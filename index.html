@@ -838,6 +838,21 @@ table.ctab tfoot th { left: 0; z-index: 2; }
 .tnote2 { font-size: 11px; color: var(--ink-3); margin: 4px 0 0; }
 @container (max-width: 900px) { .cmp-work.two { grid-template-columns: 1fr; } .cmp-div { display: none; } }
 body.tab-on .wm { visibility: hidden; }
+/* 1.8: ⓘ info links, info cards and the help centre */
+.ib-i { border: 0; background: none; color: var(--ink-3); font-size: 12px; line-height: 1; padding: 0 3px; cursor: pointer; vertical-align: baseline; }
+.ib-i:hover { color: #3b78b5; } .ib-i.hq { border: 1px solid var(--rule); border-radius: 50%; width: 17px; height: 17px; font: 700 10px var(--f); padding: 0; }
+.crow > .ib-i { align-self: start; margin-top: 2px; }
+.linkish { border: 0; background: none; padding: 0; color: #3b78b5; cursor: pointer; font: inherit; text-decoration: underline; text-underline-offset: 2px; text-align: left; }
+.ilead { margin: 0 0 8px; line-height: 1.45; } .imore { margin: 8px 0 0; font-size: 12px; }
+.itab { border-collapse: collapse; width: 100%; font-size: 12px; } .itab th, .itab td { text-align: left; vertical-align: top; padding: 5px 6px; border-bottom: 1px solid var(--rule); } .itab th { color: var(--ink-2); width: 34%; font-weight: 600; } .itab th .ico { width: 13px; height: 13px; vertical-align: -2px; }
+.itab.wide th { width: 22%; } .itab td a { color: #3b78b5; word-break: break-all; }
+.help { max-width: 1000px; } .help h2 { margin: 26px 0 8px; } .hnav { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 0; border-bottom: 1px solid var(--rule); position: sticky; top: 0; background: var(--solid); z-index: 1; }
+.hnav a { color: #3b78b5; cursor: pointer; font-size: 13px; }
+.hsec { border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; margin: 10px 0; } .hsec h3 { margin: 0 0 6px; font-size: 15px; } .hsec h3 small { color: var(--ink-3); font-weight: 400; font-size: 11.5px; }
+.hsec dl { display: grid; grid-template-columns: 150px 1fr; gap: 4px 12px; margin: 0; font-size: 13px; } .hsec dt { color: var(--ink-3); font-weight: 600; } .hsec dd { margin: 0; line-height: 1.45; }
+.hex { font-size: 12.5px; color: var(--ink-2); margin: 8px 0 0; } .hflash { animation: hflash 1.2s ease-out; } @keyframes hflash { from { background: rgba(59,120,181,.18); } to { background: transparent; } }
+@media (max-width: 700px) { .hsec dl { grid-template-columns: 1fr; } }
+.lg h5 .ib-i { margin-left: -2px; }
 </style>
 </head>
 <body>
@@ -862,6 +877,7 @@ body.tab-on .wm { visibility: hidden; }
 <div id="menu" hidden>
   <button class="btn primary menu-cmp" id="open-cmp"><svg class="ico" viewBox="0 0 24 24"><path d="M5 4v16M12 9v11M19 6v14"/></svg>Compare places and metrics…</button>
   <button class="btn primary menu-cmp" id="open-analyse"><svg class="ico" viewBox="0 0 24 24"><circle cx="6" cy="17" r="1.6"/><circle cx="10" cy="11" r="1.6"/><circle cx="15" cy="13" r="1.6"/><circle cx="19" cy="6" r="1.6"/><path d="M4 20 20 4"/></svg>Analyse relationships…</button>
+  <button class="btn menu-cmp" id="open-help"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/></svg>Help: methods, charts, labels</button>
   <button class="btn menu-cmp" id="open-export"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>Export a table (Excel / CSV)…</button>
   <h2>Display</h2>
   <div class="row"><label>Appearance</label><div class="seg" id="mode"><button data-mode="light">Light</button><button data-mode="dark">Dark</button></div></div>
@@ -951,11 +967,11 @@ body.tab-on .wm { visibility: hidden; }
 <script src="data/local.js"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="stats.js?v=18272235"></script>
-<script src="psephology.js?v=18272235"></script>
-<script src="charts.js?v=18272235"></script>
-<script src="engine.js?v=18272235"></script>
-<script src="xlsx.js?v=18272235"></script>
+<script src="stats.js?v=18272238"></script>
+<script src="psephology.js?v=18272238"></script>
+<script src="charts.js?v=18272238"></script>
+<script src="engine.js?v=18272238"></script>
+<script src="xlsx.js?v=18272238"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -965,7 +981,8 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="windows.js?v=18272235"></script>
-<script src="app.js?v=18272235"></script>
+<script src="help.js?v=18272238"></script>
+<script src="windows.js?v=18272238"></script>
+<script src="app.js?v=18272238"></script>
 </body>
 </html>

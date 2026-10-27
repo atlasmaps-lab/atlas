@@ -722,7 +722,7 @@
     select: codes => codes.forEach(c => P[c] && addCompare({ code: c, level: P[c].level })),
     focus: c => focus(c), unfocus: () => unfocus(), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); if (!on) setLevelOn("auto", true); },
     closeAll: () => { while (WM.closeTop()); },
-    setCmpMetrics: ids => { CMP.metrics = new Set(ids); CMP.items = []; }, cmpTable: sp => cmpTable(sp), get CMP() { return CMP; },
+    setCmpMetrics: ids => { CMP.metrics = new Set(ids); CMP.items = []; }, cmpTable: sp => cmpTable(sp), get CMP() { return CMP; }, get AN() { return AN; },
     openProtestCard: i => openProtestCard(i), setHeat: () => { PS.prefs.protest_events = "heat"; repaint(); },
     setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), openExport: o => openExport(o),
     mapOnly: ids => { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); } };
@@ -1096,7 +1096,7 @@
   }
   const LAST = { fc: {}, k: {}, present: {}, presentB: {} };
   const NODATA = "#b9bcbd";
-  const noDataKey = level => (LAST.present[level] && LAST.present[level].has("__nd") ? `<div class="ndkey"><span ${isoAttr("nd", 1)}><i class="sw" style="background:${NODATA}"></i>No data</span></div>` : "") +
+  const noDataKey = level => (["__nd", "__nm", "__est"].some(k => LAST.present[level] && LAST.present[level].has(k)) ? `<div class="ndkey"><button class="linkish" data-info="__honesty">ⓘ What these labels mean</button></div>` : "") + (LAST.present[level] && LAST.present[level].has("__nd") ? `<div class="ndkey"><span ${isoAttr("nd", 1)}><i class="sw" style="background:${NODATA}"></i>No data</span></div>` : "") +
     (LAST.present[level] && LAST.present[level].has("__nm") ? `<div class="ndkey"><span><i class="sw" style="background:transparent;border:1px dashed var(--ink-3)"></i>Unfilled: not meaningful at this level</span></div>` : "") +
     (LAST.present[level] && LAST.present[level].has("__est") ? `<div class="ndkey"><span><i class="sw hatchsw"></i>Hatched: estimated (e.g. notional results on new boundaries)</span></div>` : "");
   let curPlan = { notes: [] };
@@ -1164,7 +1164,7 @@
     if (m.pick === "pair") { const cur = pickOf(m.id); return `<select class="as" data-pick="${m.id}" aria-label="Pair of parties">${PAIRS.map(([k, l]) => `<option value="${k}" ${k === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`; }
     return "";
   }
-  const lhead = (m, extra) => `<h5 style="--c:${PER[m.p].hue}">${svgIcon(m.p)}<span>${esc(m.label)}</span>${picker(m)}${chooser(m)}${extra || ""}<button class="lrm" data-lrm="${m.id}" title="Take ${esc(m.label)} off the map" aria-label="Remove ${esc(m.label)}">×</button></h5>`;
+  const lhead = (m, extra) => `<h5 style="--c:${PER[m.p].hue}">${svgIcon(m.p)}<span>${esc(m.label)}</span>${infoBtn(m.id)}${picker(m)}${chooser(m)}${extra || ""}<button class="lrm" data-lrm="${m.id}" title="Take ${esc(m.label)} off the map" aria-label="Remove ${esc(m.label)}">×</button></h5>`;
   const isoAttr = (ch, v) => { const on = state.iso && state.iso.ch === ch && JSON.stringify(state.iso.v) === JSON.stringify(v); return `data-iso='${esc(JSON.stringify({ ch, v }))}' class="iso${on ? " on" : ""}"`; };
   function ticks(m, level, n) {
     const b = breaksFor(m, level, n); const f = m.fmt || String;
@@ -1213,7 +1213,7 @@
       parts.push(`<div class="lg">${lhead(ev)}<div class="seg sm" role="group" aria-label="Time window">${[[365, "1y"], [1826, "5y"], [3652, "10y"], [99999, "All"]].map(([w, l]) => `<button data-win="${w}" class="${PS.win === w ? "on" : ""}">${l}</button>`).join("")}</div><button class="btn sm prl-open" data-prlist title="List the protests in this window, for the area in focus or the visible map">List</button>
         ${PL.points ? `<div class="cats2">${[...present].sort((a, b) => a - b).map(c => `<span><i class="sw dot" style="background:${CAUSE_COL[CAUSES[c]]}"></i>${esc(CAUSES[c])}</span>`).join("") || `<span style="color:var(--ink-3)">No protests ${esc(winLabel())}</span>`}</div>
         <div class="dots" style="--c:#8560b5">${[1000, 20000, 500000].map(v => { const r = clamp(3 + 3.1 * Math.log10(v / 100 + 1), 3, 15) * 1.3; return `<span><i style="width:${r * 2}px;height:${r * 2}px;background:#888"></i>${fmtBig(v)}</span>`; }).join("")}<span><i style="width:8px;height:8px;background:#888;border:1.6px solid #1a2226"></i>size unknown</span></div>
-        <div class="note">Colour = cause. Size = crowd. Newer protests are solid and ringed; older ones fade. Window: protests ${esc(winLabel())}. Numbered circles are groups of nearby protests (the ring shows their causes): click to zoom in. Click a point for its card.</div>` : `<div class="note">Darker = more people protesting nearby, ${esc(winLabel())}.</div>`}</div>`);
+        <div class="note">Colour = cause, size = crowd; numbered rings are groups (click to zoom). Click a point for its card.</div>` : `<div class="note">Darker = more people protesting nearby, ${esc(winLabel())}.</div>`}</div>`);
     }
     const nd = noDataKey(level); if (nd && parts.length) parts[0] = parts[0].replace(/<\/div>$/, nd + "</div>");
     const unplaced = curPlan.notes.filter(n => !n.ch);
@@ -1374,7 +1374,7 @@
       const sub = text ? "Card only: text can't be drawn on the map" : !av.ok ? `${esc(av.why)}${mapped ? ": untick to take it off" : av.nm || /^No data for/.test(av.why) ? ". Choose other boundaries in Areas ▾" : ". Move the time bar"}` : mapped && note ? `On the map as <b>${note.ch ? CH_NAME[note.ch] : "— no free channel"}</b>` : esc(m.desc || "");
       return `<div class="crow${(text ? inCard : mapped) ? " on" : ""}${noD ? " nodata" : ""}" ${noD ? `title="${esc(av.why)}"` : ""}><input type="checkbox" id="cb-${m.id}" ${text ? `data-card="${m.id}"` : `data-map="${m.id}"`} ${(text ? inCard : mapped) ? "checked" : ""} ${noD ? "disabled" : ""}>
         <label for="cb-${m.id}" class="ml">${esc(m.label)}${tag}<small>${sub}</small></label>
-        <span></span></div>`;
+        ${infoBtn(m.id)}</div>`;
     }).join("") : p.planned.map(n => `<div class="crow off" title="Not available yet"><input type="checkbox" disabled><span class="ml">${esc(n)}<small>Not available yet: planned</small></span><span></span></div>`).join("");
     const n = ms.filter(m => isMapped(m.id)).length;
     pmenu.innerHTML = `<div class="pm-head"><div><h3>${esc(pmOpen.g || p.name)}</h3><p>${esc(p.name)} · ${esc(p.desc)}</p></div><button class="x" data-pmx aria-label="Close">×</button></div><div class="pm-list">${rows}</div>
@@ -1605,7 +1605,7 @@
     const items = CORE.map(f => { let v = value(code, f.id); if (past && (f.id === "ruler" || f.id === "party")) v = { text: M[f.id].get(code, d).text, yr: "" }; return `<li><b>${esc(f.label)}:</b> ${esc(v.text)}${v.yr ? ` <small>(${esc(v.yr)})</small>` : ""}${v.edited ? ` <span class="tag">edited</span>` : ""}</li>`; });
     ((rec && rec.fields) || []).forEach(f => { if (f.label) items.push(`<li><b>${esc(f.label)}:</b> ${esc(f.value || "—")}</li>`); });
     const onMap = planMetrics(); // everything ticked shows in the card, drawn or not
-    const mapped = onMap.map(m => { const r = m.get(code, d); return `<li${r && r.nm ? ' class="nm"' : ""}>${swatchOf(m, code)}<span><b>${esc(m.label)}:</b> ${esc(r && (r.v != null || !EN.isNum(m) || r.nm) ? r.text : "No data")}${estTag(r)}${r && r.note ? ` <small>· ${esc(r.note)}</small>` : ""}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}${r && r.nm ? "" : sparkFor(m, code)}${pinned && m.how && !(r && r.nm) ? `<small class="how">How this is worked out: ${esc(m.how)}</small>` : ""}${pinned && r && r.detail ? `<div class="mdet">${r.detail}</div>` : ""}</span></li>`; });
+    const mapped = onMap.map(m => { const r = m.get(code, d); return `<li${r && r.nm ? ' class="nm"' : ""}>${swatchOf(m, code)}<span><b>${esc(m.label)}:</b> ${esc(r && (r.v != null || !EN.isNum(m) || r.nm) ? r.text : "No data")}${estTag(r)}${r && r.note ? ` <small>· ${esc(r.note)}</small>` : ""}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}${r && r.nm ? "" : sparkFor(m, code)}${pinned && m.how && !(r && r.nm) && PS.detail !== "simple" ? `<small class="how">How this is worked out: ${esc(m.how)}</small>` : ""}${pinned ? infoBtn(m.id) : ""}${pinned && r && r.detail ? `<div class="mdet">${r.detail}</div>` : ""}</span></li>`; });
     if (PS.detail === "simple" && !pinned) {   // short: Westminster results become one line (winner, share, majority); the rest stays
       const wmOn = onMap.some(m => m.group === G4), keep = onMap.map((m, i) => m.group === G4 ? null : mapped[i]).filter(Boolean);
       if (wmOn) { const r = resultFor(code, d); if (r && !(M.ge_winner.get(code, d) || {}).nm) { const w = r.agg ? Object.keys(r.seats).sort((a, b) => r.seats[b] - r.seats[a])[0] : winnerOf(r), mj = r.agg ? null : PSE.majority(r.cl, r.t.total);
@@ -2273,7 +2273,7 @@
     else if (!ms.length) main += `<div class="empty-big">Tick the metrics you want to compare on the left. They can come from the same perspective or different ones.</div>`;
     else {
       const anyNum = ms.some(m => EN.isNum(m));
-      main += `<section class="cmp-acts"><button class="btn primary" data-kmk="table" title="Choose a layout and dates">Make table ▾</button><button class="btn primary" data-kmk="chart" title="Choose a chart style for these places and metrics">Make chart</button><button class="btn" data-can ${anyNum ? "" : `disabled title="Analyse needs at least one numeric metric"`}>Analyse these…</button><button class="btn" data-ctile title="The places as a small map in the workspace">Places as a tile → workspace</button><button class="btn" data-cexp>Export…</button></section>`;
+      main += `<section class="cmp-acts"><button class="btn primary" data-kmk="table" title="Choose a layout and dates">Make table ▾</button><button class="btn primary" data-kmk="chart" title="Choose a chart style for these places and metrics">Make chart</button><button class="btn" data-can ${anyNum ? "" : `disabled title="Analyse needs at least one numeric metric"`}>Analyse these…</button><button class="btn" data-ctile title="The places as a small map in the workspace">Places as a tile → workspace</button><button class="btn" data-cexp>Export…</button>${helpBtn("tables", "Help: tables and totals")}</section>`;
       if (CMP.mk === "table") main += cmpBuilderHTML(codes, ms);
       main += cmpWorkHTML();
       main += `<details class="cmp-pat"${CMP.patOpen ? " open" : ""}><summary>Patterns between two metrics</summary>` + (usable.length < 2 ? `<div class="empty-big">Tick two or more metrics to look for a pattern between them.</div>` : patternHTML(codes, M[CMP.x], M[CMP.y], usable)) + `</details>`;
@@ -2425,6 +2425,8 @@
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, old); else old();
   }
   function download(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+  const sourceOf = m => m.source || m.src || (m.group === G2 ? "Protests: Wikipedia articles and Wikidata (notable protests since 1974); crowd = Wikipedia's estimate; alignment = Atlas lookup (organiser_alignment.csv)"
+    : { political: "Wikipedia (council control and leaders, from each council's article); government history compiled by hand", economic: SER ? SER.sources.gdp : "", social: SER ? SER.sources.population : "", markets: MK ? MK.sources : "" }[m.p] || "");
   function aboutRows(ms) {
     const rows = [["column", "label", "perspective", "kind of data", "over time", "how areas are combined", "how this is worked out", "valid at", "source / notes"], ["code", "ONS area code", "", "", "", "", "", "", "ONS Open Geography Portal"], ["date", "date the values refer to", "", "", "", "", "", "", "Atlas time bar"],
       ["<metric>_status", "measured / estimated / missing / not meaningful", "", "", "", "", "Estimated = modelled or notional (e.g. results recalculated on new boundaries); missing is never shown as zero", "", ""]];
@@ -2695,7 +2697,7 @@
     const card = st => `<button class="sty${st.id === cur ? " on" : ""}${st.ok ? "" : " no"}" data-${prefix}style="${st.id}" ${st.ok ? "" : "disabled"} title="${esc(st.why)}">${sIcon(st.id)}<span>${esc(st.label)}</span>${st.id === best && !compact ? "<em>simple</em>" : ""}</button>`;
     const plain = styles.filter(x => !x.story), story = styles.filter(x => x.story);
     if (compact) return `<div class="sty-row">${plain.filter(x => x.ok).map(card).join("")}<span class="sty-sep">Story</span>${story.filter(x => x.ok).map(card).join("")}</div>`;
-    return `<div class="sty-pick"><p>How should Atlas draw this? <small>Simple charts first; greyed styles don't suit this choice (hover for why).</small></p><div class="sty-grid">${plain.map(card).join("")}</div>
+    return `<div class="sty-pick"><p>How should Atlas draw this? <small>Simple charts first; greyed styles don't suit this choice (hover for why).</small> ${infoBtn("__charts", "the chart styles")}${helpBtn("charts", "Help: charts")}</p><div class="sty-grid">${plain.map(card).join("")}</div>
       <p class="sty-h">Story views <small>(experimental: the same numbers, drawn as things in the world)</small></p><div class="sty-grid story">${story.map(card).join("")}</div>
       <button class="btn primary" data-${prefix}draw ${best ? "" : "disabled"}>Draw ${esc(((styles.find(x => x.id === cur) || {}).label || "chart").toLowerCase())}</button></div>`;
   }
@@ -2750,7 +2752,7 @@
   function openTableTab(spec, label) { const t = { id: "t" + (++tabSeq), label: label || "Table", table: spec }; TABS.push(t); activateTab(t.id); }
   function renderTabs() {
     const on = t => t.id === "map" ? VIEW.mode !== "ws" && (activeTab === "map" || activeTab === "split" || VIEW.mode === "split") : t.id === "ws" ? VIEW.mode !== "map" : t.id === activeTab;
-    const icon = t => t.table ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>` : t.id === "map" ? `<svg class="ico" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/></svg>` : t.id === "ws" ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/></svg>` : sIcon(t.spec.style);
+    const icon = t => t.help ? `<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/></svg>` : t.table ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>` : t.id === "map" ? `<svg class="ico" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/></svg>` : t.id === "ws" ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/></svg>` : sIcon(t.spec.style);
     const label = t => t.id === "ws" ? `Workspace${proj().items.length ? ` (${proj().items.length})` : ""}` : t.label;
     tabsEl.innerHTML = TABS.map(t => `<button class="tab${on(t) ? " on" : ""}" data-tab="${t.id}">${icon(t)}<span>${esc(label(t).length > 28 ? label(t).slice(0, 27) + "…" : label(t))}</span>${t.id === "map" || t.id === "ws" ? "" : `<i data-tabx="${t.id}" aria-label="Close tab">×</i>`}</button>`).join("") +
       `<button class="tab tool${VIEW.mode === "split" ? " on" : ""}" data-split title="Map and workspace side by side (drag the divider to change the share)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></button><button class="tab tool" data-overview title="All tabs (or swipe up over the top bar)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>`;
@@ -2758,8 +2760,9 @@
   }
   function activateTab(id) {
     activeTab = id; renderTabs(); const t = TABS.find(x => x.id === id);
-    document.body.classList.toggle("tab-on", !!t && !!(t.spec || t.table));   // floating windows step aside while a chart or table has the screen
+    document.body.classList.toggle("tab-on", !!t && !!(t.spec || t.table || t.help));   // floating windows step aside while a chart or table has the screen
     if (!t || id === "map" || id === "ws" || id === "split") { tabview.hidden = true; return; }
+    if (t.help) { tabview.innerHTML = helpHTML(); tabview.hidden = false; document.body.classList.add("tab-on"); return; }
     if (t.table) {
       tabview.innerHTML = `<div class="tv-wrap"><div class="tv-head"><h2>${esc(t.label)}</h2><span class="cp-sub">${t.table.layout === "pm" && t.table.when === "bar" ? "Values on the time bar's date · " : ""}${esc(LAYOUTS[t.table.layout])}</span><button class="btn" data-tcsv>Copy as CSV</button><button class="btn" data-tback>Back to the map</button></div><div class="tv-body">${cmpTableHTML(t.table)}</div></div>`;
       tabview.hidden = false; return;
@@ -2811,6 +2814,76 @@
   }
   map.on("render", placeZoneLabels);
 
+
+  // ---------- 1.8: information behind ⓘ links, and the help centre ----------
+  // Cards, keys and menus show one line; the detail (definition, formula, unit, levels, years, source, what's estimated,
+  // caveats, related metrics) opens in a small info card. The help centre (ATLAS menu → Help) explains every method,
+  // chart and label; what each method needs comes from AN_METHODS, the table Analyse itself uses.
+  const HELP = window.ATLAS_HELP || { methods: {}, charts: {}, honesty: [], tables: [] };
+  const CAVEAT = {
+    gdp: "Output is counted where it is produced, so places where many people commute in to work (the City of London, Westminster) look far bigger than their residents' incomes.",
+    gdp_per_head: "Commuting: GDP is counted where people work but divided by the people who live there, so city centres look very rich and commuter towns poorer than their residents are. GDHI (household income) is the better measure of living standards; it isn't loaded yet.",
+    registration_ratio: "Not a measure of registration completeness: the electorate includes some people who aren't adults resident in the seat (e.g. overseas electors), and some residents can't register (non-qualifying nationals).",
+    protest_events: "Only notable protests with a Wikipedia article, checked to be in the UK: most protests never get one, so absence on the map isn't absence of protest.",
+    density: "Area includes land that nobody lives on (moors, lakes), so rural councils look emptier than their towns are.",
+    control: "Means different things at each level: the government for nations, the mayor or the UK Government for regions, council control for councils and wards, the MP's party for constituencies.",
+  };
+  ["protest_count", "protest_rate", "protest_largest", "protest_people", "protest_cause", "protest_align", "protest_trend", "protest_diversity", "protest_opposition"].forEach(k => { CAVEAT[k] = CAVEAT.protest_events; });
+  const infoBtn = (id, what) => `<button type="button" class="ib-i" data-info="${id}" title="About ${esc(what || (M[id] ? M[id].label : id))}" aria-label="About ${esc(what || (M[id] ? M[id].label : id))}">ⓘ</button>`;
+  const helpBtn = (sec, what) => `<button type="button" class="ib-i hq" data-help="${sec}" title="${esc(what || "Help")}" aria-label="${esc(what || "Help")}">?</button>`;
+  function sampleValue(m) { for (const c of [UKC, "E92000001", "E12000007", "E06000023", "E08000025"]) { try { const r = m.get(c, state.date) || m.get(c, TODAY); if (r && r.v != null && !r.nm) return r; } catch (e) {} } return null; }
+  function metricInfoHTML(m) {
+    const sp = metricSpan(m), ex = sampleValue(m), pl = l => (PLURAL_L[l] || (l === "country" ? "the UK" : l)).toLowerCase();
+    const est = m.group === G4 ? "Results across the 2010 and 2024 boundary changes use the House of Commons Library's notional results (what the old votes would have been on the new boundaries): marked est. and hatched." : m.id === "eu_leave_est_pcon" ? "Every value is an estimate (Chris Hanretty's model), except where the BBC obtained ward counts; all are marked est." : m.group === "Ideology" ? "Party positions are expert-survey scores (CHES), not measurements; values are missing when parties with a score have under 75% of the vote." : "";
+    const rel = METRICS.filter(x => x.p === m.p && x.group === m.group && x.id !== m.id && PER[x.p].ready).slice(0, 6);
+    const row = (k, v) => v ? `<tr><th>${k}</th><td>${v}</td></tr>` : "";
+    const src = sourceOf(m);
+    return `<p class="ilead">${esc(m.desc || "")}</p><table class="itab">${row("How it's worked out", esc(m.how || EN.aggregate(m).why))}
+      ${row("Unit", ex ? `e.g. ${esc((m.fmt || String)(ex.v))}${m.unit ? ` (${esc(m.unit)})` : ""}` : m.unit ? esc(m.unit) : "")}
+      ${row("Kind of data", `${esc(m.scale)}, ${esc(m.nature)} · ${esc({ state: "holds until it changes", annual: "one value a year", event: "dated events", static: "one date only", election: "holds from one election to the next" }[m.temporal] || m.temporal)}`)}
+      ${row("Where it applies", m.levels ? esc(m.levels.map(pl).join(", ")) + ` <small>(elsewhere: ${esc(NM_TEXT.toLowerCase())})</small>` : "every boundary set with data")}
+      ${row("Years", m.temporal === "static" ? "one date" + (ex && ex.yr ? ` (${esc(ex.yr)})` : "") : sp ? `${sp[0].slice(0, 4)}–${sp[1] >= TODAY ? "today" : sp[1].slice(0, 4)}` : "—")}
+      ${row("Source", esc(src).replace(/(https?:\/\/[^\s;),]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>') || "—")}
+      ${row("Estimated values", esc(est))}${row("Caveats", esc(CAVEAT[m.id] || ""))}
+      ${row("Related", rel.map(x => `<button class="linkish" data-info="${x.id}">${esc(x.label)}</button>`).join(" · "))}</table>
+      <p class="imore">${helpBtn("honesty", "What measured, estimated, missing and not meaningful mean")} <button class="linkish" data-help="honesty">What “estimated” and “not meaningful” mean</button></p>`;
+  }
+  const infoWins = new Map();
+  function openInfo(key, title, html) { // a compact, resizable info card (several can be open; they cascade)
+    const have = infoWins.get(key); if (have && WM.isOpen(have.el)) { have.setBody(html); WM.front(have.el); WM.pulse(have.el); return; }
+    const w = WM.make({ type: "info", title, html, cascade: true, min: { w: 300, h: 180 }, def: () => ({ x: Math.round(innerWidth / 2 - 190), y: 90, w: 380, h: Math.min(460, innerHeight - 140) }), onClose: () => infoWins.delete(key) });
+    infoWins.set(key, w); WM.open(w.el);
+  }
+  function openMetricInfo(id) { const m = M[id]; if (m) openInfo("m:" + id, m.label, metricInfoHTML(m)); }
+  function chartInfoHTML() { return `<p class="ilead">Simple charts come first; a greyed style doesn't suit what's chosen (hover it for why).</p><table class="itab">${Object.entries(HELP.charts).map(([k, [use, not]]) => `<tr><th>${sIcon(k)} ${esc((EN.chartStyles([], 0).styles.find(x => x.id === k) || {}).label || k)}</th><td><b>For:</b> ${esc(use)}<br><b>Not for:</b> ${esc(not)}</td></tr>`).join("")}</table><p class="imore"><button class="linkish" data-help="charts">More in Help</button></p>`; }
+  function honestyHTML() { return `<table class="itab">${HELP.honesty.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</table>`; }
+  // the help centre: a full-screen tab
+  function helpHTML() {
+    const meth = AN_METHODS.map(x => { const h = HELP.methods[x.id] || {}; return `<section class="hsec" id="help-m-${x.id}"><h3>${esc(x.label)} <small>${x.mode === "time" ? "over time" : "across places"}</small></h3>
+      <dl><dt>What it answers</dt><dd>${esc(h.answers || METHOD_WHY[x.id] || "")}</dd><dt>What it needs</dt><dd>${esc(x.needs)}</dd><dt>Assumptions</dt><dd>${esc(h.assumes || "")}</dd><dt>When it misleads</dt><dd>${esc(h.misleads || "")}</dd></dl>
+      ${h.example ? `<p class="hex">Example: ${esc(h.example.label)} <button class="btn sm" data-hexample="${x.id}">Load this example</button></p>` : ""}</section>`; }).join("");
+    const charts = Object.entries(HELP.charts).map(([k, [use, not]]) => `<tr><th>${sIcon(k)} ${esc((EN.chartStyles([], 0).styles.find(x => x.id === k) || {}).label || k)}</th><td>${esc(use)}</td><td>${esc(not)}</td></tr>`).join("");
+    const levelled = METRICS.filter(m => m.levels && PER[m.p].ready).map(m => `<li><b>${esc(m.label)}</b>: ${esc(m.levels.map(l => (PLURAL_L[l] || "the UK").toLowerCase()).join(", "))} only</li>`).join("");
+    return `<div class="tv-wrap help"><div class="tv-head"><h2>Help</h2><span class="cp-sub">What each test, chart, table and label needs and means. The thresholds here are the ones Atlas uses.</span><button class="btn" data-tback>Back to the map</button></div>
+      <nav class="hnav"><a data-hgo="help-methods">Analysis methods</a><a data-hgo="help-charts">Charts</a><a data-hgo="help-tables">Tables</a><a data-hgo="help-honesty">Labels: measured, estimated…</a><a data-hgo="help-levels">Where metrics apply</a></nav>
+      <section id="help-methods"><h2>Analysis methods (Analyse window)</h2><p>Numeric metrics are numbers (counts, rates, amounts); categories (e.g. controlling party) and events (protests) are not used in these tests. “Places” are the areas compared, on one boundary set.</p>${meth}</section>
+      <section id="help-charts"><h2>Charts</h2><table class="itab wide"><thead><tr><th>Style</th><th>For</th><th>Not for</th></tr></thead><tbody>${charts}</tbody></table><p>Two axes, Small charts and the Line chart need metrics that change over time; Ranked, Shares and the story views use the time bar's date.</p></section>
+      <section id="help-tables"><h2>Tables (Compare)</h2><table class="itab wide"><tbody>${Object.entries(LAYOUTS).map(([k, l]) => `<tr><th>${esc(l)}</th><td>${k === "pm" ? "Two or more places and any metrics; one date (the time bar's or a chosen year)." : k === "py" ? "Two or more places and one metric; a range of years (values on 1 July)." : "One place and any metrics; a range of years. No totals (different units)."}</td></tr>`).join("")}${HELP.tables.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</tbody></table></section>
+      <section id="help-honesty"><h2>Labels: measured, estimated, missing, not meaningful</h2>${honestyHTML()}</section>
+      <section id="help-levels"><h2>Where metrics apply</h2><p>Some metrics only mean something for some boundary sets; elsewhere the map leaves areas unfilled and the menu greys them out.</p><ul>${levelled}</ul></section></div>`;
+  }
+  function openHelp(anchor) {
+    let t = TABS.find(x => x.help); if (!t) { t = { id: "help", label: "Help", help: true }; TABS.push(t); }
+    activateTab("help"); closeMenu();
+    if (anchor) requestAnimationFrame(() => { const el = $(anchor.startsWith("help-") ? anchor : "help-" + anchor); if (el) { el.scrollIntoView({ block: "start" }); el.classList.add("hflash"); setTimeout(() => el.classList.remove("hflash"), 1200); } });
+  }
+  document.addEventListener("click", e => {
+    const i = e.target.closest("[data-info]"); if (i) { e.preventDefault(); e.stopPropagation(); const k = i.dataset.info; if (k === "__charts") openInfo("charts", "Chart styles", chartInfoHTML()); else if (k === "__honesty") openInfo("honesty", "What the labels mean", honestyHTML()); else openMetricInfo(k); return; }
+    const h = e.target.closest("[data-help]"); if (h) { e.preventDefault(); e.stopPropagation(); const sec = h.dataset.help; openHelp(sec === "honesty" ? "help-honesty" : sec === "charts" ? "help-charts" : sec === "tables" ? "help-tables" : sec.startsWith("m-") ? "help-" + sec : "help-methods"); return; }
+    const g = e.target.closest("[data-hgo]"); if (g) { const el = $(g.dataset.hgo); if (el) el.scrollIntoView({ block: "start" }); return; }
+    const x = e.target.closest("[data-hexample]"); if (x) { const ex = (HELP.methods[x.dataset.hexample] || {}).example; if (!ex) return;
+      activateTab("map"); Object.assign(AN, { metrics: ex.metrics.filter(id => M[id]), mode: ex.mode || "across", level: ex.level || AN.level, within: UKC, place: ex.place || AN.place, method: ex.method }); saveAN(); openAnalyse(); AN.method = ex.method; renderAnalyse(); }
+  }, true);
 
   // ---------- floating windows (1.8): windows.js owns stacking, focus, size and position; this puts back the header buttons ----------
   function addFctl(el) { WM.decorate(el); }
@@ -3094,7 +3167,7 @@
     if (!okM.some(m => m[0] === AN.method)) AN.method = okM.length && cfg.metrics.length ? okM[0][0] : null; cfg.method = AN.method;
     const pers = PERSPECTIVES.filter(p => p.ready && p.id !== "analysis").map(p => { const ms = anMetricsAll().filter(m => m.p === p.id); return ms.length ? `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + ms.map(m => `<label style="--c:${p.hue}"><input type="checkbox" data-anm="${m.id}" ${AN.metrics.includes(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("") : ""; }).join("");
     const res = cfg.method ? anResult(cfg, Math.max(360, Math.min(900, anEl.offsetWidth - 330))) : null;
-    anEl.innerHTML = `<div class="an-head"><b>Analyse</b><span class="cp-sub">How metrics relate across places, within an area, or over time. No need to pick places.</span><button class="x" data-anx aria-label="Close">×</button></div>
+    anEl.innerHTML = `<div class="an-head"><b>Analyse</b><span class="cp-sub">How metrics relate across places, within an area, or over time. No need to pick places.</span>${helpBtn("methods", "Help: analysis methods")}<button class="x" data-anx aria-label="Close">×</button></div>
       <div class="an-body"><div class="an-side">
         <div class="an-row"><b>Look</b><div class="seg sm"><button data-anmode="across" class="${AN.mode !== "time" ? "on" : ""}">Across places</button><button data-anmode="time" class="${AN.mode === "time" ? "on" : ""}">Over time</button></div></div>
         ${AN.mode === "time" ? `<div class="an-row"><b>Place</b><select data-anplace>${[UKC, "E92000001", "S92000003", "W92000004", "N92000002"].concat(state.focus && !["E92000001", "S92000003", "W92000004", "N92000002", UKC].includes(state.focus) ? [state.focus] : [], state.sel.map(s => s.code)).filter((c, i, a) => a.indexOf(c) === i).map(c => `<option value="${c}" ${AN.place === c ? "selected" : ""}>${esc(nameOf(c))}</option>`).join("")}</select></div>`
@@ -3103,7 +3176,7 @@
         <div class="an-row"><b>Date</b><span class="muted">${esc(longDate(state.date))} (time bar)</span></div>
         <div class="an-metrics"><div class="an-mh">Metrics <small>${AN.metrics.length} chosen</small>${AN.metrics.length ? `<button class="btn" data-anclear>Clear</button>` : ""}</div>${pers}</div>
       </div><div class="an-main">
-        ${AN.metrics.length ? `<div class="an-methods">${methods.map(([id, l, ok, why]) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}>${esc(l)}</button>`).join("")}</div>${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")}</p>` : `<p class="anwhy">No method suits this choice yet: hover a greyed method to see what it needs.</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
+        ${AN.metrics.length ? `<div class="an-methods">${methods.map(([id, l, ok, why]) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}>${esc(l)}</button>`).join("")}</div>${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")} ${helpBtn("m-" + AN.method, "Help: what this method needs and assumes")}</p>` : `<p class="anwhy">No method suits this choice yet. ${methods.filter(m => !m[2]).slice(0, 3).map(([id, l, , why]) => `<button class="linkish" data-help="m-${id}">${esc(l)}: ${esc(why)}</button>`).join(" · ")}</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
         ${AN.method === "rel" ? `<label class="anpick">Split by a category <select data-ansplit><option value="">none</option>${anCats().map(m => `<option value="${m.id}" ${AN.split === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : ""}
         <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
         ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Show on map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy data (CSV)</button>` : ""}</div>` : ""}
@@ -3118,7 +3191,7 @@
     const a = e.target.closest("[data-go]"); if (a) { focus(a.dataset.go); return; }
     const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
     if (b.hasAttribute("data-anx")) { closeAnalyse(); return; }
-    if (ds.anmethod && b.getAttribute("aria-disabled") === "true") { toast(`${AN_BY[ds.anmethod].label}: ${b.title}.`); return; }
+    if (ds.anmethod && b.getAttribute("aria-disabled") === "true") { undoToast(`${AN_BY[ds.anmethod].label}: ${b.title}.`, () => {}); const t = $("toast"), u = $("undo-btn"); if (u) { u.textContent = "What it needs"; u.onclick = () => { t.hidden = true; openHelp("help-m-" + ds.anmethod); }; } return; }
     if (ds.antrim) AN.trim = ds.antrim === "1"; else if (ds.anmode) AN.mode = ds.anmode; else if (ds.anmethod) AN.method = ds.anmethod; else if (ds.ancorr) AN.corr = ds.ancorr;
     else if (b.hasAttribute("data-anclear")) AN.metrics = [];
     else if (b.hasAttribute("data-anws")) { const cfg = Object.assign({}, AN, { date: state.date }); sendToWS({ type: "analysis", title: anEl._last.title, cfg }); return; }
@@ -3352,6 +3425,7 @@
   WM.register(cmpEl, { type: "compare", title: "Compare", handle: ".cmp-top", min: { w: 360, h: 260 }, close: closeCmp });
   WM.register(expEl, { type: "export", title: "Export", handle: ".cmp-top", min: { w: 360, h: 260 }, close: closeExport });
   $("open-analyse").addEventListener("click", () => openAnalyse());
+  $("open-help").addEventListener("click", () => openHelp());
   ovEl.addEventListener("click", e => { const b = e.target.closest("[data-ov]"); ovEl.hidden = true; if (b) goTab(b.dataset.ov); });
 
   // ---------- fly ----------

@@ -23,6 +23,8 @@ SCENES = {
         const D = AtlasDebug; D.select(['E06000023','E08000025','E06000043']); D.openCmp();
         document.querySelector('#cmp [data-can]') && document.querySelector('#cmp [data-can]').click();""",
     "chart": "document.getElementById('chart-bubble').click();",
+    "help": "document.getElementById('open-help').click();",
+    "info": "AtlasDebug.mapOnly(['gdp_per_head']); setTimeout(() => document.querySelector(\"#legend [data-info='gdp_per_head']\").click(), 300);",
     "availability": """AtlasDebug.mapOnly(['control']); AtlasDebug.setDate('1990-06-01');
         document.querySelector('#dock [data-open=economic]').click(); document.querySelector('#dock [data-group="Output & growth"]').click();""",
     "timebar": "AtlasDebug.mapOnly && AtlasDebug.mapOnly(['gdp_per_head']);",
