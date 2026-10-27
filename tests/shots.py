@@ -5,7 +5,7 @@ Screenshots of Atlas at the four test sizes, for pull requests (Atlas 1.8):
 
 saves docs/screenshots/1.8/<name>-<scene>-<width>x<height>.jpg and prints any console errors.
 Scenes: start (default), compare (two places in Compare), analyse (Analyse opened from Compare), chart (the chart panel),
-timebar (GDP on the map), availability (a metric greyed before its data starts), protests (protests on the map, zoomed to London), declutter (the default screen).
+timebar (GDP on the map), availability (a metric greyed before its data starts), protests (protests on the map, zoomed to London), declutter (the default screen), app-markets / app-politics / app-economic / app-social (an app as it opens).
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -39,7 +39,7 @@ def main():
     with server() as base, browser() as b:
         for w, h in SIZES:
             for sc in scenes:
-                page = open_atlas(b, base, (w, h))
+                page = open_atlas(b, base, (w, h), query="debug#app=" + sc[4:] if sc.startswith("app-") else "debug")
                 try:
                     if SCENES.get(sc):
                         page.evaluate("() => { %s }" % SCENES[sc])

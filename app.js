@@ -27,6 +27,8 @@
     G.constituencies = PCON.geo;
     Object.entries(PCON.parties || {}).forEach(([k, v]) => { if (!POL.parties[k]) POL.parties[k] = v; });
   }
+  // 1.8: one perspective as its own app (index.html#app=markets); Atlas Multi when there's no #app
+  const APP_ID = (location.hash.match(/app=([a-z]+)/) || [])[1] || null;
   const LEVELS = ["nation", "region", "council", "constituency", "ward"];
   const LABEL = { nation: "Nation", region: "Region", council: "Council", constituency: "Constituency", ward: "Ward", country: "Country", zone: "Financial district" };
   const SRC = { nation: "nations", region: "regions", council: "councils", constituency: "constituencies", ward: "wards", zone: "zones" };
@@ -46,6 +48,7 @@
   let tt; function toast(m) { const el = $("toast"); el.textContent = m; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 3000); }
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } } };
   const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+  const appListeners = [], notifyApps = () => appListeners.forEach(f => { try { f(); } catch (e) { console.error(e); } });   // live app panels (1.8)
   const TOOLS = Object.assign({ zoom: 0.5, cursor: 0.5, contrast: 0.5, overlay: 0.5, soften: 0.25, grid: "off" }, store.get("atlas-13-tools", {}));
   const fillOp = () => +(0.15 + 0.9 * TOOLS.overlay).toFixed(2);
 
@@ -688,7 +691,8 @@
     card: { control: true, protest_events: true }, prefs: {}, pick: {}, biv: { pal: "pt", n: 3 }, step: 1, win: 1826, detail: "detailed", hot: false,
   };
   const PS = (() => {
-    const s = store.get("atlas-15-persp", {}), o = JSON.parse(JSON.stringify(DEF_PS));
+    const s = store.get("atlas-15-persp" + (APP_ID ? "-" + APP_ID : ""), APP_ID ? { mapped: {} } : {}), o = JSON.parse(JSON.stringify(DEF_PS));
+    if (APP_ID) Object.keys(o.mapped).forEach(p => { o.mapped[p] = []; });   // an app starts from its own layout (init), not Multi's
     ["on", "active", "card", "prefs", "biv", "pick"].forEach(k => Object.assign(o[k], s[k] || {}));
     Object.entries(s.mapped || {}).forEach(([p, v]) => { if (PER[p]) o.mapped[p] = (Array.isArray(v) ? v : [v]).filter(id => M[id]); });
     if (Array.isArray(s.order)) o.order = s.order.filter(p => PER[p]);
@@ -697,7 +701,7 @@
   })();
   // 0.3.1: a perspective is "on" exactly when something in it is ticked (there is no separate perspective switch any more)
   Object.keys(PS.mapped).forEach(pid => { if (!PS.on[pid]) PS.mapped[pid] = []; PS.on[pid] = PS.mapped[pid].length > 0; });
-  const savePS = () => store.set("atlas-15-persp", PS);
+  const savePS = () => store.set("atlas-15-persp" + (APP_ID ? "-" + APP_ID : ""), PS);
   const onPersps = () => PS.order.filter(p => PS.on[p] && PER[p] && PER[p].ready);
   const isMapped = id => { const m = M[id]; return !!(m && PS.on[m.p] && PS.active[id] && (PS.mapped[m.p] || []).includes(id)); };
 
@@ -725,7 +729,7 @@
     setCmpMetrics: ids => { CMP.metrics = new Set(ids); CMP.items = []; }, cmpTable: sp => cmpTable(sp), get CMP() { return CMP; }, get AN() { return AN; },
     openProtestCard: i => openProtestCard(i), setHeat: () => { PS.prefs.protest_events = "heat"; repaint(); },
     setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), openExport: o => openExport(o),
-    mapOnly: ids => { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); } };
+    get APP() { return APP; }, mapOnly: ids => mapOnly(ids) };
   map.boxZoom.disable(); map.touchZoomRotate.disableRotation();
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
   map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
@@ -1290,7 +1294,7 @@
   const LEVEL_WORDS = { 3: ["low", "middling", "high"], 4: ["low", "lower-middle", "upper-middle", "high"] };
   const bivWords = (cx, ry, n, mx, my) => `${LEVEL_WORDS[n][cx]} ${mx.label.toLowerCase()} · ${LEVEL_WORDS[n][ry]} ${my.label.toLowerCase()}`;
 
-  function renderSup() { const on = onPersps(), sup = $("sup"); sup.textContent = on.length === 0 ? "" : on.length === 1 ? PER[on[0]].name.toLowerCase() : "multi"; $("brand").style.setProperty("--sup", on.length === 1 ? PER[on[0]].hue : "var(--ink-2)"); }
+  function renderSup() { const on = onPersps(), sup = $("sup"); if (APP) { sup.textContent = APP.short; return; } sup.textContent = on.length === 0 ? "" : on.length === 1 ? PER[on[0]].name.toLowerCase() : "multi"; $("brand").style.setProperty("--sup", on.length === 1 ? PER[on[0]].hue : "var(--ink-2)"); }
 
   // ---------- perspectives dock + menus ----------
   // Each perspective is a name; clicking it drops down its categories (e.g. "Government & control"). A category opens a
@@ -1308,10 +1312,21 @@
     dock.classList.toggle("collapsed", !!dockFold.folded);
     const n = PERSPECTIVES.reduce((a, p) => a + mappedIn(p.id), 0);
     dock.innerHTML = `<div class="dt-row"><button class="dt" data-fold aria-expanded="${!dockFold.folded}"><span>Perspectives</span>${n ? `<span class="n">${n}</span>` : ""}<span class="chev">▾</span></button><button class="dclear" data-dclear ${n ? "" : "disabled"} title="${n ? "Take everything off the map (Esc). Undo in the message that follows" : "Nothing is on the map"}">Clear all</button></div>
-      <div class="dbody"><div class="dinner">${PERSPECTIVES.filter(p => !(p.hidden && !p.ready)).map(p => { const on = mappedIn(p.id) > 0, open = dockOpenP === p.id; return `<div class="pr${on ? " on" : ""}${p.ready ? "" : " locked"}" style="--c:${p.hue}">
-        <div class="phead"><button class="pname" data-open="${p.id}" aria-expanded="${open}" ${p.ready ? "" : `title="Not available yet: no data loaded. Click to see what's planned"`}>${esc(p.name)}${p.ready ? "" : `<small>not available yet</small>`}<span class="caret">▾</span></button>${on ? `<button class="pclear" data-pclear="${p.id}" title="Take the ${esc(p.name)} metrics off the map">clear</button>` : ""}</div>
+      <div class="dbody"><div class="dinner">${APP ? `<a class="appswitch" href="${location.pathname}" target="_blank" rel="noopener" title="All perspectives together, in a new tab">Atlas Multi ↗</a>` : ""}${PERSPECTIVES.filter(p => !(p.hidden && !p.ready) && (!APP || p.id === APP.perspective || (p.id === "analysis" && p.ready))).map(p => { const on = mappedIn(p.id) > 0, open = dockOpenP === p.id; return `<div class="pr${on ? " on" : ""}${p.ready ? "" : " locked"}" style="--c:${p.hue}">
+        <div class="phead"><button class="pname" data-open="${p.id}" aria-expanded="${open}" ${p.ready ? "" : `title="Not available yet: no data loaded. Click to see what's planned"`}>${esc(p.name)}${p.ready ? "" : `<small>not available yet</small>`}<span class="caret">▾</span></button>${on ? `<button class="pclear" data-pclear="${p.id}" title="Take the ${esc(p.name)} metrics off the map">clear</button>` : ""}${!APP && p.ready && p.id !== "analysis" ? `<a class="papp" href="${appHref(p.id)}" target="_blank" rel="noopener" title="Open as ${esc(appName(p.id))}, in its own tab">↗</a>` : ""}</div>
         ${open ? `<div class="pgroups">${groupsOfP(p).map(g => { const k = mappedIn(p.id, g) + cardIn(p.id, g), sel = pmOpen && pmOpen.p === p.id && pmOpen.g === g; return `<button class="pgroup${k ? " on" : ""}${sel ? " sel" : ""}" data-group="${esc(g)}" data-p="${p.id}" aria-expanded="${sel}">${esc(g || p.name)}${k ? `<span class="k">${k}</span>` : ""}</button>`; }).join("")}</div>` : ""}</div>`; }).join("")}</div></div>`;
   }
+  function mapOnly(ids) { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.filter(id => M[id]).forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); }
+  // ---------- 1.8: perspective apps ----------
+  const APP_FOR = { political: "politics", economic: "economic", social: "social", markets: "markets", health: "health", transport: "transport" };
+  const appHref = pid => location.pathname + "#app=" + (APP_FOR[pid] || pid);
+  const appName = pid => { const d = window.AtlasApps && AtlasApps.get(APP_FOR[pid]); return d ? d.name : "Atlas " + PER[pid].name; };
+  const APP = (() => { // the open app: its module if there is one, otherwise just the perspective on its own
+    if (!APP_ID) return null;
+    const def = window.AtlasApps && AtlasApps.get(APP_ID), pid = def ? def.perspective : Object.keys(APP_FOR).find(k => APP_FOR[k] === APP_ID) || APP_ID;
+    if (!PER[pid]) return null;
+    return Object.assign({ id: APP_ID, name: "Atlas " + PER[pid].name, perspective: pid, accent: PER[pid].hue, panels: [], tools: [], dataNeeds: [] }, def || {}, { short: (def ? def.name : PER[pid].name).replace(/^Atlas /, "").toLowerCase(), ok: PER[pid].ready && (!def || AtlasApps.ready(def)) });
+  })();
   function syncOn(pid) { const on = (PS.mapped[pid] || []).some(id => PS.active[id]); PS.on[pid] = on; PS.order = PS.order.filter(x => x !== pid); if (on) PS.order.push(pid); }
   function togglePersp(pid, on) { PS.on[pid] = on; PS.order = PS.order.filter(x => x !== pid); if (on) PS.order.push(pid); if (on) (PS.mapped[pid] || []).forEach(id => { PS.active[id] = true; }); repaint(); }
   // Clear every layer at once (Esc when nothing else is open, or the Clear all buttons); Undo puts them back
@@ -1454,6 +1469,7 @@
     if (!cpanel.hidden && CHART.drawn) renderChartBody();
     renderTray(); if (!$("cmp").hidden) renderCmp(); refreshGroupCards();
     if (pmOpen) renderPMenu(); if (!$("browse").hidden) renderLevelPicker();
+    notifyApps();
   }
   slider.addEventListener("input", () => { let d = +slider.value >= +slider.max ? viewHi() : +slider.value <= +slider.min ? viewLo() : fromMonthIdx(+slider.value); if (PS.step > 1 && d !== viewHi() && d !== viewLo()) d = Math.round(+d.slice(0, 4) / PS.step) * PS.step + "-07-01"; setDate(d); });
   dateIn.addEventListener("keydown", e => { if (e.key === "Escape") { dateIn.blur(); return; } if (e.key === "Enter") { const d = parseDMY(dateIn.value); if (d) { setDate(d); dateIn.blur(); } else { dateIn.classList.add("bad"); toast("Type the date as dd/mm/yy, e.g. 07/05/15"); } } });
@@ -1944,7 +1960,7 @@
     syncFocusColour(); veil.classList.add("on"); document.body.classList.add("focused");
     card.className = "card pinned"; card.innerHTML = cardHTML(code, true); card.hidden = false; hist.hidden = true;
     if (!(opts && opts.noFly)) flyTo(code, 0, true);
-    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList();
+    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList(); notifyApps();
   }
   function unfocus() {
     if (!state.focus && !state.pinned) return;
@@ -1952,7 +1968,7 @@
     veil.classList.remove("on"); document.body.classList.remove("focused"); veil.style.clipPath = ""; veil.style.webkitClipPath = ""; mind.innerHTML = ""; card.hidden = true; hist.hidden = true;
     setP("focus-lift", "fill-opacity", 0); setP("focus-edge", "line-opacity", 0); setP("focus-shadow", "line-opacity", 0);
     setTimeout(() => { if (!state.focus && map.getSource("focus")) map.getSource("focus").setData({ type: "FeatureCollection", features: [] }); }, 320);
-    renderTray(); renderProtestList();
+    renderTray(); renderProtestList(); notifyApps();
   }
   function syncFocusColour() { if (!FX) return; const c = LAST.fc[FX.code]; setP("focus-lift", "fill-color", c || (look.mode === "dark" ? "#2a3237" : "#ffffff")); }
   function updateOverlay() {
@@ -3689,6 +3705,50 @@
   $("pfoot").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; if (b.hasAttribute("data-psearch")) searchTicked(); else if (b.hasAttribute("data-pclear")) { picked = []; showHits(); renderBrowse(); } });
   $("plist").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; if (b.dataset.council) { bopen = bopen === b.dataset.council ? null : b.dataset.council; renderBrowse(); return; } if (b.dataset.place) { toggleTick(b.dataset.place); renderBrowse(); } });
 
+  // ---------- 1.8: the open app: its bar, panels and tools, and the ctx it gets ----------
+  const CTX = {
+    get app() { return APP; }, M, METRICS, P, PER, PARTY, POL, PR, MK, EL: window.ATLAS_EL || null, LOC: window.ATLAS_LOCAL || null, SPANS, CH, EN, ST, XL, WM,
+    esc, fmtInt, fmtBig, fmtPct, longDate, shortDate, dmy, nameOf, partyName, partyCol, LABEL, PLURAL_L, UKC, today: TODAY,
+    get date() { return state.date; }, get level() { return state.level; }, get focus() { return state.focus; }, get sel() { return state.sel.map(x => x.code); },
+    setDate: d => setDate(d), mapOnly, setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); },
+    focus: c => focus(c), view: (center, zoom) => map.flyTo({ center, zoom, duration: 1000 }), allCodesAt, popAt, seriesOf, resultFor, resultsOf: code => (RES[code] || []).map(decode), areaOf: c => AREA[c] || null, previousFor, ELX, GE_DAYS, metricSpan: id => metricSpan(M[id]),
+    openChart: o => openChart(o), openCmp: () => openCmp(), openProtestList: () => openProtestList(), openProtestCard: i => openProtestCard(i), openInfo: id => openMetricInfo(id),
+    sendToWS: it => sendToWS(it), toast, copy, download, searchNames, onDate: f => appListeners.push(f), openPanel: id => openAppPanel(id), store,
+    defineMetric: m => { if (!M[m.id]) def(m); PS.active[m.id] = true; }, repaint: () => repaint(),
+  };
+  window.AtlasCtx = CTX;
+  const appWins = {};
+  function openAppPanel(id) {
+    const x = [...APP.panels, ...APP.tools].find(p => p.id === id); if (!x) return;
+    const have = appWins[id]; if (have && WM.isOpen(have.el)) { WM.front(have.el); WM.pulse(have.el); return; }
+    const w = appWins[id] = have || WM.make({ type: "app-" + APP.id + "-" + id, title: x.title, dispose: false, min: x.min || { w: 340, h: 240 }, def: x.def });
+    w.el.classList.add("apppanel"); WM.open(w.el);
+    const draw = () => { if (!w.el.hidden) { try { x.render(CTX, w.body); } catch (e) { console.error(e); w.body.innerHTML = `<p class="aempty">Couldn't draw this: ${esc(e.message)}</p>`; } } };
+    draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
+  }
+  function renderAppsMenu() {
+    const el = $("apps-list"); if (!el) return;
+    el.innerHTML = (APP ? `<a class="btn" href="${location.pathname}" target="_blank" rel="noopener">Atlas Multi (all perspectives) ↗</a>` : "") + PERSPECTIVES.filter(p => !p.hidden).map(p => p.ready
+      ? `<a class="btn" href="${appHref(p.id)}" target="_blank" rel="noopener" style="--c:${p.hue}">Open as ${esc(appName(p.id))} ↗</a>`
+      : `<span class="btn dis" title="Not available yet: no ${esc(p.name.toLowerCase())} data is loaded">${esc(appName(p.id))}: not available yet</span>`).join("");
+  }
+  function bootApp() {
+    if (!APP_ID) return;
+    if (!APP) { toast("There's no such app: showing Atlas Multi."); return; }
+    document.title = APP.name; document.body.classList.add("appmode"); document.documentElement.style.setProperty("--app", APP.accent);
+    const bar = $("appbar");
+    if (!APP.ok) {
+      bar.innerHTML = `<b style="color:${APP.accent}">${esc(APP.name)}</b><span class="appna">Not available yet</span>`; bar.hidden = false;
+      const w = WM.make({ type: "app-na", title: APP.name + ": not available yet", html: `<p>No ${esc(PER[APP.perspective].name.toLowerCase())} data is loaded yet, so this app has nothing to show.</p>${(PER[APP.perspective].planned || []).length ? `<p>Planned:</p><ul>${PER[APP.perspective].planned.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}<p><a href="${location.pathname}">Back to Atlas Multi</a></p>` });
+      WM.open(w.el); return;
+    }
+    bar.innerHTML = `<b style="color:${APP.accent}">${esc(APP.name)}</b>${[...APP.panels, ...APP.tools].map(x => `<button class="btn sm${APP.tools.includes(x) ? " tool" : ""}" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("")}`;
+    bar.hidden = false; bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) openAppPanel(b.dataset.apanel); });
+    dockOpenP = APP.perspective; setFold(false);
+    if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) map.loaded() ? APP.init(CTX) : map.once("load", () => APP.init(CTX)); }
+  }
+  $("brand").addEventListener("click", renderAppsMenu);
+
   // ---------- start ----------
   draggable(legend, $("legend-grip"), "atlas-031-legend-pos", positionLegend);
   resizable(legend, "atlas-061-legend-size", { minW: 240, minH: 120, after: positionLegend });
@@ -3704,7 +3764,7 @@
   slider.value = monthIdx(state.date); dateIn.value = dmy(state.date);
   document.documentElement.dataset.mode = look.mode;
   curPlan = EN.plan(planMetrics(), PS.prefs); syncRange(true);
-  renderLegend(); renderTNote();
+  renderLegend(); renderTNote(); bootApp();
   document.documentElement.style.setProperty("--veil-a", (0.55 * TOOLS.soften).toFixed(3));
   document.documentElement.style.setProperty("--veil-blur", (3 * TOOLS.soften * TOOLS.soften * 1.6).toFixed(2) + "px");
 })();
