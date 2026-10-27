@@ -78,7 +78,7 @@ Every downloaded file is listed, with its URL, licence, date and SHA-256, in `pi
 
 Atlas 1.6 is about the data: what you can do with it, where you can put it, and how much of the map stays in view while you work. Built on 1.5 (Ruben's 0.3.3 merged with Mo's 1.4). Earlier versions stay unchanged in their own folders.
 
-## From 1.6
+
 
 **Analyse relationships (ATLAS menu → Analyse relationships…).** Compares metrics without picking places. Tick metrics on the left, choose the level (councils, constituencies…), and choose **Within**: the whole UK, one nation or region, or your selection. You can also switch to **Over time** for one place. The methods offered depend on how many metrics are ticked:
 
@@ -388,6 +388,8 @@ python3 pipeline/fetch_politics.py         # council control and leaders from Wi
 python3 pipeline/fetch_protests.py         # protests from Wikipedia and Wikidata
 python3 pipeline/build.py                  # everything in data/ (runs build_politics, build_series, build_protests)
 python3 pipeline/build_constituencies.py   # data/constituencies*.js: 2024 seats, plus the 2010 and 1997 sets and every seat's MP history
+python3 pipeline/fetch_extra.py           # health, housing and debt sources -> pipeline/sources/extra_raw/ (about 120 MB, not committed)
+python3 pipeline/build_extra.py           # data/extra.js and data/extra_wards.js (needs: pip install python-calamine)
 python3 pipeline/convert_old_constituencies.py <unzipped folder>   # one-off: ONS 2001/2005 shapefiles -> geometry/constituencies_1997.geojson (needs pyshp, pyproj)
 
 # 1.7: elections, referendums, council tax, councils, representation, ideology, hex maps
@@ -420,10 +422,10 @@ charts.js                        charts and story views (Mo's 1.4); interactive 
 stats.js                         statistics for Analyse (1.6): correlations with p-values, regression, partial correlation, PCA, k-means, Moran's I, lags
 engine.js                        decides calculations and visual encodings for each kind of data
 xlsx.js                          writes Excel files in the browser
-data/                            generated: uk-data.js, uk-geo.js, politics.js, series.js, protests.js, constituencies.js, markets.js, wards/, os-style.js, edits.js
+data/                            generated: uk-data.js, uk-geo.js, politics.js, series.js, protests.js, constituencies.js, markets.js, extra.js, extra_wards.js, wards/, os-style.js, edits.js
 pipeline/                        fetch_*.py, build*.py, import_acled.py, xlsx_read.py, sources/, geometry/
 ```
 
 ## Credits
 
-Contains OS data © Crown copyright and database right 2026. © OpenStreetMap contributors. Tiles and imagery © MapTiler. ONS data and boundaries: Open Government Licence v3.0. Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Political and protest information: Wikipedia (CC BY-SA 4.0) and Wikidata (CC0). Map engine: MapLibre GL JS.
+Contains OS data © Crown copyright and database right 2026. © OpenStreetMap contributors. Tiles and imagery © MapTiler. ONS data and boundaries: Open Government Licence v3.0. Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Health indicators: Office for Health Improvement and Disparities (Fingertips), Open Government Licence v3.0. House prices: HM Land Registry data © Crown copyright and database right 2026, Open Government Licence v3.0 (UK HPI includes Registers of Scotland and Land & Property Services Northern Ireland data). Census 2021, rents, affordability, public sector finances: ONS, Open Government Licence v3.0. Dwelling stock and council finance: MHCLG, Open Government Licence v3.0. Political and protest information: Wikipedia (CC BY-SA 4.0) and Wikidata (CC0). Map engine: MapLibre GL JS.
