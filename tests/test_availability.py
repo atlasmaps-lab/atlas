@@ -14,6 +14,7 @@ def main():
     with server() as base, browser() as b:
         page = open_atlas(b, base, (1280, 800))
         js = page.evaluate
+        page.click("#dock [data-fold]")   # the Perspectives panel starts folded
         rep.check(page.is_visible("#dock .dt-row [data-dclear]"), "Clear all is at the top of the Perspectives panel")
         rep.check(js("() => document.querySelectorAll('#dock [data-pclear]').length") == 1, "only Political (which has something ticked) shows a “clear” link")
         page.click("#dock [data-dclear]"); page.wait_for_timeout(200)

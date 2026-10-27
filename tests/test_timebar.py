@@ -28,7 +28,7 @@ def main():
         page = open_atlas(b, base, (1440, 900))
         for wpx in (320, 480, 800, "full"):
             page.evaluate("w => { const t = document.getElementById('timebar'); t.style.width = (w === 'full' ? innerWidth - 16 : w) + 'px'; t.style.minWidth = '0'; }", wpx)
-            page.wait_for_timeout(250)
+            page.wait_for_timeout(600)   # the labels redraw after the bar's size settles
             r = page.evaluate(LABELS)
             print(f"  width {wpx}: {r}")
             rep.check(r["overlap"] == 0, f"{wpx}: no labels overlap ({r['n']} labels, tier {r['tier']})")
@@ -55,10 +55,10 @@ def main():
         lo, hi, d, *_ = range_for(["mp_tenure"])
         rep.check(d >= lo, f"a date before the new range (1975) moves to its start ({d})")
         # Full range: 1974 to today, with the years without data hatched
-        page.click("#tb-full"); page.wait_for_timeout(200)
+        page.click("#tb-more"); page.click("#tb-full"); page.wait_for_timeout(200)
         r = page.evaluate("() => ({ min: document.getElementById('slider').min, nd: document.querySelectorAll('#marks .tb-nd').length, txt: [...document.querySelectorAll('#marks .tb-nd')].map(e => e.textContent).join(',') })")
         rep.check(r["nd"] >= 1 and "no data" in r["txt"], f"Full range hatches the years with no data ({r})")
-        page.click("#tb-full")
+        page.click("#tb-full")   # the ⋯ menu is still open
         lo, hi, d, *_ = range_for(["protest_events"])
         rep.check(lo[:4] <= "1980" and hi[:4] >= "2020", f"protests only: the span of their events ({lo} to {hi})")
         rep.check(not page.errors, "no console errors" + (f": {page.errors}" if page.errors else ""))

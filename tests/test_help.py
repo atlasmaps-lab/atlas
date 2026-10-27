@@ -15,6 +15,7 @@ def main():
     with server() as base, browser() as b:
         page = open_atlas(b, base, (1440, 900))
         js = page.evaluate
+        page.click("#dock [data-fold]")   # the Perspectives panel starts folded
         js("() => AtlasDebug.mapOnly(['gdp_per_head'])"); page.wait_for_timeout(300)
         page.click("#legend [data-info='gdp_per_head']"); page.wait_for_timeout(300)
         txt = js("() => document.querySelector('.wmwin[data-wm-type=info]:not([hidden])').textContent")

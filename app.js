@@ -1396,7 +1396,7 @@
   });
   function closePMenu() { if (!pmOpen) return false; pmOpen = null; renderDock(); renderPMenu(); return true; }
   // folding the panel
-  const dockFold = { folded: false, timer: null, hover: false };
+  const dockFold = { folded: true, timer: null, hover: false };   // 1.8: starts folded (a calmer first screen)
   function setFold(f) { dockFold.folded = f; if (f) { pmOpen = null; renderPMenu(); } renderDock(); armFold(); }
   function armFold() { clearTimeout(dockFold.timer); if (dockFold.folded) return; dockFold.timer = setTimeout(() => { if (dockFold.hover || document.activeElement && (dock.contains(document.activeElement) || pmenu.contains(document.activeElement)) && document.activeElement !== document.body) return armFold(); setFold(true); }, 15000); }
   [dock, pmenu].forEach(el => { el.addEventListener("pointerenter", () => { dockFold.hover = true; armFold(); }); el.addEventListener("pointerleave", () => { dockFold.hover = false; armFold(); }); ["pointerdown", "keydown", "wheel"].forEach(ev => el.addEventListener(ev, armFold)); });
@@ -1456,7 +1456,7 @@
     if (pmOpen) renderPMenu(); if (!$("browse").hidden) renderLevelPicker();
   }
   slider.addEventListener("input", () => { let d = +slider.value >= +slider.max ? viewHi() : +slider.value <= +slider.min ? viewLo() : fromMonthIdx(+slider.value); if (PS.step > 1 && d !== viewHi() && d !== viewLo()) d = Math.round(+d.slice(0, 4) / PS.step) * PS.step + "-07-01"; setDate(d); });
-  dateIn.addEventListener("keydown", e => { if (e.key === "Enter") { const d = parseDMY(dateIn.value); if (d) { setDate(d); dateIn.blur(); } else { dateIn.classList.add("bad"); toast("Type the date as dd/mm/yy, e.g. 07/05/15"); } } });
+  dateIn.addEventListener("keydown", e => { if (e.key === "Escape") { dateIn.blur(); return; } if (e.key === "Enter") { const d = parseDMY(dateIn.value); if (d) { setDate(d); dateIn.blur(); } else { dateIn.classList.add("bad"); toast("Type the date as dd/mm/yy, e.g. 07/05/15"); } } });
   dateIn.addEventListener("blur", () => { if (!parseDMY(dateIn.value)) dateIn.value = dmy(state.date); });
   $("now").addEventListener("click", () => { stopPlay(); setDate(viewHi()); });
   const PLAY_ICON = '<svg class="ico" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>', PAUSE_ICON = '<svg class="ico" viewBox="0 0 24 24"><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z"/></svg>';
@@ -1504,9 +1504,13 @@
   function placeCur() { // the date above the handle (the thumb is 14 px wide)
     const c = $("tcur"), tr = slider.getBoundingClientRect(); if (!c || !tr.width) return;
     const lo = +slider.min, hi = +slider.max, f = hi > lo ? (monthIdx(state.date) - lo) / (hi - lo) : 1, x = 7 + clamp(f, 0, 1) * (tr.width - 14);
-    c.textContent = tr.width < 220 ? monYr(state.date) : longDate(state.date);
+    c.textContent = longDate(state.date); if (c.offsetWidth > tr.width * 0.55) c.textContent = monYr(state.date);
     const w = c.offsetWidth; c.style.left = clamp(x - w / 2, 0, Math.max(0, tr.width - w)).toFixed(1) + "px";
   }
+  $("tb-more").addEventListener("click", e => { e.stopPropagation(); const p = $("tb-pop"); p.hidden = !p.hidden; $("tb-more").setAttribute("aria-expanded", String(!p.hidden)); });
+  document.addEventListener("mousedown", e => { if (!$("tb-pop").hidden && !e.target.closest("#tb-pop,#tb-more")) $("tb-pop").hidden = true; });
+  $("tcur").addEventListener("click", () => { timebar.classList.add("typing"); dateIn.focus(); dateIn.select(); });
+  dateIn.addEventListener("blur", () => timebar.classList.remove("typing"));
   $("tb-full").addEventListener("click", () => { TB.full = !TB.full; store.set("atlas-18-tb-full", TB.full); syncRange(); if (TB.full) toast("Full range: 1974 to today. Hatched years have no data for what's on the map."); });
   if (window.ResizeObserver) new ResizeObserver(() => renderMarks()).observe($("marks"));
   function renderTNote() {
@@ -2471,7 +2475,9 @@
       ${SLIDERS.map(([k, l, t]) => `<div class="tb-slider" title="${esc(t)}"><label for="tb-${k}">${l}</label><input type="range" id="tb-${k}" data-sl="${k}" min="0" max="1" step="0.01" value="${TOOLS[k]}"><input type="number" class="tb-num" data-sn="${k}" min="0" max="1" step="0.01" value="${(+TOOLS[k]).toFixed(2)}" aria-label="${esc(l)} value"></div>`).join("")}
       <div class="tb-foot"><button class="btn" data-treset>Reset to defaults</button><span>All sliders run from 0 to 1.</span></div>`;
   }
-  tbBtn.addEventListener("click", () => { const open = tbMenu.hidden; tbMenu.hidden = !open; tbBtn.setAttribute("aria-expanded", String(open)); if (open) renderTools(); });
+  function toggleTools(force) { const open = force != null ? force : tbMenu.hidden; tbMenu.hidden = !open; tbBtn.setAttribute("aria-expanded", String(open)); if (open) { closeMenu(); renderTools(); } }
+  tbBtn.addEventListener("click", () => toggleTools());
+  $("open-tools").addEventListener("click", () => toggleTools(true));
   tbMenu.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     if (b.dataset.tool) { const t = b.dataset.tool; if (t === "copy") copyView(); else if (t === "shot") captureMap(); else setTool(state.tool === t ? null : t); renderTools(); }
@@ -2756,7 +2762,8 @@
     const label = t => t.id === "ws" ? `Workspace${proj().items.length ? ` (${proj().items.length})` : ""}` : t.label;
     tabsEl.innerHTML = TABS.map(t => `<button class="tab${on(t) ? " on" : ""}" data-tab="${t.id}">${icon(t)}<span>${esc(label(t).length > 28 ? label(t).slice(0, 27) + "…" : label(t))}</span>${t.id === "map" || t.id === "ws" ? "" : `<i data-tabx="${t.id}" aria-label="Close tab">×</i>`}</button>`).join("") +
       `<button class="tab tool${VIEW.mode === "split" ? " on" : ""}" data-split title="Map and workspace side by side (drag the divider to change the share)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></button><button class="tab tool" data-overview title="All tabs (or swipe up over the top bar)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>`;
-    tabsEl.hidden = false; document.body.classList.add("has-tabs");
+    const more = TABS.length > 2 || proj().items.length > 0 || VIEW.mode !== "map";   // 1.8: just the map? no tab bar (the workspace is in the ATLAS menu)
+    tabsEl.hidden = !more; document.body.classList.toggle("has-tabs", more);
   }
   function activateTab(id) {
     activeTab = id; renderTabs(); const t = TABS.find(x => x.id === id);
@@ -2785,6 +2792,7 @@
   // ---------- hot zones: panels hide until the pointer nears an edge ----------
   let hotT = null;
   document.addEventListener("mousemove", e => {
+    document.body.classList.toggle("near-right", e.clientX > innerWidth - 72 || !!e.target.closest(".maplibregl-ctrl-top-right,#notes-handle"));
     if (!PS.hot) return;
     const L = e.clientX < 36 || !!e.target.closest("#dock,#legend,#pmenu"), B = e.clientY > window.innerHeight - 44 || !!e.target.closest("#timebar,#tray");
     document.body.classList.toggle("show-left", L); document.body.classList.toggle("show-bottom", B);
@@ -2797,7 +2805,10 @@
       <textarea id="nt-text" placeholder="A thought, a pattern to check, a question for Ruben…"></textarea><label class="ck"><input type="checkbox" id="nt-view" checked>Remember this map view and date</label><button class="btn primary" data-ntadd>Add note</button>
       <div class="nt-list">${E.notes.slice().reverse().map(n => `<div class="nt"><p>${esc(n.text)}</p><small>${new Date(n.t).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}${n.view ? ` · view of ${esc(dmy(n.view.date))}` : ""}</small><span>${n.view ? `<button class="btn" data-ntgo="${n.id}">Go there</button>` : ""}<button class="btn" data-ntdel="${n.id}" aria-label="Delete note">×</button></span></div>`).join("") || `<div class="tip">No notes yet. Notes are saved in this browser and included when you export your edits.</div>`}</div>`;
   }
-  notesH.addEventListener("click", () => { notesEl.hidden = !notesEl.hidden; notesH.classList.toggle("open", !notesEl.hidden); if (!notesEl.hidden) { renderNotes(); $("nt-text").focus(); } });
+  function toggleNotes(force) { notesEl.hidden = force != null ? !force : !notesEl.hidden; notesH.classList.toggle("open", !notesEl.hidden); document.body.classList.toggle("notes-open", !notesEl.hidden); if (!notesEl.hidden) { closeMenu(); renderNotes(); $("nt-text").focus(); } }
+  notesH.addEventListener("click", () => toggleNotes());
+  $("open-notes").addEventListener("click", () => toggleNotes(true));
+  $("open-ws").addEventListener("click", () => { closeMenu(); goTab("ws"); });
   notesEl.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     if (b.hasAttribute("data-ntx")) { notesEl.hidden = true; notesH.classList.remove("open"); }
