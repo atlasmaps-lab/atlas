@@ -55,9 +55,8 @@ Atlas 1.8 makes Atlas easier to use and to trust: windows that stay where you ca
 
 **Fixed along the way:** "Copy data (CSV)" buttons called a function that didn't exist; the time bar slid under the Perspectives panel at 1024 px; the tab bar ran under Tools on narrow screens; tables opened in their own tab were hidden behind floating windows.
 
-## Atlas 1.7 (previous version)
 
-## What's new in 1.7
+## What's new in 1.7 (previous version)
 
 **Honest numbers.** Every new metric carries:
 - **How this is worked out:** a one-line formula on the pinned card and in the export's About sheet.

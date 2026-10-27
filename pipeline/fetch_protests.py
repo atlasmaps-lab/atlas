@@ -100,12 +100,12 @@ def get_json(url, tries=4):
             json.dump(j, open(f, "w")); return j
         except Exception:
             say(f"retry {k + 1} ({out[:80]!r}) for {url[:120]}"); time.sleep(2 + 3 * k)
-    return {}
+    raise SystemExit(f"Gave up after {tries} tries (rate limited or offline): {url[:160]}. Nothing was written; run again later (answers so far are cached).")
 get_json.last = 0.0
 
 
 def api(params, host="en.wikipedia.org"):
-    return get_json(f"https://{host}/w/api.php?" + urllib.parse.urlencode(dict(params, format="json", formatversion=2, maxlag=5)), 8)
+    return get_json(f"https://{host}/w/api.php?" + urllib.parse.urlencode(dict(params, format="json", formatversion=2, maxlag=5)), 10)
 
 
 def candidates():
