@@ -377,7 +377,10 @@
   const origOpacity = {};
   function setP(id, prop, v) { if (!map.getLayer(id)) return; try { map.setPaintProperty(id, prop, v); } catch (e) {} }
   function widthExpr(stops, k) { const e = ["interpolate", ["linear"], ["zoom"]]; stops.forEach(([z, w]) => e.push(z, +(w * k).toFixed(3))); return e; }
-  const LINE_STOPS = { "ward-line": [[9.5, 0.4], [14, 1.2]], "constituency-line": [[5, 0.6], [12, 1.6]], "council-line": [[7, 0.5], [12, 1.6]], "region-line": [[5.5, 0.8], [9, 2]], "nation-line": [[4, 1], [9, 2.6]] };
+  // Boundary lines keep the same on-screen thickness at every zoom (pixels), so they look the same zoomed out and zoomed in.
+  // Each sits on a soft halo ("-case") so it stays readable over busy basemap detail. Dash patterns are in multiples of the width.
+  const LINE_W = { "ward-line": 1.3, "constituency-line": 1.5, "council-line": 1.5, "region-line": 1.6, "nation-line": 1.8 };
+  const CASE_COL = { light: "#ffffff", dark: "#0e1518", cvdLight: "#ffffff", cvdDark: "#000000" };
   function applyLook(first) {
     document.documentElement.dataset.mode = look.mode;
     if (key && OS.palettes) { const pal = OS.palettes[paletteKey()]; Object.entries(pal).forEach(([id, props]) => Object.entries(props).forEach(([p, v]) => setP(id, p, v))); }
@@ -385,7 +388,7 @@
     ["ward-line", "council-line", "region-line"].forEach(id => setP(id, "line-color", o.line)); setP("constituency-line", "line-color", o.pcon); setP("nation-line", "line-color", o.nation);
     LEVELS.forEach(l => { setP(l + "-sel", "line-color", o.sel); setP(l + "-fill", "fill-color", o.hover); });
     setP("focus-edge", "line-color", o.edge);
-    Object.entries(LINE_STOPS).forEach(([id, st]) => setP(id, "line-width", widthExpr(st, look.thick)));
+    Object.entries(LINE_W).forEach(([id, w]) => { setP(id, "line-width", +(w * look.thick).toFixed(2)); setP(id + "-case", "line-width", +(w * look.thick + 2.2).toFixed(2)); setP(id + "-case", "line-color", CASE_COL[paletteKey()]); });
     LEVELS.forEach(l => setP(l + "-sel", "line-width", ["case", ["boolean", ["feature-state", "sel"], false], 2.8 * Math.max(1, look.thick * .8), ["boolean", ["feature-state", "hover"], false], 2 * Math.max(1, look.thick * .8), 0]));
     if (!plain) { try { applyType(first); } catch (e) {} }
     syncMenu(); store.set("atlas-uk-look", look);
@@ -481,10 +484,12 @@
     LEVELS.forEach(l => map.addLayer({ id: l + "-fill", type: "fill", source: SRC[l], minzoom: VIS[l][0], maxzoom: VIS[l][1],
       paint: { "fill-color": "#3b5b78", "fill-opacity": ["case", ["boolean", ["feature-state", "sel"], false], 0.18, ["boolean", ["feature-state", "hover"], false], 0.14, 0], "fill-opacity-transition": { duration: 250 } } }, before));
     map.addLayer({ id: "grid-line", type: "line", source: "grid", paint: { "line-color": "#1f2a2e", "line-opacity": 0.28, "line-width": ["case", ["==", ["get", "major"], 1], 1, 0.5] } }, before);
-    map.addLayer({ id: "ward-line", type: "line", source: "wards", minzoom: Z.ward - 0.3, paint: { "line-color": "#8a7d92", "line-width": 1, "line-opacity": ["interpolate", ["linear"], ["zoom"], Z.ward - 0.3, 0, Z.ward, 0.7], "line-dasharray": [2, 1.5] } }, before);
-    map.addLayer({ id: "council-line", type: "line", source: "councils", minzoom: Z.council - 0.3, paint: { "line-color": "#7d6f86", "line-width": 1, "line-opacity": ["interpolate", ["linear"], ["zoom"], Z.council - 0.3, 0, Z.council, 0.8] } }, before);
-    map.addLayer({ id: "constituency-line", type: "line", source: "constituencies", layout: { visibility: "none" }, paint: { "line-color": "#8a6d3b", "line-width": 1, "line-opacity": 0.85, "line-dasharray": [4, 2] } }, before);
-    map.addLayer({ id: "region-line", type: "line", source: "regions", minzoom: Z.region - 0.3, paint: { "line-color": "#7d6f86", "line-width": 1, "line-opacity": 0.85, "line-dasharray": [3, 1.5] } }, before);
+    [["ward-line", "wards", Z.ward - 0.3], ["council-line", "councils", Z.council - 0.3], ["constituency-line", "constituencies", 0], ["region-line", "regions", Z.region - 0.3], ["nation-line", "nations", 0]].forEach(([id, src, mz]) =>
+      map.addLayer({ id: id + "-case", type: "line", source: src, minzoom: mz, layout: { "line-join": "round", visibility: id === "constituency-line" ? "none" : "visible" }, paint: { "line-color": "#ffffff", "line-width": 3, "line-opacity": 0, "line-blur": 0.6 } }, before));
+    map.addLayer({ id: "ward-line", type: "line", source: "wards", minzoom: Z.ward - 0.3, paint: { "line-color": "#8a7d92", "line-width": 1, "line-opacity": ["interpolate", ["linear"], ["zoom"], Z.ward - 0.3, 0, Z.ward, 0.9], "line-dasharray": [4, 3] } }, before);
+    map.addLayer({ id: "council-line", type: "line", source: "councils", minzoom: Z.council - 0.3, paint: { "line-color": "#7d6f86", "line-width": 1, "line-opacity": ["interpolate", ["linear"], ["zoom"], Z.council - 0.3, 0, Z.council, 0.9] } }, before);
+    map.addLayer({ id: "constituency-line", type: "line", source: "constituencies", layout: { visibility: "none" }, paint: { "line-color": "#8a6d3b", "line-width": 1, "line-opacity": 0.9, "line-dasharray": [5, 2.5] } }, before);
+    map.addLayer({ id: "region-line", type: "line", source: "regions", minzoom: Z.region - 0.3, paint: { "line-color": "#7d6f86", "line-width": 1, "line-opacity": 0.9, "line-dasharray": [4, 2.5] } }, before);
     map.addLayer({ id: "nation-line", type: "line", source: "nations", paint: { "line-color": "#6d5a7a", "line-width": 1, "line-opacity": 0.9 } }, before);
     LEVELS.forEach(l => map.addLayer({ id: l + "-sel", type: "line", source: SRC[l], paint: { "line-color": "#1f2a2e", "line-width": 0 } }, before));
     LEVELS.forEach(l => {
@@ -952,7 +957,9 @@
   const FINE = ["ward", "constituency", "council", "region", "nation"];
   const fillIds = l => ["pf-" + l, ...[0, 1, 2, 3, 4].map(k => `pdt-${l}-${k}`), l + "-fill", "pd-" + l, "pb-" + l];
   const LINE_OF = { nation: "nation-line", region: "region-line", council: "council-line", constituency: "constituency-line", ward: "ward-line" };
-  const AUTO_LINE = { nation: [0, 0.9], region: [Z.region - 0.3, 0.85], council: [Z.council - 0.3, ["interpolate", ["linear"], ["zoom"], Z.council - 0.3, 0, Z.council, 0.8]], ward: [Z.ward - 0.3, ["interpolate", ["linear"], ["zoom"], Z.ward - 0.3, 0, Z.ward, 0.7]] };
+  const AUTO_LINE = { nation: [0, 0.9], region: [Z.region - 0.3, 0.9], council: [Z.council - 0.3, ["interpolate", ["linear"], ["zoom"], Z.council - 0.3, 0, Z.council, 0.9]], ward: [Z.ward - 0.3, ["interpolate", ["linear"], ["zoom"], Z.ward - 0.3, 0, Z.ward, 0.9]] };
+  // halo opacity follows its line's opacity (which may itself be a zoom expression), at about two thirds strength
+  const caseOp = o => typeof o === "number" ? +(o * 0.6).toFixed(2) : o.map((x, i) => i > 3 && i % 2 === 0 ? +(x * 0.6).toFixed(2) : x);
   function applyLevels() {
     store.set("atlas-031-levels", LV);
     if (!map.getLayer || !map.getLayer("pf-nation")) { syncLevel(); return; }
@@ -960,8 +967,9 @@
       const on = LV.auto ? l !== "constituency" : l === LV.active, range = LV.auto ? VIS[l] : [0, 24];
       fillIds(l).forEach(id => { if (!map.getLayer(id)) return; map.setLayoutProperty(id, "visibility", on ? "visible" : "none"); map.setLayerZoomRange(id, range[0], range[1]); });
       const ln = LINE_OF[l], a = AUTO_LINE[l]; if (!map.getLayer(ln)) return;
-      if (LV.auto) { map.setLayoutProperty(ln, "visibility", a ? "visible" : "none"); if (a) { map.setLayerZoomRange(ln, a[0], 24); setP(ln, "line-opacity", a[1]); } }
-      else { const show = LV.on.includes(l) || l === "nation"; map.setLayoutProperty(ln, "visibility", show ? "visible" : "none"); map.setLayerZoomRange(ln, 0, 24); setP(ln, "line-opacity", l === "ward" ? 0.7 : 0.85); }
+      [ln, ln + "-case"].forEach(id => { if (!map.getLayer(id)) return; const cs = id !== ln;
+        if (LV.auto) { map.setLayoutProperty(id, "visibility", a ? "visible" : "none"); if (a) { map.setLayerZoomRange(id, a[0], 24); setP(id, "line-opacity", cs ? caseOp(a[1]) : a[1]); } }
+        else { const show = LV.on.includes(l) || l === "nation", op = 0.9; map.setLayoutProperty(id, "visibility", show ? "visible" : "none"); map.setLayerZoomRange(id, 0, 24); setP(id, "line-opacity", cs ? caseOp(op) : op); } });
     });
     clearHover(); syncLevel(); loadVisibleWards(); renderLevelPicker(); syncPcon();
   }
