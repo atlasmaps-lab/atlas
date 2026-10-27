@@ -1,0 +1,362 @@
+code,name,leader,control
+E06000001,Hartlepool,,No overall control
+E06000002,Middlesbrough,Mayor: Chris Cooke (Labour),Labour
+E06000003,Redcar and Cleveland,Leader: Alec Brown (Labour),No overall control
+E06000004,Stockton-on-Tees,Leader: Lisa Evans (Labour),No overall control
+E06000005,Darlington,,No overall control
+E06000006,Halton,Leader: Angela Ball (Labour),Labour
+E06000007,Warrington,Leader: Hans Mundry (Labour),Labour
+E06000008,Blackburn with Darwen,Leader: Phil Riley (Labour),No overall control
+E06000009,Blackpool,Leader: Lynn Williams (Labour),Labour
+E06000010,"Kingston upon Hull, City of",Leader: Mike Ross (Liberal Democrat),No overall control
+E06000011,East Riding of Yorkshire,Leader: Anne Handley (Conservative),No overall control
+E06000012,North East Lincolnshire,Leader: Oliver Freeston (Reform UK),No overall control
+E06000013,North Lincolnshire,Leader: Rob Waltham (Conservative),Conservative
+E06000014,York,Leader: Claire Douglas (Labour),Labour
+E06000015,Derby,Leader: Nadine Peatfield (Labour),No overall control
+E06000016,Leicester,City Mayor: Peter Soulsby (Labour),Labour
+E06000017,Rutland,Leader: Christine Wise (Liberal Democrats),No overall control
+E06000018,Nottingham,Leader: Neghat Khan (Labour),Labour
+E06000019,"Herefordshire, County of",Leader: Jonathan Lester (Conservative),No overall control
+E06000020,Telford and Wrekin,Leader: Lee Carter (Labour),Labour
+E06000021,Stoke-on-Trent,Leader: Jane Ashworth (Labour),Labour
+E06000022,Bath and North East Somerset,Leader: Kevin Guy (Liberal Democrat),Liberal Democrats
+E06000023,"Bristol, City of",Leader: Tony Dyer (Green),No overall control
+E06000024,North Somerset,Leader: Mike Bell (Liberal Democrat),No overall control
+E06000025,South Gloucestershire,Leader: Maggie Tyrrell (Liberal Democrat),No overall control
+E06000026,Plymouth,Leader: Tudor Evans (Labour),Labour
+E06000027,Torbay,Leader: David Thomas (Conservative),No overall control
+E06000030,Swindon,Leader: Gary Sumner (Conservative),No overall control
+E06000031,Peterborough,Leader: Shabina Qayyum (Labour),No overall control
+E06000032,Luton,Leader: Amjid Ali (Liberal Democrats),Labour
+E06000033,Southend-on-Sea,Leader: Daniel Cowan (Labour),No overall control
+E06000034,Thurrock,Leader: Richard Bingley (Reform UK),Reform UK
+E06000035,Medway,Leader: Vince Maple (Labour),Labour
+E06000036,Bracknell Forest,Leader: Helen Purnell (Labour),Labour
+E06000037,West Berkshire,Leader: Jeff Brooks (Liberal Democrats),Liberal Democrat
+E06000038,Reading,Leader: Liz Terry (Labour),Labour
+E06000039,Slough,Leader: Wal Chahal (Conservative),No overall control
+E06000040,Windsor and Maidenhead,Leader: Simon Werner (Liberal Democrat),Liberal Democrat
+E06000041,Wokingham,Leader: Stephen Conway (Liberal Democrat),Liberal Democrat
+E06000042,Milton Keynes,Leader: Jane Carr (Liberal Democrat),No overall control
+E06000043,Brighton and Hove,Leader: Bella Sankey (Labour),Labour
+E06000044,Portsmouth,Leader: Steve Pitt (Liberal Democrat),Liberal Democrat
+E06000045,Southampton,Leader: Sarah Bogle (Labour),No overall control
+E06000046,Isle of Wight,Leader: Jonathan Bacon (Independent),No overall control
+E06000047,County Durham,Leader: Andrew Husband (Reform UK),Reform UK
+E06000049,Cheshire East,Leader: Nick Mannion (Labour),No overall control
+E06000050,Cheshire West and Chester,Leader: Louise Gittins (Labour),No overall control
+E06000051,Shropshire,Leader: Heather Kidd (Liberal Democrats),Liberal Democrat
+E06000052,Cornwall,Leader: Leigh Frost (Liberal Democrats),No overall control
+E06000053,Isles of Scilly,,Independent
+E06000054,Wiltshire,Leader: Ian Thorn (Liberal Democrats),No overall control
+E06000055,Bedford,Mayor: Tom Wootton (Conservative),No overall control
+E06000056,Central Bedfordshire,Leader: Adam Zerny (Independent),No overall control
+E06000057,Northumberland,Leader: Glen Sanderson (Conservative),No overall control
+E06000058,"Bournemouth, Christchurch and Poole",Leader: Millie Earl (Liberal Democrats),No overall control
+E06000059,Dorset,Leader: Nick Ireland (Liberal Democrats),Liberal Democrat
+E06000060,Buckinghamshire,Leader: Steve Broadbent (Conservative),Conservative
+E06000061,North Northamptonshire,Leader: Martin Griffiths (Reform UK),Reform UK
+E06000062,West Northamptonshire,Leader: Mark Arnull (Reform UK),Reform UK
+E06000063,Cumberland,Leader: Mark Fryer (Labour),Labour
+E06000064,Westmorland and Furness,Leader: Jonathan Brook (Liberal Democrats),Liberal Democrats
+E06000065,North Yorkshire,Leader: Carl Les (Conservative),No overall control
+E06000066,Somerset,Leader: Bill Revans (Liberal Democrats),Liberal Democrat
+E07000008,Cambridge,Leader: Katie Thornburrow (Labour),No overall control
+E07000009,East Cambridgeshire,,Conservative
+E07000010,Fenland,,Conservative
+E07000011,Huntingdonshire,Leader: Sarah Conboy (Liberal Democrat),No overall control
+E07000012,South Cambridgeshire,,Liberal Democrat
+E07000032,Amber Valley,,Labour
+E07000033,Bolsover,,Labour
+E07000034,Chesterfield,,Labour
+E07000035,Derbyshire Dales,,No overall control
+E07000036,Erewash,,Labour
+E07000037,High Peak,Leader: Anthony McKeown (Labour),Labour
+E07000038,North East Derbyshire,,No overall control
+E07000039,South Derbyshire,,Labour
+E07000040,East Devon,,No overall control
+E07000041,Exeter,Leader: Philip Bialyk (Labour),No overall control
+E07000042,Mid Devon,,Liberal Democrat
+E07000043,North Devon,,Liberal Democrat
+E07000044,South Hams,,Liberal Democrat
+E07000045,Teignbridge,,Liberal Democrat
+E07000046,Torridge,,Independent
+E07000047,West Devon,,No overall control
+E07000061,Eastbourne,Leader: Stephen Holt (Liberal Democrat),Liberal Democrat
+E07000062,Hastings,Leader: Glenn Haffenden (Green),Green
+E07000063,Lewes,,No overall control
+E07000064,Rother,,No overall control
+E07000065,Wealden,,No overall control
+E07000066,Basildon,,No overall control
+E07000067,Braintree,,Conservative
+E07000068,Brentwood,,No overall control
+E07000069,Castle Point,,The People's Independent Party
+E07000070,Chelmsford,,Liberal Democrat
+E07000071,Colchester,,No overall control
+E07000072,Epping Forest,,No overall control
+E07000073,Harlow,Leader: Dan Swords (Conservative),Conservative
+E07000074,Maldon,,No overall control
+E07000075,Rochford,,No overall control
+E07000076,Tendring,,No overall control
+E07000077,Uttlesford,,Independent
+E07000078,Cheltenham,Leader: Rowena Hay (Liberal Democrats),Liberal Democrat
+E07000079,Cotswold,,Liberal Democrat
+E07000080,Forest of Dean,,No overall control
+E07000081,Gloucester,Leader: Vacant,No overall control
+E07000082,Stroud,,No overall control
+E07000083,Tewkesbury,,No overall control
+E07000084,Basingstoke and Deane,,No overall control
+E07000085,East Hampshire,,No overall control
+E07000086,Eastleigh,,Liberal Democrat
+E07000087,Fareham,,Conservative
+E07000088,Gosport,Leader: Zoe Huggins (Conservative),No overall control
+E07000089,Hart,,No overall control
+E07000090,Havant,,No overall control
+E07000091,New Forest,,Conservative
+E07000092,Rushmoor,,No overall control
+E07000093,Test Valley,,Conservative
+E07000094,Winchester,,Liberal Democrat
+E07000095,Broxbourne,,Conservative
+E07000096,Dacorum,,No overall control
+E07000098,Hertsmere,,No overall control
+E07000099,North Hertfordshire,,No overall control
+E07000102,Three Rivers,,No overall control
+E07000103,Watford,Mayor: Peter Taylor (Liberal Democrats),Liberal Democrat
+E07000105,Ashford,,No overall control
+E07000106,Canterbury,,No overall control
+E07000107,Dartford,,Conservative
+E07000108,Dover,,No overall control
+E07000109,Gravesham,,Labour
+E07000110,Maidstone,,No overall control
+E07000111,Sevenoaks,,Conservative
+E07000112,Folkestone and Hythe,,No overall control
+E07000113,Swale,,No overall control
+E07000114,Thanet,,Labour
+E07000115,Tonbridge and Malling,,No overall control
+E07000116,Tunbridge Wells,,Liberal Democrat
+E07000117,Burnley,Leader: Afrasiab Anwar (Independent),No overall control
+E07000118,Chorley,,Labour
+E07000119,Fylde,,Conservative
+E07000120,Hyndburn,,No overall control
+E07000121,Lancaster,,No overall control
+E07000122,Pendle,Leader: Asjad Mahmood (Independent),No overall control
+E07000123,Preston,,No overall control
+E07000124,Ribble Valley,,No overall control
+E07000125,Rossendale,,Labour
+E07000126,South Ribble,,Labour
+E07000127,West Lancashire,,No overall control
+E07000128,Wyre,,Conservative
+E07000129,Blaby,,Conservative
+E07000130,Charnwood,Leader: Jewel Miah (Labour),No overall control
+E07000131,Harborough,,No overall control
+E07000132,Hinckley and Bosworth,,Liberal Democrat
+E07000133,Melton,,No overall control
+E07000134,North West Leicestershire,,No overall control
+E07000135,Oadby and Wigston,,Liberal Democrat
+E07000136,Boston,,Independent
+E07000137,East Lindsey,,No overall control
+E07000138,Lincoln,Leader: ,Labour
+E07000139,North Kesteven,,Conservative
+E07000140,South Holland,,Conservative
+E07000141,South Kesteven,,Conservative
+E07000142,West Lindsey,,No overall control
+E07000143,Breckland,,Conservative
+E07000144,Broadland,,No overall control
+E07000145,Great Yarmouth,,No overall control
+E07000146,King's Lynn and West Norfolk,,No overall control
+E07000147,North Norfolk,,Liberal Democrat
+E07000148,Norwich,Leader: Lucy Galvin (Green),Green
+E07000149,South Norfolk,,Conservative
+E07000170,Ashfield,,Independent
+E07000171,Bassetlaw,,Labour
+E07000172,Broxtowe,,Labour
+E07000173,Gedling,,Labour
+E07000174,Mansfield,,Labour
+E07000175,Newark and Sherwood,,No overall control
+E07000176,Rushcliffe,,Conservative
+E07000177,Cherwell,,No overall control
+E07000178,Oxford,Leader: Susan Brown (Labour),No overall control
+E07000179,South Oxfordshire,,Liberal Democrat
+E07000180,Vale of White Horse,Leader: Bethia Thomas (Liberal Democrat),Liberal Democrat
+E07000181,West Oxfordshire,,No overall control
+E07000192,Cannock Chase,,No overall control
+E07000193,East Staffordshire,,Labour
+E07000194,Lichfield,,No overall control
+E07000195,Newcastle-under-Lyme,,Reform UK
+E07000196,South Staffordshire,,Conservative
+E07000197,Stafford,,No overall control
+E07000198,Staffordshire Moorlands,,No overall control
+E07000199,Tamworth,Leader: Carol Dean (Labour),No overall control
+E07000200,Babergh,,No overall control
+E07000202,Ipswich,Leader: Neil MacDonald (Labour),Labour
+E07000203,Mid Suffolk,,Green
+E07000207,Elmbridge,Leader: Mike Rollings (Liberal Democrat),No overall control
+E07000208,Epsom and Ewell,,Independent
+E07000209,Guildford,,Liberal Democrat
+E07000210,Mole Valley,Leader: Bridget Kendrick (Liberal Democrat),Liberal Democrat
+E07000211,Reigate and Banstead,,No overall control
+E07000212,Runnymede,Co-leaders: Robert King (Lab) Don Whyte (Lib Dem) Linda Gillham (RIRG),No overall control
+E07000213,Spelthorne,,No overall control
+E07000214,Surrey Heath,,Liberal Democrat
+E07000215,Tandridge,,No overall control
+E07000216,Waverley,,No overall control
+E07000217,Woking,Leader: Ann-Marie Barker (Liberal Democrat),Liberal Democrat
+E07000218,North Warwickshire,,No overall control
+E07000219,Nuneaton and Bedworth,,No overall control
+E07000220,Rugby,,No overall control
+E07000221,Stratford-on-Avon,,Liberal Democrat
+E07000222,Warwick,,No overall control
+E07000223,Adur,,Labour
+E07000224,Arun,,No overall control
+E07000225,Chichester,,Liberal Democrat
+E07000226,Crawley,Leader: Michael Jones (Labour),Labour
+E07000227,Horsham,,Liberal Democrat
+E07000228,Mid Sussex,,No overall control
+E07000229,Worthing,Leader: Caroline Baxter (Labour),No overall control
+E07000234,Bromsgrove,,No overall control
+E07000235,Malvern Hills,,No overall control
+E07000236,Redditch,Leader: Matt Dormer (Conservative Party),No overall control
+E07000237,Worcester,Leader: Lynn Denham (Labour),No overall control
+E07000238,Wychavon,,Conservative
+E07000239,Wyre Forest,,Conservative
+E07000240,St Albans,,Liberal Democrats
+E07000241,Welwyn Hatfield,,No overall control
+E07000242,East Hertfordshire,,No overall control
+E07000243,Stevenage,Leader: Richard Henry (Labour),Labour
+E07000244,East Suffolk,,No overall control
+E07000245,West Suffolk,,No overall control
+E08000001,Bolton,Leader: Akhtar Zaman (Labour),No overall control
+E08000002,Bury,Leader: Eamonn O'Brien (Labour),Labour
+E08000003,Manchester,Leader: Garry Bridges (Labour),Labour
+E08000004,Oldham,Leader: Vacant,No overall control
+E08000005,Rochdale,Leader: Neil Emmott (Labour),Labour
+E08000006,Salford,City Mayor: Paul Dennett (Labour),Labour
+E08000007,Stockport,Leader: Mark Roberts (Liberal Democrat),Liberal Democrat
+E08000008,Tameside,Executive Leader: Eleanor Wills (Labour),No overall control
+E08000009,Trafford,Leader: Tom Ross (Labour),Labour
+E08000010,Wigan,Leader: Nazia Rehman (Labour),Labour
+E08000011,Knowsley,Leader: Graham Morgan (Labour),Labour
+E08000012,Liverpool,Leader: Liam Robinson (Labour),Labour
+E08000013,St. Helens,Leader: George Woodward (Reform UK),Reform UK
+E08000014,Sefton,Leader: Marion Atkinson (Labour),Labour
+E08000015,Wirral,Leader: Paula Basnett (Labour),No overall control
+E08000017,Doncaster,Elected Mayor: Ros Jones (Labour),Reform UK
+E08000018,Rotherham,Leader: Chris Read (Labour),Labour
+E08000021,Newcastle upon Tyne,Leader: Colin Ferguson (Liberal Democrat),No overall control
+E08000022,North Tyneside,Mayor: Karen Clark (Labour),Labour
+E08000023,South Tyneside,Leader: Paul Mackings (Reform UK),Reform UK
+E08000024,Sunderland,Leader: Chris Eynon (Reform UK),Reform UK
+E08000025,Birmingham,Leader: Roger Harmer (Liberal Democrats),No overall control
+E08000026,Coventry,Leader: George Duggins (Labour),No overall control
+E08000027,Dudley,Leader: Patrick Harley (Conservative),No overall control
+E08000028,Sandwell,Leader: Ray Nock (Reform UK),Reform UK
+E08000029,Solihull,Leader: Karen Grinsell (Conservative),No overall control
+E08000030,Walsall,Leader: Elaine Williams (Reform UK),Reform UK
+E08000031,Wolverhampton,Leader: Stephen Simkins (Labour),Labour
+E08000032,Bradford,Leader: Stephen Place (Reform UK),No overall control
+E08000033,Calderdale,Leader: Dan Sutherland (Reform UK),Reform UK
+E08000034,Kirklees,Leader: Sarah Wood (Reform),No overall control
+E08000035,Leeds,Leader: James Lewis (Labour),No overall control
+E08000036,Wakefield,Leader: Karl Johnson (Reform UK),Reform UK
+E08000037,Gateshead,Leader: Nick Allan (Reform UK),Reform UK
+E08000038,Barnsley,Leader: William Brown (Reform UK),
+E08000039,Sheffield,Leader: Fran Belbin (Labour),
+E09000001,City of London,,
+E09000002,Barking and Dagenham,Leader: Dominic Twomey (Labour),Labour
+E09000003,Barnet,Leader: Barry Rawlings (Labour),No overall control
+E09000004,Bexley,Leader: David Leaf (Conservative),Conservative
+E09000005,Brent,Leader: Muhammed Butt (Labour),No overall control
+E09000006,Bromley,Leader: Colin Smith (Conservative),Conservative
+E09000007,Camden,Leader: Sagal Abdi-Wali (Labour),Labour
+E09000008,Croydon,,No overall control
+E09000009,Ealing,Leader: Peter Mason (Labour),Labour
+E09000010,Enfield,Mayor: Emma Supple (Conservative) ; Leader: Alessandro Georgiou (Conservative),No overall control
+E09000011,Greenwich,Leader: Anthony Okereke (Labour),Labour
+E09000012,Hackney,Mayor: Zoë Garbett (Green),Green
+E09000013,Hammersmith and Fulham,Leader: Stephen Cowan (Labour),Labour
+E09000014,Haringey,Leader: Mark Blake (Green),No overall control
+E09000015,Harrow,Leader: Paul Osborn (Conservative),Conservative
+E09000016,Havering,Leader: Keith Prince (Reform),Reform UK
+E09000017,Hillingdon,Leader: Steve Tuckwell (Conservative),Conservative
+E09000018,Hounslow,Leader: Shantanu Rajawat (Labour),Labour
+E09000019,Islington,Leader: Una O'Halloran (Labour),Labour
+E09000020,Kensington and Chelsea,Leader: Elizabeth Campbell (Conservative),Conservative
+E09000021,Kingston upon Thames,Leader: Andreas Kirsch (Liberal Democrat),Liberal Democrat
+E09000022,Lambeth,Leader: Martin Abrams (Green),No overall control
+E09000023,Lewisham,Mayor: Liam Shrivastava (Green Party),Green
+E09000024,Merton,Leader: Ross Garrod (Labour),Labour
+E09000025,Newham,Mayor: Forhad Hussain (Labour),No overall control
+E09000026,Redbridge,Leader: Kam Rai (Labour),Labour
+E09000027,Richmond upon Thames,Leader: Gareth Roberts (Liberal Democrat),Liberal Democrat
+E09000028,Southwark,Leader: James McAsh (Green),No overall control
+E09000029,Sutton,Leader: Barry Lewis (Liberal Democrat),Liberal Democrat
+E09000030,Tower Hamlets,Mayor: Lutfur Rahman (Aspire),Aspire
+E09000031,Waltham Forest,Leader: Paul Perkins (Green),Green
+E09000032,Wandsworth,Leader: Robert Morritt (Conservative),No overall control
+E09000033,Westminster,Leader: Paul Swaddle (Conservative),Conservative
+N09000001,Antrim and Newtownabbey,,No overall control
+N09000002,"Armagh City, Banbridge and Craigavon",,No overall control
+N09000003,Belfast,,No overall control
+N09000004,Causeway Coast and Glens,,No overall control
+N09000005,Derry City and Strabane,,No overall control
+N09000006,Fermanagh and Omagh,,Sinn Féin
+N09000007,Lisburn and Castlereagh,,No overall control
+N09000008,Mid and East Antrim,,No overall control
+N09000009,Mid Ulster,,No overall control
+N09000010,"Newry, Mourne and Down",,No overall control
+N09000011,Ards and North Down,,No overall control
+S12000005,Clackmannanshire,Leader: Ellen Forson (SNP),No overall control
+S12000006,Dumfries and Galloway,,No overall control
+S12000008,East Ayrshire,Leader: Douglas Reid (SNP),No overall control
+S12000010,East Lothian,Leader: Norman Hampshire (Labour),No overall control
+S12000011,East Renfrewshire,,No overall control
+S12000013,Na h-Eileanan Siar,Leader: Paul Steele (Independent),Independent
+S12000014,Falkirk,,No overall control
+S12000017,Highland,Leader: Raymond Bremner (SNP),No overall control
+S12000018,Inverclyde,Leader: Stephen McCabe (Labour),No overall control
+S12000019,Midlothian,Leader: Kelly Parry (SNP),No overall control
+S12000020,Moray,Leader: Kathleen Robertson (Conservative),No overall control
+S12000021,North Ayrshire,,No overall control
+S12000023,Orkney Islands,Leader: Heather Woodbridge (Independent),Independent
+S12000026,Scottish Borders,Leader: Euan Jardine (Conservative),No overall control
+S12000027,Shetland Islands,Leader: Emma Macdonald (Independent),Independent
+S12000028,South Ayrshire,Leader: Brian Connolly (Independent),No overall control
+S12000029,South Lanarkshire,Leader: Maureen Devlin (Labour),No overall control
+S12000030,Stirling,,No overall control
+S12000033,Aberdeen City,Co-leader: Christian Allard (SNP) ; Co-leader: Ian Yuill (Liberal Democrat),No overall control
+S12000034,Aberdeenshire,Co-leaders: Stewart Adams Conservative and Anne Stirling Liberal Democrat,No overall control
+S12000035,Argyll and Bute,Leader: Jim Lynch (Scottish National Party),No overall control
+S12000036,City of Edinburgh,Leader: Jane Meagher (Labour),No overall control
+S12000038,Renfrewshire,Leader: Iain Nicolson (SNP),No overall control
+S12000039,West Dunbartonshire,Leader: Martin Rooney (Labour),Labour
+S12000040,West Lothian,Leader: Lawrence Fitzpatrick (Labour),No overall control
+S12000041,Angus,Leader: George Meechan (Independent),No overall control
+S12000042,Dundee City,Leader: Mark Flynn (SNP),Scottish National Party
+S12000045,East Dunbartonshire,,No overall control
+S12000047,Fife,Leader: David Ross (Labour),No overall control
+S12000048,Perth and Kinross,Leader: Eric Drysdale (SNP),No overall control
+S12000049,Glasgow City,Leader: Ricky Bell (SNP),No overall control
+S12000050,North Lanarkshire,Leader: Jim Logue (Labour),No overall control
+W06000001,Isle of Anglesey,Leader: Gary Pritchard (Plaid Cymru),Plaid Cymru
+W06000002,Gwynedd,Leader: Nia Wyn Jeffreys (Plaid Cymru),Plaid Cymru
+W06000003,Conwy,Leader: Julie Fallon (Independent),No overall control
+W06000004,Denbighshire,Leader: Hugh Evans (Independent),No overall control
+W06000005,Flintshire,Leader: Dave Hughes (Labour),No overall control
+W06000006,Wrexham,Leader: Mark Pritchard (Independent),No overall control
+W06000008,Ceredigion,Leader: Bryan Davies (Plaid Cymru),Plaid Cymru
+W06000009,Pembrokeshire,Leader: Tessa Hodgson (Independent),No overall control
+W06000010,Carmarthenshire,Leader: Linda Evans (Plaid Cymru),Plaid Cymru
+W06000011,Swansea,Leader: Rob Stewart (Labour),Labour
+W06000012,Neath Port Talbot,Leader: Scott Jones (Independent),No overall control
+W06000013,Bridgend,Leader: John Spanswick (Labour),Labour
+W06000014,Vale of Glamorgan,Leader: Lis Burnett (Labour),No overall control
+W06000015,Cardiff,Leader: Chris Weaver (Labour),Labour
+W06000016,Rhondda Cynon Taf,Leader: Ann Crimmings (Labour),Labour
+W06000018,Caerphilly,Leader: Jamie Pritchard (Labour),Labour
+W06000019,Blaenau Gwent,Leader: Steve Thomas (Labour),Labour
+W06000020,Torfaen,Leader: Anthony Hunt (Labour),Labour
+W06000021,Monmouthshire,Leader: Mary Ann Brocklesby (Labour),No overall control
+W06000022,Newport,Leader: Dimitri Batrouni (Labour),Labour
+W06000023,Powys,Leader: Jake Berriman (Liberal Democrat),No overall control
+W06000024,Merthyr Tydfil,Leader: Brent Carter (Labour),No overall control

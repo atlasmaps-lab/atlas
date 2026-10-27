@@ -1,0 +1,334 @@
+# Atlas 1.6 — United Kingdom
+
+Atlas 1.6 is about the data: what you can do with it, where you can put it, and how much of the map stays in view while you work. Built on 1.5 (Ruben's 0.3.3 merged with Mo's 1.4). Earlier versions stay unchanged in their own folders.
+
+## What's new in 1.6
+
+**Analyse relationships (ATLAS menu → Analyse relationships…).** Compares metrics without picking places. Tick metrics on the left, choose the level (councils, constituencies…), and choose **Within**: the whole UK, one nation or region, or your selection. You can also switch to **Over time** for one place. The methods offered depend on how many metrics are ticked:
+
+| Metrics ticked | Methods |
+|---|---|
+| One | **Distribution**: histogram, median, quartiles, skew and outliers. **Spatial pattern**: Moran's I with a permutation test, plus local hot and cold spots |
+| Two | **Relationship**: scatter with a fitted line; Pearson, Spearman and Kendall with p-values; R²; optionally split by a category. **Area by area**: the same link measured inside each nation or region, to show where it holds and where it reverses |
+| Three or more | **Correlation matrix** (Pearson or Spearman). **Partial correlations**: each pair with the others held fixed. **Regression**: pick the outcome; standardised effects with 95% ranges. **Components (PCA)**: which metrics move together. **Clusters**: k-means, choosing the number of groups by silhouette, with a profile of each group. **Unusual places**: Mahalanobis distance across all the metrics |
+| Over time | **Trend** (growth per year, biggest moves), **Timeline** (small multiples), **Lag** (correlation of year-on-year changes, and which metric leads) |
+
+- Every result can be sent to the workspace, copied as CSV, or, where it makes sense, shown on the map (residuals, hot spots, component scores, clusters).
+- **Extreme places:** when a few places sit far outside the rest (beyond 3 × the interquartile range), Atlas names them and offers **Leave them out**. Example: GDP per head against population change shows Pearson r = .72 with the City of London and inner boroughs included, but .20 without them. When Pearson and Spearman disagree, the headline strength now comes from Spearman, and the fitted line is described per typical step (one standard deviation) rather than per £1.
+- The statistics live in `stats.js` and are plain, dependency-free code, checked against textbook values (Anscombe's data and others).
+
+**Interactive charts.** Every chart responds to the pointer:
+- Line and area charts show a guide line and the exact year and value of every series.
+- Scatters snap to the nearest point, with a crosshair to both axes.
+- Bars, histograms, heat maps and effect charts show their exact value on hover.
+
+**Tables.** Click a column header to sort. Hover a row to highlight the place on the map; double-click a row to focus it.
+
+**Floating windows.** The comparison, chart, export and Analyse windows:
+- drag by the title bar
+- resize from the corner
+- shrink to the title bar (–) or fill the screen (⤢)
+- open docked to the right, so the map stays usable on the left
+- remember their position
+
+**Workspace.** A tab of its own, for projects. Send things to it:
+- charts (chart panel → "To workspace")
+- tables and tiles of the selected places (comparison window)
+- analyses
+- a place's card or its tile (pinned card)
+- pictures of the map (Tools → To workspace, or Capture map)
+- notes
+
+On the canvas:
+- Drag items by the title and resize them from the corner. Double-click a title to rename it.
+- Drop one item onto another to combine them: two charts become one chart with both sets of places and metrics; tiles merge into one map; tables merge; anything else stacks. Undo is offered.
+- Charts and analyses stay live: they redraw at their own date and size, and keep their tooltips.
+- Several projects, each with a name.
+- **Export ▾**:
+  - **PDF**: your browser's print dialog, one item per page
+  - **Presentation**: a standalone HTML slide file; arrow keys move, F goes full screen
+  - **Project file (.json)**: to back up a project or share it with Ruben; import it the same way
+
+Projects are saved in this browser.
+
+**Map and workspace together.**
+- The **Split** button (in the tab strip and the workspace bar) puts them side by side; drag the divider to change the share.
+- Swipe left or right with two fingers on a trackpad (or on a touch screen) to move between the map, the workspace and chart tabs.
+- Swipe up over the top bar, or press the grid button, to see all tabs.
+
+**Selecting.** The Select tool is gone. Hold the mouse still for a moment, then drag a box; a quick drag still moves the map. Shift-drag and the Lasso tool work as before.
+
+**Bringing a selection into focus** now happens 2 seconds after you stop selecting (was 8), after a box selection as well as after Shift-clicks.
+
+**Smaller fixes:**
+- Zone labels can no longer push the page sideways.
+- Focusing a place before the map has loaded waits instead of failing.
+- Map pictures get the sea behind them instead of black.
+
+## From 1.5: how the two lines fit together
+
+| | |
+|---|---|
+| Bottom-right buttons | Two round buttons: **compare** (Ruben's; appears when areas are selected, shows how many) and, to its right, the **chart bubble** (Mo's). The chart uses whatever you're looking at: the focused area, the selection, or the places shown together from a search |
+| Clicking areas | Follows the boundary set chosen in the Areas menu. Once you're zoomed into London, the gold district tiles take clicks inside them; company squares take clicks on themselves |
+| Hover card | Everything ticked in Perspectives shows in the card (Ruben's rule), each with a small line chart of its history (Mo's). Tools → Hover cards → Simple gives short cards |
+| Areas menu | Boundary sets (Ruben's), with **Custom zones → Financial districts** listed next to **Electoral → Westminster constituencies** |
+| Controlling party | Districts show the control of the council they sit in |
+| Toolbox | Ruben's tools (select, lasso, measure, copy view, grid lines), plus Mo's **Panels: near edges** and **Hover cards** switches |
+| Esc | Closes, in order: the chart tab, the chart panel, the notes, then the menus and pages as before |
+
+Settings are saved under a new key, so the first time you open 1.5 the perspectives start from their defaults.
+
+## From Mo's 1.4
+
+**Charts everywhere.** A round **chart bubble** sits at the bottom right. It bounces when there's something new to chart: a focused area, a selection, a district or a company. Click it and the chart panel opens.
+
+1. **What:** pick one or more metrics, the places (your focused area plus your selection; Shift-click to add more) or companies, and the years.
+2. **How:** before anything is drawn, Atlas offers chart styles. Simple ones come first, and the engine pre-selects the simplest one that suits. Greyed styles don't fit the choice; hover them to see why.
+
+   | Style | Best for |
+   |---|---|
+   | Line | change over time (the default) |
+   | Area | one or a few places over time |
+   | Bars by year | totals and counts |
+   | Start vs end | who rose and who fell |
+   | Ranked | places in order on one date |
+   | Timeline | a category through time, e.g. party control |
+   | Shares (donut) | how places split between categories, or shares of a total |
+   | Two axes | two metrics with different units |
+   | Small charts | several metrics side by side in one frame |
+
+3. **Story views (experimental):** the same numbers drawn as things in the world. These are for one metric at a time; use the precise charts for exact readings.
+
+   | View | What it shows |
+   |---|---|
+   | Dye in water | glasses that fill and darken with the value |
+   | Balance | two places weighed against each other |
+   | Orbits | places orbit the typical (median) value; further out means less typical; bigger planets have more people |
+   | Tree | branches are areas, leaves are the smaller areas inside them, coloured by value |
+
+**Open in tab:** any chart can open full screen in its own **tab**. Tabs appear next to the level buttons; the map is always the first tab.
+
+Charts also appear in other places:
+- small **line charts (sparklines)** in hover cards for every metric on the map
+- a **Chart** button on pinned cards
+- **Chart over time** in the mind map
+- price lines on company and district cards
+
+Pie, ranked and story views use the date on the time bar.
+
+**Custom zones: London's financial districts (Markets perspective, test case).** Some places are known for something. Atlas now supports **custom zones**: areas that aren't official boundaries but are clickable tiles with their own cards. The test case is four financial districts:
+
+| District | Boundary |
+|---|---|
+| The City (Square Mile) | the City of London council boundary |
+| Canary Wharf | drawn by hand, approximate |
+| West End & St James's | drawn by hand, approximate |
+| Midtown & King's Cross | drawn by hand, approximate |
+
+- **When they appear:** from London zoom, the tiles show as gold dashed areas with labels. At lower zoom a gold dot marks them; click it to fly in.
+- **Clicking a district** focuses it like any area. Its card lists the FTSE 100 head offices inside it, with market values, a sector bar and price sparklines. **Chart these companies** opens their share prices.
+- **The market (one only): the FTSE 100** (London Stock Exchange). 55 of its 100 companies are headquartered in London, and 42 of those are inside the four districts.
+- **Companies are squares** (protests are circles), sized by market value and coloured by sector. Click one for its card: head office, market value, revenue, employees, founding date, share price with 12-month change, and price line.
+- **Markets metrics:** FTSE 100 head offices, market value headquartered here, share price change over 12 months (moves with the time bar, from 2000), main sector, and the company points.
+- **Data sources:**
+  - Constituents and sectors: Wikipedia
+  - Market values and monthly share prices are **not included in this public repository**: their sources (companiesmarketcap.com and Yahoo Finance) do not allow republishing. Run `python3 pipeline/fetch_markets.py` then `python3 pipeline/build_markets.py` to add them on your own computer; don't commit the result.
+  - Head offices: a hand-compiled address table (`pipeline/sources/hq_addresses.csv`), geocoded with OpenStreetMap. **Check it: offices move.**
+
+  Edit districts in `pipeline/sources/zones.json`; any shape can become a zone.
+
+**Calmer screen.**
+- **Tools → Panels → Near edges:** the perspectives dock and legend hide until the pointer nears the left edge, and the time bar until it nears the bottom (hot zones).
+- **Tools → Hover cards → Simple:** short cards (name, what's on the map, sparklines).
+- **Notes:** a drawer on the right edge. Jot a thought and, if you like, remember the map view and date with it. **Go there** returns to that view. Notes are kept with your edits and exported with them.
+
+**Rebuild the market data:**
+
+```
+python3 pipeline/fetch_markets.py
+python3 pipeline/build_markets.py
+```
+
+
+## From Ruben's 0.3.3
+
+Atlas 0.3.3 continues the clean-up of Mo's Atlas 1.3. Earlier versions stay unchanged in their own folders.
+
+## What changed from 0.3.2
+
+1. **Constituencies work on past dates (back to 1997).** The constituency layer shows the boundaries in force on the date on the time bar, and each seat is coloured by the party its MP sat for on that day (by-elections and defections included):
+
+   | Dates | Boundaries | Source |
+   |---|---|---|
+   | 4 July 2024 → today | the 2024 seats (650) | ONS (Office for National Statistics) |
+   | 2010 → 2024 | the 2010 seats; Scotland's from 2005 | ONS, December 2019 boundaries |
+   | 1997 → 2010 | the 1997 seats; Scotland's until 2005 | ONS 2001 boundaries (Great Britain) |
+   | before 1997 | none: the map says "constituency records start in 1997" | |
+
+   - MPs and parties come from the UK Parliament Members API (Application Programming Interface).
+   - Seat totals match the election results, e.g. 2010: Conservative 306, Labour 258, Lib Dem 57.
+   - Older boundaries load the first time you go back past 2024.
+   - Northern Ireland's 1997–2010 boundaries aren't published, so its 2010 shapes stand in for them; the card says "approx. boundary".
+   - Population and age are only for the 2024 seats.
+2. **One "Controlling party" layer** replaces Council control, Council leader's party and Governing party. What it shows follows the boundary set on the map, and the key says which:
+
+   | Boundary set | Controlling party |
+   |---|---|
+   | Nations | the UK or devolved government |
+   | Regions | the Mayor of London for London; the UK Government elsewhere (England has no regional governments) |
+   | Councils | the party in control of the council |
+   | Wards | their council's control |
+   | Constituencies | the MP's party |
+
+   Council leaders still show as "De facto ruler" in the hover card.
+3. **Tickboxes in the Areas dropdown** (the one showing Nations / Councils…), as well as in the search bar's dropdown. Clicking a place ticks it, and **Search** at the bottom shows all ticked places together. Both lists share one set of ticks, and a "3 ticked" label in the search bar shows how many. Pressing Enter in the search bar still jumps straight to one place.
+4. **Shift-click several areas and leave the map alone for 8 seconds:** it switches to the softened view with a card for each area. Panning, zooming or clicking anywhere else cancels the switch.
+
+## Ruben's 0.3.2
+
+## What changed from 0.3.1
+
+1. **Right-click to deselect.**
+   - Right-click a selected area to deselect it.
+   - Right-drag a box to deselect every selected area inside it.
+   - Right-click the sea (no area) to clear the whole selection.
+   - Right-clicking a place shown from a search removes it from the view.
+2. **Search uses tickboxes.**
+   - Typing and pressing **Enter** jumps straight to the best match, as before.
+   - In the dropdown, click results to **tick** them, across as many searches as you like. Ticked places stay at the top of the list.
+   - The dropdown's **Search** button shows them all together:
+     - Every place fits in one frame, and the rest of the map is softened.
+     - The cards sit in columns on the right, each joined to its place by a line and a matching number, so no card covers a place.
+   - Only the dropdown can search several places at once.
+3. **No separate hover-card switch.** Everything you tick in Perspectives shows in the hover card automatically. The "On the map" heading on the card is gone.
+4. **A larger Perspectives panel**, lettered like the ATLAS name in the top left.
+5. **The key can be closed** with its ×. A small **Key** button (bottom left) brings it back. It can still be dragged by its grip.
+6. **One full page at a time.** Opening Export from the comparison page now replaces the comparison page instead of opening behind it. The export page has **← Back to comparison**.
+7. **No table on the map when you select areas.** A small white round button with a chart icon appears at the bottom right, showing how many areas are selected. Click it to open the comparison page (the same as Compare places and metrics).
+
+## Ruben's 0.3.1
+
+Atlas 0.3.1 was the first clean-up of Mo's Atlas 1.3: bug fixes and interface changes, with no new features apart from Westminster constituencies.
+
+## Open it
+
+Double-click `index.html`. Paste your MapTiler key, or press **Continue without basemap**.
+
+## What changed in 0.3.1 (from 1.3)
+
+1. **Colour grid bug fixed.** A metric set to "colour grid" used to vanish whenever the other metric was set to anything except lightness, or when a category such as council control was filling the map. Now:
+   - A colour grid always gets a second rate for its other axis, borrowed from the layers already on the map when possible.
+   - A category on the map becomes a centre marker instead of hiding the grid.
+   - If there is no second rate, the metric is shown as lightness, and **Why this view?** says so.
+   No metric is ever listed as "on the map" without being drawn.
+2. **Boundaries are chosen in the Areas menu, not by zooming.** The Nations / Regions / Councils / Wards buttons along the top have gone. Open **Areas ▾** (next to the search box) and tick the boundary sets you want:
+   - The map does not move when you tick one.
+   - The set ticked most recently takes the colours, hover cards and clicks (marked "colours & hover"). Other ticked sets show as outlines; click a set's name to make it the one with colours.
+   - **Automatic** brings back the old behaviour, where the boundaries follow the zoom.
+   - The Areas button shows which set is active.
+3. **Search several places at once.** (Replaced in 0.3.2 by tickboxes in the dropdown.)
+4. **The key and the time bar can be dragged.** Drag them by their dotted grip. Double-click the grip to put them back. Their positions are remembered.
+5. **The Perspectives panel folds away.** Click its heading to fold or unfold it. It folds itself, smoothly, after 15 seconds untouched (not while the pointer is over it). When it folds, the key moves down into the space.
+6. **Perspectives are now text with categories.**
+   - Click a perspective name (Political, Economic…) to drop down its categories, e.g. *Government & control*, *Protests (test case)*.
+   - Click a category for a checklist of its metrics. Tick a box to put that metric on the map (and in the hover card).
+   - Names and categories stay grey until something in them is ticked, then they take the perspective's colour.
+   - De facto ruler and Party / alignment are text, so their boxes put them in the hover card instead.
+7. **Westminster constituencies** (650, July 2024 boundaries) are a boundary set in the Areas menu and a list in the area browser. Each one has:
+
+   | Field | Value | Source |
+   |---|---|---|
+   | De facto ruler | the sitting MP | UK Parliament Members API, October 2026 |
+   | Party / alignment | the MP's party | UK Parliament Members API, October 2026 |
+   | Population and average age | England and Wales | ONS (Office for National Statistics) mid-2024 small-area estimates via Nomis |
+   | Area | in km² | worked out from the boundaries |
+
+   - Council control and council leader's party show **the MP's party** for constituencies (the key says so).
+   - Protests are counted per constituency.
+   - GDP is not published for constituencies.
+   - Scottish and Northern Irish population figures are not loaded yet.
+   - Earlier MPs are not loaded, so dates before the current MP's election show "Earlier MPs not loaded yet".
+8. **The help line under the top bar is gone.**
+9. **Lasso replaces Snip** in the toolbox. Draw any shape and every area whose centre falls inside it is selected. Shift-drag and the Select tool still draw boxes. **Copy view** still saves a picture of the map.
+
+Smaller fixes:
+- Long legend labels now wrap instead of being cut off.
+- The map credits fold into the ⓘ button, so they no longer sit under the time bar.
+- Hover cards no longer cover the time bar.
+
+## Several metrics on the map at once
+
+Tick as many metrics as you like. The engine (`engine.js`) gives each metric its own visual channel:
+
+| What the metric is | How it is shown |
+|---|---|
+| A category | Fill colour |
+| A rate, with a category already filling | Lightness of that colour |
+| A rate, with no category | Light-to-dark fill |
+| Two rates | One colour grid (bivariate, 3×3 or 4×4) |
+| A value with a meaningful middle | Two-sided colour |
+| A second category | Marker at the centre of each area |
+| A further number | Dots (bigger = higher) |
+| A total | Circles, area = value |
+| Dated events | Points that appear and fade, or a heat surface |
+
+- **Why this view?** at the bottom of the key explains every choice.
+- Each layer's **Show as** menu overrides the engine.
+- Click a key square to show only those areas; Esc shows everything.
+
+## Data over time
+
+| Metric | Years | Source |
+|---|---|---|
+| Council control, leaders, governing party | 1974–today | Wikipedia; government history compiled by hand |
+| GDP, GDP per head, real GDP growth | 1998–2024 | ONS regional GDP, local authorities |
+| Population, density, 10-year change | 1998–2025 | ONS mid-year estimates |
+| Protests | 1974–today | Wikipedia and Wikidata (optionally ACLED (Armed Conflict Location & Event Data)) |
+| Average age | latest only | ONS mid-2025 |
+| Constituency MPs | current only | UK Parliament Members API |
+| Constituency population and age | mid-2024 | ONS via Nomis (England and Wales) |
+
+## Toolbox (top right)
+
+| Tool | What it does |
+|---|---|
+| Select | Drag a box to select areas |
+| Lasso | Draw any shape to select the areas whose centre is inside it |
+| Measure | Click points for distance; three or more points also give area and perimeter |
+| Copy view | Copies a picture of the map |
+| Grid lines | Latitude/longitude, or km squares |
+
+There are also five 0–1 sliders: zoom sensitivity, cursor sensitivity, contrast, overlay strength and focus softening.
+
+## Export (ATLAS menu → Export a table)
+
+Pick metrics, places (your selection, the UK, nations, regions, councils, constituencies or wards) and dates, then choose Excel (.xlsx) or CSV.
+
+## Rebuilding the data
+
+```
+python3 pipeline/fetch_politics.py         # council control and leaders from Wikipedia
+python3 pipeline/fetch_protests.py         # protests from Wikipedia and Wikidata
+python3 pipeline/build.py                  # everything in data/ (runs build_politics, build_series, build_protests)
+python3 pipeline/build_constituencies.py   # data/constituencies*.js: 2024 seats, plus the 2010 and 1997 sets and every seat's MP history
+python3 pipeline/convert_old_constituencies.py <unzipped folder>   # one-off: ONS 2001/2005 shapefiles -> geometry/constituencies_1997.geojson (needs pyshp, pyproj)
+```
+
+The constituency sources are in `pipeline/geometry/constituencies.geojson` (ONS Open Geography Portal, PCON July 2024 BGC), `pipeline/sources/constituency_mps.csv` and `pipeline/sources/constituency_population_mid2024.csv`.
+
+## Files
+
+```
+index.html, app.js, config.js   the page, its behaviour and settings
+charts.js                        charts and story views (Mo's 1.4); interactive tooltips, scatter, histogram, heat map, effect and profile charts (1.6)
+stats.js                         statistics for Analyse (1.6): correlations with p-values, regression, partial correlation, PCA, k-means, Moran's I, lags
+engine.js                        decides calculations and visual encodings for each kind of data
+xlsx.js                          writes Excel files in the browser
+data/                            generated: uk-data.js, uk-geo.js, politics.js, series.js, protests.js, constituencies.js, markets.js, wards/, os-style.js, edits.js
+pipeline/                        fetch_*.py, build*.py, import_acled.py, xlsx_read.py, sources/, geometry/
+```
+
+## Credits
+
+Contains OS data © Crown copyright and database right 2026. © OpenStreetMap contributors. Tiles and imagery © MapTiler. ONS data and boundaries: Open Government Licence v3.0. Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Political and protest information: Wikipedia (CC BY-SA 4.0) and Wikidata (CC0). Map engine: MapLibre GL JS.

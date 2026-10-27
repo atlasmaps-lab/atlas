@@ -1,0 +1,48 @@
+code,title,leader,party,start,end,note
+K02000001,Prime Minister,Harold Wilson,lab,1974-03-04,1976-04-05,UK Government
+K02000001,Prime Minister,James Callaghan,lab,1976-04-05,1979-05-04,UK Government
+K02000001,Prime Minister,Margaret Thatcher,con,1979-05-04,1990-11-28,UK Government
+K02000001,Prime Minister,John Major,con,1990-11-28,1997-05-02,UK Government
+K02000001,Prime Minister,Tony Blair,lab,1997-05-02,2007-06-27,UK Government
+K02000001,Prime Minister,Gordon Brown,lab,2007-06-27,2010-05-11,UK Government
+K02000001,Prime Minister,David Cameron,con,2010-05-11,2015-05-08,Conservative–Liberal Democrat coalition
+K02000001,Prime Minister,David Cameron,con,2015-05-08,2016-07-13,UK Government
+K02000001,Prime Minister,Theresa May,con,2016-07-13,2019-07-24,UK Government
+K02000001,Prime Minister,Boris Johnson,con,2019-07-24,2022-09-06,UK Government
+K02000001,Prime Minister,Liz Truss,con,2022-09-06,2022-10-25,UK Government
+K02000001,Prime Minister,Rishi Sunak,con,2022-10-25,2024-07-05,UK Government
+K02000001,Prime Minister,Keir Starmer,lab,2024-07-05,2026-07-20,UK Government
+K02000001,Prime Minister,Andy Burnham,lab,2026-07-20,,UK Government
+S92000003,UK Government,,uk,1974-01-01,1999-05-17,Governed directly from Westminster before devolution
+S92000003,First Minister,Donald Dewar,lab,1999-05-17,2000-10-26,Labour–Liberal Democrat coalition
+S92000003,First Minister,Henry McLeish,lab,2000-10-26,2001-11-22,Labour–Liberal Democrat coalition
+S92000003,First Minister,Jack McConnell,lab,2001-11-22,2007-05-17,Labour–Liberal Democrat coalition
+S92000003,First Minister,Alex Salmond,snp,2007-05-17,2014-11-20,Scottish Government
+S92000003,First Minister,Nicola Sturgeon,snp,2014-11-20,2023-03-29,Scottish Government
+S92000003,First Minister,Humza Yousaf,snp,2023-03-29,2024-05-08,Scottish Government
+S92000003,First Minister,John Swinney,snp,2024-05-08,,Scottish Government
+W92000004,UK Government,,uk,1974-01-01,1999-05-12,Governed directly from Westminster before devolution
+W92000004,First Minister,Alun Michael,lab,1999-05-12,2000-02-09,Welsh Government (First Secretary until 2000)
+W92000004,First Minister,Rhodri Morgan,lab,2000-02-09,2009-12-10,Welsh Government
+W92000004,First Minister,Carwyn Jones,lab,2009-12-10,2018-12-13,Welsh Government
+W92000004,First Minister,Mark Drakeford,lab,2018-12-13,2024-03-20,Welsh Government
+W92000004,First Minister,Vaughan Gething,lab,2024-03-20,2024-08-06,Welsh Government
+W92000004,First Minister,Eluned Morgan,lab,2024-08-06,2026-05-12,Welsh Government
+W92000004,First Minister,Rhun ap Iorwerth,pc,2026-05-12,,Welsh Government
+N92000002,UK Government,,uk,1974-01-01,1999-12-02,Direct rule from Westminster
+N92000002,First Minister,David Trimble,uup,1999-12-02,2000-02-11,Northern Ireland Executive (joint office with an SDLP deputy)
+N92000002,UK Government,,uk,2000-02-11,2000-05-30,Direct rule: devolution suspended
+N92000002,First Minister,David Trimble,uup,2000-05-30,2002-10-14,Northern Ireland Executive (joint office with an SDLP deputy)
+N92000002,UK Government,,uk,2002-10-14,2007-05-08,Direct rule: devolution suspended
+N92000002,First Minister,Ian Paisley,dup,2007-05-08,2008-06-05,Northern Ireland Executive (joint office with a Sinn Féin deputy)
+N92000002,First Minister,Peter Robinson,dup,2008-06-05,2016-01-11,Northern Ireland Executive (joint office with a Sinn Féin deputy)
+N92000002,First Minister,Arlene Foster,dup,2016-01-11,2017-01-16,Northern Ireland Executive (joint office with a Sinn Féin deputy)
+N92000002,UK Government,,uk,2017-01-16,2020-01-11,No Executive: run by civil servants under the UK Government
+N92000002,First Minister,Arlene Foster,dup,2020-01-11,2021-06-14,Northern Ireland Executive (joint office with a Sinn Féin deputy)
+N92000002,First Minister,Paul Givan,dup,2021-06-17,2022-02-04,Northern Ireland Executive (joint office with a Sinn Féin deputy)
+N92000002,UK Government,,uk,2022-02-04,2024-02-03,No Executive: run by civil servants under the UK Government
+N92000002,First Minister,Michelle O'Neill,sf,2024-02-03,,Northern Ireland Executive (joint office with DUP deputy Emma Little-Pengelly)
+E12000007,Mayor of London,Ken Livingstone,ind,2000-05-04,2004-01-06,Greater London Authority
+E12000007,Mayor of London,Ken Livingstone,lab,2004-01-06,2008-05-04,Greater London Authority
+E12000007,Mayor of London,Boris Johnson,con,2008-05-04,2016-05-09,Greater London Authority
+E12000007,Mayor of London,Sadiq Khan,lab,2016-05-09,,Greater London Authority

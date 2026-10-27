@@ -1,0 +1,2220 @@
+code,party,party_as_written,start,end,wikipedia_article
+E06000001,lab,Labour Party (UK),1974-05-01,1976-05-01,Borough of Hartlepool
+E06000001,noc,No overall control,1976-05-01,1979-05-01,Borough of Hartlepool
+E06000001,lab,Labour Party (UK),1979-05-01,1996-05-01,Borough of Hartlepool
+E06000001,lab,Labour Party (UK),1996-05-01,2000-05-01,Borough of Hartlepool
+E06000001,noc,No overall control,2000-05-01,2004-05-01,Borough of Hartlepool
+E06000001,lab,Labour Party (UK),2004-05-01,2008-05-01,Borough of Hartlepool
+E06000001,noc,No overall control,2008-05-01,2010-05-01,Borough of Hartlepool
+E06000001,lab,Labour Party (UK),2010-05-01,2019-05-01,Borough of Hartlepool
+E06000001,noc,No overall control,2019-05-01,2024-05-01,Borough of Hartlepool
+E06000001,lab,Labour Party (UK),2024-05-01,2026-05-01,Borough of Hartlepool
+E06000001,noc,No overall control,2026-05-01,,Borough of Hartlepool
+E06000002,lab,Labour Party (UK),1974-05-01,1996-05-01,Middlesbrough Council
+E06000002,lab,Labour Party (UK),1996-05-01,2019-05-01,Middlesbrough Council
+E06000002,noc,No overall control,2019-05-01,2023-05-01,Middlesbrough Council
+E06000002,lab,Labour Party (UK),2023-05-01,,Middlesbrough Council
+E06000003,noc,No overall control,1974-05-01,1976-05-01,Redcar and Cleveland Borough Council
+E06000003,con,Conservative Party (UK),1976-05-01,1979-05-01,Redcar and Cleveland Borough Council
+E06000003,lab,Labour Party (UK),1979-05-01,1987-05-01,Redcar and Cleveland Borough Council
+E06000003,noc,No overall control,1987-05-01,1991-05-01,Redcar and Cleveland Borough Council
+E06000003,lab,Labour Party (UK),1991-05-01,1996-05-01,Redcar and Cleveland Borough Council
+E06000003,lab,Labour Party (UK),1996-05-01,2003-05-01,Redcar and Cleveland Borough Council
+E06000003,noc,No overall control,2003-05-01,2011-05-01,Redcar and Cleveland Borough Council
+E06000003,lab,Labour Party (UK),2011-05-01,2013-05-01,Redcar and Cleveland Borough Council
+E06000003,noc,No overall control,2013-05-01,,Redcar and Cleveland Borough Council
+E06000004,lab,Labour Party (UK),1974-05-01,1976-05-01,Stockton-on-Tees Borough Council
+E06000004,con,Conservative Party (UK),1976-05-01,1979-05-01,Stockton-on-Tees Borough Council
+E06000004,lab,Labour Party (UK),1979-05-01,1991-05-01,Stockton-on-Tees Borough Council
+E06000004,noc,No overall control,1991-05-01,1996-05-01,Stockton-on-Tees Borough Council
+E06000004,lab,Labour Party (UK),1996-05-01,2005-05-01,Stockton-on-Tees Borough Council
+E06000004,noc,No overall control,2005-05-01,2015-05-01,Stockton-on-Tees Borough Council
+E06000004,lab,Labour Party (UK),2015-05-01,2019-05-01,Stockton-on-Tees Borough Council
+E06000004,noc,No overall control,2019-05-01,,Stockton-on-Tees Borough Council
+E06000005,lab,Labour Party (UK),1974-05-01,1976-05-01,Borough of Darlington
+E06000005,con,Conservative Party (UK),1976-05-01,1979-05-01,Borough of Darlington
+E06000005,lab,Labour Party (UK),1979-05-01,1987-05-01,Borough of Darlington
+E06000005,noc,No overall control,1987-05-01,1991-05-01,Borough of Darlington
+E06000005,lab,Labour Party (UK),1991-05-01,1997-05-01,Borough of Darlington
+E06000005,lab,Labour Party (UK),1997-05-01,2019-05-01,Borough of Darlington
+E06000005,noc,No overall control,2019-05-01,,Borough of Darlington
+E06000006,lab,Labour Party (UK),1974-05-01,1998-05-01,Halton Borough Council
+E06000006,lab,Labour Party (UK),1998-05-01,,Halton Borough Council
+E06000007,con,Conservative Party (UK),1974-05-01,1979-05-01,Warrington Borough Council
+E06000007,noc,No overall control,1979-05-01,1983-05-01,Warrington Borough Council
+E06000007,lab,Labour Party (UK),1983-05-01,1998-05-01,Warrington Borough Council
+E06000007,lab,Labour Party (UK),1998-05-01,2006-05-01,Warrington Borough Council
+E06000007,noc,No overall control,2006-05-01,2011-05-01,Warrington Borough Council
+E06000007,lab,Labour Party (UK),2011-05-01,,Warrington Borough Council
+E06000008,noc,No overall control,1974-05-01,1983-05-01,Blackburn with Darwen Borough Council
+E06000008,lab,Labour Party (UK),1983-05-01,1984-05-01,Blackburn with Darwen Borough Council
+E06000008,noc,No overall control,1984-05-01,1986-05-01,Blackburn with Darwen Borough Council
+E06000008,lab,Labour Party (UK),1986-05-01,1987-05-01,Blackburn with Darwen Borough Council
+E06000008,noc,No overall control,1987-05-01,1988-05-01,Blackburn with Darwen Borough Council
+E06000008,lab,Labour Party (UK),1988-05-01,1998-05-01,Blackburn with Darwen Borough Council
+E06000008,lab,Labour Party (UK),1998-05-01,2007-05-01,Blackburn with Darwen Borough Council
+E06000008,noc,No overall control,2007-05-01,2011-05-01,Blackburn with Darwen Borough Council
+E06000008,lab,Labour Party (UK),2011-05-01,2026-05-01,Blackburn with Darwen Borough Council
+E06000008,noc,No overall control,2026-05-01,,Blackburn with Darwen Borough Council
+E06000009,con,Conservative Party (UK),1974-05-01,1987-05-01,Blackpool Council
+E06000009,noc,No overall control,1987-05-01,1991-05-01,Blackpool Council
+E06000009,lab,Labour Party (UK),1991-05-01,1998-05-01,Blackpool Council
+E06000009,lab,Labour Party (UK),1998-05-01,2007-05-01,Blackpool Council
+E06000009,con,Conservative Party (UK),2007-05-01,2011-05-01,Blackpool Council
+E06000009,lab,Labour Party (UK),2011-05-01,,Blackpool Council
+E06000010,lab,Labour Party (UK),1929-05-01,1930-05-01,Hull City Council
+E06000010,ind,Independent politician,1930-05-01,1934-05-01,Hull City Council
+E06000010,lab,Labour Party (UK),1934-05-01,1938-05-01,Hull City Council
+E06000010,ind,Municipal Association Group,1938-05-01,1945-05-01,Hull City Council
+E06000010,lab,Labour Party (UK),1945-05-01,1969-05-01,Hull City Council
+E06000010,con,Conservative Party (UK),1969-05-01,1971-05-01,Hull City Council
+E06000010,lab,Labour Party (UK),1971-05-01,2002-05-01,Hull City Council
+E06000010,noc,No overall control,2002-05-01,2007-05-01,Hull City Council
+E06000010,ld,Liberal Democrats (UK),2007-05-01,2011-05-01,Hull City Council
+E06000010,lab,Labour Party (UK),2011-05-01,2022-05-01,Hull City Council
+E06000010,ld,Liberal Democrats (UK),2022-05-01,2026-05-01,Hull City Council
+E06000010,noc,No overall control,2026-05-01,,Hull City Council
+E06000011,noc,No overall control,1996-05-01,2007-05-01,East Riding of Yorkshire Council
+E06000011,con,Conservative Party (UK),2007-05-01,2023-05-01,East Riding of Yorkshire Council
+E06000011,noc,No overall control,2023-05-01,,East Riding of Yorkshire Council
+E06000012,lab,Labour Party (UK),1996-05-01,2003-05-01,North East Lincolnshire Council
+E06000012,noc,No overall control,2003-05-01,2012-05-01,North East Lincolnshire Council
+E06000012,lab,Labour Party (UK),2012-05-01,2014-05-01,North East Lincolnshire Council
+E06000012,noc,No overall control,2014-05-01,2019-05-01,North East Lincolnshire Council
+E06000012,con,Conservative Party (UK),2019-05-01,2024-05-01,North East Lincolnshire Council
+E06000012,noc,No overall control,2024-05-01,,North East Lincolnshire Council
+E06000013,lab,Labour Party (UK),1996-05-01,2003-05-01,North Lincolnshire Council
+E06000013,con,Conservative Party (UK),2003-05-01,2007-05-01,North Lincolnshire Council
+E06000013,lab,Labour Party (UK),2007-05-01,2011-05-01,North Lincolnshire Council
+E06000013,con,Conservative Party (UK),2011-05-01,,North Lincolnshire Council
+E06000014,noc,No overall control,1974-05-01,1976-05-01,City of York Council
+E06000014,con,Conservative Party (UK),1976-05-01,1980-05-01,City of York Council
+E06000014,noc,No overall control,1980-05-01,1986-05-01,City of York Council
+E06000014,lab,Labour Party (UK),1986-05-01,1996-05-01,City of York Council
+E06000014,lab,Labour Party (UK),1996-05-01,2000-05-01,City of York Council
+E06000014,noc,No overall control,2000-05-01,2003-05-01,City of York Council
+E06000014,ld,Liberal Democrats (UK),2003-05-01,2007-05-01,City of York Council
+E06000014,noc,No overall control,2007-05-01,2011-05-01,City of York Council
+E06000014,lab,Labour Party (UK),2011-05-01,2015-05-01,City of York Council
+E06000014,noc,No overall control,2015-05-01,2023-05-01,City of York Council
+E06000014,lab,Labour Party (UK),2023-05-01,,City of York Council
+E06000015,lab,Labour Party (UK),1974-05-01,1976-05-01,Derby City Council
+E06000015,con,Conservative Party (UK),1976-05-01,1979-05-01,Derby City Council
+E06000015,lab,Labour Party (UK),1979-05-01,1988-05-01,Derby City Council
+E06000015,con,Conservative Party (UK),1988-05-01,1991-05-01,Derby City Council
+E06000015,noc,No overall control,1991-05-01,1994-05-01,Derby City Council
+E06000015,lab,Labour Party (UK),1994-05-01,1997-05-01,Derby City Council
+E06000015,lab,Labour Party (UK),1997-05-01,2003-05-01,Derby City Council
+E06000015,noc,No overall control,2003-05-01,2005-05-01,Derby City Council
+E06000015,lab,Labour Party (UK),2005-05-01,2006-05-01,Derby City Council
+E06000015,noc,No overall control,2006-05-01,2012-05-01,Derby City Council
+E06000015,lab,Labour Party (UK),2012-05-01,2018-05-01,Derby City Council
+E06000015,noc,No overall control,2018-05-01,,Derby City Council
+E06000016,lab,Labour Party (UK),1974-05-01,1976-05-01,Leicester City Council
+E06000016,con,Conservative Party (UK),1976-05-01,1979-05-01,Leicester City Council
+E06000016,lab,Labour Party (UK),1979-05-01,1997-05-01,Leicester City Council
+E06000016,lab,Labour Party (UK),1997-05-01,2003-05-01,Leicester City Council
+E06000016,noc,No overall control,2003-05-01,2007-05-01,Leicester City Council
+E06000016,lab,Labour Party (UK),2007-05-01,,Leicester City Council
+E06000017,ind,Independent politician,1974-05-01,1987-05-01,Rutland County Council
+E06000017,noc,No overall control,1987-05-01,1995-05-01,Rutland County Council
+E06000017,ind,Independent politician,1995-05-01,1997-05-01,Rutland County Council
+E06000017,ind,Independent politician,1997-05-01,1998-05-01,Rutland County Council
+E06000017,noc,No overall control,1998-05-01,2003-05-01,Rutland County Council
+E06000017,con,Conservative Party (UK),2003-05-01,2021-05-01,Rutland County Council
+E06000017,noc,No overall control,2021-05-01,,Rutland County Council
+E06000018,lab,Labour Party (UK),1974-05-01,1976-05-01,Nottingham City Council
+E06000018,con,Conservative Party (UK),1976-05-01,1979-05-01,Nottingham City Council
+E06000018,lab,Labour Party (UK),1979-05-01,1987-05-01,Nottingham City Council
+E06000018,con,Conservative Party (UK),1987-05-01,1988-05-01,Nottingham City Council
+E06000018,noc,No overall control,1988-05-01,1991-05-01,Nottingham City Council
+E06000018,lab,Labour Party (UK),1991-05-01,1998-05-01,Nottingham City Council
+E06000018,lab,Labour Party (UK),1998-05-01,,Nottingham City Council
+E06000019,ld,Liberal Democrats (UK),1998-05-01,2000-05-01,Herefordshire Council
+E06000019,noc,No overall control,2000-05-01,2007-05-01,Herefordshire Council
+E06000019,con,Conservative Party (UK),2007-05-01,2019-05-01,Herefordshire Council
+E06000019,noc,No overall control,2019-05-01,,Herefordshire Council
+E06000020,lab,Labour Party (UK),1974-05-01,1998-05-01,Telford and Wrekin Council
+E06000020,lab,Labour Party (UK),1998-05-01,2006-05-01,Telford and Wrekin Council
+E06000020,noc,No overall control,2006-05-01,2008-05-01,Telford and Wrekin Council
+E06000020,con,Conservative Party (UK),2008-05-01,2011-05-01,Telford and Wrekin Council
+E06000020,lab,Labour Party (UK),2011-05-01,2015-05-01,Telford and Wrekin Council
+E06000020,noc,No overall control,2015-05-01,2016-05-01,Telford and Wrekin Council
+E06000020,lab,Labour Party (UK),2016-05-01,,Telford and Wrekin Council
+E06000021,lab,Labour Party (UK),1974-05-01,1997-05-01,Stoke-on-Trent City Council
+E06000021,lab,Labour Party (UK),1997-05-01,2002-05-01,Stoke-on-Trent City Council
+E06000021,noc,No overall control,2002-05-01,2004-05-01,Stoke-on-Trent City Council
+E06000021,lab,Labour Party (UK),2004-05-01,2006-05-01,Stoke-on-Trent City Council
+E06000021,noc,No overall control,2006-05-01,2011-05-01,Stoke-on-Trent City Council
+E06000021,lab,Labour Party (UK),2011-05-01,2015-05-01,Stoke-on-Trent City Council
+E06000021,noc,No overall control,2015-05-01,2023-05-01,Stoke-on-Trent City Council
+E06000021,lab,Labour Party (UK),2023-05-01,,Stoke-on-Trent City Council
+E06000022,noc,No overall control,1996-05-01,2015-05-01,Bath and North East Somerset Council
+E06000022,con,Conservative Party (UK),2015-05-01,2019-05-01,Bath and North East Somerset Council
+E06000022,ld,"Liberal Democrats (UK, 2025)",2019-05-01,,Bath and North East Somerset Council
+E06000023,lab,Labour Party (UK),1974-05-01,1983-05-01,Bristol City Council
+E06000023,noc,No overall control,1983-05-01,1986-05-01,Bristol City Council
+E06000023,lab,Labour Party (UK),1986-05-01,1996-05-01,Bristol City Council
+E06000023,lab,Labour Party (UK),1996-05-01,2003-05-01,Bristol City Council
+E06000023,noc,No overall control,2003-05-01,2009-05-01,Bristol City Council
+E06000023,ld,Liberal Democrats (UK),2009-05-01,2011-05-01,Bristol City Council
+E06000023,noc,No overall control,2011-05-01,2016-05-01,Bristol City Council
+E06000023,lab,Labour Party (UK),2016-05-01,2016-05-01,Bristol City Council
+E06000023,noc,No overall control,2016-05-01,2016-05-01,Bristol City Council
+E06000023,lab,Labour Party (UK),2016-05-01,2021-05-01,Bristol City Council
+E06000023,noc,No overall control,2021-05-01,,Bristol City Council
+E06000024,con,Conservative Party (UK),1974-05-01,1995-05-01,North Somerset Council
+E06000024,noc,No overall control,1995-05-01,1996-05-01,North Somerset Council
+E06000024,ld,Liberal Democrats (UK),1996-05-01,1999-05-01,North Somerset Council
+E06000024,con,Conservative Party (UK),1999-05-01,2003-05-01,North Somerset Council
+E06000024,noc,No overall control,2003-05-01,2007-05-01,North Somerset Council
+E06000024,con,Conservative Party (UK),2007-05-01,2019-05-01,North Somerset Council
+E06000024,noc,No overall control,2019-05-01,,North Somerset Council
+E06000025,noc,No overall control,1996-05-01,1999-05-01,South Gloucestershire Council
+E06000025,ld,"Liberal Democrats (UK, 2025)",1999-05-01,2003-05-01,South Gloucestershire Council
+E06000025,noc,No overall control,2003-05-01,2015-05-01,South Gloucestershire Council
+E06000025,con,Conservative Party (UK),2015-05-01,2023-05-01,South Gloucestershire Council
+E06000025,noc,No overall control,2023-05-01,,South Gloucestershire Council
+E06000026,con,Conservative Party (UK),1974-05-01,1991-05-01,Plymouth City Council
+E06000026,lab,Labour Party (UK),1991-05-01,1998-05-01,Plymouth City Council
+E06000026,lab,Labour Party (UK),1998-05-01,2000-05-01,Plymouth City Council
+E06000026,con,Conservative Party (UK),2000-05-01,2003-05-01,Plymouth City Council
+E06000026,lab,Labour Party (UK),2003-05-01,2006-05-01,Plymouth City Council
+E06000026,noc,No overall control,2006-05-01,2006-05-01,Plymouth City Council
+E06000026,lab,Labour Party (UK),2006-05-01,2007-05-01,Plymouth City Council
+E06000026,con,Conservative Party (UK),2007-05-01,2012-05-01,Plymouth City Council
+E06000026,lab,Labour Party (UK),2012-05-01,2015-05-01,Plymouth City Council
+E06000026,noc,No overall control,2015-05-01,2017-05-01,Plymouth City Council
+E06000026,con,Conservative Party (UK),2017-05-01,2018-05-01,Plymouth City Council
+E06000026,lab,Labour Party (UK),2018-05-01,2021-05-01,Plymouth City Council
+E06000026,noc,No overall control,2021-05-01,2022-05-01,Plymouth City Council
+E06000026,con,Conservative Party (UK),2022-05-01,2022-05-01,Plymouth City Council
+E06000026,noc,No overall control,2022-05-01,2023-05-01,Plymouth City Council
+E06000026,lab,Labour Party (UK),2023-05-01,,Plymouth City Council
+E06000027,con,Conservative Party (UK),1974-05-01,1990-05-01,Torbay Council
+E06000027,noc,No overall control,1990-05-01,1991-05-01,Torbay Council
+E06000027,ld,Liberal Democrats (UK),1991-05-01,1998-05-01,Torbay Council
+E06000027,ld,Liberal Democrats (UK),1998-05-01,2000-05-01,Torbay Council
+E06000027,con,Conservative Party (UK),2000-05-01,2003-05-01,Torbay Council
+E06000027,ld,Liberal Democrats (UK),2003-05-01,2007-05-01,Torbay Council
+E06000027,con,Conservative Party (UK),2007-05-01,2019-05-01,Torbay Council
+E06000027,noc,No overall control,2019-05-01,2023-05-01,Torbay Council
+E06000027,con,Conservative Party (UK),2023-05-01,2023-05-01,Torbay Council
+E06000027,noc,No overall control,2023-05-01,,Torbay Council
+E06000030,lab,Labour Party (UK),1974-05-01,1976-05-01,Swindon Borough Council
+E06000030,noc,No overall control,1976-05-01,1978-05-01,Swindon Borough Council
+E06000030,lab,Labour Party (UK),1978-05-01,1997-05-01,Swindon Borough Council
+E06000030,lab,Labour Party (UK),1997-05-01,2000-05-01,Swindon Borough Council
+E06000030,noc,No overall control,2000-05-01,2004-05-01,Swindon Borough Council
+E06000030,con,Conservative Party (UK),2004-05-01,2023-05-01,Swindon Borough Council
+E06000030,lab,Labour Party (UK),2023-05-01,2026-05-01,Swindon Borough Council
+E06000030,noc,No overall control,2026-05-01,,Swindon Borough Council
+E06000031,lab,Labour Party (UK),1974-05-01,1976-05-01,Peterborough City Council
+E06000031,con,Conservative Party (UK),1976-05-01,1978-05-01,Peterborough City Council
+E06000031,noc,No overall control,1978-05-01,1980-05-01,Peterborough City Council
+E06000031,lab,Labour Party (UK),1980-05-01,1982-05-01,Peterborough City Council
+E06000031,noc,No overall control,1982-05-01,1996-05-01,Peterborough City Council
+E06000031,lab,Labour Party (UK),1996-05-01,1997-05-01,Peterborough City Council
+E06000031,noc,No overall control,1997-05-01,1998-05-01,Peterborough City Council
+E06000031,noc,No overall control,1998-05-01,2002-05-01,Peterborough City Council
+E06000031,con,Conservative Party (UK),2002-05-01,2014-05-01,Peterborough City Council
+E06000031,noc,No overall control,2014-05-01,2016-05-01,Peterborough City Council
+E06000031,con,Conservative Party (UK),2016-05-01,2017-05-01,Peterborough City Council
+E06000031,noc,No overall control,2017-05-01,2018-05-01,Peterborough City Council
+E06000031,con,Conservative Party (UK),2018-05-01,2018-05-01,Peterborough City Council
+E06000031,noc,No overall control,2018-05-01,2018-05-01,Peterborough City Council
+E06000031,con,Conservative Party (UK),2018-05-01,2019-05-01,Peterborough City Council
+E06000031,noc,No overall control,2019-05-01,,Peterborough City Council
+E06000032,lab,Labour Party (UK),1974-05-01,1976-05-01,Luton Borough Council
+E06000032,con,Conservative Party (UK),1976-05-01,1991-05-01,Luton Borough Council
+E06000032,lab,Labour Party (UK),1991-05-01,1997-05-01,Luton Borough Council
+E06000032,lab,Labour Party (UK),1997-05-01,2003-05-01,Luton Borough Council
+E06000032,noc,No overall control,2003-05-01,2007-05-01,Luton Borough Council
+E06000032,lab,Labour Party (UK),2007-05-01,2026-05-01,Luton Borough Council
+E06000032,noc,No overall control,2026-05-01,,Luton Borough Council
+E06000033,noc,No overall control,1974-05-01,1976-05-01,Southend-on-Sea City Council
+E06000033,con,Conservative Party (UK),1976-05-01,1987-05-01,Southend-on-Sea City Council
+E06000033,noc,No overall control,1987-05-01,1990-05-01,Southend-on-Sea City Council
+E06000033,con,Conservative Party (UK),1990-05-01,1994-05-01,Southend-on-Sea City Council
+E06000033,noc,No overall control,1994-05-01,1998-05-01,Southend-on-Sea City Council
+E06000033,noc,No overall control,1998-05-01,2000-05-01,Southend-on-Sea City Council
+E06000033,con,Conservative Party (UK),2000-05-01,2012-05-01,Southend-on-Sea City Council
+E06000033,noc,No overall control,2012-05-01,2013-05-01,Southend-on-Sea City Council
+E06000033,con,Conservative Party (UK),2013-05-01,2014-05-01,Southend-on-Sea City Council
+E06000033,noc,No overall control,2014-05-01,2017-05-01,Southend-on-Sea City Council
+E06000033,con,Conservative Party (UK),2017-05-01,2019-05-01,Southend-on-Sea City Council
+E06000033,noc,No overall control,2019-05-01,,Southend-on-Sea City Council
+E06000034,lab,Labour Party (UK),1974-05-01,1979-05-01,Thurrock Council
+E06000034,noc,No overall control,1979-05-01,1982-05-01,Thurrock Council
+E06000034,lab,Labour Party (UK),1982-05-01,1998-05-01,Thurrock Council
+E06000034,lab,Labour Party (UK),1998-05-01,2004-05-01,Thurrock Council
+E06000034,con,Conservative Party (UK),2004-05-01,2007-05-01,Thurrock Council
+E06000034,noc,No overall control,2007-05-01,2012-05-01,Thurrock Council
+E06000034,lab,Labour Party (UK),2012-05-01,2014-05-01,Thurrock Council
+E06000034,noc,No overall control,2014-05-01,2021-05-01,Thurrock Council
+E06000034,con,Conservative Party (UK),2021-05-01,2024-05-01,Thurrock Council
+E06000034,noc,No overall control,2024-05-01,2024-05-01,Thurrock Council
+E06000034,lab,Labour Party (UK),2024-05-01,2026-05-01,Thurrock Council
+E06000034,ref,Reform UK,2026-05-01,,Thurrock Council
+E06000035,noc,No overall control,1998-05-01,2003-05-01,Medway Council
+E06000035,con,Conservative Party (UK),2003-05-01,2023-05-01,Medway Council
+E06000035,lab,Labour Party (UK),2023-05-01,2025-05-01,Medway Council
+E06000035,lab,Labour Party (UK),2025-05-01,,Medway Council
+E06000036,lab,Labour Party (UK),1974-05-01,1976-05-01,Bracknell Forest Council
+E06000036,con,Conservative Party (UK),1976-05-01,1995-05-01,Bracknell Forest Council
+E06000036,lab,Labour Party (UK),1995-05-01,1997-05-01,Bracknell Forest Council
+E06000036,con,Conservative Party (UK),1997-05-01,1998-05-01,Bracknell Forest Council
+E06000036,con,Conservative Party (UK),1998-05-01,2023-05-01,Bracknell Forest Council
+E06000036,lab,Labour Party (UK),2023-05-01,2025-05-01,Bracknell Forest Council
+E06000036,noc,No overall control,2025-05-01,,Bracknell Forest Council
+E06000037,noc,No overall control,1974-05-01,1976-05-01,West Berkshire Council
+E06000037,con,Conservative Party (UK),1976-05-01,1991-05-01,West Berkshire Council
+E06000037,ld,Liberal Democrats (UK),1991-05-01,1998-05-01,West Berkshire Council
+E06000037,ld,Liberal Democrats (UK),1998-05-01,2003-05-01,West Berkshire Council
+E06000037,noc,No overall control,2003-05-01,2005-05-01,West Berkshire Council
+E06000037,con,Conservative Party (UK),2005-05-01,2023-05-01,West Berkshire Council
+E06000037,ld,Liberal Democrats (UK),2023-05-01,,West Berkshire Council
+E06000038,noc,No overall control,1974-05-01,1983-05-01,Reading Borough Council
+E06000038,con,Conservative Party (UK),1983-05-01,1986-05-01,Reading Borough Council
+E06000038,noc,No overall control,1986-05-01,1987-05-01,Reading Borough Council
+E06000038,lab,Labour Party (UK),1987-05-01,1998-05-01,Reading Borough Council
+E06000038,lab,Labour Party (UK),1998-05-01,2008-05-01,Reading Borough Council
+E06000038,noc,No overall control,2008-05-01,2012-05-01,Reading Borough Council
+E06000038,lab,Labour Party (UK),2012-05-01,,Reading Borough Council
+E06000039,lab,Labour Party (UK),1974-05-01,1976-05-01,Slough Borough Council
+E06000039,con,Conservative Party (UK),1976-05-01,1983-05-01,Slough Borough Council
+E06000039,lab,Labour Party (UK),1983-05-01,1998-05-01,Slough Borough Council
+E06000039,lab,Labour Party (UK),1998-05-01,2004-05-01,Slough Borough Council
+E06000039,noc,No overall control,2004-05-01,2008-05-01,Slough Borough Council
+E06000039,lab,Labour Party (UK),2008-05-01,2023-05-01,Slough Borough Council
+E06000039,noc,No overall control,2023-05-01,,Slough Borough Council
+E06000040,con,Conservative Party (UK),1974-05-01,1991-05-01,Windsor and Maidenhead Borough Council
+E06000040,noc,No overall control,1991-05-01,1995-05-01,Windsor and Maidenhead Borough Council
+E06000040,ld,Liberal Democrats (UK),1995-05-01,1997-05-01,Windsor and Maidenhead Borough Council
+E06000040,noc,No overall control,1997-05-01,1998-05-01,Windsor and Maidenhead Borough Council
+E06000040,noc,No overall control,1998-05-01,1999-05-01,Windsor and Maidenhead Borough Council
+E06000040,ld,Liberal Democrats (UK),1999-05-01,2000-05-01,Windsor and Maidenhead Borough Council
+E06000040,noc,No overall control,2000-05-01,2003-05-01,Windsor and Maidenhead Borough Council
+E06000040,ld,Liberal Democrats (UK),2003-05-01,2007-05-01,Windsor and Maidenhead Borough Council
+E06000040,con,Conservative Party (UK),2007-05-01,2023-05-01,Windsor and Maidenhead Borough Council
+E06000040,ld,Liberal Democrats (UK),2023-05-01,,Windsor and Maidenhead Borough Council
+E06000041,noc,No overall control,1974-05-01,1976-05-01,Wokingham Borough Council
+E06000041,con,Conservative Party (UK),1976-05-01,1995-05-01,Wokingham Borough Council
+E06000041,noc,No overall control,1995-05-01,1996-05-01,Wokingham Borough Council
+E06000041,ld,Liberal Democrats (UK),1996-05-01,1997-05-01,Wokingham Borough Council
+E06000041,con,Conservative Party (UK),1997-05-01,1998-05-01,Wokingham Borough Council
+E06000041,con,Conservative Party (UK),1998-05-01,2000-05-01,Wokingham Borough Council
+E06000041,noc,No overall control,2000-05-01,2002-05-01,Wokingham Borough Council
+E06000041,con,Conservative Party (UK),2002-05-01,2022-05-01,Wokingham Borough Council
+E06000041,noc,No overall control,2022-05-01,2025-05-01,Wokingham Borough Council
+E06000042,lab,Labour Party (UK),1974-05-01,1976-05-01,Milton Keynes City Council
+E06000042,con,Conservative Party (UK),1976-05-01,1982-05-01,Milton Keynes City Council
+E06000042,noc,No overall control,1982-05-01,1990-05-01,Milton Keynes City Council
+E06000042,lab,Labour Party (UK),1990-05-01,1992-05-01,Milton Keynes City Council
+E06000042,noc,No overall control,1992-05-01,1996-05-01,Milton Keynes City Council
+E06000042,lab,Labour Party (UK),1996-05-01,1997-05-01,Milton Keynes City Council
+E06000042,lab,Labour Party (UK),1997-05-01,2000-05-01,Milton Keynes City Council
+E06000042,noc,No overall control,2000-05-01,2002-05-01,Milton Keynes City Council
+E06000042,ld,Liberal Democrats (UK),2002-05-01,2006-05-01,Milton Keynes City Council
+E06000042,noc,No overall control,2006-05-01,2024-05-01,Milton Keynes City Council
+E06000042,lab,Labour Party (UK),2024-05-01,2026-05-01,Milton Keynes City Council
+E06000042,noc,No overall control,2026-05-01,,Milton Keynes City Council
+E06000043,lab,Labour Party (UK),1997-05-01,2003-05-01,Brighton and Hove City Council
+E06000043,noc,No overall control,2003-05-01,2023-05-01,Brighton and Hove City Council
+E06000043,lab,Labour Party (UK),2023-05-01,,Brighton and Hove City Council
+E06000044,con,Conservative Party (UK),1974-05-01,1991-05-01,Portsmouth City Council
+E06000044,noc,No overall control,1991-05-01,1996-05-01,Portsmouth City Council
+E06000044,lab,Labour Party (UK),1996-05-01,1997-05-01,Portsmouth City Council
+E06000044,lab,Labour Party (UK),1997-05-01,2000-05-01,Portsmouth City Council
+E06000044,noc,No overall control,2000-05-01,2009-05-01,Portsmouth City Council
+E06000044,ld,Liberal Democrats (UK),2009-05-01,2014-05-01,Portsmouth City Council
+E06000044,noc,No overall control,2014-05-01,2026-05-01,Portsmouth City Council
+E06000044,ld,"Liberal Democrats (UK, 2025)",2026-05-01,,Portsmouth City Council
+E06000045,lab,Labour Party (UK),1974-05-01,1976-05-01,Southampton City Council
+E06000045,con,Conservative Party (UK),1976-05-01,1984-05-01,Southampton City Council
+E06000045,lab,Labour Party (UK),1984-05-01,1987-05-01,Southampton City Council
+E06000045,noc,No overall control,1987-05-01,1988-05-01,Southampton City Council
+E06000045,lab,Labour Party (UK),1988-05-01,1997-05-01,Southampton City Council
+E06000045,lab,Labour Party (UK),1997-05-01,2000-05-01,Southampton City Council
+E06000045,noc,No overall control,2000-05-01,2008-05-01,Southampton City Council
+E06000045,con,Conservative Party (UK),2008-05-01,2012-05-01,Southampton City Council
+E06000045,lab,Labour Party (UK),2012-05-01,2021-05-01,Southampton City Council
+E06000045,con,Conservative Party (UK),2021-05-01,2022-05-01,Southampton City Council
+E06000045,lab,Labour Party (UK),2022-05-01,2026-05-01,Southampton City Council
+E06000045,noc,No overall control,2026-05-01,,Southampton City Council
+E06000046,ind,Independent (politician),1974-05-01,1977-05-01,Isle of Wight Council
+E06000046,con,Conservative Party (UK),1977-05-01,1981-05-01,Isle of Wight Council
+E06000046,lib,Liberal Party (UK),1981-05-01,1985-05-01,Isle of Wight Council
+E06000046,lib,SDP–Liberal Alliance,1985-05-01,1988-05-01,Isle of Wight Council
+E06000046,ld,Liberal Democrats (UK),1988-05-01,1995-05-01,Isle of Wight Council
+E06000046,ld,Liberal Democrats (UK),1995-05-01,1998-05-01,Isle of Wight Council
+E06000046,noc,No overall control,1998-05-01,2005-05-01,Isle of Wight Council
+E06000046,con,Conservative Party (UK),2005-05-01,2013-05-01,Isle of Wight Council
+E06000046,noc,No overall control,2013-05-01,2017-05-01,Isle of Wight Council
+E06000046,con,Conservative Party (UK),2017-05-01,2021-05-01,Isle of Wight Council
+E06000046,noc,No overall control,2021-05-01,,Isle of Wight Council
+E06000047,lab,Labour Party (UK),1919-05-01,1922-05-01,Durham County Council
+E06000047,noc,No overall control,1922-05-01,1925-05-01,Durham County Council
+E06000047,lab,Labour Party (UK),1925-05-01,1974-05-01,Durham County Council
+E06000047,lab,Labour Party (UK),1974-05-01,2009-05-01,Durham County Council
+E06000047,lab,Labour Party (UK),2009-05-01,2021-05-01,Durham County Council
+E06000047,noc,No overall control,2021-05-01,2025-05-01,Durham County Council
+E06000047,ref,Reform UK,2025-05-01,,Durham County Council
+E06000049,con,Conservative Party (UK),2009-05-01,2019-05-01,Cheshire East Council
+E06000049,noc,No overall control,2019-05-01,,Cheshire East Council
+E06000050,con,Conservative Party (UK),2009-05-01,2015-05-01,Cheshire West and Chester Council
+E06000050,lab,Labour Party (UK),2015-05-01,2019-05-01,Cheshire West and Chester Council
+E06000050,noc,No overall control,2019-05-01,2023-05-01,Cheshire West and Chester Council
+E06000050,lab,Labour Party (UK),2023-05-01,2025-05-01,Cheshire West and Chester Council
+E06000050,noc,No overall control,2025-05-01,,Cheshire West and Chester Council
+E06000051,noc,No overall control,1974-05-01,2005-05-01,Shropshire Council
+E06000051,con,Conservative Party (UK),2005-05-01,2009-05-01,Shropshire Council
+E06000051,con,Conservative Party (UK),2009-05-01,2025-05-01,Shropshire Council
+E06000051,ld,Liberal Democrats (UK),2025-05-01,,Shropshire Council
+E06000052,ind,Independent politician,1974-05-01,1985-05-01,Cornwall Council
+E06000052,noc,No overall control,1985-05-01,1993-05-01,Cornwall Council
+E06000052,ld,Liberal Democrats (UK),1993-05-01,1997-05-01,Cornwall Council
+E06000052,noc,No overall control,1997-05-01,2005-05-01,Cornwall Council
+E06000052,ld,Liberal Democrats (UK),2005-05-01,2009-05-01,Cornwall Council
+E06000052,noc,No overall control,2009-05-01,2021-05-01,Cornwall Council
+E06000052,con,Conservative Party (UK),2021-05-01,2024-05-01,Cornwall Council
+E06000052,noc,No overall control,2024-05-01,,Cornwall Council
+E06000053,ind,Independent politician,2009-05-01,,Council of the Isles of Scilly
+E06000054,noc,No overall control,1974-05-01,1977-05-01,Wiltshire Council
+E06000054,con,Conservative Party (UK),1977-05-01,1985-05-01,Wiltshire Council
+E06000054,noc,No overall control,1985-05-01,1997-05-01,Wiltshire Council
+E06000054,ld,Liberal Democrats (UK),1997-05-01,1997-05-01,Wiltshire Council
+E06000054,noc,No overall control,1997-05-01,2000-05-01,Wiltshire Council
+E06000054,con,Conservative Party (UK),2000-05-01,2009-05-01,Wiltshire Council
+E06000054,con,Conservative Party (UK),2009-05-01,2025-05-01,Wiltshire Council
+E06000054,noc,No overall control,2025-05-01,,Wiltshire Council
+E06000055,noc,No overall control,1974-05-01,1976-05-01,Bedford Borough Council
+E06000055,con,Conservative Party (UK),1976-05-01,1986-05-01,Bedford Borough Council
+E06000055,noc,No overall control,1986-05-01,2009-05-01,Bedford Borough Council
+E06000055,noc,No overall control,2009-05-01,,Bedford Borough Council
+E06000056,con,Conservative Party (UK),2009-05-01,2023-05-01,Central Bedfordshire Council
+E06000056,noc,No overall control,2023-05-01,,Central Bedfordshire Council
+E06000057,noc,No overall control,1974-05-01,1981-05-01,Northumberland County Council
+E06000057,lab,Labour Party (UK),1981-05-01,1985-05-01,Northumberland County Council
+E06000057,noc,No overall control,1985-05-01,1989-05-01,Northumberland County Council
+E06000057,lab,Labour Party (UK),1989-05-01,2008-05-01,Northumberland County Council
+E06000057,noc,No overall control,2008-05-01,2009-05-01,Northumberland County Council
+E06000057,noc,No overall control,2009-05-01,2021-05-01,Northumberland County Council
+E06000057,con,Conservative Party (UK),2021-05-01,2021-05-01,Northumberland County Council
+E06000057,noc,No overall control,2021-05-01,,Northumberland County Council
+E06000058,noc,No overall control,2019-05-01,2021-05-01,"Bournemouth, Christchurch and Poole Council"
+E06000058,con,Conservative Party (UK),2021-05-01,2022-05-01,"Bournemouth, Christchurch and Poole Council"
+E06000058,noc,No overall control,2022-05-01,,"Bournemouth, Christchurch and Poole Council"
+E06000059,con,Conservative Party (UK),2019-05-01,2024-05-01,Dorset Council (UK)
+E06000059,ld,Liberal Democrats (UK),2024-05-01,,Dorset Council (UK)
+E06000060,con,Conservative Party (UK),1974-05-01,2020-05-01,Buckinghamshire Council
+E06000060,con,Conservative Party (UK),2020-05-01,2025-05-01,Buckinghamshire Council
+E06000060,noc,No overall control,2025-05-01,2026-05-01,Buckinghamshire Council
+E06000060,con,Conservative Party (UK),2026-05-01,,Buckinghamshire Council
+E06000061,con,Conservative Party (UK),2021-05-01,2025-05-01,North Northamptonshire Council
+E06000061,ref,Reform UK,2025-05-01,,North Northamptonshire Council
+E06000062,con,Conservative Party (UK),2021-05-01,2025-05-01,West Northamptonshire Council
+E06000062,ref,Reform UK,2025-05-01,,West Northamptonshire Council
+E06000063,lab,Labour Party (UK),2023-05-01,,Cumberland Council
+E06000064,ld,Liberal Democrats (UK),2023-05-01,,Westmorland and Furness Council
+E06000065,con,Conservative Party (UK),1974-05-01,1993-05-01,North Yorkshire Council
+E06000065,noc,No overall control,1993-05-01,2001-05-01,North Yorkshire Council
+E06000065,con,Conservative Party (UK),2001-05-01,2023-05-01,North Yorkshire Council
+E06000065,con,Conservative Party (UK),2023-05-01,2023-05-01,North Yorkshire Council
+E06000065,noc,No overall control,2023-05-01,,North Yorkshire Council
+E06000066,con,Conservative Party (UK),1974-05-01,1985-05-01,Somerset Council
+E06000066,noc,No overall control,1985-05-01,1989-05-01,Somerset Council
+E06000066,con,Conservative Party (UK),1989-05-01,1993-05-01,Somerset Council
+E06000066,ld,Liberal Democrats (UK),1993-05-01,2001-05-01,Somerset Council
+E06000066,noc,No overall control,2001-05-01,2005-05-01,Somerset Council
+E06000066,ld,Liberal Democrats (UK),2005-05-01,2009-05-01,Somerset Council
+E06000066,con,Conservative Party (UK),2009-05-01,2022-05-01,Somerset Council
+E06000066,ld,Liberal Democrats (UK),2022-05-01,2023-05-01,Somerset Council
+E06000066,ld,Liberal Democrats (UK),2023-05-01,,Somerset Council
+E07000008,lab,Labour Party (UK),1974-05-01,1976-05-01,Cambridge City Council
+E07000008,con,Conservative Party (UK),1976-05-01,1979-05-01,Cambridge City Council
+E07000008,noc,No overall control,1979-05-01,1986-05-01,Cambridge City Council
+E07000008,lab,Labour Party (UK),1986-05-01,1987-05-01,Cambridge City Council
+E07000008,noc,No overall control,1987-05-01,1988-05-01,Cambridge City Council
+E07000008,lab,Labour Party (UK),1988-05-01,1992-05-01,Cambridge City Council
+E07000008,noc,No overall control,1992-05-01,1996-05-01,Cambridge City Council
+E07000008,lab,Labour Party (UK),1996-05-01,1998-05-01,Cambridge City Council
+E07000008,noc,No overall control,1998-05-01,2000-05-01,Cambridge City Council
+E07000008,ld,Liberal Democrats (UK),2000-05-01,2012-05-01,Cambridge City Council
+E07000008,noc,No overall control,2012-05-01,2014-05-01,Cambridge City Council
+E07000008,lab,Labour Party (UK),2014-05-01,2026-05-01,Cambridge City Council
+E07000008,noc,No overall control,2026-05-01,,Cambridge City Council
+E07000009,ind,Independent politician,1974-05-01,1999-05-01,East Cambridgeshire
+E07000009,ld,Liberal Democrats (UK),1999-05-01,2003-05-01,East Cambridgeshire
+E07000009,noc,No overall control,2003-05-01,2007-05-01,East Cambridgeshire
+E07000009,con,Conservative Party (UK),2007-05-01,2024-05-01,East Cambridgeshire
+E07000009,noc,No overall control,2024-05-01,2026-05-01,East Cambridgeshire
+E07000009,con,Conservative Party (UK),2026-05-01,,East Cambridgeshire
+E07000010,noc,No overall control,1974-05-01,1976-05-01,Fenland District
+E07000010,con,Conservative Party (UK),1976-05-01,1995-05-01,Fenland District
+E07000010,lab,Labour Party (UK),1995-05-01,1999-05-01,Fenland District
+E07000010,con,Conservative Party (UK),1999-05-01,,Fenland District
+E07000011,noc,No overall control,1974-05-01,1976-05-01,Huntingdonshire District Council
+E07000011,con,Conservative Party (UK),1976-05-01,2022-05-01,Huntingdonshire District Council
+E07000011,noc,No overall control,2022-05-01,,Huntingdonshire District Council
+E07000012,ind,Independent politician,1974-05-01,1992-05-01,South Cambridgeshire
+E07000012,noc,No overall control,1992-05-01,2007-05-01,South Cambridgeshire
+E07000012,con,Conservative Party (UK),2007-05-01,2018-05-01,South Cambridgeshire
+E07000012,ld,Liberal Democrats (UK),2018-05-01,,South Cambridgeshire
+E07000032,lab,Labour Party (UK),1974-05-01,1976-05-01,Amber Valley
+E07000032,noc,No overall control,1976-05-01,1980-05-01,Amber Valley
+E07000032,lab,Labour Party (UK),1980-05-01,1987-05-01,Amber Valley
+E07000032,noc,No overall control,1987-05-01,1988-05-01,Amber Valley
+E07000032,con,Conservative Party (UK),1988-05-01,1991-05-01,Amber Valley
+E07000032,lab,Labour Party (UK),1991-05-01,2000-05-01,Amber Valley
+E07000032,con,Conservative Party (UK),2000-05-01,2014-05-01,Amber Valley
+E07000032,lab,Labour Party (UK),2014-05-01,2015-05-01,Amber Valley
+E07000032,con,Conservative Party (UK),2015-05-01,2019-05-01,Amber Valley
+E07000032,lab,Labour Party (UK),2019-05-01,2021-05-01,Amber Valley
+E07000032,con,Conservative Party (UK),2021-05-01,2023-05-01,Amber Valley
+E07000032,lab,Labour Party (UK),2023-05-01,2025-05-01,Amber Valley
+E07000032,noc,No overall control,2025-05-01,,Amber Valley
+E07000033,lab,Labour Party (UK),1974-05-01,2019-05-01,Bolsover District
+E07000033,noc,No overall control,2019-05-01,2021-05-01,Bolsover District
+E07000033,lab,Labour Party (UK),2021-05-01,,Bolsover District
+E07000034,lab,Labour Party (UK),1974-05-01,2003-05-01,Borough of Chesterfield
+E07000034,ld,Liberal Democrats (UK),2003-05-01,2011-05-01,Borough of Chesterfield
+E07000034,lab,Labour Party (UK),2011-05-01,,Borough of Chesterfield
+E07000035,noc,No overall control,1974-05-01,1976-05-01,Derbyshire Dales
+E07000035,con,Conservative Party (UK),1976-05-01,1995-05-01,Derbyshire Dales
+E07000035,noc,No overall control,1995-05-01,1999-05-01,Derbyshire Dales
+E07000035,con,Conservative Party (UK),1999-05-01,2023-05-01,Derbyshire Dales
+E07000035,noc,No overall control,2023-05-01,,Derbyshire Dales
+E07000036,lab,Labour Party (UK),1974-05-01,1976-05-01,Borough of Erewash
+E07000036,con,Conservative Party (UK),1976-05-01,1991-05-01,Borough of Erewash
+E07000036,lab,Labour Party (UK),1991-05-01,2003-05-01,Borough of Erewash
+E07000036,con,Conservative Party (UK),2003-05-01,2023-05-01,Borough of Erewash
+E07000036,lab,Labour Party (UK),2023-05-01,,Borough of Erewash
+E07000037,noc,No overall control,1974-05-01,1976-05-01,High Peak Borough Council
+E07000037,con,Conservative Party (UK),1976-05-01,1979-05-01,High Peak Borough Council
+E07000037,noc,No overall control,1979-05-01,1995-05-01,High Peak Borough Council
+E07000037,lab,Labour Party (UK),1995-05-01,2003-05-01,High Peak Borough Council
+E07000037,noc,No overall control,2003-05-01,2007-05-01,High Peak Borough Council
+E07000037,con,Conservative Party (UK),2007-05-01,2011-05-01,High Peak Borough Council
+E07000037,noc,No overall control,2011-05-01,2015-05-01,High Peak Borough Council
+E07000037,con,Conservative Party (UK),2015-05-01,2019-05-01,High Peak Borough Council
+E07000037,lab,Labour Party (UK),2019-05-01,2022-05-01,High Peak Borough Council
+E07000037,noc,No overall control,2022-05-01,2023-05-01,High Peak Borough Council
+E07000037,lab,Labour Party (UK),2023-05-01,,High Peak Borough Council
+E07000038,lab,Labour Party (UK),1974-05-01,1976-05-01,North East Derbyshire
+E07000038,noc,No overall control,1976-05-01,1979-05-01,North East Derbyshire
+E07000038,lab,Labour Party (UK),1979-05-01,2019-05-01,North East Derbyshire
+E07000038,con,Conservative Party (UK),2019-05-01,2022-05-01,North East Derbyshire
+E07000038,noc,No overall control,2022-05-01,2023-05-01,North East Derbyshire
+E07000038,lab,Labour Party (UK),2023-05-01,2026-05-01,North East Derbyshire
+E07000038,noc,No overall control,2026-05-01,,North East Derbyshire
+E07000039,lab,Labour Party (UK),1974-05-01,1976-05-01,South Derbyshire
+E07000039,noc,No overall control,1976-05-01,1983-05-01,South Derbyshire
+E07000039,lab,Labour Party (UK),1983-05-01,2007-05-01,South Derbyshire
+E07000039,con,Conservative Party (UK),2007-05-01,2020-05-01,South Derbyshire
+E07000039,noc,No overall control,2020-05-01,2023-05-01,South Derbyshire
+E07000039,lab,Labour Party (UK),2023-05-01,,South Derbyshire
+E07000040,ind,Independent politician,1974-05-01,1976-05-01,East Devon
+E07000040,con,Conservative Party (UK),1976-05-01,1995-05-01,East Devon
+E07000040,noc,No overall control,1995-05-01,1999-05-01,East Devon
+E07000040,con,Conservative Party (UK),1999-05-01,2019-05-01,East Devon
+E07000040,noc,No overall control,2019-05-01,,East Devon
+E07000041,noc,No overall control,1974-05-01,1976-05-01,Exeter City Council
+E07000041,con,Conservative Party (UK),1976-05-01,1983-05-01,Exeter City Council
+E07000041,noc,No overall control,1983-05-01,1995-05-01,Exeter City Council
+E07000041,lab,Labour Party (UK),1995-05-01,2003-05-01,Exeter City Council
+E07000041,noc,No overall control,2003-05-01,2012-05-01,Exeter City Council
+E07000041,lab,Labour Party (UK),2012-05-01,2026-05-01,Exeter City Council
+E07000041,noc,No overall control,2026-05-01,,Exeter City Council
+E07000042,ind,Independent politician,1974-05-01,1995-05-01,Mid Devon
+E07000042,ld,Liberal Democrats (UK),1995-05-01,1999-05-01,Mid Devon
+E07000042,noc,No overall control,1999-05-01,2023-05-01,Mid Devon
+E07000042,ld,Liberal Democrats (UK),2023-05-01,,Mid Devon
+E07000043,ind,Independent politician,1974-05-01,1987-05-01,North Devon
+E07000043,noc,No overall control,1987-05-01,1991-05-01,North Devon
+E07000043,ld,Liberal Democrats (UK),1991-05-01,2007-05-01,North Devon
+E07000043,con,Conservative Party (UK),2007-05-01,2011-05-01,North Devon
+E07000043,noc,No overall control,2011-05-01,2019-05-01,North Devon
+E07000043,ld,Liberal Democrats (UK),2019-05-01,,North Devon
+E07000044,ind,Independent politician,1974-05-01,1983-05-01,South Hams
+E07000044,noc,No overall control,1983-05-01,1987-05-01,South Hams
+E07000044,con,Conservative Party (UK),1987-05-01,1995-05-01,South Hams
+E07000044,noc,No overall control,1995-05-01,1999-05-01,South Hams
+E07000044,con,Conservative Party (UK),1999-05-01,2023-05-01,South Hams
+E07000044,ld,Liberal Democrats (UK),2023-05-01,,South Hams
+E07000045,ind,Independent politician,1974-05-01,1983-05-01,Teignbridge
+E07000045,noc,No overall control,1983-05-01,2011-05-01,Teignbridge
+E07000045,con,Conservative Party (UK),2011-05-01,2019-05-01,Teignbridge
+E07000045,ld,Liberal Democrats (UK),2019-05-01,2021-05-01,Teignbridge
+E07000045,noc,No overall control,2021-05-01,2023-05-01,Teignbridge
+E07000045,ld,Liberal Democrats (UK),2023-05-01,,Teignbridge
+E07000046,ind,Independent politician,1974-05-01,1995-05-01,Torridge District
+E07000046,noc,No overall control,1995-05-01,1999-05-01,Torridge District
+E07000046,ind,Independent politician,1999-05-01,2007-05-01,Torridge District
+E07000046,noc,No overall control,2007-05-01,2015-05-01,Torridge District
+E07000046,con,Conservative Party (UK),2015-05-01,2017-05-01,Torridge District
+E07000046,noc,No overall control,2017-05-01,2022-05-01,Torridge District
+E07000046,ind,Independent politician,2022-05-01,2023-05-01,Torridge District
+E07000046,noc,No overall control,2023-05-01,,Torridge District
+E07000047,ind,Independent politician,1974-05-01,1987-05-01,West Devon
+E07000047,noc,No overall control,1987-05-01,1991-05-01,West Devon
+E07000047,ind,Independent politician,1991-05-01,1995-05-01,West Devon
+E07000047,ld,Liberal Democrats (UK),1995-05-01,1999-05-01,West Devon
+E07000047,noc,No overall control,1999-05-01,2015-05-01,West Devon
+E07000047,con,Conservative Party (UK),2015-05-01,2020-05-01,West Devon
+E07000047,noc,No overall control,2020-05-01,2021-05-01,West Devon
+E07000047,con,Conservative Party (UK),2021-05-01,2023-05-01,West Devon
+E07000047,noc,No overall control,2023-05-01,,West Devon
+E07000061,lib,Liberal Party (UK),1974-05-01,1976-05-01,Eastbourne Borough Council
+E07000061,con,Conservative Party (UK),1976-05-01,1984-05-01,Eastbourne Borough Council
+E07000061,noc,No overall control,1984-05-01,1986-05-01,Eastbourne Borough Council
+E07000061,lib,SDP-Liberal Alliance,1986-05-01,1988-05-01,Eastbourne Borough Council
+E07000061,con,Conservative Party (UK),1988-05-01,1990-05-01,Eastbourne Borough Council
+E07000061,noc,No overall control,1990-05-01,1991-05-01,Eastbourne Borough Council
+E07000061,ld,Liberal Democrats (UK),1991-05-01,1999-05-01,Eastbourne Borough Council
+E07000061,noc,No overall control,1999-05-01,2000-05-01,Eastbourne Borough Council
+E07000061,con,Conservative Party (UK),2000-05-01,2002-05-01,Eastbourne Borough Council
+E07000061,ld,Liberal Democrats (UK),2002-05-01,2004-05-01,Eastbourne Borough Council
+E07000061,con,Conservative Party (UK),2004-05-01,2007-05-01,Eastbourne Borough Council
+E07000061,ld,Liberal Democrats (UK),2007-05-01,,Eastbourne Borough Council
+E07000062,noc,No overall control,1974-05-01,1976-05-01,Hastings Borough Council
+E07000062,con,Conservative Party (UK),1976-05-01,1980-05-01,Hastings Borough Council
+E07000062,noc,No overall control,1980-05-01,1996-05-01,Hastings Borough Council
+E07000062,ld,Liberal Democrats (UK),1996-05-01,1998-05-01,Hastings Borough Council
+E07000062,lab,Labour Party (UK),1998-05-01,2004-05-01,Hastings Borough Council
+E07000062,noc,No overall control,2004-05-01,2006-05-01,Hastings Borough Council
+E07000062,con,Conservative Party (UK),2006-05-01,2007-05-01,Hastings Borough Council
+E07000062,noc,No overall control,2007-05-01,2010-05-01,Hastings Borough Council
+E07000062,lab,Labour Party (UK),2010-05-01,2022-05-01,Hastings Borough Council
+E07000062,noc,No overall control,2022-05-01,2026-05-01,Hastings Borough Council
+E07000062,grn,Green Party of England and Wales,2026-05-01,,Hastings Borough Council
+E07000063,con,Conservative Party (UK),1974-05-01,1991-05-01,Lewes District
+E07000063,ld,Liberal Democrats (UK),1991-05-01,2011-05-01,Lewes District
+E07000063,con,Conservative Party (UK),2011-05-01,2013-05-01,Lewes District
+E07000063,noc,No overall control,2013-05-01,2015-05-01,Lewes District
+E07000063,con,Conservative Party (UK),2015-05-01,2018-05-01,Lewes District
+E07000063,noc,No overall control,2018-05-01,,Lewes District
+E07000064,ind,Independent politician,1974-05-01,1979-05-01,Rother District
+E07000064,noc,No overall control,1979-05-01,1983-05-01,Rother District
+E07000064,con,Conservative Party (UK),1983-05-01,1991-05-01,Rother District
+E07000064,noc,No overall control,1991-05-01,1999-05-01,Rother District
+E07000064,con,Conservative Party (UK),1999-05-01,2019-05-01,Rother District
+E07000064,noc,No overall control,2019-05-01,,Rother District
+E07000065,con,Conservative Party (UK),1974-05-01,1995-05-01,Wealden District
+E07000065,noc,No overall control,1995-05-01,1997-05-01,Wealden District
+E07000065,con,Conservative Party (UK),1997-05-01,2023-05-01,Wealden District
+E07000065,noc,No overall control,2023-05-01,,Wealden District
+E07000066,lab,Labour Party (UK),1974-05-01,1976-05-01,Borough of Basildon
+E07000066,noc,No overall control,1976-05-01,1982-05-01,Borough of Basildon
+E07000066,lab,Labour Party (UK),1982-05-01,1987-05-01,Borough of Basildon
+E07000066,noc,No overall control,1987-05-01,1990-05-01,Borough of Basildon
+E07000066,lab,Labour Party (UK),1990-05-01,1991-05-01,Borough of Basildon
+E07000066,noc,No overall control,1991-05-01,1992-05-01,Borough of Basildon
+E07000066,con,Conservative Party (UK),1992-05-01,1994-05-01,Borough of Basildon
+E07000066,noc,No overall control,1994-05-01,1996-05-01,Borough of Basildon
+E07000066,lab,Labour Party (UK),1996-05-01,2000-05-01,Borough of Basildon
+E07000066,noc,No overall control,2000-05-01,2003-05-01,Borough of Basildon
+E07000066,con,Conservative Party (UK),2003-05-01,2014-05-01,Borough of Basildon
+E07000066,noc,No overall control,2014-05-01,2018-05-01,Borough of Basildon
+E07000066,con,Conservative Party (UK),2018-05-01,2019-05-01,Borough of Basildon
+E07000066,noc,No overall control,2019-05-01,2021-05-01,Borough of Basildon
+E07000066,con,Conservative Party (UK),2021-05-01,2024-05-01,Borough of Basildon
+E07000066,noc,No overall control,2024-05-01,,Borough of Basildon
+E07000067,noc,No overall control,1974-05-01,1976-05-01,Braintree District
+E07000067,con,Conservative Party (UK),1976-05-01,1979-05-01,Braintree District
+E07000067,noc,No overall control,1979-05-01,1995-05-01,Braintree District
+E07000067,lab,Labour Party (UK),1995-05-01,2003-05-01,Braintree District
+E07000067,noc,No overall control,2003-05-01,2007-05-01,Braintree District
+E07000067,con,Conservative Party (UK),2007-05-01,,Braintree District
+E07000068,con,Conservative Party (UK),1974-05-01,1990-05-01,Borough of Brentwood
+E07000068,noc,No overall control,1990-05-01,1991-05-01,Borough of Brentwood
+E07000068,ld,Liberal Democrats (UK),1991-05-01,2003-05-01,Borough of Brentwood
+E07000068,noc,No overall control,2003-05-01,2004-05-01,Borough of Brentwood
+E07000068,con,Conservative Party (UK),2004-05-01,2014-05-01,Borough of Brentwood
+E07000068,noc,No overall control,2014-05-01,2015-05-01,Borough of Brentwood
+E07000068,con,Conservative Party (UK),2015-05-01,2023-05-01,Borough of Brentwood
+E07000068,noc,No overall control,2023-05-01,,Borough of Brentwood
+E07000069,lab,Labour Party (UK),1974-05-01,1976-05-01,Borough of Castle Point
+E07000069,con,Conservative Party (UK),1976-05-01,1995-05-01,Borough of Castle Point
+E07000069,lab,Labour Party (UK),1995-05-01,2003-05-01,Borough of Castle Point
+E07000069,con,Conservative Party (UK),2003-05-01,2014-05-01,Borough of Castle Point
+E07000069,noc,No overall control,2014-05-01,2014-05-01,Borough of Castle Point
+E07000069,con,Conservative Party (UK),2014-05-01,2022-05-01,Borough of Castle Point
+E07000069,noc,No overall control,2022-05-01,2024-05-01,Borough of Castle Point
+E07000069,ind,The People's Independent Party,2024-05-01,,Borough of Castle Point
+E07000070,noc,No overall control,1974-05-01,1976-05-01,City of Chelmsford
+E07000070,con,Conservative Party (UK),1976-05-01,1983-05-01,City of Chelmsford
+E07000070,lib,SDP-Liberal Alliance,1983-05-01,1988-05-01,City of Chelmsford
+E07000070,ld,"Liberal Democrats (UK, 2025)",1988-05-01,1991-05-01,City of Chelmsford
+E07000070,con,Conservative Party (UK),1991-05-01,1995-05-01,City of Chelmsford
+E07000070,ld,"Liberal Democrats (UK, 2025)",1995-05-01,1999-05-01,City of Chelmsford
+E07000070,noc,No overall control,1999-05-01,2003-05-01,City of Chelmsford
+E07000070,con,Conservative Party (UK),2003-05-01,2019-05-01,City of Chelmsford
+E07000070,ld,"Liberal Democrats (UK, 2025)",2019-05-01,,City of Chelmsford
+E07000071,noc,No overall control,1974-05-01,1976-05-01,City of Colchester
+E07000071,con,Conservative Party (UK),1976-05-01,1986-05-01,City of Colchester
+E07000071,noc,No overall control,1986-05-01,1994-05-01,City of Colchester
+E07000071,ld,Liberal Democrats (UK),1994-05-01,1998-05-01,City of Colchester
+E07000071,noc,No overall control,1998-05-01,2007-05-01,City of Colchester
+E07000071,con,Conservative Party (UK),2007-05-01,2008-05-01,City of Colchester
+E07000071,noc,No overall control,2008-05-01,,City of Colchester
+E07000072,con,Conservative Party (UK),1974-05-01,1994-05-01,Epping Forest District
+E07000072,noc,No overall control,1994-05-01,2006-05-01,Epping Forest District
+E07000072,con,Conservative Party (UK),2006-05-01,2025-05-01,Epping Forest District
+E07000072,noc,No overall control,2025-05-01,,Epping Forest District
+E07000073,lab,Labour Party (UK),1974-05-01,2002-05-01,Harlow District Council
+E07000073,noc,No overall control,2002-05-01,2008-05-01,Harlow District Council
+E07000073,con,Conservative Party (UK),2008-05-01,2012-05-01,Harlow District Council
+E07000073,lab,Labour Party (UK),2012-05-01,2021-05-01,Harlow District Council
+E07000073,con,Conservative Party (UK),2021-05-01,,Harlow District Council
+E07000074,noc,No overall control,1974-05-01,1976-05-01,Maldon District
+E07000074,con,Conservative Party (UK),1976-05-01,1983-05-01,Maldon District
+E07000074,noc,No overall control,1983-05-01,1999-05-01,Maldon District
+E07000074,con,Conservative Party (UK),1999-05-01,2020-05-01,Maldon District
+E07000074,noc,No overall control,2020-05-01,,Maldon District
+E07000075,noc,No overall control,1974-05-01,1976-05-01,Rochford District
+E07000075,con,Conservative Party (UK),1976-05-01,1990-05-01,Rochford District
+E07000075,noc,No overall control,1990-05-01,1994-05-01,Rochford District
+E07000075,ld,Liberal Democrats (UK),1994-05-01,1998-05-01,Rochford District
+E07000075,noc,No overall control,1998-05-01,2002-05-01,Rochford District
+E07000075,con,Conservative Party (UK),2002-05-01,2023-05-01,Rochford District
+E07000075,noc,No overall control,2023-05-01,,Rochford District
+E07000076,con,Conservative Party (UK),1974-05-01,1991-05-01,Tendring District
+E07000076,noc,No overall control,1991-05-01,1995-05-01,Tendring District
+E07000076,lab,Labour Party (UK),1995-05-01,1999-05-01,Tendring District
+E07000076,noc,No overall control,1999-05-01,2011-05-01,Tendring District
+E07000076,con,Conservative Party (UK),2011-05-01,2015-05-01,Tendring District
+E07000076,noc,No overall control,2015-05-01,,Tendring District
+E07000077,con,Conservative Party (UK),1974-05-01,1995-05-01,Uttlesford
+E07000077,noc,No overall control,1995-05-01,2003-05-01,Uttlesford
+E07000077,ld,Liberal Democrats (UK),2003-05-01,2007-05-01,Uttlesford
+E07000077,con,Conservative Party (UK),2007-05-01,2019-05-01,Uttlesford
+E07000077,ind,Residents for Uttlesford,2019-05-01,2026-05-01,Uttlesford
+E07000077,noc,No overall control,2026-05-01,,Uttlesford
+E07000078,con,Conservative Party (UK),1974-05-01,1979-05-01,Cheltenham Borough Council
+E07000078,noc,No overall control,1979-05-01,1991-05-01,Cheltenham Borough Council
+E07000078,ld,Liberal Democrats (UK),1991-05-01,1999-05-01,Cheltenham Borough Council
+E07000078,noc,No overall control,1999-05-01,2000-05-01,Cheltenham Borough Council
+E07000078,con,Conservative Party (UK),2000-05-01,2002-05-01,Cheltenham Borough Council
+E07000078,ld,Liberal Democrats (UK),2002-05-01,2004-05-01,Cheltenham Borough Council
+E07000078,noc,No overall control,2004-05-01,2010-05-01,Cheltenham Borough Council
+E07000078,ld,"Liberal Democrats (UK, 2025)",2010-05-01,,Cheltenham Borough Council
+E07000079,ind,Independent politician,1974-05-01,1999-05-01,Cotswold District
+E07000079,noc,No overall control,1999-05-01,2003-05-01,Cotswold District
+E07000079,con,Conservative Party (UK),2003-05-01,2019-05-01,Cotswold District
+E07000079,ld,Liberal Democrats (UK),2019-05-01,,Cotswold District
+E07000080,ind,Independent (politician),1974-05-01,1976-05-01,Forest of Dean District
+E07000080,noc,No overall control,1976-05-01,1991-05-01,Forest of Dean District
+E07000080,lab,Labour Party (UK),1991-05-01,2003-05-01,Forest of Dean District
+E07000080,noc,No overall control,2003-05-01,,Forest of Dean District
+E07000081,con,Conservative Party (UK),1974-05-01,1984-05-01,Gloucester City Council
+E07000081,noc,No overall control,1984-05-01,1987-05-01,Gloucester City Council
+E07000081,con,Conservative Party (UK),1987-05-01,1990-05-01,Gloucester City Council
+E07000081,noc,No overall control,1990-05-01,1995-05-01,Gloucester City Council
+E07000081,lab,Labour Party (UK),1995-05-01,2002-05-01,Gloucester City Council
+E07000081,noc,No overall control,2002-05-01,2011-05-01,Gloucester City Council
+E07000081,con,Conservative Party (UK),2011-05-01,2012-05-01,Gloucester City Council
+E07000081,noc,No overall control,2012-05-01,2015-05-01,Gloucester City Council
+E07000081,con,Conservative Party (UK),2015-05-01,2024-05-01,Gloucester City Council
+E07000081,noc,No overall control,2024-05-01,,Gloucester City Council
+E07000082,noc,No overall control,1974-05-01,1976-05-01,Stroud District
+E07000082,con,Conservative Party (UK),1976-05-01,1984-05-01,Stroud District
+E07000082,noc,No overall control,1984-05-01,1996-05-01,Stroud District
+E07000082,lab,Labour Party (UK),1996-05-01,1998-05-01,Stroud District
+E07000082,noc,No overall control,1998-05-01,2002-05-01,Stroud District
+E07000082,con,Conservative Party (UK),2002-05-01,2011-05-01,Stroud District
+E07000082,noc,No overall control,2011-05-01,,Stroud District
+E07000083,noc,No overall control,1974-05-01,1976-05-01,Borough of Tewkesbury
+E07000083,ind,Independent politician,1976-05-01,1987-05-01,Borough of Tewkesbury
+E07000083,noc,No overall control,1987-05-01,1991-05-01,Borough of Tewkesbury
+E07000083,ind,Independent politician,1991-05-01,1995-05-01,Borough of Tewkesbury
+E07000083,noc,No overall control,1995-05-01,2011-05-01,Borough of Tewkesbury
+E07000083,con,Conservative Party (UK),2011-05-01,2023-05-01,Borough of Tewkesbury
+E07000083,noc,No overall control,2023-05-01,,Borough of Tewkesbury
+E07000084,noc,No overall control,1974-05-01,1976-05-01,Basingstoke and Deane
+E07000084,con,Conservative Party (UK),1976-05-01,1982-05-01,Basingstoke and Deane
+E07000084,noc,No overall control,1982-05-01,1986-05-01,Basingstoke and Deane
+E07000084,con,Conservative Party (UK),1986-05-01,1994-05-01,Basingstoke and Deane
+E07000084,noc,No overall control,1994-05-01,2006-05-01,Basingstoke and Deane
+E07000084,con,Conservative Party (UK),2006-05-01,2008-05-01,Basingstoke and Deane
+E07000084,noc,No overall control,2008-05-01,2008-05-01,Basingstoke and Deane
+E07000084,con,Conservative Party (UK),2008-05-01,2013-05-01,Basingstoke and Deane
+E07000084,noc,No overall control,2013-05-01,2015-05-01,Basingstoke and Deane
+E07000084,con,Conservative Party (UK),2015-05-01,2019-05-01,Basingstoke and Deane
+E07000084,noc,No overall control,2019-05-01,2021-05-01,Basingstoke and Deane
+E07000084,con,Conservative Party (UK),2021-05-01,2022-05-01,Basingstoke and Deane
+E07000084,noc,No overall control,2022-05-01,,Basingstoke and Deane
+E07000085,noc,No overall control,1974-05-01,1976-05-01,East Hampshire
+E07000085,con,Conservative Party (UK),1976-05-01,1991-05-01,East Hampshire
+E07000085,noc,No overall control,1991-05-01,1995-05-01,East Hampshire
+E07000085,ld,Liberal Democrats (UK),1995-05-01,1999-05-01,East Hampshire
+E07000085,con,Conservative Party (UK),1999-05-01,2023-05-01,East Hampshire
+E07000085,noc,No overall control,2023-05-01,,East Hampshire
+E07000086,noc,No overall control,1974-05-01,1976-05-01,Borough of Eastleigh
+E07000086,con,Conservative Party (UK),1976-05-01,1983-05-01,Borough of Eastleigh
+E07000086,noc,No overall control,1983-05-01,1988-05-01,Borough of Eastleigh
+E07000086,ld,Liberal Democrats (UK),1988-05-01,1990-05-01,Borough of Eastleigh
+E07000086,noc,No overall control,1990-05-01,1994-05-01,Borough of Eastleigh
+E07000086,ld,Liberal Democrats (UK),1994-05-01,,Borough of Eastleigh
+E07000087,noc,No overall control,1974-05-01,1976-05-01,Borough of Fareham
+E07000087,con,Conservative Party (UK),1976-05-01,1986-05-01,Borough of Fareham
+E07000087,noc,No overall control,1986-05-01,1987-05-01,Borough of Fareham
+E07000087,con,Conservative Party (UK),1987-05-01,1994-05-01,Borough of Fareham
+E07000087,noc,No overall control,1994-05-01,1999-05-01,Borough of Fareham
+E07000087,con,Conservative Party (UK),1999-05-01,2026-05-01,Borough of Fareham
+E07000088,lab,Labour Party (UK),1974-05-01,1976-05-01,Gosport Borough Council
+E07000088,con,Conservative Party (UK),1976-05-01,1990-05-01,Gosport Borough Council
+E07000088,noc,No overall control,1990-05-01,1991-05-01,Gosport Borough Council
+E07000088,ld,Liberal Democrats (UK),1991-05-01,1997-05-01,Gosport Borough Council
+E07000088,noc,No overall control,1997-05-01,2004-05-01,Gosport Borough Council
+E07000088,con,Conservative Party (UK),2004-05-01,2006-05-01,Gosport Borough Council
+E07000088,noc,No overall control,2006-05-01,2010-05-01,Gosport Borough Council
+E07000088,con,Conservative Party (UK),2010-05-01,2022-05-01,Gosport Borough Council
+E07000088,ld,Liberal Democrats (UK),2022-05-01,2026-05-01,Gosport Borough Council
+E07000088,noc,No overall control,2026-05-01,,Gosport Borough Council
+E07000089,ind,Independent politician,1974-05-01,1979-05-01,Hart District
+E07000089,con,Conservative Party (UK),1979-05-01,1983-05-01,Hart District
+E07000089,noc,No overall control,1983-05-01,2000-05-01,Hart District
+E07000089,con,Conservative Party (UK),2000-05-01,2005-05-01,Hart District
+E07000089,noc,No overall control,2005-05-01,2010-05-01,Hart District
+E07000089,con,Conservative Party (UK),2010-05-01,2012-05-01,Hart District
+E07000089,noc,No overall control,2012-05-01,,Hart District
+E07000090,noc,No overall control,1974-05-01,1978-05-01,Borough of Havant
+E07000090,con,Conservative Party (UK),1978-05-01,1990-05-01,Borough of Havant
+E07000090,noc,No overall control,1990-05-01,2002-05-01,Borough of Havant
+E07000090,con,Conservative Party (UK),2002-05-01,2024-05-01,Borough of Havant
+E07000090,noc,No overall control,2024-05-01,,Borough of Havant
+E07000091,ind,Independent politician,1974-05-01,1976-05-01,New Forest District
+E07000091,con,Conservative Party (UK),1976-05-01,1991-05-01,New Forest District
+E07000091,noc,No overall control,1991-05-01,1995-05-01,New Forest District
+E07000091,ld,Liberal Democrats (UK),1995-05-01,1999-05-01,New Forest District
+E07000091,con,Conservative Party (UK),1999-05-01,2026-05-01,New Forest District
+E07000091,noc,No overall control,2026-05-01,2026-05-01,New Forest District
+E07000092,noc,No overall control,1974-05-01,1976-05-01,Rushmoor
+E07000092,con,Conservative Party (UK),1976-05-01,1980-05-01,Rushmoor
+E07000092,noc,No overall control,1980-05-01,1982-05-01,Rushmoor
+E07000092,con,Conservative Party (UK),1982-05-01,1995-05-01,Rushmoor
+E07000092,noc,No overall control,1995-05-01,2000-05-01,Rushmoor
+E07000092,con,Conservative Party (UK),2000-05-01,2024-05-01,Rushmoor
+E07000092,lab,Labour Party (UK),2024-05-01,2025-05-01,Rushmoor
+E07000092,noc,No overall control,2025-05-01,,Rushmoor
+E07000093,ind,Independent politician,1974-05-01,1976-05-01,Test Valley
+E07000093,noc,No overall control,1976-05-01,1979-05-01,Test Valley
+E07000093,con,Conservative Party (UK),1979-05-01,1995-05-01,Test Valley
+E07000093,noc,No overall control,1995-05-01,1999-05-01,Test Valley
+E07000093,con,Conservative Party (UK),1999-05-01,,Test Valley
+E07000094,ind,Independent politician,1974-05-01,1976-05-01,City of Winchester
+E07000094,noc,No overall control,1976-05-01,1979-05-01,City of Winchester
+E07000094,con,Conservative Party (UK),1979-05-01,1987-05-01,City of Winchester
+E07000094,noc,No overall control,1987-05-01,1995-05-01,City of Winchester
+E07000094,ld,Liberal Democrats (UK),1995-05-01,2004-05-01,City of Winchester
+E07000094,noc,No overall control,2004-05-01,2006-05-01,City of Winchester
+E07000094,con,Conservative Party (UK),2006-05-01,2010-05-01,City of Winchester
+E07000094,ld,Liberal Democrats (UK),2010-05-01,2011-05-01,City of Winchester
+E07000094,noc,No overall control,2011-05-01,2012-05-01,City of Winchester
+E07000094,con,Conservative Party (UK),2012-05-01,2014-05-01,City of Winchester
+E07000094,noc,No overall control,2014-05-01,2015-05-01,City of Winchester
+E07000094,con,Conservative Party (UK),2015-05-01,2019-05-01,City of Winchester
+E07000094,ld,Liberal Democrats (UK),2019-05-01,,City of Winchester
+E07000095,con,Conservative Party (UK),1974-05-01,,Borough of Broxbourne
+E07000096,lab,Labour Party (UK),1974-05-01,1976-05-01,Dacorum
+E07000096,con,Conservative Party (UK),1976-05-01,1995-05-01,Dacorum
+E07000096,lab,Labour Party (UK),1995-05-01,1999-05-01,Dacorum
+E07000096,noc,No overall control,1999-05-01,2003-05-01,Dacorum
+E07000096,con,Conservative Party (UK),2003-05-01,2023-05-01,Dacorum
+E07000096,ld,Liberal Democrats (UK),2023-05-01,2024-05-01,Dacorum
+E07000096,noc,No overall control,2024-05-01,,Dacorum
+E07000098,noc,No overall control,1974-05-01,1976-05-01,Hertsmere
+E07000098,con,Conservative Party (UK),1976-05-01,1994-05-01,Hertsmere
+E07000098,noc,No overall control,1994-05-01,1996-05-01,Hertsmere
+E07000098,lab,Labour Party (UK),1996-05-01,1999-05-01,Hertsmere
+E07000098,con,Conservative Party (UK),1999-05-01,2023-05-01,Hertsmere
+E07000098,noc,No overall control,2023-05-01,,Hertsmere
+E07000099,noc,No overall control,1974-05-01,1976-05-01,North Hertfordshire
+E07000099,con,Conservative Party (UK),1976-05-01,1994-05-01,North Hertfordshire
+E07000099,noc,No overall control,1994-05-01,1996-05-01,North Hertfordshire
+E07000099,lab,Labour Party (UK),1996-05-01,1999-05-01,North Hertfordshire
+E07000099,con,Conservative Party (UK),1999-05-01,2019-05-01,North Hertfordshire
+E07000099,noc,No overall control,2019-05-01,,North Hertfordshire
+E07000102,noc,No overall control,1974-05-01,1976-05-01,Three Rivers District
+E07000102,con,Conservative Party (UK),1976-05-01,1986-05-01,Three Rivers District
+E07000102,noc,No overall control,1986-05-01,1987-05-01,Three Rivers District
+E07000102,lib,SDP–Liberal Alliance,1987-05-01,1988-05-01,Three Rivers District
+E07000102,ld,Liberal Democrats (UK),1988-05-01,1990-05-01,Three Rivers District
+E07000102,noc,No overall control,1990-05-01,1999-05-01,Three Rivers District
+E07000102,ld,Liberal Democrats (UK),1999-05-01,2015-05-01,Three Rivers District
+E07000102,noc,No overall control,2015-05-01,2016-05-01,Three Rivers District
+E07000102,ld,Liberal Democrats (UK),2017-05-01,2018-05-01,Three Rivers District
+E07000102,noc,No overall control,2018-05-01,2018-05-01,Three Rivers District
+E07000102,ld,Liberal Democrats (UK),2018-05-01,2024-05-01,Three Rivers District
+E07000103,lab,Labour Party (UK),1974-05-01,1988-05-01,Watford Borough Council
+E07000103,noc,No overall control,1988-05-01,1990-05-01,Watford Borough Council
+E07000103,lab,Labour Party (UK),1990-05-01,2000-05-01,Watford Borough Council
+E07000103,noc,No overall control,2000-05-01,2003-05-01,Watford Borough Council
+E07000103,ld,Liberal Democrats (UK),2003-05-01,,Watford Borough Council
+E07000105,noc,No overall control,1974-05-01,1976-05-01,Borough of Ashford
+E07000105,con,Conservative Party (UK),1976-05-01,1979-05-01,Borough of Ashford
+E07000105,noc,No overall control,1979-05-01,1983-05-01,Borough of Ashford
+E07000105,con,Conservative Party (UK),1983-05-01,1995-05-01,Borough of Ashford
+E07000105,noc,No overall control,1995-05-01,2003-05-01,Borough of Ashford
+E07000105,con,Conservative Party (UK),2003-05-01,2022-05-01,Borough of Ashford
+E07000105,noc,No overall control,2022-05-01,,Borough of Ashford
+E07000106,con,Conservative Party (UK),1974-05-01,1991-05-01,City of Canterbury
+E07000106,noc,No overall control,1991-05-01,2005-05-01,City of Canterbury
+E07000106,con,Conservative Party (UK),2005-05-01,2023-05-01,City of Canterbury
+E07000106,noc,No overall control,2023-05-01,,City of Canterbury
+E07000107,lab,Labour Party (UK),1974-05-01,1983-05-01,Borough of Dartford
+E07000107,con,Conservative Party (UK),1983-05-01,1995-05-01,Borough of Dartford
+E07000107,lab,Labour Party (UK),1995-05-01,2003-05-01,Borough of Dartford
+E07000107,noc,No overall control,2003-05-01,2007-05-01,Borough of Dartford
+E07000107,con,Conservative Party (UK),2007-05-01,,Borough of Dartford
+E07000108,con,Conservative Party (UK),1974-05-01,1991-05-01,Dover District
+E07000108,noc,No overall control,1991-05-01,1995-05-01,Dover District
+E07000108,lab,Labour Party (UK),1995-05-01,1999-05-01,Dover District
+E07000108,noc,No overall control,1999-05-01,2007-05-01,Dover District
+E07000108,con,Conservative Party (UK),2007-05-01,2023-05-01,Dover District
+E07000108,lab,Labour Party (UK),2023-05-01,2025-05-01,Dover District
+E07000108,noc,No overall control,2025-05-01,,Dover District
+E07000109,lab,Labour Party (UK),1974-05-01,1976-05-01,Gravesham
+E07000109,con,Conservative Party (UK),1976-05-01,1987-05-01,Gravesham
+E07000109,noc,No overall control,1987-05-01,1993-05-01,Gravesham
+E07000109,lab,Labour Party (UK),1993-05-01,2007-05-01,Gravesham
+E07000109,con,Conservative Party (UK),2007-05-01,2011-05-01,Gravesham
+E07000109,lab,Labour Party (UK),2011-05-01,2015-05-01,Gravesham
+E07000109,con,Conservative Party (UK),2015-05-01,2018-05-01,Gravesham
+E07000109,noc,No overall control,2018-05-01,2019-05-01,Gravesham
+E07000109,lab,Labour Party (UK),2019-05-01,2021-05-01,Gravesham
+E07000109,noc,No overall control,2021-05-01,2023-05-01,Gravesham
+E07000109,lab,Labour Party (UK),2023-05-01,,Gravesham
+E07000110,noc,No overall control,1974-05-01,1976-05-01,Borough of Maidstone
+E07000110,con,Conservative Party (UK),1976-05-01,1983-05-01,Borough of Maidstone
+E07000110,noc,No overall control,1983-05-01,2008-05-01,Borough of Maidstone
+E07000110,con,Conservative Party (UK),2008-05-01,2014-05-01,Borough of Maidstone
+E07000110,noc,No overall control,2014-05-01,2021-05-01,Borough of Maidstone
+E07000110,con,Conservative Party (UK),2021-05-01,2023-05-01,Borough of Maidstone
+E07000110,noc,No overall control,2023-05-01,,Borough of Maidstone
+E07000111,con,Conservative Party (UK),1974-05-01,1995-05-01,Sevenoaks District
+E07000111,noc,No overall control,1995-05-01,1999-05-01,Sevenoaks District
+E07000111,con,Conservative Party (UK),1999-05-01,2025-05-01,Sevenoaks District
+E07000111,noc,No overall control,2025-05-01,,Sevenoaks District
+E07000112,con,Conservative Party (UK),1974-05-01,1987-05-01,Folkestone and Hythe District
+E07000112,noc,No overall control,1987-05-01,1991-05-01,Folkestone and Hythe District
+E07000112,ld,Liberal Democrats (UK),1991-05-01,1995-05-01,Folkestone and Hythe District
+E07000112,noc,No overall control,1995-05-01,1999-05-01,Folkestone and Hythe District
+E07000112,con,Conservative Party (UK),1999-05-01,2003-05-01,Folkestone and Hythe District
+E07000112,ld,Liberal Democrats (UK),2003-05-01,2004-05-01,Folkestone and Hythe District
+E07000112,noc,No overall control,2004-05-01,2007-05-01,Folkestone and Hythe District
+E07000112,con,Conservative Party (UK),2007-05-01,2019-05-01,Folkestone and Hythe District
+E07000112,noc,No overall control,2019-05-01,,Folkestone and Hythe District
+E07000113,noc,No overall control,1974-05-01,1976-05-01,Borough of Swale
+E07000113,con,Conservative Party (UK),1976-05-01,1986-05-01,Borough of Swale
+E07000113,noc,No overall control,1986-05-01,2002-05-01,Borough of Swale
+E07000113,con,Conservative Party (UK),2002-05-01,2019-05-01,Borough of Swale
+E07000113,noc,No overall control,2019-05-01,,Borough of Swale
+E07000114,con,Conservative Party (UK),1974-05-01,1987-05-01,Thanet District
+E07000114,noc,No overall control,1987-05-01,1991-05-01,Thanet District
+E07000114,con,Conservative Party (UK),1991-05-01,1995-05-01,Thanet District
+E07000114,lab,Labour Party (UK),1995-05-01,2003-05-01,Thanet District
+E07000114,con,Conservative Party (UK),2003-05-01,2011-05-01,Thanet District
+E07000114,noc,No overall control,2011-05-01,2015-05-01,Thanet District
+E07000114,ukip,UK Independence Party,2015-05-01,2015-05-01,Thanet District
+E07000114,noc,No overall control,2015-05-01,2016-05-01,Thanet District
+E07000114,ukip,UK Independence Party,2016-05-01,2017-05-01,Thanet District
+E07000114,noc,No overall control,2017-05-01,2023-05-01,Thanet District
+E07000114,lab,Labour Party (UK),2023-05-01,,Thanet District
+E07000115,con,Conservative Party (UK),1974-05-01,1995-05-01,Tonbridge and Malling
+E07000115,noc,No overall control,1995-05-01,2003-05-01,Tonbridge and Malling
+E07000115,con,Conservative Party (UK),2003-05-01,2023-05-01,Tonbridge and Malling
+E07000115,noc,No overall control,2023-05-01,,Tonbridge and Malling
+E07000116,con,Conservative Party (UK),1974-05-01,1994-05-01,Borough of Tunbridge Wells
+E07000116,noc,No overall control,1994-05-01,1996-05-01,Borough of Tunbridge Wells
+E07000116,ld,Liberal Democrats (UK),1996-05-01,1998-05-01,Borough of Tunbridge Wells
+E07000116,con,Conservative Party (UK),1998-05-01,2021-05-01,Borough of Tunbridge Wells
+E07000116,noc,No overall control,2021-05-01,2024-05-01,Borough of Tunbridge Wells
+E07000116,ld,Liberal Democrats (UK),2024-05-01,,Borough of Tunbridge Wells
+E07000117,lab,Labour Party (UK),1974-05-01,2000-05-01,Burnley Borough Council
+E07000117,noc,No overall control,2000-05-01,2001-05-01,Burnley Borough Council
+E07000117,lab,Labour Party (UK),2001-05-01,2004-05-01,Burnley Borough Council
+E07000117,noc,No overall control,2004-05-01,2008-05-01,Burnley Borough Council
+E07000117,ld,Liberal Democrats (UK),2008-05-01,2011-05-01,Burnley Borough Council
+E07000117,noc,No overall control,2011-05-01,2012-05-01,Burnley Borough Council
+E07000117,lab,Labour Party (UK),2012-05-01,2019-05-01,Burnley Borough Council
+E07000117,noc,No overall control,2019-05-01,,Burnley Borough Council
+E07000118,noc,No overall control,1974-05-01,1976-05-01,Borough of Chorley
+E07000118,con,Conservative Party (UK),1976-05-01,1983-05-01,Borough of Chorley
+E07000118,noc,No overall control,1983-05-01,1990-05-01,Borough of Chorley
+E07000118,lab,Labour Party (UK),1990-05-01,1991-05-01,Borough of Chorley
+E07000118,noc,No overall control,1991-05-01,1995-05-01,Borough of Chorley
+E07000118,lab,Labour Party (UK),1995-05-01,2000-05-01,Borough of Chorley
+E07000118,noc,No overall control,2000-05-01,2006-05-01,Borough of Chorley
+E07000118,con,Conservative Party (UK),2006-05-01,2011-05-01,Borough of Chorley
+E07000118,noc,No overall control,2011-05-01,2012-05-01,Borough of Chorley
+E07000118,lab,Labour Party (UK),2012-05-01,,Borough of Chorley
+E07000119,con,Conservative Party (UK),1974-05-01,1991-05-01,Borough of Fylde
+E07000119,noc,No overall control,1991-05-01,2003-05-01,Borough of Fylde
+E07000119,con,Conservative Party (UK),2003-05-01,,Borough of Fylde
+E07000120,noc,No overall control,1974-05-01,1976-05-01,Hyndburn
+E07000120,con,Conservative Party (UK),1976-05-01,1980-05-01,Hyndburn
+E07000120,lab,Labour Party (UK),1980-05-01,1984-05-01,Hyndburn
+E07000120,con,Conservative Party (UK),1984-05-01,1986-05-01,Hyndburn
+E07000120,lab,Labour Party (UK),1986-05-01,1999-05-01,Hyndburn
+E07000120,noc,No overall control,1999-05-01,2000-05-01,Hyndburn
+E07000120,con,Conservative Party (UK),2000-05-01,2002-05-01,Hyndburn
+E07000120,lab,Labour Party (UK),2002-05-01,2003-05-01,Hyndburn
+E07000120,con,Conservative Party (UK),2003-05-01,2010-05-01,Hyndburn
+E07000120,noc,No overall control,2010-05-01,2011-05-01,Hyndburn
+E07000120,lab,Labour Party (UK),2011-05-01,2022-05-01,Hyndburn
+E07000120,noc,No overall control,2022-05-01,2024-05-01,Hyndburn
+E07000120,lab,Labour Party (UK),2024-05-01,2026-05-01,Hyndburn
+E07000120,noc,No overall control,2026-05-01,,Hyndburn
+E07000121,con,Conservative Party (UK),1974-05-01,1987-05-01,City of Lancaster
+E07000121,noc,No overall control,1987-05-01,1995-05-01,City of Lancaster
+E07000121,lab,Labour Party (UK),1995-05-01,1999-05-01,City of Lancaster
+E07000121,noc,No overall control,1999-05-01,2017-05-01,City of Lancaster
+E07000121,lab,Labour Party (UK),2017-05-01,2019-05-01,City of Lancaster
+E07000121,noc,No overall control,2019-05-01,,City of Lancaster
+E07000122,noc,No overall control,1974-05-01,1976-05-01,Pendle Borough Council
+E07000122,con,Conservative Party (UK),1976-05-01,1979-05-01,Pendle Borough Council
+E07000122,noc,No overall control,1979-05-01,1987-05-01,Pendle Borough Council
+E07000122,ld,Liberal Democrats (UK),1987-05-01,1990-05-01,Pendle Borough Council
+E07000122,noc,No overall control,1990-05-01,1991-05-01,Pendle Borough Council
+E07000122,lab,Labour Party (UK),1991-05-01,1994-05-01,Pendle Borough Council
+E07000122,noc,No overall control,1994-05-01,1995-05-01,Pendle Borough Council
+E07000122,ld,Liberal Democrats (UK),1995-05-01,1999-05-01,Pendle Borough Council
+E07000122,noc,No overall control,1999-05-01,2004-05-01,Pendle Borough Council
+E07000122,ld,Liberal Democrats (UK),2004-05-01,2008-05-01,Pendle Borough Council
+E07000122,noc,No overall control,2008-05-01,2018-05-01,Pendle Borough Council
+E07000122,con,Conservative Party (UK),2018-05-01,2019-05-01,Pendle Borough Council
+E07000122,noc,No overall control,2019-05-01,2021-05-01,Pendle Borough Council
+E07000122,con,Conservative Party (UK),2021-05-01,2023-05-01,Pendle Borough Council
+E07000122,noc,No overall control,2023-05-01,,Pendle Borough Council
+E07000123,lab,Labour Party (UK),1974-05-01,1976-05-01,"City of Preston, Lancashire"
+E07000123,con,Conservative Party (UK),1976-05-01,1980-05-01,"City of Preston, Lancashire"
+E07000123,lab,Labour Party (UK),1980-05-01,1999-05-01,"City of Preston, Lancashire"
+E07000123,noc,No overall control,1999-05-01,2011-05-01,"City of Preston, Lancashire"
+E07000123,lab,Labour Party (UK),2011-05-01,2026-05-01,"City of Preston, Lancashire"
+E07000123,noc,No overall control,2026-05-01,,"City of Preston, Lancashire"
+E07000124,con,Conservative Party (UK),1974-05-01,1995-05-01,Ribble Valley
+E07000124,noc,No overall control,1995-05-01,2003-05-01,Ribble Valley
+E07000124,con,Conservative Party (UK),2003-05-01,2023-05-01,Ribble Valley
+E07000124,noc,No overall control,2023-05-01,,Ribble Valley
+E07000125,noc,No overall control,1974-05-01,1976-05-01,Borough of Rossendale
+E07000125,con,Conservative Party (UK),1976-05-01,1986-05-01,Borough of Rossendale
+E07000125,lab,Labour Party (UK),1986-05-01,2000-05-01,Borough of Rossendale
+E07000125,con,Conservative Party (UK),2000-05-01,2002-05-01,Borough of Rossendale
+E07000125,lab,Labour Party (UK),2002-05-01,2003-05-01,Borough of Rossendale
+E07000125,noc,No overall control,2003-05-01,2004-05-01,Borough of Rossendale
+E07000125,con,Conservative Party (UK),2004-05-01,2007-05-01,Borough of Rossendale
+E07000125,noc,No overall control,2007-05-01,2008-05-01,Borough of Rossendale
+E07000125,con,Conservative Party (UK),2008-05-01,2011-05-01,Borough of Rossendale
+E07000125,noc,No overall control,2011-05-01,2012-05-01,Borough of Rossendale
+E07000125,lab,Labour Party (UK),2012-05-01,2021-05-01,Borough of Rossendale
+E07000125,noc,No overall control,2021-05-01,2022-05-01,Borough of Rossendale
+E07000125,lab,Labour Party (UK),2022-05-01,,Borough of Rossendale
+E07000126,con,Conservative Party (UK),1974-05-01,1995-05-01,South Ribble
+E07000126,lab,Labour Party (UK),1995-05-01,1999-05-01,South Ribble
+E07000126,noc,No overall control,1999-05-01,2007-05-01,South Ribble
+E07000126,con,Conservative Party (UK),2007-05-01,2019-05-01,South Ribble
+E07000126,noc,No overall control,2019-05-01,2023-05-01,South Ribble
+E07000126,lab,Labour Party (UK),2023-05-01,,South Ribble
+E07000127,noc,No overall control,1974-05-01,1976-05-01,West Lancashire
+E07000127,con,Conservative Party (UK),1976-05-01,1986-05-01,West Lancashire
+E07000127,noc,No overall control,1986-05-01,1987-05-01,West Lancashire
+E07000127,con,Conservative Party (UK),1987-05-01,1991-05-01,West Lancashire
+E07000127,noc,No overall control,1991-05-01,1994-05-01,West Lancashire
+E07000127,lab,Labour Party (UK),1994-05-01,2002-05-01,West Lancashire
+E07000127,con,Conservative Party (UK),2002-05-01,2014-05-01,West Lancashire
+E07000127,noc,No overall control,2014-05-01,2015-05-01,West Lancashire
+E07000127,lab,Labour Party (UK),2015-05-01,2021-05-01,West Lancashire
+E07000127,noc,No overall control,2021-05-01,2023-05-01,West Lancashire
+E07000127,lab,Labour Party (UK),2023-05-01,2025-05-01,West Lancashire
+E07000127,noc,No overall control,2025-05-01,2026-05-01,West Lancashire
+E07000128,con,Conservative Party (UK),1974-05-01,1995-05-01,Borough of Wyre
+E07000128,lab,Labour Party (UK),1995-05-01,1999-05-01,Borough of Wyre
+E07000128,con,Conservative Party (UK),1999-05-01,,Borough of Wyre
+E07000129,ind,Independent politician,1974-05-01,1976-05-01,Blaby District
+E07000129,con,Conservative Party (UK),1976-05-01,1995-05-01,Blaby District
+E07000129,noc,No overall control,1995-05-01,1999-05-01,Blaby District
+E07000129,con,Conservative Party (UK),1999-05-01,2025-05-01,Blaby District
+E07000129,noc,No overall control,2025-05-01,,Blaby District
+E07000130,noc,No overall control,1974-05-01,1976-05-01,Charnwood Borough Council
+E07000130,con,Conservative Party (UK),1976-05-01,1995-05-01,Charnwood Borough Council
+E07000130,lab,Labour Party (UK),1995-05-01,1999-05-01,Charnwood Borough Council
+E07000130,noc,No overall control,1999-05-01,2007-05-01,Charnwood Borough Council
+E07000130,con,Conservative Party (UK),2007-05-01,2023-05-01,Charnwood Borough Council
+E07000130,noc,No overall control,2023-05-01,,Charnwood Borough Council
+E07000131,con,Conservative Party (UK),1974-05-01,1987-05-01,Harborough District
+E07000131,noc,No overall control,1987-05-01,2007-05-01,Harborough District
+E07000131,con,Conservative Party (UK),2007-05-01,2023-05-01,Harborough District
+E07000131,noc,No overall control,2023-05-01,,Harborough District
+E07000132,noc,No overall control,1974-05-01,1976-05-01,Hinckley and Bosworth
+E07000132,con,Conservative Party (UK),1976-05-01,1995-05-01,Hinckley and Bosworth
+E07000132,noc,No overall control,1995-05-01,2003-05-01,Hinckley and Bosworth
+E07000132,con,Conservative Party (UK),2003-05-01,2007-05-01,Hinckley and Bosworth
+E07000132,ld,Liberal Democrats (UK),2007-05-01,2015-05-01,Hinckley and Bosworth
+E07000132,con,Conservative Party (UK),2015-05-01,2019-05-01,Hinckley and Bosworth
+E07000132,ld,Liberal Democrats (UK),2019-05-01,,Hinckley and Bosworth
+E07000133,con,Conservative Party (UK),1974-05-01,1995-05-01,Borough of Melton
+E07000133,noc,No overall control,1995-05-01,2003-05-01,Borough of Melton
+E07000133,con,Conservative Party (UK),2003-05-01,2023-05-01,Borough of Melton
+E07000133,noc,No overall control,2023-05-01,,Borough of Melton
+E07000134,lab,Labour Party (UK),1974-05-01,1976-05-01,North West Leicestershire
+E07000134,noc,No overall control,1976-05-01,1979-05-01,North West Leicestershire
+E07000134,lab,Labour Party (UK),1979-05-01,1983-05-01,North West Leicestershire
+E07000134,noc,No overall control,1983-05-01,1991-05-01,North West Leicestershire
+E07000134,lab,Labour Party (UK),1991-05-01,2007-05-01,North West Leicestershire
+E07000134,con,Conservative Party (UK),2007-05-01,2023-05-01,North West Leicestershire
+E07000134,noc,No overall control,2023-05-01,,North West Leicestershire
+E07000135,con,Conservative Party (UK),1974-05-01,1991-05-01,Oadby and Wigston
+E07000135,ld,Liberal Democrats (UK),1991-05-01,,Oadby and Wigston
+E07000136,noc,No overall control,1974-05-01,2007-05-01,Borough of Boston
+E07000136,ind,Boston Bypass Independents,2007-05-01,2011-05-01,Borough of Boston
+E07000136,con,Conservative Party (UK),2011-05-01,2015-05-01,Borough of Boston
+E07000136,noc,No overall control,2015-05-01,2019-05-01,Borough of Boston
+E07000136,con,Conservative Party (UK),2019-05-01,2020-05-01,Borough of Boston
+E07000136,noc,No overall control,2020-05-01,2023-05-01,Borough of Boston
+E07000136,ind,Boston Independent,2023-05-01,2025-05-01,Borough of Boston
+E07000136,ind,Independent politician,2025-05-01,,Borough of Boston
+E07000137,ind,Independent politician,1974-05-01,2003-05-01,East Lindsey
+E07000137,noc,No overall control,2003-05-01,2015-05-01,East Lindsey
+E07000137,con,Conservative Party (UK),2015-05-01,2023-05-01,East Lindsey
+E07000137,noc,No overall control,2023-05-01,,East Lindsey
+E07000138,oth,"Democratic Labour Party (UK, 1972)",1974-05-01,1978-05-01,City of Lincoln Council
+E07000138,noc,No overall control,1978-05-01,1979-05-01,City of Lincoln Council
+E07000138,con,Conservative Party (UK),1979-05-01,1982-05-01,City of Lincoln Council
+E07000138,lab,Labour Party (UK),1982-05-01,2007-05-01,City of Lincoln Council
+E07000138,con,Conservative Party (UK),2007-05-01,2010-05-01,City of Lincoln Council
+E07000138,noc,No overall control,2010-05-01,2011-05-01,City of Lincoln Council
+E07000138,lab,Labour Party (UK),2011-05-01,,City of Lincoln Council
+E07000139,ind,Independent politician,1974-05-01,1987-05-01,North Kesteven
+E07000139,noc,No overall control,1987-05-01,2007-05-01,North Kesteven
+E07000139,con,Conservative Party (UK),2007-05-01,2019-05-01,North Kesteven
+E07000139,noc,No overall control,2019-05-01,2023-05-01,North Kesteven
+E07000139,con,Conservative Party (UK),2023-05-01,,North Kesteven
+E07000140,ind,Independent politician,1974-05-01,1987-05-01,South Holland District
+E07000140,noc,No overall control,1987-05-01,1991-05-01,South Holland District
+E07000140,ind,Independent politician,1991-05-01,1997-05-01,South Holland District
+E07000140,noc,No overall control,1997-05-01,1999-05-01,South Holland District
+E07000140,con,Conservative Party (UK),1999-05-01,2002-05-01,South Holland District
+E07000140,noc,No overall control,2002-05-01,2003-05-01,South Holland District
+E07000140,con,Conservative Party (UK),2003-05-01,2025-05-01,South Holland District
+E07000140,noc,No overall control,2025-05-01,,South Holland District
+E07000141,noc,No overall control,1974-05-01,1979-05-01,South Kesteven
+E07000141,con,Conservative Party (UK),1979-05-01,1991-05-01,South Kesteven
+E07000141,noc,No overall control,1991-05-01,2003-05-01,South Kesteven
+E07000141,con,Conservative Party (UK),2003-05-01,2023-05-01,South Kesteven
+E07000141,noc,No overall control,2023-05-01,,South Kesteven
+E07000142,ind,Independent politician,1974-05-01,1979-05-01,West Lindsey
+E07000142,noc,No overall control,1979-05-01,1987-05-01,West Lindsey
+E07000142,ld,Liberal Democrats (UK),1987-05-01,1988-05-01,West Lindsey
+E07000142,noc,No overall control,1988-05-01,1996-05-01,West Lindsey
+E07000142,ld,Liberal Democrats (UK),1996-05-01,1998-05-01,West Lindsey
+E07000142,noc,No overall control,1998-05-01,2004-05-01,West Lindsey
+E07000142,con,Conservative Party (UK),2004-05-01,2006-05-01,West Lindsey
+E07000142,ld,Liberal Democrats (UK),2006-05-01,2008-05-01,West Lindsey
+E07000142,con,Conservative Party (UK),2008-05-01,2021-05-01,West Lindsey
+E07000142,noc,No overall control,2021-05-01,,West Lindsey
+E07000143,noc,No overall control,1974-05-01,1979-05-01,Breckland District
+E07000143,con,Conservative Party (UK),1979-05-01,1995-05-01,Breckland District
+E07000143,noc,No overall control,1995-05-01,1999-05-01,Breckland District
+E07000143,con,Conservative Party (UK),1999-05-01,,Breckland District
+E07000144,noc,No overall control,1974-05-01,1976-05-01,Broadland
+E07000144,con,Conservative Party (UK),1976-05-01,1994-05-01,Broadland
+E07000144,noc,No overall control,1994-05-01,1999-05-01,Broadland
+E07000144,con,Conservative Party (UK),1999-05-01,2023-05-01,Broadland
+E07000144,noc,No overall control,2023-05-01,,Broadland
+E07000145,con,Conservative Party (UK),1974-05-01,1980-05-01,Borough of Great Yarmouth
+E07000145,noc,No overall control,1980-05-01,1983-05-01,Borough of Great Yarmouth
+E07000145,con,Conservative Party (UK),1983-05-01,1986-05-01,Borough of Great Yarmouth
+E07000145,noc,No overall control,1986-05-01,1990-05-01,Borough of Great Yarmouth
+E07000145,lab,Labour Party (UK),1990-05-01,2000-05-01,Borough of Great Yarmouth
+E07000145,con,Conservative Party (UK),2000-05-01,2012-05-01,Borough of Great Yarmouth
+E07000145,lab,Labour Party (UK),2012-05-01,2014-05-01,Borough of Great Yarmouth
+E07000145,noc,No overall control,2014-05-01,2017-05-01,Borough of Great Yarmouth
+E07000145,con,Conservative Party (UK),2017-05-01,2023-05-01,Borough of Great Yarmouth
+E07000145,noc,No overall control,2023-05-01,,Borough of Great Yarmouth
+E07000146,noc,No overall control,1974-05-01,1976-05-01,King's Lynn and West Norfolk
+E07000146,con,Conservative Party (UK),1976-05-01,1991-05-01,King's Lynn and West Norfolk
+E07000146,noc,No overall control,1991-05-01,1995-05-01,King's Lynn and West Norfolk
+E07000146,lab,Labour Party (UK),1995-05-01,1999-05-01,King's Lynn and West Norfolk
+E07000146,noc,No overall control,1999-05-01,2003-05-01,King's Lynn and West Norfolk
+E07000146,con,Conservative Party (UK),2003-05-01,2023-05-01,King's Lynn and West Norfolk
+E07000146,noc,No overall control,2023-05-01,,King's Lynn and West Norfolk
+E07000147,ind,Independent politician,1974-05-01,1991-05-01,North Norfolk
+E07000147,noc,No overall control,1991-05-01,2003-05-01,North Norfolk
+E07000147,ld,Liberal Democrats (UK),2003-05-01,2011-05-01,North Norfolk
+E07000147,con,Conservative Party (UK),2011-05-01,2017-05-01,North Norfolk
+E07000147,noc,No overall control,2017-05-01,2019-05-01,North Norfolk
+E07000147,ld,"Liberal Democrats (UK, 2025)",2019-05-01,,North Norfolk
+E07000148,lab,Labour Party (UK),1974-05-01,2002-05-01,Norwich City Council
+E07000148,ld,Liberal Democrats (UK),2002-05-01,2004-05-01,Norwich City Council
+E07000148,noc,No overall control,2004-05-01,2012-05-01,Norwich City Council
+E07000148,lab,Labour Party (UK),2012-05-01,2023-05-01,Norwich City Council
+E07000148,noc,No overall control,2023-05-01,2026-05-01,Norwich City Council
+E07000149,ind,Independent (politician),1974-05-01,1976-05-01,South Norfolk
+E07000149,noc,No overall control,1976-05-01,1979-05-01,South Norfolk
+E07000149,con,Conservative Party (UK),1979-05-01,1987-05-01,South Norfolk
+E07000149,noc,No overall control,1987-05-01,1995-05-01,South Norfolk
+E07000149,ld,Liberal Democrats (UK),1995-05-01,2007-05-01,South Norfolk
+E07000149,con,Conservative Party (UK),2007-05-01,2024-05-01,South Norfolk
+E07000149,noc,No overall control,2024-05-01,,South Norfolk
+E07000170,lab,Labour Party (UK),1974-05-01,2003-05-01,Ashfield District
+E07000170,noc,No overall control,2003-05-01,2011-05-01,Ashfield District
+E07000170,lab,Labour Party (UK),2011-05-01,2018-05-01,Ashfield District
+E07000170,noc,No overall control,2018-05-01,2019-05-01,Ashfield District
+E07000170,ind,Ashfield Independents,2019-05-01,,Ashfield District
+E07000171,lab,Labour Party (UK),1974-05-01,1976-05-01,Bassetlaw District
+E07000171,noc,No overall control,1976-05-01,1979-05-01,Bassetlaw District
+E07000171,lab,Labour Party (UK),1979-05-01,2004-05-01,Bassetlaw District
+E07000171,noc,No overall control,2004-05-01,2006-05-01,Bassetlaw District
+E07000171,con,Conservative Party (UK),2006-05-01,2010-05-01,Bassetlaw District
+E07000171,noc,No overall control,2010-05-01,2011-05-01,Bassetlaw District
+E07000171,lab,Labour Party (UK),2011-05-01,,Bassetlaw District
+E07000172,con,Conservative Party (UK),1974-05-01,1995-05-01,Borough of Broxtowe
+E07000172,lab,Labour Party (UK),1995-05-01,2003-05-01,Borough of Broxtowe
+E07000172,noc,No overall control,2003-05-01,2015-05-01,Borough of Broxtowe
+E07000172,con,Conservative Party (UK),2015-05-01,2019-05-01,Borough of Broxtowe
+E07000172,noc,No overall control,2019-05-01,2023-05-01,Borough of Broxtowe
+E07000172,lab,Labour Party (UK),2023-05-01,2025-05-01,Borough of Broxtowe
+E07000172,noc,No overall control,2025-05-01,,Borough of Broxtowe
+E07000173,con,Conservative Party (UK),1974-05-01,1995-05-01,Borough of Gedling
+E07000173,lab,Labour Party (UK),1995-05-01,1999-05-01,Borough of Gedling
+E07000173,con,Conservative Party (UK),1999-05-01,2003-05-01,Borough of Gedling
+E07000173,noc,No overall control,2003-05-01,2007-05-01,Borough of Gedling
+E07000173,con,Conservative Party (UK),2007-05-01,2011-05-01,Borough of Gedling
+E07000173,lab,Labour Party (UK),2011-05-01,,Borough of Gedling
+E07000174,lab,Labour Party (UK),1974-05-01,2003-05-01,Mansfield District
+E07000174,ind,Mansfield Independent Forum,2003-05-01,2011-05-01,Mansfield District
+E07000174,lab,Labour Party (UK),2011-05-01,2015-05-01,Mansfield District
+E07000174,ind,Mansfield Independent Forum,2015-05-01,2019-05-01,Mansfield District
+E07000174,noc,No overall control,2019-05-01,2023-05-01,Mansfield District
+E07000174,lab,Labour Party (UK),2023-05-01,,Mansfield District
+E07000175,lab,Labour Party (UK),1974-05-01,1976-05-01,Newark and Sherwood
+E07000175,con,Conservative Party (UK),1976-05-01,1979-05-01,Newark and Sherwood
+E07000175,noc,No overall control,1979-05-01,1991-05-01,Newark and Sherwood
+E07000175,lab,Labour Party (UK),1991-05-01,1999-05-01,Newark and Sherwood
+E07000175,noc,No overall control,1999-05-01,2007-05-01,Newark and Sherwood
+E07000175,con,Conservative Party (UK),2007-05-01,2023-05-01,Newark and Sherwood
+E07000175,noc,No overall control,2023-05-01,,Newark and Sherwood
+E07000176,con,Conservative Party (UK),1974-05-01,1995-05-01,Borough of Rushcliffe
+E07000176,noc,No overall control,1995-05-01,1999-05-01,Borough of Rushcliffe
+E07000176,con,Conservative Party (UK),1999-05-01,,Borough of Rushcliffe
+E07000177,noc,No overall control,1974-05-01,1976-05-01,Cherwell (district)
+E07000177,con,Conservative Party (UK),1976-05-01,1995-05-01,Cherwell (district)
+E07000177,noc,No overall control,1995-05-01,1996-05-01,Cherwell (district)
+E07000177,lab,Labour Party (UK),1996-05-01,1998-05-01,Cherwell (district)
+E07000177,noc,No overall control,1998-05-01,2000-05-01,Cherwell (district)
+E07000177,con,Conservative Party (UK),2000-05-01,2023-05-01,Cherwell (district)
+E07000177,noc,No overall control,2023-05-01,,Cherwell (district)
+E07000178,lab,Labour Party (UK),1974-05-01,1976-05-01,Oxford City Council
+E07000178,con,Conservative Party (UK),1976-05-01,1980-05-01,Oxford City Council
+E07000178,lab,Labour Party (UK),1980-05-01,2000-05-01,Oxford City Council
+E07000178,noc,No overall control,2000-05-01,2002-05-01,Oxford City Council
+E07000178,lab,Labour Party (UK),2002-05-01,2004-05-01,Oxford City Council
+E07000178,noc,No overall control,2004-05-01,2010-05-01,Oxford City Council
+E07000178,lab,Labour Party (UK),2010-05-01,2023-05-01,Oxford City Council
+E07000178,noc,No overall control,2023-05-01,,Oxford City Council
+E07000179,noc,No overall control,1974-05-01,1976-05-01,South Oxfordshire
+E07000179,con,Conservative Party (UK),1976-05-01,1995-05-01,South Oxfordshire
+E07000179,noc,No overall control,1995-05-01,2003-05-01,South Oxfordshire
+E07000179,con,Conservative Party (UK),2003-05-01,2019-05-01,South Oxfordshire
+E07000179,noc,No overall control,2019-05-01,2023-05-01,South Oxfordshire
+E07000179,ld,Liberal Democrats (UK),2023-05-01,,South Oxfordshire
+E07000180,con,Conservative Party (UK),1974-05-01,1995-05-01,Vale of White Horse District Council
+E07000180,ld,Liberal Democrats (UK),1995-05-01,2011-05-01,Vale of White Horse District Council
+E07000180,con,Conservative Party (UK),2011-05-01,2019-05-01,Vale of White Horse District Council
+E07000180,ld,Liberal Democrats (UK),2019-05-01,,Vale of White Horse District Council
+E07000181,ind,Independent (politician),1974-05-01,1976-05-01,West Oxfordshire
+E07000181,noc,No overall control,1976-05-01,1983-05-01,West Oxfordshire
+E07000181,con,Conservative Party (UK),1983-05-01,1984-05-01,West Oxfordshire
+E07000181,noc,No overall control,1984-05-01,1987-05-01,West Oxfordshire
+E07000181,con,Conservative Party (UK),1987-05-01,1990-05-01,West Oxfordshire
+E07000181,ind,Independent (politician),1990-05-01,1992-05-01,West Oxfordshire
+E07000181,noc,No overall control,1992-05-01,2000-05-01,West Oxfordshire
+E07000181,con,Conservative Party (UK),2000-05-01,2022-05-01,West Oxfordshire
+E07000181,noc,No overall control,2022-05-01,,West Oxfordshire
+E07000192,lab,Labour Party (UK),1974-05-01,1982-05-01,Cannock Chase District
+E07000192,noc,No overall control,1982-05-01,1987-05-01,Cannock Chase District
+E07000192,lab,Labour Party (UK),1987-05-01,2003-05-01,Cannock Chase District
+E07000192,noc,No overall control,2003-05-01,2012-05-01,Cannock Chase District
+E07000192,lab,Labour Party (UK),2012-05-01,2019-05-01,Cannock Chase District
+E07000192,noc,No overall control,2019-05-01,2021-05-01,Cannock Chase District
+E07000192,con,Conservative Party (UK),2021-05-01,2023-05-01,Cannock Chase District
+E07000192,noc,No overall control,2023-05-01,2024-05-01,Cannock Chase District
+E07000192,lab,Labour Party (UK),2024-05-01,2026-05-01,Cannock Chase District
+E07000192,noc,No overall control,2026-05-01,,Cannock Chase District
+E07000193,noc,No overall control,1974-05-01,1976-05-01,East Staffordshire
+E07000193,con,Conservative Party (UK),1976-05-01,1979-05-01,East Staffordshire
+E07000193,noc,No overall control,1979-05-01,1995-05-01,East Staffordshire
+E07000193,lab,Labour Party (UK),1995-05-01,2003-05-01,East Staffordshire
+E07000193,con,Conservative Party (UK),2003-05-01,2014-05-01,East Staffordshire
+E07000193,noc,No overall control,2014-05-01,2015-05-01,East Staffordshire
+E07000193,con,Conservative Party (UK),2015-05-01,2023-05-01,East Staffordshire
+E07000193,lab,Labour Party (UK),2023-05-01,,East Staffordshire
+E07000194,noc,No overall control,1974-05-01,1976-05-01,Lichfield District
+E07000194,con,Conservative Party (UK),1976-05-01,1995-05-01,Lichfield District
+E07000194,lab,Labour Party (UK),1995-05-01,1999-05-01,Lichfield District
+E07000194,con,Conservative Party (UK),1999-05-01,2023-05-01,Lichfield District
+E07000194,noc,No overall control,2023-05-01,,Lichfield District
+E07000195,noc,No overall control,1974-05-01,1979-05-01,Borough of Newcastle-under-Lyme
+E07000195,lab,Labour Party (UK),1979-05-01,2002-05-01,Borough of Newcastle-under-Lyme
+E07000195,noc,No overall control,2002-05-01,2004-05-01,Borough of Newcastle-under-Lyme
+E07000195,lab,Labour Party (UK),2004-05-01,2006-05-01,Borough of Newcastle-under-Lyme
+E07000195,noc,No overall control,2006-05-01,2012-05-01,Borough of Newcastle-under-Lyme
+E07000195,lab,Labour Party (UK),2012-05-01,2017-05-01,Borough of Newcastle-under-Lyme
+E07000195,noc,No overall control,2017-05-01,2021-05-01,Borough of Newcastle-under-Lyme
+E07000195,con,Conservative Party (UK),2021-05-01,2026-05-01,Borough of Newcastle-under-Lyme
+E07000195,ref,Reform UK,2026-05-01,,Borough of Newcastle-under-Lyme
+E07000196,noc,No overall control,1974-05-01,1976-05-01,South Staffordshire
+E07000196,con,Conservative Party (UK),1976-05-01,,South Staffordshire
+E07000197,noc,No overall control,1974-05-01,1995-05-01,Borough of Stafford
+E07000197,lab,Labour Party (UK),1995-05-01,1999-05-01,Borough of Stafford
+E07000197,noc,No overall control,1999-05-01,2003-05-01,Borough of Stafford
+E07000197,con,Conservative Party (UK),2003-05-01,2022-05-01,Borough of Stafford
+E07000197,noc,No overall control,2022-05-01,,Borough of Stafford
+E07000198,noc,No overall control,1974-05-01,1991-05-01,Staffordshire Moorlands
+E07000198,ind,Independent politician,1991-05-01,1995-05-01,Staffordshire Moorlands
+E07000198,noc,No overall control,1995-05-01,2007-05-01,Staffordshire Moorlands
+E07000198,con,Conservative Party (UK),2007-05-01,2011-05-01,Staffordshire Moorlands
+E07000198,noc,No overall control,2011-05-01,2015-05-01,Staffordshire Moorlands
+E07000198,con,Conservative Party (UK),2015-05-01,2019-05-01,Staffordshire Moorlands
+E07000198,noc,No overall control,2019-05-01,2022-05-01,Staffordshire Moorlands
+E07000198,con,Conservative Party (UK),2022-05-01,2023-05-01,Staffordshire Moorlands
+E07000198,noc,No overall control,2023-05-01,,Staffordshire Moorlands
+E07000199,lab,Labour Party (UK),1974-05-01,1976-05-01,Tamworth Borough Council
+E07000199,noc,No overall control,1976-05-01,1978-05-01,Tamworth Borough Council
+E07000199,con,Conservative Party (UK),1978-05-01,1980-05-01,Tamworth Borough Council
+E07000199,lab,Labour Party (UK),1980-05-01,1983-05-01,Tamworth Borough Council
+E07000199,con,Conservative Party (UK),1983-05-01,1986-05-01,Tamworth Borough Council
+E07000199,lab,Labour Party (UK),1986-05-01,1987-05-01,Tamworth Borough Council
+E07000199,con,Conservative Party (UK),1987-05-01,1988-05-01,Tamworth Borough Council
+E07000199,noc,No overall control,1988-05-01,1990-05-01,Tamworth Borough Council
+E07000199,lab,Labour Party (UK),1990-05-01,2004-05-01,Tamworth Borough Council
+E07000199,con,Conservative Party (UK),2004-05-01,2023-05-01,Tamworth Borough Council
+E07000199,noc,No overall control,2023-05-01,2024-05-01,Tamworth Borough Council
+E07000199,lab,Labour Party (UK),2024-05-01,2026-05-01,Tamworth Borough Council
+E07000199,noc,No overall control,2026-05-01,,Tamworth Borough Council
+E07000200,noc,No overall control,1974-05-01,2015-05-01,Babergh District
+E07000200,con,Conservative Party (UK),2015-05-01,2019-05-01,Babergh District
+E07000200,noc,No overall control,2019-05-01,,Babergh District
+E07000202,lab,Labour Party (UK),1974-05-01,1976-05-01,Ipswich Borough Council
+E07000202,con,Conservative Party (UK),1976-05-01,1979-05-01,Ipswich Borough Council
+E07000202,lab,Labour Party (UK),1979-05-01,2004-05-01,Ipswich Borough Council
+E07000202,noc,No overall control,2004-05-01,2011-05-01,Ipswich Borough Council
+E07000202,lab,Labour Party (UK),2011-05-01,,Ipswich Borough Council
+E07000203,ind,Independent (politician),1974-05-01,1976-05-01,Mid Suffolk
+E07000203,noc,No overall control,1976-05-01,2003-05-01,Mid Suffolk
+E07000203,con,Conservative Party (UK),2003-05-01,2005-05-01,Mid Suffolk
+E07000203,noc,No overall control,2005-05-01,2007-05-01,Mid Suffolk
+E07000203,con,Conservative Party (UK),2007-05-01,2019-05-01,Mid Suffolk
+E07000203,noc,No overall control,2019-05-01,2023-05-01,Mid Suffolk
+E07000203,grn,Green Party of England and Wales,2023-05-01,,Mid Suffolk
+E07000207,con,Conservative Party (UK),1974-05-01,1986-05-01,Elmbridge Borough Council
+E07000207,noc,No overall control,1986-05-01,1988-05-01,Elmbridge Borough Council
+E07000207,con,Conservative Party (UK),1988-05-01,1991-05-01,Elmbridge Borough Council
+E07000207,noc,No overall control,1991-05-01,2002-05-01,Elmbridge Borough Council
+E07000207,ind,Independent politician,2002-05-01,2005-05-01,Elmbridge Borough Council
+E07000207,noc,No overall control,2005-05-01,2008-05-01,Elmbridge Borough Council
+E07000207,con,Conservative Party (UK),2008-05-01,2016-05-01,Elmbridge Borough Council
+E07000207,noc,No overall control,2016-05-01,,Elmbridge Borough Council
+E07000208,ind,Residents Associations of Epsom and Ewell,1974-05-01,,Epsom and Ewell
+E07000209,con,Conservative Party (UK),1836-05-01,1875-05-01,Borough of Guildford
+E07000209,noc,No overall control,1875-05-01,1877-05-01,Borough of Guildford
+E07000209,con,Conservative Party (UK),1877-05-01,1879-05-01,Borough of Guildford
+E07000209,noc,No overall control,1879-05-01,1880-05-01,Borough of Guildford
+E07000209,con,Conservative Party (UK),1880-05-01,1883-05-01,Borough of Guildford
+E07000209,noc,No overall control,1883-05-01,1885-05-01,Borough of Guildford
+E07000209,con,Conservative Party (UK),1885-05-01,1888-05-01,Borough of Guildford
+E07000209,lib,Liberal Party (UK),1888-05-01,1889-05-01,Borough of Guildford
+E07000209,con,Conservative Party (UK),1889-05-01,1892-05-01,Borough of Guildford
+E07000209,noc,No overall control,1892-05-01,1892-05-01,Borough of Guildford
+E07000209,lib,Liberal Party (UK),1892-05-01,1894-05-01,Borough of Guildford
+E07000209,noc,No overall control,1894-05-01,1895-05-01,Borough of Guildford
+E07000209,lib,Liberal Party (UK),1895-05-01,1898-05-01,Borough of Guildford
+E07000209,noc,No overall control,1898-05-01,1899-05-01,Borough of Guildford
+E07000209,ind,Independent (politician),1899-05-01,1957-05-01,Borough of Guildford
+E07000209,noc,No overall control,1957-05-01,1965-05-01,Borough of Guildford
+E07000209,con,Conservative Party (UK),1965-05-01,1972-05-01,Borough of Guildford
+E07000209,noc,No overall control,1972-05-01,1974-05-01,Borough of Guildford
+E07000209,con,Conservative Party (UK),1974-05-01,1991-05-01,Borough of Guildford
+E07000209,noc,No overall control,1991-05-01,1995-05-01,Borough of Guildford
+E07000209,ld,Liberal Democrats (UK),1995-05-01,1997-05-01,Borough of Guildford
+E07000209,noc,No overall control,1997-05-01,2003-05-01,Borough of Guildford
+E07000209,con,Conservative Party (UK),2003-05-01,2019-05-01,Borough of Guildford
+E07000209,noc,No overall control,2019-05-01,2023-05-01,Borough of Guildford
+E07000209,ld,Liberal Democrats (UK),2023-05-01,,Borough of Guildford
+E07000210,noc,No overall control,1974-05-01,1980-05-01,Mole Valley District Council
+E07000210,ind,Independent politician,1980-05-01,1982-05-01,Mole Valley District Council
+E07000210,noc,No overall control,1982-05-01,1994-05-01,Mole Valley District Council
+E07000210,ld,Liberal Democrats (UK),1994-05-01,1995-05-01,Mole Valley District Council
+E07000210,noc,No overall control,1995-05-01,2006-05-01,Mole Valley District Council
+E07000210,con,Conservative Party (UK),2006-05-01,2010-05-01,Mole Valley District Council
+E07000210,noc,No overall control,2010-05-01,2015-05-01,Mole Valley District Council
+E07000210,con,Conservative Party (UK),2015-05-01,2018-05-01,Mole Valley District Council
+E07000210,noc,No overall control,2018-05-01,2019-05-01,Mole Valley District Council
+E07000210,ld,Liberal Democrats (UK),2019-05-01,,Mole Valley District Council
+E07000211,con,Conservative Party (UK),1974-05-01,1991-05-01,Reigate and Banstead
+E07000211,noc,No overall control,1991-05-01,2000-05-01,Reigate and Banstead
+E07000211,con,Conservative Party (UK),2000-05-01,2024-05-01,Reigate and Banstead
+E07000211,noc,No overall control,2024-05-01,,Reigate and Banstead
+E07000212,con,Conservative Party (UK),1974-05-01,1996-05-01,Runnymede Borough Council
+E07000212,noc,No overall control,1996-05-01,1998-05-01,Runnymede Borough Council
+E07000212,con,Conservative Party (UK),1998-05-01,2023-05-01,Runnymede Borough Council
+E07000212,noc,No overall control,2023-05-01,,Runnymede Borough Council
+E07000213,con,Conservative Party (UK),1974-05-01,2020-05-01,Borough of Spelthorne
+E07000213,noc,No overall control,2020-05-01,,Borough of Spelthorne
+E07000214,con,Conservative Party (UK),1974-05-01,2020-05-01,Surrey Heath
+E07000214,noc,No overall control,2020-05-01,2021-05-01,Surrey Heath
+E07000214,con,Conservative Party (UK),2021-05-01,2022-05-01,Surrey Heath
+E07000214,noc,No overall control,2022-05-01,2023-05-01,Surrey Heath
+E07000214,ld,Liberal Democrats (UK),2023-05-01,,Surrey Heath
+E07000215,con,Conservative Party (UK),1974-05-01,1990-05-01,Tandridge District
+E07000215,noc,No overall control,1990-05-01,1994-05-01,Tandridge District
+E07000215,con,Conservative Party (UK),1994-05-01,1995-05-01,Tandridge District
+E07000215,noc,No overall control,1995-05-01,2000-05-01,Tandridge District
+E07000215,con,Conservative Party (UK),2000-05-01,2019-05-01,Tandridge District
+E07000215,noc,No overall control,2019-05-01,,Tandridge District
+E07000216,noc,No overall control,1974-05-01,1976-05-01,Borough of Waverley
+E07000216,con,Conservative Party (UK),1976-05-01,1991-05-01,Borough of Waverley
+E07000216,noc,No overall control,1991-05-01,1995-05-01,Borough of Waverley
+E07000216,ld,Liberal Democrats (UK),1995-05-01,1999-05-01,Borough of Waverley
+E07000216,con,Conservative Party (UK),1999-05-01,2003-05-01,Borough of Waverley
+E07000216,ld,Liberal Democrats (UK),2003-05-01,2004-05-01,Borough of Waverley
+E07000216,noc,No overall control,2004-05-01,2007-05-01,Borough of Waverley
+E07000216,con,Conservative Party (UK),2007-05-01,2019-05-01,Borough of Waverley
+E07000216,noc,No overall control,2019-05-01,,Borough of Waverley
+E07000217,con,Conservative Party (UK),1974-05-01,1986-05-01,Woking Borough Council
+E07000217,noc,No overall control,1986-05-01,1992-05-01,Woking Borough Council
+E07000217,con,Conservative Party (UK),1992-05-01,1994-05-01,Woking Borough Council
+E07000217,noc,No overall control,1994-05-01,1996-05-01,Woking Borough Council
+E07000217,ld,Liberal Democrats (UK),1996-05-01,1998-05-01,Woking Borough Council
+E07000217,noc,No overall control,1998-05-01,2007-05-01,Woking Borough Council
+E07000217,con,Conservative Party (UK),2007-05-01,2009-05-01,Woking Borough Council
+E07000217,noc,No overall control,2009-05-01,2011-05-01,Woking Borough Council
+E07000217,con,Conservative Party (UK),2011-05-01,2019-05-01,Woking Borough Council
+E07000217,noc,No overall control,2019-05-01,2022-05-01,Woking Borough Council
+E07000217,ld,Liberal Democrats (UK),2022-05-01,,Woking Borough Council
+E07000218,lab,Labour Party (UK),1974-05-01,1976-05-01,North Warwickshire
+E07000218,noc,No overall control,1976-05-01,1979-05-01,North Warwickshire
+E07000218,lab,Labour Party (UK),1979-05-01,2003-05-01,North Warwickshire
+E07000218,noc,No overall control,2003-05-01,2007-05-01,North Warwickshire
+E07000218,con,Conservative Party (UK),2007-05-01,2011-05-01,North Warwickshire
+E07000218,lab,Labour Party (UK),2011-05-01,2015-05-01,North Warwickshire
+E07000218,con,Conservative Party (UK),2015-05-01,2023-05-01,North Warwickshire
+E07000218,noc,No overall control,2023-05-01,,North Warwickshire
+E07000219,lab,Labour Party (UK),1974-05-01,2008-05-01,Nuneaton and Bedworth
+E07000219,con,Conservative Party (UK),2008-05-01,2010-05-01,Nuneaton and Bedworth
+E07000219,noc,No overall control,2010-05-01,2012-05-01,Nuneaton and Bedworth
+E07000219,lab,Labour Party (UK),2012-05-01,2018-05-01,Nuneaton and Bedworth
+E07000219,noc,No overall control,2018-05-01,2021-05-01,Nuneaton and Bedworth
+E07000219,con,Conservative Party (UK),2021-05-01,2024-05-01,Nuneaton and Bedworth
+E07000219,lab,Labour Party (UK),2024-05-01,2024-05-01,Nuneaton and Bedworth
+E07000219,noc,No overall control,2024-05-01,,Nuneaton and Bedworth
+E07000220,noc,No overall control,1974-05-01,1976-05-01,Borough of Rugby
+E07000220,con,Conservative Party (UK),1976-05-01,1979-05-01,Borough of Rugby
+E07000220,noc,No overall control,1979-05-01,1987-05-01,Borough of Rugby
+E07000220,con,Conservative Party (UK),1987-05-01,1990-05-01,Borough of Rugby
+E07000220,noc,No overall control,1990-05-01,2007-05-01,Borough of Rugby
+E07000220,con,Conservative Party (UK),2007-05-01,2016-05-01,Borough of Rugby
+E07000220,noc,No overall control,2016-05-01,2018-05-01,Borough of Rugby
+E07000220,con,Conservative Party (UK),2018-05-01,2023-05-01,Borough of Rugby
+E07000220,noc,No overall control,2023-05-01,,Borough of Rugby
+E07000221,ind,Independent politician,1974-05-01,1976-05-01,Stratford-on-Avon District
+E07000221,noc,No overall control,1976-05-01,1979-05-01,Stratford-on-Avon District
+E07000221,con,Conservative Party (UK),1979-05-01,1991-05-01,Stratford-on-Avon District
+E07000221,noc,No overall control,1991-05-01,1992-05-01,Stratford-on-Avon District
+E07000221,con,Conservative Party (UK),1992-05-01,1994-05-01,Stratford-on-Avon District
+E07000221,noc,No overall control,1994-05-01,2000-05-01,Stratford-on-Avon District
+E07000221,con,Conservative Party (UK),2000-05-01,2002-05-01,Stratford-on-Avon District
+E07000221,noc,No overall control,2002-05-01,2003-05-01,Stratford-on-Avon District
+E07000221,con,Conservative Party (UK),2003-05-01,2023-05-01,Stratford-on-Avon District
+E07000221,ld,Liberal Democrats (UK),2023-05-01,,Stratford-on-Avon District
+E07000222,noc,No overall control,1974-05-01,1976-05-01,Warwick District
+E07000222,con,Conservative Party (UK),1976-05-01,1995-05-01,Warwick District
+E07000222,noc,No overall control,1995-05-01,2007-05-01,Warwick District
+E07000222,con,Conservative Party (UK),2007-05-01,2019-05-01,Warwick District
+E07000222,noc,No overall control,2019-05-01,,Warwick District
+E07000223,noc,No overall control,1974-05-01,1979-05-01,Adur District
+E07000223,con,Conservative Party (UK),1979-05-01,1980-05-01,Adur District
+E07000223,lib,Liberal Party (UK),1980-05-01,1983-05-01,Adur District
+E07000223,noc,No overall control,1983-05-01,1986-05-01,Adur District
+E07000223,lib,SDP-Liberal Alliance,1986-05-01,1988-05-01,Adur District
+E07000223,ld,Liberal Democrats (UK),1988-05-01,1999-05-01,Adur District
+E07000223,noc,No overall control,1999-05-01,2002-05-01,Adur District
+E07000223,con,Conservative Party (UK),2002-05-01,2024-05-01,Adur District
+E07000224,con,Conservative Party (UK),1974-05-01,2019-05-01,Arun District
+E07000224,noc,No overall control,2019-05-01,,Arun District
+E07000225,noc,No overall control,1974-05-01,1976-05-01,Chichester District
+E07000225,con,Conservative Party (UK),1976-05-01,1995-05-01,Chichester District
+E07000225,noc,No overall control,1995-05-01,1999-05-01,Chichester District
+E07000225,con,Conservative Party (UK),1999-05-01,2004-05-01,Chichester District
+E07000225,noc,No overall control,2004-05-01,2006-05-01,Chichester District
+E07000225,con,Conservative Party (UK),2006-05-01,2019-05-01,Chichester District
+E07000225,noc,No overall control,2019-05-01,2019-05-01,Chichester District
+E07000225,con,Conservative Party (UK),2019-05-01,2020-05-01,Chichester District
+E07000225,noc,No overall control,2020-05-01,2023-05-01,Chichester District
+E07000225,ld,Liberal Democrats (UK),2023-05-01,,Chichester District
+E07000226,lab,Labour Party (UK),1974-05-01,2006-05-01,Crawley Borough Council
+E07000226,con,Conservative Party (UK),2006-05-01,2006-05-01,Crawley Borough Council
+E07000226,noc,No overall control,2006-05-01,2007-05-01,Crawley Borough Council
+E07000226,con,Conservative Party (UK),2007-05-01,2014-05-01,Crawley Borough Council
+E07000226,lab,Labour Party (UK),2014-05-01,2020-05-01,Crawley Borough Council
+E07000226,noc,No overall control,2020-05-01,2022-05-01,Crawley Borough Council
+E07000226,lab,Labour Party (UK),2022-05-01,,Crawley Borough Council
+E07000227,ind,Independent politician,1974-05-01,1976-05-01,Horsham District
+E07000227,con,Conservative Party (UK),1976-05-01,1995-05-01,Horsham District
+E07000227,ld,Liberal Democrats (UK),1995-05-01,1999-05-01,Horsham District
+E07000227,con,Conservative Party (UK),1999-05-01,2003-05-01,Horsham District
+E07000227,noc,No overall control,2003-05-01,2007-05-01,Horsham District
+E07000227,con,Conservative Party (UK),2007-05-01,2023-05-01,Horsham District
+E07000227,ld,Liberal Democrats (UK),2023-05-01,,Horsham District
+E07000228,noc,No overall control,1974-05-01,1979-05-01,Mid Sussex District
+E07000228,con,Conservative Party (UK),1979-05-01,1995-05-01,Mid Sussex District
+E07000228,ld,Liberal Democrats (UK),1995-05-01,1999-05-01,Mid Sussex District
+E07000228,con,Conservative Party (UK),1999-05-01,2023-05-01,Mid Sussex District
+E07000228,noc,No overall control,2023-05-01,,Mid Sussex District
+E07000229,noc,No overall control,1974-05-01,1976-05-01,Worthing Borough Council
+E07000229,con,Conservative Party (UK),1976-05-01,1994-05-01,Worthing Borough Council
+E07000229,ld,Liberal Democrats (UK),1994-05-01,1999-05-01,Worthing Borough Council
+E07000229,con,Conservative Party (UK),1999-05-01,2002-05-01,Worthing Borough Council
+E07000229,ld,Liberal Democrats (UK),2002-05-01,2003-05-01,Worthing Borough Council
+E07000229,noc,No overall control,2003-05-01,2004-05-01,Worthing Borough Council
+E07000229,con,Conservative Party (UK),2004-05-01,2022-05-01,Worthing Borough Council
+E07000229,lab,Labour Party (UK),2022-05-01,2026-05-01,Worthing Borough Council
+E07000229,noc,No overall control,2026-05-01,,Worthing Borough Council
+E07000234,con,Conservative Party (UK),1974-05-01,1995-05-01,Bromsgrove District
+E07000234,lab,Labour Party (UK),1995-05-01,1999-05-01,Bromsgrove District
+E07000234,con,Conservative Party (UK),1999-05-01,2023-05-01,Bromsgrove District
+E07000235,noc,No overall control,1997-05-01,2007-05-01,Malvern Hills District
+E07000235,con,Conservative Party (UK),2007-05-01,2019-05-01,Malvern Hills District
+E07000235,noc,No overall control,2019-05-01,,Malvern Hills District
+E07000236,lab,Labour Party (UK),1974-05-01,1976-05-01,Redditch Borough Council
+E07000236,con,Conservative Party (UK),1976-05-01,1983-05-01,Redditch Borough Council
+E07000236,lab,Labour Party (UK),1983-05-01,2002-05-01,Redditch Borough Council
+E07000236,noc,No overall control,2002-05-01,2004-05-01,Redditch Borough Council
+E07000236,lab,Labour Party (UK),2004-05-01,2006-05-01,Redditch Borough Council
+E07000236,noc,No overall control,2006-05-01,2008-05-01,Redditch Borough Council
+E07000236,con,Conservative Party (UK),2008-05-01,2012-05-01,Redditch Borough Council
+E07000236,lab,Labour Party (UK),2012-05-01,2018-05-01,Redditch Borough Council
+E07000236,con,Conservative Party (UK),2018-05-01,2024-05-01,Redditch Borough Council
+E07000236,lab,Labour Party (UK),2024-05-01,2026-05-01,Redditch Borough Council
+E07000236,noc,No overall control,2026-05-01,,Redditch Borough Council
+E07000237,noc,No overall control,1974-05-01,1976-05-01,Worcester City Council
+E07000237,con,Conservative Party (UK),1976-05-01,1980-05-01,Worcester City Council
+E07000237,lab,Labour Party (UK),1980-05-01,1983-05-01,Worcester City Council
+E07000237,noc,No overall control,1983-05-01,1986-05-01,Worcester City Council
+E07000237,lab,Labour Party (UK),1986-05-01,2000-05-01,Worcester City Council
+E07000237,noc,No overall control,2000-05-01,2003-05-01,Worcester City Council
+E07000237,con,Conservative Party (UK),2003-05-01,2007-05-01,Worcester City Council
+E07000237,noc,No overall control,2007-05-01,2011-05-01,Worcester City Council
+E07000237,con,Conservative Party (UK),2011-05-01,2012-05-01,Worcester City Council
+E07000237,noc,No overall control,2012-05-01,2015-05-01,Worcester City Council
+E07000237,con,Conservative Party (UK),2015-05-01,2016-05-01,Worcester City Council
+E07000237,noc,No overall control,2016-05-01,2021-05-01,Worcester City Council
+E07000237,con,Conservative Party (UK),2021-05-01,2022-05-01,Worcester City Council
+E07000237,noc,No overall control,2022-05-01,,Worcester City Council
+E07000238,ind,Independent politician,1974-05-01,1983-05-01,Wychavon
+E07000238,noc,No overall control,1983-05-01,1987-05-01,Wychavon
+E07000238,con,Conservative Party (UK),1987-05-01,1995-05-01,Wychavon
+E07000238,noc,No overall control,1995-05-01,1999-05-01,Wychavon
+E07000238,con,Conservative Party (UK),1999-05-01,,Wychavon
+E07000239,noc,No overall control,1974-05-01,1976-05-01,Wyre Forest District
+E07000239,con,Conservative Party (UK),1976-05-01,1979-05-01,Wyre Forest District
+E07000239,noc,No overall control,1979-05-01,1996-05-01,Wyre Forest District
+E07000239,lab,Labour Party (UK),1996-05-01,1999-05-01,Wyre Forest District
+E07000239,noc,No overall control,1999-05-01,2002-05-01,Wyre Forest District
+E07000239,ind,Independent Kidderminster Hospital and Health Concern,2002-05-01,2002-05-01,Wyre Forest District
+E07000239,noc,No overall control,2002-05-01,2008-05-01,Wyre Forest District
+E07000239,con,Conservative Party (UK),2008-05-01,2009-05-01,Wyre Forest District
+E07000239,noc,No overall control,2009-05-01,2010-05-01,Wyre Forest District
+E07000239,con,Conservative Party (UK),2010-05-01,2012-05-01,Wyre Forest District
+E07000239,noc,No overall control,2012-05-01,2015-05-01,Wyre Forest District
+E07000239,con,Conservative Party (UK),2015-05-01,2019-05-01,Wyre Forest District
+E07000239,noc,No overall control,2019-05-01,2023-05-01,Wyre Forest District
+E07000239,con,Conservative Party (UK),2023-05-01,,Wyre Forest District
+E07000240,con,Conservative Party (UK),1974-05-01,1984-05-01,City of St Albans
+E07000240,noc,No overall control,1984-05-01,1988-05-01,City of St Albans
+E07000240,con,Conservative Party (UK),1988-05-01,1991-05-01,City of St Albans
+E07000240,noc,No overall control,1991-05-01,1994-05-01,City of St Albans
+E07000240,ld,Liberal Democrats (UK),1994-05-01,1999-05-01,City of St Albans
+E07000240,noc,No overall control,1999-05-01,2006-05-01,City of St Albans
+E07000240,ld,Liberal Democrats (UK),2006-05-01,2007-05-01,City of St Albans
+E07000240,noc,No overall control,2007-05-01,2008-05-01,City of St Albans
+E07000240,ld,Liberal Democrats (UK),2008-05-01,2011-05-01,City of St Albans
+E07000240,noc,No overall control,2011-05-01,2015-05-01,City of St Albans
+E07000240,con,Conservative Party (UK),2015-05-01,2019-05-01,City of St Albans
+E07000240,noc,No overall control,2019-05-01,2021-05-01,City of St Albans
+E07000240,ld,Liberal Democrats (UK),2021-05-01,,City of St Albans
+E07000241,lab,Labour Party (UK),1974-05-01,1976-05-01,Welwyn Hatfield
+E07000241,con,Conservative Party (UK),1976-05-01,1979-05-01,Welwyn Hatfield
+E07000241,lab,Labour Party (UK),1979-05-01,1992-05-01,Welwyn Hatfield
+E07000241,con,Conservative Party (UK),1992-05-01,1994-05-01,Welwyn Hatfield
+E07000241,lab,Labour Party (UK),1994-05-01,1999-05-01,Welwyn Hatfield
+E07000241,con,Conservative Party (UK),1999-05-01,2000-05-01,Welwyn Hatfield
+E07000241,lab,Labour Party (UK),2000-05-01,2002-05-01,Welwyn Hatfield
+E07000241,con,Conservative Party (UK),2002-05-01,2019-05-01,Welwyn Hatfield
+E07000241,noc,No overall control,2019-05-01,2021-05-01,Welwyn Hatfield
+E07000241,con,Conservative Party (UK),2021-05-01,2023-05-01,Welwyn Hatfield
+E07000241,noc,No overall control,2023-05-01,,Welwyn Hatfield
+E07000242,noc,No overall control,1974-05-01,1976-05-01,East Hertfordshire
+E07000242,con,Conservative Party (UK),1976-05-01,1995-05-01,East Hertfordshire
+E07000242,noc,No overall control,1995-05-01,1999-05-01,East Hertfordshire
+E07000242,con,Conservative Party (UK),1999-05-01,2023-05-01,East Hertfordshire
+E07000242,noc,No overall control,2023-05-01,,East Hertfordshire
+E07000243,lab,Labour Party (UK),1974-05-01,,Stevenage Borough Council
+E07000244,con,Conservative Party (UK),2019-05-01,2023-05-01,East Suffolk (district)
+E07000244,noc,No overall control,2023-05-01,,East Suffolk (district)
+E07000245,con,Conservative Party (UK),2019-05-01,2023-05-01,West Suffolk District
+E07000245,noc,No overall control,2023-05-01,,West Suffolk District
+E08000001,con,Conservative Party (UK),1974-05-01,1980-05-01,Bolton Council
+E08000001,lab,Labour Party (UK),1980-05-01,2003-05-01,Bolton Council
+E08000001,noc,No overall control,2003-05-01,2011-05-01,Bolton Council
+E08000001,lab,Labour Party (UK),2011-05-01,2019-05-01,Bolton Council
+E08000001,noc,No overall control,2019-05-01,,Bolton Council
+E08000002,noc,No overall control,1974-05-01,1975-05-01,Bury Council
+E08000002,con,Conservative Party (UK),1975-05-01,1986-05-01,Bury Council
+E08000002,lab,Labour Party (UK),1986-05-01,1992-05-01,Bury Council
+E08000002,noc,No overall control,1992-05-01,1995-05-01,Bury Council
+E08000002,lab,Labour Party (UK),1995-05-01,2006-05-01,Bury Council
+E08000002,noc,No overall control,2006-05-01,2008-05-01,Bury Council
+E08000002,con,Conservative Party (UK),2008-05-01,2010-05-01,Bury Council
+E08000002,noc,No overall control,2010-05-01,2011-05-01,Bury Council
+E08000002,lab,Labour Party (UK),2011-05-01,,Bury Council
+E08000003,lib,Liberal Party (UK),1838-05-01,1886-05-01,Manchester City Council
+E08000003,noc,No overall control,1886-05-01,1908-05-01,Manchester City Council
+E08000003,con,Conservative Party (UK),1908-05-01,1919-05-01,Manchester City Council
+E08000003,noc,No overall control,1919-05-01,1921-05-01,Manchester City Council
+E08000003,con,Conservative Party (UK),1921-05-01,1926-05-01,Manchester City Council
+E08000003,noc,No overall control,1926-05-01,1932-05-01,Manchester City Council
+E08000003,con,Conservative Party (UK),1932-05-01,1934-05-01,Manchester City Council
+E08000003,noc,No overall control,1934-05-01,1946-05-01,Manchester City Council
+E08000003,lab,Labour Party (UK),1946-05-01,1947-05-01,Manchester City Council
+E08000003,noc,No overall control,1947-05-01,1949-05-01,Manchester City Council
+E08000003,con,Conservative Party (UK),1949-05-01,1952-05-01,Manchester City Council
+E08000003,noc,No overall control,1952-05-01,1953-05-01,Manchester City Council
+E08000003,lab,Labour Party (UK),1953-05-01,1967-05-01,Manchester City Council
+E08000003,con,Conservative Party (UK),1967-05-01,1971-05-01,Manchester City Council
+E08000003,lab,Labour Party (UK),1971-05-01,1974-05-01,Manchester City Council
+E08000003,lab,Labour Party (UK),1974-05-01,,Manchester City Council
+E08000004,lab,Labour Party (UK),1974-05-01,1977-05-01,Greater Manchester County Council
+E08000004,con,Conservative Party (UK),1977-05-01,1981-05-01,Greater Manchester County Council
+E08000004,lab,Labour Party (UK),1981-05-01,1986-05-01,Greater Manchester County Council
+E08000005,lab,Labour Party (UK),1974-05-01,1975-05-01,Rochdale Borough Council
+E08000005,noc,No overall control,1975-05-01,1976-05-01,Rochdale Borough Council
+E08000005,con,Conservative Party (UK),1976-05-01,1979-05-01,Rochdale Borough Council
+E08000005,noc,No overall control,1979-05-01,1980-05-01,Rochdale Borough Council
+E08000005,lab,Labour Party (UK),1980-05-01,1982-05-01,Rochdale Borough Council
+E08000005,noc,No overall control,1982-05-01,1986-05-01,Rochdale Borough Council
+E08000005,lab,Labour Party (UK),1986-05-01,1992-05-01,Rochdale Borough Council
+E08000005,noc,No overall control,1992-05-01,1996-05-01,Rochdale Borough Council
+E08000005,lab,Labour Party (UK),1996-05-01,2003-05-01,Rochdale Borough Council
+E08000005,noc,No overall control,2003-05-01,2007-05-01,Rochdale Borough Council
+E08000005,ld,Liberal Democrats (UK),2007-05-01,2010-05-01,Rochdale Borough Council
+E08000005,noc,No overall control,2010-05-01,2011-05-01,Rochdale Borough Council
+E08000005,lab,Labour Party (UK),2011-05-01,,Rochdale Borough Council
+E08000006,lab,Labour Party (UK),1974-05-01,,Salford City Council
+E08000007,noc,No overall control,1974-05-01,1975-05-01,Stockport Metropolitan Borough Council
+E08000007,con,Conservative Party (UK),1975-05-01,1983-05-01,Stockport Metropolitan Borough Council
+E08000007,noc,No overall control,1983-05-01,1999-05-01,Stockport Metropolitan Borough Council
+E08000007,ld,Liberal Democrats (UK),1999-05-01,2000-05-01,Stockport Metropolitan Borough Council
+E08000007,noc,No overall control,2000-05-01,2002-05-01,Stockport Metropolitan Borough Council
+E08000007,ld,Liberal Democrats (UK),2002-05-01,2011-05-01,Stockport Metropolitan Borough Council
+E08000007,noc,No overall control,2011-05-01,2026-05-01,Stockport Metropolitan Borough Council
+E08000007,ld,"Liberal Democrats (UK, 2025)",2026-05-01,,Stockport Metropolitan Borough Council
+E08000008,lab,Labour Party (UK),1974-05-01,1976-05-01,Tameside Metropolitan Borough Council
+E08000008,con,Conservative Party (UK),1976-05-01,1979-05-01,Tameside Metropolitan Borough Council
+E08000008,lab,Labour Party (UK),1979-05-01,,Tameside Metropolitan Borough Council
+E08000009,con,Conservative Party (UK),1974-05-01,1986-05-01,Trafford Council
+E08000009,noc,No overall control,1986-05-01,1988-05-01,Trafford Council
+E08000009,con,Conservative Party (UK),1988-05-01,1995-05-01,Trafford Council
+E08000009,noc,No overall control,1995-05-01,1996-05-01,Trafford Council
+E08000009,lab,Labour Party (UK),1996-05-01,2003-05-01,Trafford Council
+E08000009,noc,No overall control,2003-05-01,2004-05-01,Trafford Council
+E08000009,con,Conservative Party (UK),2004-05-01,2018-05-01,Trafford Council
+E08000009,noc,No overall control,2018-05-01,2019-05-01,Trafford Council
+E08000009,lab,Labour Party (UK),2019-05-01,,Trafford Council
+E08000010,lab,Labour Party (UK),1974-05-01,,Wigan Council
+E08000011,lab,Labour Party (UK),1974-05-01,,Knowsley Council
+E08000012,oth,Whigs (British political party),1835-05-01,1841-05-01,Liverpool City Council
+E08000012,con,Conservative Party (UK),1841-05-01,1892-05-01,Liverpool City Council
+E08000012,lib,Liberal Party (UK),1892-05-01,1895-05-01,Liverpool City Council
+E08000012,con,Conservative Party (UK),1895-05-01,1953-05-01,Liverpool City Council
+E08000012,noc,No overall control,1953-05-01,1955-05-01,Liverpool City Council
+E08000012,lab,Labour Party (UK),1955-05-01,1961-05-01,Liverpool City Council
+E08000012,con,Conservative Party (UK),1961-05-01,1963-05-01,Liverpool City Council
+E08000012,lab,Labour Party (UK),1963-05-01,1967-05-01,Liverpool City Council
+E08000012,con,Conservative Party (UK),1967-05-01,1971-05-01,Liverpool City Council
+E08000012,noc,No overall control,1971-05-01,1972-05-01,Liverpool City Council
+E08000012,lab,Labour Party (UK),1972-05-01,1974-05-01,Liverpool City Council
+E08000012,noc,No overall control,1974-05-01,1983-05-01,Liverpool City Council
+E08000012,lab,Labour Party (UK),1983-05-01,1992-05-01,Liverpool City Council
+E08000012,noc,No overall control,1992-05-01,1996-05-01,Liverpool City Council
+E08000012,lab,Labour Party (UK),1996-05-01,1998-05-01,Liverpool City Council
+E08000012,ld,Liberal Democrats (UK),1998-05-01,2010-05-01,Liverpool City Council
+E08000012,lab,Labour Party (UK),2010-05-01,,Liverpool City Council
+E08000013,lab,Labour Party (UK),1974-05-01,2004-05-01,St Helens Borough Council
+E08000013,noc,No overall control,2004-05-01,2010-05-01,St Helens Borough Council
+E08000013,lab,Labour Party (UK),2010-05-01,2026-05-01,St Helens Borough Council
+E08000013,ref,Reform UK,2026-05-01,,St Helens Borough Council
+E08000014,con,Conservative Party (UK),1974-05-01,1986-05-01,Sefton Council
+E08000014,noc,No overall control,1986-05-01,2012-05-01,Sefton Council
+E08000014,lab,Labour Party (UK),2012-05-01,,Sefton Council
+E08000015,noc,No overall control,1974-05-01,1975-05-01,Wirral Council
+E08000015,con,Conservative Party (UK),1975-05-01,1986-05-01,Wirral Council
+E08000015,noc,No overall control,1986-05-01,1991-05-01,Wirral Council
+E08000015,lab,Labour Party (UK),1991-05-01,1992-05-01,Wirral Council
+E08000015,noc,No overall control,1992-05-01,1995-05-01,Wirral Council
+E08000015,lab,Labour Party (UK),1995-05-01,2002-05-01,Wirral Council
+E08000015,noc,No overall control,2002-05-01,2012-05-01,Wirral Council
+E08000015,lab,Labour Party (UK),2012-05-01,2019-05-01,Wirral Council
+E08000015,noc,No overall control,2019-05-01,,Wirral Council
+E08000017,lab,Labour Party (UK),1974-05-01,2004-05-01,City of Doncaster Council
+E08000017,noc,No overall control,2004-05-01,2010-05-01,City of Doncaster Council
+E08000017,lab,Labour Party (UK),2010-05-01,2025-05-01,City of Doncaster Council
+E08000017,ref,Reform UK,2025-05-01,,City of Doncaster Council
+E08000018,lab,Labour Party (UK),1974-05-01,,Rotherham Metropolitan Borough Council
+E08000021,lab,Labour Party (UK),1974-05-01,2004-05-01,Newcastle City Council
+E08000021,ld,Liberal Democrats (UK),2004-05-01,2011-05-01,Newcastle City Council
+E08000021,lab,Labour Party (UK),2011-05-01,2024-05-01,Newcastle City Council
+E08000021,noc,No overall control,2024-05-01,,Newcastle City Council
+E08000022,lab,Labour Party (UK),1974-05-01,1986-05-01,North Tyneside Council
+E08000022,noc,No overall control,1986-05-01,1987-05-01,North Tyneside Council
+E08000022,lab,Labour Party (UK),1987-05-01,2004-05-01,North Tyneside Council
+E08000022,noc,No overall control,2004-05-01,2008-05-01,North Tyneside Council
+E08000022,con,Conservative Party (UK),2008-05-01,2010-05-01,North Tyneside Council
+E08000022,noc,No overall control,2010-05-01,2011-05-01,North Tyneside Council
+E08000022,lab,Labour Party (UK),2011-05-01,,North Tyneside Council
+E08000023,lab,Labour Party (UK),1974-05-01,1978-05-01,South Tyneside Council
+E08000023,noc,No overall control,1978-05-01,1979-05-01,South Tyneside Council
+E08000023,lab,Labour Party (UK),1979-05-01,2025-05-01,South Tyneside Council
+E08000023,noc,No overall control,2025-05-01,2026-05-01,South Tyneside Council
+E08000023,ref,Reform UK,2026-05-01,,South Tyneside Council
+E08000024,lab,Labour Party (UK),1919-05-01,1922-05-01,Durham County Council
+E08000024,noc,No overall control,1922-05-01,1925-05-01,Durham County Council
+E08000024,lab,Labour Party (UK),1925-05-01,1974-05-01,Durham County Council
+E08000024,lab,Labour Party (UK),1974-05-01,2009-05-01,Durham County Council
+E08000024,lab,Labour Party (UK),2009-05-01,2021-05-01,Durham County Council
+E08000024,noc,No overall control,2021-05-01,2025-05-01,Durham County Council
+E08000024,ref,Reform UK,2025-05-01,,Durham County Council
+E08000025,lab,Labour Party (UK),1974-05-01,1975-05-01,Birmingham City Council
+E08000025,noc,No overall control,1975-05-01,1976-05-01,Birmingham City Council
+E08000025,con,Conservative Party (UK),1976-05-01,1979-05-01,Birmingham City Council
+E08000025,noc,No overall control,1979-05-01,1980-05-01,Birmingham City Council
+E08000025,lab,Labour Party (UK),1980-05-01,1982-05-01,Birmingham City Council
+E08000025,con,Conservative Party (UK),1982-05-01,1984-05-01,Birmingham City Council
+E08000025,lab,Labour Party (UK),1984-05-01,2003-05-01,Birmingham City Council
+E08000025,noc,No overall control,2003-05-01,2012-05-01,Birmingham City Council
+E08000025,lab,Labour Party (UK),2012-05-01,2026-05-01,Birmingham City Council
+E08000025,noc,No overall control,2026-05-01,,Birmingham City Council
+E08000026,lab,Labour Party (UK),1974-05-01,1977-05-01,Coventry City Council
+E08000026,con,Conservative Party (UK),1977-05-01,1979-05-01,Coventry City Council
+E08000026,lab,Labour Party (UK),1979-05-01,2003-05-01,Coventry City Council
+E08000026,noc,No overall control,2003-05-01,2006-05-01,Coventry City Council
+E08000026,con,Conservative Party (UK),2006-05-01,2008-05-01,Coventry City Council
+E08000026,noc,No overall control,2008-05-01,2010-05-01,Coventry City Council
+E08000026,lab,Labour Party (UK),2010-05-01,2026-05-01,Coventry City Council
+E08000026,noc,No overall control,2026-05-01,,Coventry City Council
+E08000027,lab,Labour Party (UK),1974-05-01,1976-05-01,Dudley Metropolitan Borough Council
+E08000027,con,Conservative Party (UK),1976-05-01,1980-05-01,Dudley Metropolitan Borough Council
+E08000027,noc,No overall control,1980-05-01,1982-05-01,Dudley Metropolitan Borough Council
+E08000027,con,Conservative Party (UK),1982-05-01,1984-05-01,Dudley Metropolitan Borough Council
+E08000027,noc,No overall control,1984-05-01,1986-05-01,Dudley Metropolitan Borough Council
+E08000027,lab,Labour Party (UK),1986-05-01,1992-05-01,Dudley Metropolitan Borough Council
+E08000027,con,Conservative Party (UK),1992-05-01,1992-05-01,Dudley Metropolitan Borough Council
+E08000027,noc,No overall control,1992-05-01,1994-05-01,Dudley Metropolitan Borough Council
+E08000027,lab,Labour Party (UK),1994-05-01,2003-05-01,Dudley Metropolitan Borough Council
+E08000027,noc,No overall control,2003-05-01,2004-05-01,Dudley Metropolitan Borough Council
+E08000027,con,Conservative Party (UK),2004-05-01,2012-05-01,Dudley Metropolitan Borough Council
+E08000027,lab,Labour Party (UK),2012-05-01,2016-05-01,Dudley Metropolitan Borough Council
+E08000027,noc,No overall control,2016-05-01,2021-05-01,Dudley Metropolitan Borough Council
+E08000027,con,Conservative Party (UK),2021-05-01,2024-05-01,Dudley Metropolitan Borough Council
+E08000027,noc,No overall control,2024-05-01,,Dudley Metropolitan Borough Council
+E08000028,lab,Labour Party (UK),1974-05-01,1978-05-01,Sandwell Metropolitan Borough Council
+E08000028,con,Conservative Party (UK),1978-05-01,1979-05-01,Sandwell Metropolitan Borough Council
+E08000028,lab,Labour Party (UK),1979-05-01,2026-05-01,Sandwell Metropolitan Borough Council
+E08000028,ref,Reform UK,2026-05-01,,Sandwell Metropolitan Borough Council
+E08000029,con,Conservative Party (UK),1974-05-01,1991-05-01,Solihull Metropolitan Borough Council
+E08000029,noc,No overall control,1991-05-01,2000-05-01,Solihull Metropolitan Borough Council
+E08000029,con,Conservative Party (UK),2000-05-01,2007-05-01,Solihull Metropolitan Borough Council
+E08000029,noc,No overall control,2007-05-01,2008-05-01,Solihull Metropolitan Borough Council
+E08000029,con,Conservative Party (UK),2008-05-01,2010-05-01,Solihull Metropolitan Borough Council
+E08000029,noc,No overall control,2010-05-01,2011-05-01,Solihull Metropolitan Borough Council
+E08000029,con,Conservative Party (UK),2011-05-01,2026-05-01,Solihull Metropolitan Borough Council
+E08000029,noc,No overall control,2026-05-01,2026-10-01,Solihull Metropolitan Borough Council
+E08000030,lab,Labour Party (UK),1974-05-01,1976-05-01,Walsall Council
+E08000030,noc,No overall control,1976-05-01,1980-05-01,Walsall Council
+E08000030,lab,Labour Party (UK),1980-05-01,1982-05-01,Walsall Council
+E08000030,noc,No overall control,1982-05-01,1988-05-01,Walsall Council
+E08000030,lab,Labour Party (UK),1988-05-01,1992-05-01,Walsall Council
+E08000030,noc,No overall control,1992-05-01,1995-05-01,Walsall Council
+E08000030,lab,Labour Party (UK),1995-05-01,1996-05-01,Walsall Council
+E08000030,noc,No overall control,1996-05-01,1999-05-01,Walsall Council
+E08000030,lab,Labour Party (UK),1999-05-01,2000-05-01,Walsall Council
+E08000030,noc,No overall control,2000-05-01,2004-05-01,Walsall Council
+E08000030,con,Conservative Party (UK),2004-05-01,2011-05-01,Walsall Council
+E08000030,noc,No overall control,2011-05-01,2019-05-01,Walsall Council
+E08000030,con,Conservative Party (UK),2019-05-01,2026-05-01,Walsall Council
+E08000030,noc,No overall control,2026-05-01,2026-05-01,Walsall Council
+E08000030,ref,Reform UK,2026-05-01,,Walsall Council
+E08000031,lab,Labour Party (UK),1974-05-01,1978-05-01,City of Wolverhampton Council
+E08000031,noc,No overall control,1978-05-01,1980-05-01,City of Wolverhampton Council
+E08000031,lab,Labour Party (UK),1980-05-01,1987-05-01,City of Wolverhampton Council
+E08000031,noc,No overall control,1987-05-01,1988-05-01,City of Wolverhampton Council
+E08000031,lab,Labour Party (UK),1988-05-01,1992-05-01,City of Wolverhampton Council
+E08000031,noc,No overall control,1992-05-01,1994-05-01,City of Wolverhampton Council
+E08000031,lab,Labour Party (UK),1994-05-01,2008-05-01,City of Wolverhampton Council
+E08000031,noc,No overall control,2008-05-01,2011-05-01,City of Wolverhampton Council
+E08000031,lab,Labour Party (UK),2011-05-01,,City of Wolverhampton Council
+E08000032,con,Conservative Party (UK),1974-05-01,1980-05-01,City of Bradford Metropolitan District Council
+E08000032,lab,Labour Party (UK),1980-05-01,1982-05-01,City of Bradford Metropolitan District Council
+E08000032,noc,No overall control,1982-05-01,1986-05-01,City of Bradford Metropolitan District Council
+E08000032,lab,Labour Party (UK),1986-05-01,1988-05-01,City of Bradford Metropolitan District Council
+E08000032,noc,No overall control,1988-05-01,1990-05-01,City of Bradford Metropolitan District Council
+E08000032,lab,Labour Party (UK),1990-05-01,2000-05-01,City of Bradford Metropolitan District Council
+E08000032,noc,No overall control,2000-05-01,2014-05-01,City of Bradford Metropolitan District Council
+E08000032,lab,Labour Party (UK),2014-05-01,2026-05-01,City of Bradford Metropolitan District Council
+E08000032,noc,No overall control,2026-05-01,,City of Bradford Metropolitan District Council
+E08000033,lab,Labour Party (UK),1974-05-01,1975-05-01,Calderdale Council
+E08000033,con,Conservative Party (UK),1975-05-01,1980-05-01,Calderdale Council
+E08000033,noc,No overall control,1980-05-01,1990-05-01,Calderdale Council
+E08000033,lab,Labour Party (UK),1990-05-01,1992-05-01,Calderdale Council
+E08000033,noc,No overall control,1992-05-01,1995-05-01,Calderdale Council
+E08000033,lab,Labour Party (UK),1995-05-01,1999-05-01,Calderdale Council
+E08000033,noc,No overall control,1999-05-01,2000-05-01,Calderdale Council
+E08000033,con,Conservative Party (UK),2000-05-01,2002-05-01,Calderdale Council
+E08000033,noc,No overall control,2002-05-01,2019-05-01,Calderdale Council
+E08000033,lab,Labour Party (UK),2019-05-01,2026-05-01,Calderdale Council
+E08000033,ref,Reform UK,2026-05-01,,Calderdale Council
+E08000034,lab,Labour Party (UK),1974-05-01,1975-05-01,Kirklees Council
+E08000034,noc,No overall control,1975-05-01,1976-05-01,Kirklees Council
+E08000034,con,Conservative Party (UK),1976-05-01,1979-05-01,Kirklees Council
+E08000034,noc,No overall control,1979-05-01,1980-05-01,Kirklees Council
+E08000034,lab,Labour Party (UK),1980-05-01,1985-05-01,Kirklees Council
+E08000034,noc,No overall control,1985-05-01,1990-05-01,Kirklees Council
+E08000034,lab,Labour Party (UK),1990-05-01,1994-05-01,Kirklees Council
+E08000034,noc,No overall control,1994-05-01,1995-05-01,Kirklees Council
+E08000034,lab,Labour Party (UK),1995-05-01,1999-05-01,Kirklees Council
+E08000034,noc,No overall control,1999-05-01,2018-05-01,Kirklees Council
+E08000034,lab,Labour Party (UK),2018-05-01,2020-05-01,Kirklees Council
+E08000034,noc,No overall control,2020-05-01,2022-05-01,Kirklees Council
+E08000034,lab,Labour Party (UK),2022-05-01,2024-05-01,Kirklees Council
+E08000034,noc,No overall control,2024-05-01,,Kirklees Council
+E08000035,lab,Labour Party (UK),1973-05-01,1977-05-01,West Yorkshire County Council
+E08000035,con,Conservative Party (UK),1977-05-01,1981-05-01,West Yorkshire County Council
+E08000035,lab,Labour Party (UK),1981-05-01,1986-05-01,West Yorkshire County Council
+E08000036,lab,Labour Party (UK),1974-05-01,2026-05-01,Wakefield Council
+E08000036,ref,Reform UK,2026-05-01,,Wakefield Council
+E08000037,lab,Labour Party (UK),1974-05-01,2026-05-01,Gateshead Council
+E08000037,ref,Reform UK,2026-05-01,,Gateshead Council
+E08000038,lab,Labour Party (UK),1974-05-01,2026-05-01,Barnsley Metropolitan Borough Council
+E08000038,ref,Reform UK,2026-05-01,,Barnsley Metropolitan Borough Council
+E08000039,lab,Labour Party (UK),1974-05-01,1999-05-01,Sheffield City Council
+E08000039,ld,Liberal Democrats (UK),1999-05-01,2002-05-01,Sheffield City Council
+E08000039,noc,No overall control,2002-05-01,2003-05-01,Sheffield City Council
+E08000039,lab,Labour Party (UK),2003-05-01,2007-05-01,Sheffield City Council
+E08000039,noc,No overall control,2007-05-01,2008-05-01,Sheffield City Council
+E08000039,ld,Liberal Democrats (UK),2008-05-01,2010-05-01,Sheffield City Council
+E08000039,noc,No overall control,2010-05-01,2011-05-01,Sheffield City Council
+E08000039,lab,Labour Party (UK),2011-05-01,2021-05-01,Sheffield City Council
+E08000039,noc,No overall control,2021-05-01,,Sheffield City Council
+E09000002,lab,Labour Party (UK),1965-05-01,,Barking and Dagenham London Borough Council
+E09000003,con,Conservative Party (UK),1965-05-01,1994-05-01,Barnet London Borough Council
+E09000003,noc,No overall control,1994-05-01,2002-05-01,Barnet London Borough Council
+E09000003,con,Conservative Party (UK),2002-05-01,2022-05-01,Barnet London Borough Council
+E09000003,lab,Labour Party (UK),2022-05-01,2026-05-01,Barnet London Borough Council
+E09000003,noc,No overall control,2026-05-01,,Barnet London Borough Council
+E09000004,lab,Labour Party (UK),1965-05-01,1968-05-01,Bexley London Borough Council
+E09000004,con,Conservative Party (UK),1968-05-01,1971-05-01,Bexley London Borough Council
+E09000004,lab,Labour Party (UK),1971-05-01,1974-05-01,Bexley London Borough Council
+E09000004,con,Conservative Party (UK),1974-05-01,1994-05-01,Bexley London Borough Council
+E09000004,noc,No overall control,1994-05-01,1998-05-01,Bexley London Borough Council
+E09000004,con,Conservative Party (UK),1998-05-01,2002-05-01,Bexley London Borough Council
+E09000004,lab,Labour Party (UK),2002-05-01,2006-05-01,Bexley London Borough Council
+E09000004,con,Conservative Party (UK),2006-05-01,,Bexley London Borough Council
+E09000005,lab,Labour Party (UK),1965-05-01,1968-05-01,Brent London Borough Council
+E09000005,con,Conservative Party (UK),1968-05-01,1971-05-01,Brent London Borough Council
+E09000005,lab,Labour Party (UK),1971-05-01,1982-05-01,Brent London Borough Council
+E09000005,noc,No overall control,1982-05-01,1986-05-01,Brent London Borough Council
+E09000005,lab,Labour Party (UK),1986-05-01,1990-05-01,Brent London Borough Council
+E09000005,noc,No overall control,1990-05-01,1998-05-01,Brent London Borough Council
+E09000005,lab,Labour Party (UK),1998-05-01,2006-05-01,Brent London Borough Council
+E09000005,noc,No overall control,2006-05-01,2010-05-01,Brent London Borough Council
+E09000005,lab,Labour Party (UK),2010-05-01,2026-05-01,Brent London Borough Council
+E09000006,con,Conservative Party (UK),1965-05-01,1998-05-01,Bromley London Borough Council
+E09000006,noc,No overall control,1998-05-01,2001-05-01,Bromley London Borough Council
+E09000006,con,Conservative Party (UK),2001-05-01,,Bromley London Borough Council
+E09000007,lab,Labour Party (UK),1965-05-01,1968-05-01,Camden London Borough Council
+E09000007,con,Conservative Party (UK),1968-05-01,1971-05-01,Camden London Borough Council
+E09000007,lab,Labour Party (UK),1971-05-01,2006-05-01,Camden London Borough Council
+E09000007,noc,No overall control,2006-05-01,2010-05-01,Camden London Borough Council
+E09000007,lab,Labour Party (UK),2010-05-01,,Camden London Borough Council
+E09000008,noc,No overall control,1965-05-01,1968-05-01,Croydon London Borough Council
+E09000008,con,Conservative Party (UK),1968-05-01,1994-05-01,Croydon London Borough Council
+E09000008,lab,Labour Party (UK),1994-05-01,2006-05-01,Croydon London Borough Council
+E09000008,con,Conservative Party (UK),2006-05-01,2014-05-01,Croydon London Borough Council
+E09000008,lab,Labour Party (UK),2014-05-01,2022-05-01,Croydon London Borough Council
+E09000008,noc,No overall control,2022-05-01,,Croydon London Borough Council
+E09000009,lab,Labour Party (UK),1965-05-01,1968-05-01,Ealing London Borough Council
+E09000009,con,Conservative Party (UK),1968-05-01,1971-05-01,Ealing London Borough Council
+E09000009,lab,Labour Party (UK),1971-05-01,1978-05-01,Ealing London Borough Council
+E09000009,con,Conservative Party (UK),1978-05-01,1986-05-01,Ealing London Borough Council
+E09000009,lab,Labour Party (UK),1986-05-01,1990-05-01,Ealing London Borough Council
+E09000009,con,Conservative Party (UK),1990-05-01,1994-05-01,Ealing London Borough Council
+E09000009,lab,Labour Party (UK),1994-05-01,2006-05-01,Ealing London Borough Council
+E09000009,con,Conservative Party (UK),2006-05-01,2010-05-01,Ealing London Borough Council
+E09000009,lab,Labour Party (UK),2010-05-01,,Ealing London Borough Council
+E09000010,lab,Labour Party (UK),1965-05-01,1968-05-01,Enfield London Borough Council
+E09000010,con,Conservative Party (UK),1968-05-01,1994-05-01,Enfield London Borough Council
+E09000010,lab,Labour Party (UK),1994-05-01,2002-05-01,Enfield London Borough Council
+E09000010,con,Conservative Party (UK),2002-05-01,2010-05-01,Enfield London Borough Council
+E09000010,lab,Labour Party (UK),2010-05-01,2026-05-01,Enfield London Borough Council
+E09000011,lab,Labour Party (UK),1965-05-01,1968-05-01,Greenwich London Borough Council
+E09000011,con,Conservative Party (UK),1968-05-01,1971-05-01,Greenwich London Borough Council
+E09000011,lab,Labour Party (UK),1971-05-01,,Greenwich London Borough Council
+E09000012,lab,Labour Party (UK),1965-05-01,1968-05-01,Hackney London Borough Council
+E09000012,con,Conservative Party (UK),1968-05-01,1971-05-01,Hackney London Borough Council
+E09000012,lab,Labour Party (UK),1971-05-01,1998-05-01,Hackney London Borough Council
+E09000012,noc,No overall control,1998-05-01,2002-05-01,Hackney London Borough Council
+E09000012,lab,Labour Party (UK),2002-05-01,2026-05-01,Hackney London Borough Council
+E09000013,lab,Labour Party (UK),1965-05-01,1968-05-01,Hammersmith and Fulham London Borough Council
+E09000013,con,Conservative Party (UK),1968-05-01,1971-05-01,Hammersmith and Fulham London Borough Council
+E09000013,lab,Labour Party (UK),1971-05-01,1978-05-01,Hammersmith and Fulham London Borough Council
+E09000013,noc,No overall control,1978-05-01,1986-05-01,Hammersmith and Fulham London Borough Council
+E09000013,lab,Labour Party (UK),1986-05-01,2006-05-01,Hammersmith and Fulham London Borough Council
+E09000013,con,Conservative Party (UK),2006-05-01,2014-05-01,Hammersmith and Fulham London Borough Council
+E09000013,lab,Labour Party (UK),2014-05-01,,Hammersmith and Fulham London Borough Council
+E09000014,lab,Labour Party (UK),1965-05-01,1968-05-01,Haringey London Borough Council
+E09000014,con,Conservative Party (UK),1968-05-01,1971-05-01,Haringey London Borough Council
+E09000014,lab,Labour Party (UK),1971-05-01,2026-05-01,Haringey London Borough Council
+E09000014,noc,No overall control,2026-05-01,,Haringey London Borough Council
+E09000015,con,Conservative Party (UK),1965-05-01,1971-05-01,Harrow London Borough Council
+E09000015,noc,No overall control,1971-05-01,1974-05-01,Harrow London Borough Council
+E09000015,con,Conservative Party (UK),1974-05-01,1994-05-01,Harrow London Borough Council
+E09000015,noc,No overall control,1994-05-01,1998-05-01,Harrow London Borough Council
+E09000015,lab,Labour Party (UK),1998-05-01,2002-05-01,Harrow London Borough Council
+E09000015,noc,No overall control,2002-05-01,2006-05-01,Harrow London Borough Council
+E09000015,con,Conservative Party (UK),2006-05-01,2010-05-01,Harrow London Borough Council
+E09000015,lab,Labour Party (UK),2010-05-01,2013-05-01,Harrow London Borough Council
+E09000015,noc,No overall control,2013-05-01,2014-05-01,Harrow London Borough Council
+E09000015,lab,Labour Party (UK),2014-05-01,2022-05-01,Harrow London Borough Council
+E09000015,con,Conservative Party (UK),2022-05-01,,Harrow London Borough Council
+E09000016,noc,No overall control,1965-05-01,1968-05-01,Havering London Borough Council
+E09000016,con,Conservative Party (UK),1968-05-01,1971-05-01,Havering London Borough Council
+E09000016,lab,Labour Party (UK),1971-05-01,1974-05-01,Havering London Borough Council
+E09000016,noc,No overall control,1974-05-01,1978-05-01,Havering London Borough Council
+E09000016,con,Conservative Party (UK),1978-05-01,1986-05-01,Havering London Borough Council
+E09000016,noc,No overall control,1986-05-01,2006-05-01,Havering London Borough Council
+E09000016,con,Conservative Party (UK),2006-05-01,2014-05-01,Havering London Borough Council
+E09000016,noc,No overall control,2014-05-01,2026-05-01,Havering London Borough Council
+E09000016,ref,Reform UK,2026-05-01,,Havering London Borough Council
+E09000017,lab,Labour Party (UK),1964-05-01,1968-05-01,Hillingdon London Borough Council
+E09000017,con,Conservative Party (UK),1968-05-01,1971-05-01,Hillingdon London Borough Council
+E09000017,lab,Labour Party (UK),1971-05-01,1978-05-01,Hillingdon London Borough Council
+E09000017,con,Conservative Party (UK),1978-05-01,1986-05-01,Hillingdon London Borough Council
+E09000017,noc,No overall control,1986-05-01,1990-05-01,Hillingdon London Borough Council
+E09000017,con,Conservative Party (UK),1990-05-01,1993-05-01,Hillingdon London Borough Council
+E09000017,lab,Labour Party (UK),1993-05-01,1998-05-01,Hillingdon London Borough Council
+E09000017,noc,No overall control,1998-05-01,2006-05-01,Hillingdon London Borough Council
+E09000017,con,Conservative Party (UK),2006-05-01,,Hillingdon London Borough Council
+E09000018,lab,Labour Party (UK),1965-05-01,1968-05-01,Hounslow London Borough Council
+E09000018,con,Conservative Party (UK),1968-05-01,1971-05-01,Hounslow London Borough Council
+E09000018,lab,Labour Party (UK),1971-05-01,2006-05-01,Hounslow London Borough Council
+E09000018,noc,No overall control,2006-05-01,2010-05-01,Hounslow London Borough Council
+E09000018,lab,Labour Party (UK),2010-05-01,,Hounslow London Borough Council
+E09000019,lab,Labour Party (UK),1965-05-01,1968-05-01,Islington London Borough Council
+E09000019,con,Conservative Party (UK),1968-05-01,1971-05-01,Islington London Borough Council
+E09000019,lab,Labour Party (UK),1971-05-01,1981-05-01,Islington London Borough Council
+E09000019,lib,Social Democratic Party (UK),1981-05-01,1982-05-01,Islington London Borough Council
+E09000019,lab,Labour Party (UK),1982-05-01,1998-05-01,Islington London Borough Council
+E09000019,noc,No overall control,1998-05-01,1999-05-01,Islington London Borough Council
+E09000019,ld,Liberal Democrats (UK),1999-05-01,2006-05-01,Islington London Borough Council
+E09000019,noc,No overall control,2006-05-01,2010-05-01,Islington London Borough Council
+E09000019,lab,Labour Party (UK),2010-05-01,,Islington London Borough Council
+E09000020,con,Conservative Party (UK),1965-05-01,,Kensington and Chelsea London Borough Council
+E09000021,con,Conservative Party (UK),1965-05-01,1986-05-01,Kingston upon Thames London Borough Council
+E09000021,noc,No overall control,1986-05-01,1994-05-01,Kingston upon Thames London Borough Council
+E09000021,ld,Liberal Democrats (UK),1994-05-01,1998-05-01,Kingston upon Thames London Borough Council
+E09000021,noc,No overall control,1998-05-01,2002-05-01,Kingston upon Thames London Borough Council
+E09000021,ld,Liberal Democrats (UK),2002-05-01,2014-05-01,Kingston upon Thames London Borough Council
+E09000021,con,Conservative Party (UK),2014-05-01,2018-05-01,Kingston upon Thames London Borough Council
+E09000021,ld,Liberal Democrats (UK),2018-05-01,,Kingston upon Thames London Borough Council
+E09000022,lab,Labour Party (UK),1965-05-01,1968-05-01,Lambeth London Borough Council
+E09000022,con,Conservative Party (UK),1968-05-01,1971-05-01,Lambeth London Borough Council
+E09000022,lab,Labour Party (UK),1971-05-01,1982-05-01,Lambeth London Borough Council
+E09000022,noc,No overall control,1982-05-01,1986-05-01,Lambeth London Borough Council
+E09000022,lab,Labour Party (UK),1986-05-01,1994-05-01,Lambeth London Borough Council
+E09000022,noc,No overall control,1994-05-01,1998-05-01,Lambeth London Borough Council
+E09000022,lab,Labour Party (UK),1998-05-01,2002-05-01,Lambeth London Borough Council
+E09000022,noc,No overall control,2002-05-01,2006-05-01,Lambeth London Borough Council
+E09000022,lab,Labour Party (UK),2006-05-01,2026-05-01,Lambeth London Borough Council
+E09000022,noc,No overall control,2026-05-01,,Lambeth London Borough Council
+E09000023,lab,Labour Party (UK),1965-05-01,1968-05-01,Lewisham London Borough Council
+E09000023,con,Conservative Party (UK),1968-05-01,1971-05-01,Lewisham London Borough Council
+E09000023,lab,Labour Party (UK),1971-05-01,2006-05-01,Lewisham London Borough Council
+E09000023,noc,No overall control,2006-05-01,2010-05-01,Lewisham London Borough Council
+E09000023,lab,Labour Party (UK),2010-05-01,2026-05-01,Lewisham London Borough Council
+E09000023,grn,Green Party of England and Wales,2026-05-01,,Lewisham London Borough Council
+E09000024,noc,No overall control,1965-05-01,1968-05-01,Merton London Borough Council
+E09000024,con,Conservative Party (UK),1968-05-01,1971-05-01,Merton London Borough Council
+E09000024,lab,Labour Party (UK),1971-05-01,1974-05-01,Merton London Borough Council
+E09000024,con,Conservative Party (UK),1974-05-01,1989-05-01,Merton London Borough Council
+E09000024,noc,No overall control,1989-05-01,1990-05-01,Merton London Borough Council
+E09000024,lab,Labour Party (UK),1990-05-01,2006-05-01,Merton London Borough Council
+E09000024,noc,No overall control,2006-05-01,2014-05-01,Merton London Borough Council
+E09000024,lab,Labour Party (UK),2014-05-01,,Merton London Borough Council
+E09000025,lab,Labour Party (UK),1965-05-01,1968-05-01,Newham London Borough Council
+E09000025,noc,No overall control,1968-05-01,1971-05-01,Newham London Borough Council
+E09000025,lab,Labour Party (UK),1971-05-01,2026-05-01,Newham London Borough Council
+E09000025,noc,No overall control,2026-05-01,,Newham London Borough Council
+E09000026,con,Conservative Party (UK),1965-05-01,1994-05-01,Redbridge London Borough Council
+E09000026,noc,No overall control,1994-05-01,2002-05-01,Redbridge London Borough Council
+E09000026,con,Conservative Party (UK),2002-05-01,2009-05-01,Redbridge London Borough Council
+E09000026,noc,No overall control,2009-05-01,2014-05-01,Redbridge London Borough Council
+E09000026,lab,Labour Party (UK),2014-05-01,,Redbridge London Borough Council
+E09000027,lab,Labour Party (UK),1965-05-01,1968-05-01,Wandsworth London Borough Council
+E09000027,con,Conservative Party (UK),1968-05-01,1971-05-01,Wandsworth London Borough Council
+E09000027,lab,Labour Party (UK),1971-05-01,1978-05-01,Wandsworth London Borough Council
+E09000027,con,Conservative Party (UK),1978-05-01,2022-05-01,Wandsworth London Borough Council
+E09000027,lab,Labour Party (UK),2022-05-01,2026-05-01,Wandsworth London Borough Council
+E09000027,noc,No overall control,2026-05-01,,Wandsworth London Borough Council
+E09000028,lab,Labour Party (UK),1965-05-01,2002-05-01,Southwark London Borough Council
+E09000028,noc,No overall control,2002-05-01,2010-05-01,Southwark London Borough Council
+E09000028,lab,Labour Party (UK),2010-05-01,2026-05-01,Southwark London Borough Council
+E09000028,noc,No overall control,2026-05-01,,Southwark London Borough Council
+E09000029,con,Conservative Party (UK),1965-05-01,1971-05-01,Sutton London Borough Council
+E09000029,noc,No overall control,1971-05-01,1974-05-01,Sutton London Borough Council
+E09000029,con,Conservative Party (UK),1974-05-01,1986-05-01,Sutton London Borough Council
+E09000029,noc,No overall control,1986-05-01,1990-05-01,Sutton London Borough Council
+E09000029,ld,Liberal Democrats (UK),1990-05-01,,Sutton London Borough Council
+E09000030,lab,Labour Party (UK),1965-05-01,1986-05-01,Tower Hamlets London Borough Council
+E09000030,lib,SDP–Liberal Alliance,1986-05-01,1988-05-01,Tower Hamlets London Borough Council
+E09000030,ld,Liberal Democrats (UK),1988-05-01,1994-05-01,Tower Hamlets London Borough Council
+E09000030,lab,Labour Party (UK),1994-05-01,2017-05-01,Tower Hamlets London Borough Council
+E09000030,noc,No overall control,2017-05-01,2018-05-01,Tower Hamlets London Borough Council
+E09000030,lab,Labour Party (UK),2018-05-01,2022-05-01,Tower Hamlets London Borough Council
+E09000030,oth,Aspire (political party),2022-05-01,2024-05-01,Tower Hamlets London Borough Council
+E09000030,noc,No overall control,2024-05-01,2024-05-01,Tower Hamlets London Borough Council
+E09000031,lab,Labour Party (UK),1965-05-01,1968-05-01,Waltham Forest London Borough Council
+E09000031,con,Conservative Party (UK),1968-05-01,1971-05-01,Waltham Forest London Borough Council
+E09000031,lab,Labour Party (UK),1971-05-01,1982-05-01,Waltham Forest London Borough Council
+E09000031,noc,No overall control,1982-05-01,1986-05-01,Waltham Forest London Borough Council
+E09000031,lab,Labour Party (UK),1986-05-01,1994-05-01,Waltham Forest London Borough Council
+E09000031,noc,No overall control,1994-05-01,1998-05-01,Waltham Forest London Borough Council
+E09000031,lab,Labour Party (UK),1998-05-01,2002-05-01,Waltham Forest London Borough Council
+E09000031,noc,No overall control,2002-05-01,2010-05-01,Waltham Forest London Borough Council
+E09000031,lab,Labour Party (UK),2010-05-01,2026-05-01,Waltham Forest London Borough Council
+E09000031,grn,Green Party of England and Wales,2026-05-01,,Waltham Forest London Borough Council
+E09000032,lab,Labour Party (UK),1965-05-01,1968-05-01,Wandsworth London Borough Council
+E09000032,con,Conservative Party (UK),1968-05-01,1971-05-01,Wandsworth London Borough Council
+E09000032,lab,Labour Party (UK),1971-05-01,1978-05-01,Wandsworth London Borough Council
+E09000032,con,Conservative Party (UK),1978-05-01,2022-05-01,Wandsworth London Borough Council
+E09000032,lab,Labour Party (UK),2022-05-01,2026-05-01,Wandsworth London Borough Council
+E09000032,noc,No overall control,2026-05-01,,Wandsworth London Borough Council
+E09000033,con,Conservative Party (UK),1965-05-01,2022-05-01,Westminster City Council
+E09000033,lab,Labour Party (UK),2022-05-01,2026-05-01,Westminster City Council
+E09000033,con,Conservative Party (UK),2026-05-01,,Westminster City Council
+S12000005,noc,No overall control,1975-05-01,1977-05-01,Clackmannanshire Council
+S12000005,snp,Scottish National Party,1977-05-01,1980-05-01,Clackmannanshire Council
+S12000005,lab,Scottish Labour,1980-05-01,1996-05-01,Clackmannanshire Council
+S12000005,lab,Scottish Labour,1996-05-01,1999-05-01,Clackmannanshire Council
+S12000005,noc,No overall control,1999-05-01,2000-05-01,Clackmannanshire Council
+S12000005,snp,Scottish National Party,2000-05-01,2003-05-01,Clackmannanshire Council
+S12000005,lab,Scottish Labour,2003-05-01,2007-05-01,Clackmannanshire Council
+S12000005,noc,No overall control,2007-05-01,,Clackmannanshire Council
+S12000006,ind,Independent politician,1975-05-01,1994-05-01,Dumfries and Galloway
+S12000006,noc,No overall control,1994-05-01,1996-05-01,Dumfries and Galloway
+S12000006,noc,No overall control,1996-05-01,,Dumfries and Galloway
+S12000008,lab,Scottish Labour,1996-05-01,2007-05-01,East Ayrshire Council
+S12000010,lab,Scottish Labour,1975-05-01,1996-05-01,East Lothian Council
+S12000010,lab,Scottish Labour,1996-05-01,2007-05-01,East Lothian Council
+S12000011,noc,No overall control,1996-05-01,,East Renfrewshire
+S12000013,ind,Independent politician,1975-05-01,,Comhairle nan Eilean Siar
+S12000014,noc,No overall control,1975-05-01,1977-05-01,Falkirk (council area)
+S12000014,snp,Scottish National Party,1977-05-01,1980-05-01,Falkirk (council area)
+S12000014,lab,Scottish Labour,1980-05-01,1992-05-01,Falkirk (council area)
+S12000014,noc,No overall control,1992-05-01,1996-05-01,Falkirk (council area)
+S12000014,lab,Scottish Labour,1996-05-01,1999-05-01,Falkirk (council area)
+S12000017,ind,Independent politician,1975-05-01,1996-05-01,Highland Council
+S12000017,ind,Independent politician,1996-05-01,2007-05-01,Highland Council
+S12000017,noc,No overall control,2007-05-01,,Highland Council
+S12000018,lab,Scottish Labour,1975-05-01,1977-05-01,Inverclyde Council
+S12000018,lib,Scottish Liberal Party,1977-05-01,1980-05-01,Inverclyde Council
+S12000018,lab,Scottish Labour,1980-05-01,1996-05-01,Inverclyde Council
+S12000018,lab,Scottish Labour,1996-05-01,2000-05-01,Inverclyde Council
+S12000018,noc,No overall control,2000-05-01,2003-05-01,Inverclyde Council
+S12000018,ld,Scottish Liberal Democrats,2003-05-01,2007-05-01,Inverclyde Council
+S12000019,lab,Scottish Labour,1975-05-01,1977-05-01,Midlothian Council
+S12000019,noc,No overall control,1977-05-01,1980-05-01,Midlothian Council
+S12000019,lab,Scottish Labour,1980-05-01,1996-05-01,Midlothian Council
+S12000019,lab,Scottish Labour,1996-05-01,2007-05-01,Midlothian Council
+S12000019,noc,No overall control,2007-05-01,2008-05-01,Midlothian Council
+S12000019,lab,Scottish Labour,2008-05-01,2012-05-01,Midlothian Council
+S12000019,noc,No overall control,2012-05-01,,Midlothian Council
+S12000020,noc,No overall control,1975-05-01,1996-05-01,Moray Council
+S12000020,snp,Scottish National Party,1996-05-01,1999-05-01,Moray Council
+S12000020,noc,No overall control,1999-05-01,,Moray Council
+S12000021,lab,Scottish Labour,1975-05-01,1977-05-01,North Ayrshire
+S12000021,noc,No overall control,1977-05-01,1980-05-01,North Ayrshire
+S12000021,lab,Scottish Labour,1980-05-01,1996-05-01,North Ayrshire
+S12000021,lab,Scottish Labour,1996-05-01,2007-05-01,North Ayrshire
+S12000023,ind,Independent politician,1975-05-01,,Orkney Islands Council
+S12000026,ind,Independent politician,1975-05-01,1978-05-01,Scottish Borders Council
+S12000026,noc,No overall control,1978-05-01,1982-05-01,Scottish Borders Council
+S12000026,ind,Independent politician,1982-05-01,1994-05-01,Scottish Borders Council
+S12000026,noc,No overall control,1994-05-01,1996-05-01,Scottish Borders Council
+S12000026,ind,Independent politician,1996-05-01,1999-05-01,Scottish Borders Council
+S12000026,noc,No overall control,1999-05-01,,Scottish Borders Council
+S12000027,ind,Independent politician,1975-05-01,,Shetland Islands Council
+S12000028,lab,Scottish Labour,1996-05-01,2003-05-01,South Ayrshire Council
+S12000029,lab,Scottish Labour,1996-05-01,2007-05-01,South Lanarkshire Council
+S12000029,noc,No overall control,2007-05-01,2013-05-01,South Lanarkshire Council
+S12000029,lab,Scottish Labour,2013-05-01,2017-05-01,South Lanarkshire Council
+S12000030,noc,No overall control,1975-05-01,1984-05-01,Stirling (council area)
+S12000030,lab,Scottish Labour,1984-05-01,1988-05-01,Stirling (council area)
+S12000030,noc,No overall control,1988-05-01,1996-05-01,Stirling (council area)
+S12000030,lab,Scottish Labour,1996-05-01,1999-05-01,Stirling (council area)
+S12000030,noc,No overall control,1999-05-01,2003-05-01,Stirling (council area)
+S12000030,lab,Scottish Labour,2003-05-01,2007-05-01,Stirling (council area)
+S12000030,noc,No overall control,2007-05-01,,Stirling (council area)
+S12000033,lab,Scottish Labour,1975-05-01,1977-05-01,Aberdeen City Council
+S12000033,noc,No overall control,1977-05-01,1980-05-01,Aberdeen City Council
+S12000033,lab,Scottish Labour,1980-05-01,1996-05-01,Aberdeen City Council
+S12000033,lab,Scottish Labour,1996-05-01,2002-05-01,Aberdeen City Council
+S12000033,noc,No overall control,2002-05-01,,Aberdeen City Council
+S12000034,noc,No overall control,1996-05-01,,Aberdeenshire Council
+S12000035,ind,Independent politician,1975-05-01,1996-05-01,Argyll and Bute Council
+S12000035,ind,Independent politician,1996-05-01,2007-05-01,Argyll and Bute Council
+S12000036,noc,No overall control,1975-05-01,1977-05-01,City of Edinburgh Council
+S12000036,con,Scottish Conservatives,1977-05-01,1980-05-01,City of Edinburgh Council
+S12000036,noc,No overall control,1980-05-01,1984-05-01,City of Edinburgh Council
+S12000036,lab,Scottish Labour,1984-05-01,1992-05-01,City of Edinburgh Council
+S12000036,noc,No overall control,1992-05-01,1996-05-01,City of Edinburgh Council
+S12000036,lab,Scottish Labour,1996-05-01,2007-05-01,City of Edinburgh Council
+S12000038,lab,Scottish Labour,1996-05-01,2007-05-01,Renfrewshire Council
+S12000038,noc,No overall control,2007-05-01,2012-05-01,Renfrewshire Council
+S12000038,lab,Scottish Labour,2012-05-01,2017-05-01,Renfrewshire Council
+S12000038,noc,No overall control,2017-05-01,,Renfrewshire Council
+S12000039,lab,Scottish Labour,1996-05-01,2007-05-01,West Dunbartonshire Council
+S12000039,noc,No overall control,2007-05-01,2012-05-01,West Dunbartonshire Council
+S12000039,lab,Scottish Labour,2012-05-01,2017-05-01,West Dunbartonshire Council
+S12000039,noc,No overall control,2017-05-01,2022-05-01,West Dunbartonshire Council
+S12000039,lab,Scottish Labour,2022-05-01,2024-05-01,West Dunbartonshire Council
+S12000039,noc,No overall control,2024-05-01,,West Dunbartonshire Council
+S12000040,lab,Scottish Labour,1975-05-01,1977-05-01,West Lothian Council
+S12000040,noc,No overall control,1977-05-01,1980-05-01,West Lothian Council
+S12000040,lab,Scottish Labour,1980-05-01,1992-05-01,West Lothian Council
+S12000040,noc,No overall control,1992-05-01,1996-05-01,West Lothian Council
+S12000040,lab,Scottish Labour,1996-05-01,2007-05-01,West Lothian Council
+S12000041,noc,No overall control,1975-05-01,1977-05-01,Angus Council
+S12000041,con,Scottish Conservatives,1977-05-01,1980-05-01,Angus Council
+S12000041,noc,No overall control,1980-05-01,1984-05-01,Angus Council
+S12000041,snp,Scottish National Party,1984-05-01,1996-05-01,Angus Council
+S12000041,snp,Scottish National Party,1996-05-01,2007-05-01,Angus Council
+S12000041,noc,No overall control,2007-05-01,2012-05-01,Angus Council
+S12000041,snp,Scottish National Party,2012-05-01,2017-05-01,Angus Council
+S12000041,noc,No overall control,2017-05-01,,Angus Council
+S12000042,noc,No overall control,1975-05-01,1980-05-01,Dundee City Council
+S12000042,lab,Scottish Labour,1980-05-01,1996-05-01,Dundee City Council
+S12000042,lab,Scottish Labour,1996-05-01,1999-05-01,Dundee City Council
+S12000042,noc,No overall control,1999-05-01,2012-05-01,Dundee City Council
+S12000042,snp,Scottish National Party,2012-05-01,2017-05-01,Dundee City Council
+S12000042,noc,No overall control,2017-05-01,2022-05-01,Dundee City Council
+S12000042,snp,Scottish National Party,2022-05-01,,Dundee City Council
+S12000045,lab,Scottish Labour,1996-05-01,1999-05-01,East Dunbartonshire
+S12000047,lab,Scottish Labour,1975-05-01,1996-05-01,Fife Council
+S12000047,lab,Scottish Labour,1996-05-01,2003-05-01,Fife Council
+S12000047,noc,No overall control,2003-05-01,,Fife Council
+S12000048,con,Scottish Conservatives,1975-05-01,1984-05-01,Perth and Kinross Council
+S12000048,noc,No overall control,1984-05-01,1992-05-01,Perth and Kinross Council
+S12000048,con,Scottish Conservatives,1992-05-01,1996-05-01,Perth and Kinross Council
+S12000048,snp,Scottish National Party,1996-05-01,1999-05-01,Perth and Kinross Council
+S12000048,noc,No overall control,1999-05-01,,Perth and Kinross Council
+S12000049,lab,Scottish Labour,1975-05-01,1977-05-01,Glasgow City Council
+S12000049,noc,No overall control,1977-05-01,1980-05-01,Glasgow City Council
+S12000049,lab,Scottish Labour,1980-05-01,1996-05-01,Glasgow City Council
+S12000049,lab,Scottish Labour,1996-05-01,2017-05-01,Glasgow City Council
+S12000049,noc,No overall control,2017-05-01,,Glasgow City Council
+S12000050,lab,Scottish Labour,1996-05-01,2017-05-01,North Lanarkshire Council
+S12000050,noc,No overall control,2017-05-01,,North Lanarkshire Council
+W06000001,ind,Independent politician,1974-05-01,1996-05-01,Isle of Anglesey County Council
+W06000001,ind,Independent politician,1996-05-01,2013-05-01,Isle of Anglesey County Council
+W06000001,noc,No overall control,2013-05-01,2022-05-01,Isle of Anglesey County Council
+W06000001,pc,Plaid Cymru,2022-05-01,,Isle of Anglesey County Council
+W06000002,ind,Independent politician,1974-05-01,1993-05-01,Gwynedd Council
+W06000002,noc,No overall control,1993-05-01,1996-05-01,Gwynedd Council
+W06000002,pc,Plaid Cymru,1996-05-01,2008-05-01,Gwynedd Council
+W06000002,noc,No overall control,2008-05-01,2011-05-01,Gwynedd Council
+W06000002,pc,Plaid Cymru,2011-05-01,2012-05-01,Gwynedd Council
+W06000002,noc,No overall control,2012-05-01,2015-05-01,Gwynedd Council
+W06000002,pc,Plaid Cymru,2015-05-01,,Gwynedd Council
+W06000003,noc,No overall control,1996-05-01,,Conwy County Borough Council
+W06000004,noc,No overall control,1996-05-01,,Denbighshire County Council
+W06000005,lab,Welsh Labour,1996-05-01,2008-05-01,Flintshire County Council
+W06000005,noc,No overall control,2008-05-01,,Flintshire County Council
+W06000006,lab,Welsh Labour,1996-05-01,1999-05-01,Wrexham County Borough Council
+W06000006,noc,No overall control,1999-05-01,,Wrexham County Borough Council
+W06000008,ind,Independent politician,1974-05-01,1996-05-01,Ceredigion District Council
+W06000009,ind,Independent politician,1996-05-01,,Pembrokeshire County Council
+W06000010,noc,No overall control,1996-05-01,2022-05-01,Carmarthenshire County Council
+W06000010,pc,Plaid Cymru,2022-05-01,2024-05-01,Carmarthenshire County Council
+W06000010,noc,No overall control,2024-05-01,,Carmarthenshire County Council
+W06000011,lab,Welsh Labour,1996-05-01,2004-05-01,Swansea Council
+W06000011,noc,No overall control,2004-05-01,2012-05-01,Swansea Council
+W06000011,lab,Welsh Labour,2012-05-01,,Swansea Council
+W06000012,lab,Welsh Labour,1996-05-01,2022-05-01,Neath Port Talbot County Borough Council
+W06000012,noc,No overall control,2022-05-01,,Neath Port Talbot County Borough Council
+W06000013,lab,Welsh Labour,1996-05-01,2004-05-01,Bridgend County Borough Council
+W06000013,noc,No overall control,2004-05-01,2012-05-01,Bridgend County Borough Council
+W06000013,lab,Welsh Labour,2012-05-01,2017-05-01,Bridgend County Borough Council
+W06000013,noc,No overall control,2017-05-01,2022-05-01,Bridgend County Borough Council
+W06000013,lab,Welsh Labour,2022-05-01,2026-05-01,Bridgend County Borough Council
+W06000013,noc,No overall control,2026-05-01,,Bridgend County Borough Council
+W06000014,lab,Welsh Labour,1996-05-01,1999-05-01,Vale of Glamorgan Council
+W06000014,noc,No overall control,1999-05-01,2008-05-01,Vale of Glamorgan Council
+W06000014,con,Welsh Conservatives,2008-05-01,2012-05-01,Vale of Glamorgan Council
+W06000014,noc,No overall control,2012-05-01,,Vale of Glamorgan Council
+W06000015,lab,Welsh Labour,1996-05-01,2004-05-01,Cardiff Council
+W06000015,noc,No overall control,2004-05-01,2012-05-01,Cardiff Council
+W06000015,lab,Welsh Labour,2012-05-01,,Cardiff Council
+W06000016,lab,Welsh Labour,1996-05-01,1999-05-01,Rhondda Cynon Taf County Borough Council
+W06000016,pc,Plaid Cymru,1999-05-01,2004-05-01,Rhondda Cynon Taf County Borough Council
+W06000016,lab,Welsh Labour,2004-05-01,,Rhondda Cynon Taf County Borough Council
+W06000018,lab,Welsh Labour,1996-05-01,1999-05-01,Caerphilly County Borough Council
+W06000018,pc,Plaid Cymru,1999-05-01,2004-05-01,Caerphilly County Borough Council
+W06000018,lab,Welsh Labour,2004-05-01,2008-05-01,Caerphilly County Borough Council
+W06000018,noc,No overall control,2008-05-01,2012-05-01,Caerphilly County Borough Council
+W06000018,lab,Welsh Labour,2012-05-01,,Caerphilly County Borough Council
+W06000019,lab,Welsh Labour,1974-05-01,1996-05-01,Blaenau Gwent County Borough Council
+W06000019,lab,Welsh Labour,1996-05-01,2008-05-01,Blaenau Gwent County Borough Council
+W06000019,ind,Independent politician,2008-05-01,2012-05-01,Blaenau Gwent County Borough Council
+W06000019,lab,Welsh Labour,2012-05-01,2017-05-01,Blaenau Gwent County Borough Council
+W06000019,ind,Independent politician,2017-05-01,2022-05-01,Blaenau Gwent County Borough Council
+W06000019,lab,Welsh Labour,2022-05-01,,Blaenau Gwent County Borough Council
+W06000020,lab,Welsh Labour,1974-05-01,1996-05-01,Torfaen County Borough Council
+W06000020,lab,Welsh Labour,1996-05-01,2008-05-01,Torfaen County Borough Council
+W06000020,noc,No overall control,2008-05-01,2012-05-01,Torfaen County Borough Council
+W06000020,lab,Welsh Labour,2012-05-01,,Torfaen County Borough Council
+W06000021,lab,Welsh Labour,1996-05-01,1999-05-01,Monmouthshire County Council
+W06000021,noc,No overall control,1999-05-01,2004-05-01,Monmouthshire County Council
+W06000021,con,Welsh Conservatives,2004-05-01,2012-05-01,Monmouthshire County Council
+W06000021,noc,No overall control,2012-05-01,2017-05-01,Monmouthshire County Council
+W06000021,con,Welsh Conservatives,2017-05-01,2022-05-01,Monmouthshire County Council
+W06000021,noc,No overall control,2022-05-01,,Monmouthshire County Council
+W06000022,lab,Welsh Labour,1974-05-01,1976-05-01,Newport City Council
+W06000022,con,Welsh Conservatives,1976-05-01,1979-05-01,Newport City Council
+W06000022,lab,Welsh Labour,1979-05-01,1996-05-01,Newport City Council
+W06000022,lab,Welsh Labour,1996-05-01,2008-05-01,Newport City Council
+W06000022,noc,No overall control,2008-05-01,2012-05-01,Newport City Council
+W06000022,lab,Welsh Labour,2012-05-01,,Newport City Council
+W06000023,ind,Independent politician,1974-05-01,1996-05-01,Powys County Council
+W06000023,ind,Independent politician,1996-05-01,2017-05-01,Powys County Council
+W06000023,noc,No overall control,2017-05-01,,Powys County Council
+W06000024,lab,Welsh Labour,1974-05-01,1976-05-01,Merthyr Tydfil County Borough Council
+W06000024,pc,Plaid Cymru,1976-05-01,1979-05-01,Merthyr Tydfil County Borough Council
+W06000024,lab,Welsh Labour,1979-05-01,1996-05-01,Merthyr Tydfil County Borough Council
+W06000024,lab,Welsh Labour,1996-05-01,1999-05-01,Merthyr Tydfil County Borough Council
+W06000024,noc,No overall control,1999-05-01,2004-05-01,Merthyr Tydfil County Borough Council
+W06000024,lab,Welsh Labour,2004-05-01,2008-05-01,Merthyr Tydfil County Borough Council
+W06000024,ind,Independent politician,2008-05-01,2012-05-01,Merthyr Tydfil County Borough Council
+W06000024,lab,Welsh Labour,2012-05-01,2017-05-01,Merthyr Tydfil County Borough Council
+W06000024,noc,No overall control,2017-05-01,,Merthyr Tydfil County Borough Council

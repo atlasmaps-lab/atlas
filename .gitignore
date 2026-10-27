@@ -1,0 +1,9 @@
+# operating system clutter
+.DS_Store
+Thumbs.db
+# large source downloads (keep them locally; they're too big for GitHub and only needed to rebuild the data)
+*.zip
+# personal settings
+config.local.js
+# full market data with prices stays local (not republishable)
+pipeline/sources/markets_ftse100.full.json

@@ -1,0 +1,20 @@
+pattern,alignment,note
+labour party|momentum|young labour,Labour,party or party-affiliated group
+conservative|tory|tories,Conservative,party
+liberal democrat,Liberal Democrat,party
+green party|scottish greens|young greens,Green,party
+scottish national party|\bsnp\b|all under one banner|yes scotland|believe in scotland,Scottish nationalist,party or independence movement
+plaid cymru|yescymru|yes cymru,Welsh nationalist,party or independence movement
+sinn f[eé]in|\bira\b|republican|h-block|anti h-block,Irish republican,party or republican movement
+democratic unionist|\bdup\b|ulster unionist|\buup\b|loyalist|orange order|ulster volunteer|\buda\b|\buvf\b,Unionist / loyalist,party or loyalist group
+social democratic and labour|\bsdlp\b|civil rights association|nicra|people's democracy,Irish nationalist (constitutional),party or civil-rights movement
+reform uk|brexit party|leave means leave|vote leave|leave\.eu,Right (Brexit / Reform),party or campaign
+uk independence party|\bukip\b,Right (Brexit / Reform),party
+english defence league|\bedl\b|britain first|british national party|\bbnp\b|national front|patriotic alternative|tommy robinson|football lads alliance|pegida,Far right,group or party
+socialist workers|\bswp\b|stand up to racism|unite against fascism|anti-nazi league|socialist party|militant|counterfire|people's assembly|communist|revolutionary|trotsk,Far left,group or party
+stop the war|\bcnd\b|campaign for nuclear disarmament|palestine solidarity|palestine action|friends of al-aqsa|greenham,Left (peace & solidarity),campaign
+\btuc\b|trade union|\bunion\b|\bnum\b|\brmt\b|unite the union|\bunite\b|unison|\bgmb\b|\bpcs\b|\bnut\b|\bneu\b|\bucu\b|\baslef\b|\bcwu\b|\bfbu\b|\brcn\b|\bbma\b|miners|dockers,Labour movement (unions),trade unions
+extinction rebellion|\bxr\b|just stop oil|insulate britain|greenpeace|friends of the earth|reclaim the streets|earth first|fridays for future|youth strike|road protest|hs2 rebellion|animal rising|animal liberation|hunt sab,Environmental / direct action,campaign
+countryside alliance|liberty and livelihood|fuel lobby|farmers|farmers to action|save british farming,Rural / Countryside,campaign
+people's vote|european movement|best for britain|stop brexit|march for europe|open britain,Pro-European (cross-party),campaign
+black lives matter|stop deaths in custody|kill the bill|sisters uncut|reclaim these streets|stonewall|pride|women's march|suffragette|student|nus\b|national union of students,Rights campaigns (non-party),campaign

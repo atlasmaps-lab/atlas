@@ -1,0 +1,105 @@
+[
+ {
+  "code": "Z-CITY",
+  "name": "The City (Square Mile)",
+  "kind": "Financial district",
+  "from_council": "E09000001",
+  "note": "London's historic financial centre: the City of London council area.",
+  "council": "E09000001"
+ },
+ {
+  "code": "Z-CWHARF",
+  "name": "Canary Wharf",
+  "kind": "Financial district",
+  "polygon": [
+   [
+    -0.0318,
+    51.4993
+   ],
+   [
+    -0.0072,
+    51.4993
+   ],
+   [
+    -0.0072,
+    51.5092
+   ],
+   [
+    -0.0318,
+    51.5092
+   ],
+   [
+    -0.0318,
+    51.4993
+   ]
+  ],
+  "note": "The Canary Wharf estate on the Isle of Dogs (approximate boundary, drawn by hand).",
+  "council": "E09000030"
+ },
+ {
+  "code": "Z-WESTEND",
+  "name": "West End & St James's",
+  "kind": "Financial district",
+  "polygon": [
+   [
+    -0.156,
+    51.4935
+   ],
+   [
+    -0.1245,
+    51.4935
+   ],
+   [
+    -0.1245,
+    51.516
+   ],
+   [
+    -0.156,
+    51.516
+   ],
+   [
+    -0.156,
+    51.4935
+   ]
+  ],
+  "note": "Mayfair, St James's, Victoria and Westminster: corporate head offices, private equity and hedge funds (approximate boundary).",
+  "council": "E09000033"
+ },
+ {
+  "code": "Z-MIDTOWN",
+  "name": "Midtown & King's Cross",
+  "kind": "Financial district",
+  "polygon": [
+   [
+    -0.1245,
+    51.506
+   ],
+   [
+    -0.108,
+    51.506
+   ],
+   [
+    -0.108,
+    51.54
+   ],
+   [
+    -0.135,
+    51.54
+   ],
+   [
+    -0.135,
+    51.516
+   ],
+   [
+    -0.1245,
+    51.516
+   ],
+   [
+    -0.1245,
+    51.506
+   ]
+  ],
+  "note": "Strand, Holborn, Bloomsbury and King's Cross (approximate boundary).",
+  "council": "E09000007"
+ }
+]
