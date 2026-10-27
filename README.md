@@ -4,8 +4,6 @@ Atlas 1.6 is about the data: what you can do with it, where you can put it, and 
 
 ## New on this branch: health, housing and government debt
 
-**Boundary lines** now keep the same thickness on screen at every zoom, with a soft halo so they stay readable over busy basemap detail. The Look → thickness slider still scales them.
-
 **Health** is now a working perspective, **Housing** sits under Markets and **Government debt** under Economic: 87 new metrics in all. Where each one has data:
 
 | Group | Metrics | Wards | Constituencies | Councils | Regions, nations |
