@@ -538,6 +538,31 @@
     desc: "How spread out the vote is across left and right (Westminster)",
     get(code, d) { const x = ideoAt(code, d); if (!x) return null; if (x.miss) return { v: null, text: x.miss, yr: x.r.e.label };
       return { v: x.I.polarisation, text: this.fmt(x.I.polarisation), yr: x.r.e.label, note: x.note, est: x.cov < 90, estWhy: "Scored parties won under 90% of the vote" }; } });
+  // political: local elections & councils (1.7): council tax
+  const LOC = window.ATLAS_LOCAL || {}, G7 = "Local elections & councils";
+  const atYear = (blk, y) => { if (!blk) return null; const y0 = +Object.keys(blk)[0], v = blk[y0][y - y0]; return y >= y0 && v != null ? v : null; };
+  const fyOf = d => +d.slice(0, 4) - (d.slice(5) < "04-01" ? 1 : 0);   // financial years start on 1 April
+  const fyName = y => `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
+  const cpihAt = y => atYear(LOC.cpih, y), CPIH_BASE = LOC.cpih ? +Object.keys(LOC.cpih)[0] + LOC.cpih[Object.keys(LOC.cpih)[0]].length - 1 : null;
+  function bandD(code, d) { // a council's Band D; for a region or nation, the plain average of its councils is not the official figure, so not shown
+    const y = fyOf(d), v = atYear((LOC.bandd || {})[councilOf(code)], y); return v == null ? null : { v, y };
+  }
+  const CT_LV = ["council", "ward"], CT_VALID = code => nationOf(code) === "N92000002" ? "Not applicable in Northern Ireland (domestic rates, not council tax)" : null;
+  const CT_NM = { region: "Shown for councils only (the official regional average weights by dwellings, which Atlas doesn't have yet)", nation: "Shown for councils only", country: "Shown for councils only", constituency: "Council tax is set by councils, not constituencies" };
+  const gbp = v => "£" + fmtInt(v);
+  def({ id: "band_d", p: "political", group: G7, label: "Council tax, Band D", scale: "ratio", nature: "amount", temporal: "annual", fmt: gbp, levels: CT_LV, nmText: CT_NM, valid: CT_VALID, source: LOC.sources && LOC.sources.bandd,
+    how: "Band D council tax for the financial year (April to March), nominal £. England and Wales: the area figure including county, police, fire, mayoral and parish precepts (the headline official figure). Scotland: council tax only (no water or sewerage)",
+    desc: "What a Band D home pays in council tax a year",
+    get(code, d) { const r = bandD(code, d); return r ? { v: r.v, text: this.fmt(r.v) + (P[code].level === "ward" ? " (its council)" : ""), yr: fyName(r.y) } : { v: null, text: `No figure for ${fyName(fyOf(d))}` }; } });
+  def({ id: "band_d_real", p: "political", group: G7, label: "Council tax, Band D (real)", scale: "ratio", nature: "amount", temporal: "annual", fmt: gbp, levels: CT_LV, nmText: CT_NM, valid: CT_VALID, source: LOC.sources && LOC.sources.bandd,
+    how: `Band D × (CPIH in April ${CPIH_BASE} ÷ CPIH in April of that financial year): the amount in April ${CPIH_BASE} prices (ONS CPIH, L522)`, desc: "Band D council tax after inflation",
+    get(code, d) { const r = bandD(code, d); if (!r) return { v: null, text: `No figure for ${fyName(fyOf(d))}` }; const a = cpihAt(r.y), b = cpihAt(CPIH_BASE); if (!a || !b) return null; const v = r.v * b / a;
+      return { v, text: `${this.fmt(v)} in April ${CPIH_BASE} prices (${gbp(r.v)} at the time)`, yr: fyName(r.y) }; } });
+  def({ id: "band_d_change", p: "political", group: G7, label: "Band D real change", scale: "interval", nature: "change", temporal: "annual", mid: 0, fmt: fmtPct, levels: CT_LV, nmText: CT_NM, valid: CT_VALID, source: LOC.sources && LOC.sources.bandd,
+    how: "Change in real (CPIH-adjusted) Band D over 10 years, %; the card also shows 5 years", desc: "How much council tax rose or fell after inflation",
+    get(code, d) { const y = fyOf(d), real = yy => { const v = atYear((LOC.bandd || {})[councilOf(code)], yy), c = cpihAt(yy); return v != null && c ? v / c : null; };
+      const now = real(y), b10 = real(y - 10), b5 = real(y - 5); if (now == null || b10 == null) return { v: null, text: now == null ? `No figure for ${fyName(y)}` : `No figure for ${fyName(y - 10)}` };
+      const v = 100 * (now / b10 - 1); return { v, text: `${this.fmt(v)} over 10 years${b5 != null ? `, ${this.fmt(100 * (now / b5 - 1))} over 5` : ""}`, yr: `${fyName(y - 10)} to ${fyName(y)}` }; } });
   // markets: FTSE 100 companies headquartered in London (test case)
   const COS = MK ? MK.companies : [], GRP_COL = MK ? Object.fromEntries(MK.groups) : {}, G3 = "FTSE 100 in London (test case)";
   COS.forEach((c, i) => { c.i = i; });
