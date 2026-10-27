@@ -17,7 +17,8 @@ SCENES = {
     "start": "",
     "declutter": "",
     "compare": """
-        const D = AtlasDebug; D.select(['E06000023','E08000025','E06000043']); D.openCmp();""",
+        const D = AtlasDebug; D.select(['E06000023','E08000025','E06000043']); D.setCmpMetrics(['population','gdp_per_head','control']); D.openCmp();
+        document.querySelector('#cmp [data-fmax]').click(); document.querySelector('#cmp [data-kmk=chart]').click(); document.querySelector('#cmp [data-kdraw]').click();""",
     "analyse": """
         const D = AtlasDebug; D.select(['E06000023','E08000025','E06000043']); D.openCmp();
         document.querySelector('#cmp [data-can]') && document.querySelector('#cmp [data-can]').click();""",
