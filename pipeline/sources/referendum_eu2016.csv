@@ -1,0 +1,352 @@
+code,name,electorate,valid,leave,remain,rejected,areas_2016,note,source
+E06000001,Hartlepool,70341,46100,32071,14029,34,E06000001 Hartlepool,,Electoral Commission EU referendum results by counting area
+E06000002,Middlesbrough,94612,61358,40177,21181,35,E06000002 Middlesbrough,,Electoral Commission EU referendum results by counting area
+E06000003,Redcar and Cleveland,103529,72714,48128,24586,27,E06000003 Redcar and Cleveland,,Electoral Commission EU referendum results by counting area
+E06000004,Stockton-on-Tees,141486,100415,61982,38433,45,E06000004 Stockton-on-Tees,,Electoral Commission EU referendum results by counting area
+E06000005,Darlington,77662,55166,30994,24172,29,E06000005 Darlington,,Electoral Commission EU referendum results by counting area
+E06000006,Halton,95289,65005,37327,27678,42,E06000006 Halton,,Electoral Commission EU referendum results by counting area
+E06000007,Warrington,157042,115144,62487,52657,61,E06000007 Warrington,,Electoral Commission EU referendum results by counting area
+E06000008,Blackburn with Darwen,100117,65321,36799,28522,87,E06000008 Blackburn with Darwen,,Electoral Commission EU referendum results by counting area
+E06000009,Blackpool,102354,66927,45146,21781,32,E06000009 Blackpool,,Electoral Commission EU referendum results by counting area
+E06000010,"Kingston upon Hull, City of",180230,113355,76646,36709,81,"E06000010 Kingston upon Hull, City of",,Electoral Commission EU referendum results by counting area
+E06000011,East Riding of Yorkshire,266047,198915,120136,78779,121,E06000011 East Riding of Yorkshire,,Electoral Commission EU referendum results by counting area
+E06000012,North East Lincolnshire,116302,78982,55185,23797,29,E06000012 North East Lincolnshire,,Electoral Commission EU referendum results by counting area
+E06000013,North Lincolnshire,123611,88862,58915,29947,44,E06000013 North Lincolnshire,,Electoral Commission EU referendum results by counting area
+E06000014,York,155157,109600,45983,63617,81,E06000014 York,,Electoral Commission EU referendum results by counting area
+E06000015,Derby,171246,120655,69043,51612,117,E06000015 Derby,,Electoral Commission EU referendum results by counting area
+E06000016,Leicester,213819,138972,67992,70980,335,E06000016 Leicester,,Electoral Commission EU referendum results by counting area
+E06000017,Rutland,29390,22966,11613,11353,18,E06000017 Rutland,,Electoral Commission EU referendum results by counting area
+E06000018,Nottingham,195394,120661,61343,59318,130,E06000018 Nottingham,,Electoral Commission EU referendum results by counting area
+E06000019,"Herefordshire, County of",138247,108270,64122,44148,66,"E06000019 Herefordshire, County of",,Electoral Commission EU referendum results by counting area
+E06000020,Telford and Wrekin,124338,89603,56649,32954,101,E06000020 Telford and Wrekin,,Electoral Commission EU referendum results by counting area
+E06000021,Stoke-on-Trent,179010,117590,81563,36027,84,E06000021 Stoke-on-Trent,,Electoral Commission EU referendum results by counting area
+E06000022,Bath and North East Somerset,136522,105230,44352,60878,70,E06000022 Bath and North East Somerset,,Electoral Commission EU referendum results by counting area
+E06000023,"Bristol, City of",312465,228445,87418,141027,201,"E06000023 Bristol, City of",,Electoral Commission EU referendum results by counting area
+E06000024,North Somerset,160860,124548,64976,59572,74,E06000024 North Somerset,,Electoral Commission EU referendum results by counting area
+E06000025,South Gloucestershire,207793,158333,83405,74928,94,E06000025 South Gloucestershire,,Electoral Commission EU referendum results by counting area
+E06000026,Plymouth,186989,133455,79997,53458,68,E06000026 Plymouth,,Electoral Commission EU referendum results by counting area
+E06000027,Torbay,102961,75824,47889,27935,44,E06000027 Torbay,,Electoral Commission EU referendum results by counting area
+E06000030,Swindon,148960,112965,61745,51220,95,E06000030 Swindon,,Electoral Commission EU referendum results by counting area
+E06000031,Peterborough,120892,87392,53216,34176,77,E06000031 Peterborough,,Electoral Commission EU referendum results by counting area
+E06000032,Luton,127612,84481,47773,36708,135,E06000032 Luton,,Electoral Commission EU referendum results by counting area
+E06000033,Southend-on-Sea,128856,93870,54522,39348,69,E06000033 Southend-on-Sea,,Electoral Commission EU referendum results by counting area
+E06000034,Thurrock,109897,79916,57765,22151,34,E06000034 Thurrock,,Electoral Commission EU referendum results by counting area
+E06000035,Medway,192524,138886,88997,49889,87,E06000035 Medway,,Electoral Commission EU referendum results by counting area
+E06000036,Bracknell Forest,85298,64890,35002,29888,32,E06000036 Bracknell Forest,,Electoral Commission EU referendum results by counting area
+E06000037,West Berkshire,116757,93277,44977,48300,68,E06000037 West Berkshire,,Electoral Commission EU referendum results by counting area
+E06000038,Reading,103172,74767,31382,43385,59,E06000038 Reading,,Electoral Commission EU referendum results by counting area
+E06000039,Slough,87873,54542,29631,24911,56,E06000039 Slough,,Electoral Commission EU referendum results by counting area
+E06000040,Windsor and Maidenhead,102665,81792,37706,44086,63,E06000040 Windsor and Maidenhead,,Electoral Commission EU referendum results by counting area
+E06000041,Wokingham,121891,97501,42229,55272,50,E06000041 Wokingham,,Electoral Commission EU referendum results by counting area
+E06000042,Milton Keynes,177211,130456,67063,63393,78,E06000042 Milton Keynes,,Electoral Commission EU referendum results by counting area
+E06000043,Brighton and Hove,198293,146675,46027,100648,154,E06000043 Brighton and Hove,,Electoral Commission EU referendum results by counting area
+E06000044,Portsmouth,140517,98720,57336,41384,66,E06000044 Portsmouth,,Electoral Commission EU referendum results by counting area
+E06000045,Southampton,158171,107665,57927,49738,110,E06000045 Southampton,,Electoral Commission EU referendum results by counting area
+E06000046,Isle of Wight,109844,79380,49173,30207,50,E06000046 Isle of Wight,,Electoral Commission EU referendum results by counting area
+E06000047,County Durham,389507,267398,153877,113521,148,E06000047 County Durham,,Electoral Commission EU referendum results by counting area
+E06000049,Cheshire East,285957,221125,113163,107962,104,E06000049 Cheshire East,,Electoral Commission EU referendum results by counting area
+E06000050,Cheshire West and Chester,259878,193537,98082,95455,96,E06000050 Cheshire West and Chester,,Electoral Commission EU referendum results by counting area
+E06000051,Shropshire,236788,183153,104166,78987,170,E06000051 Shropshire,,Electoral Commission EU referendum results by counting area
+E06000052,Cornwall,419755,323205,182665,140540,237,E06000052 Cornwall,,Electoral Commission EU referendum results by counting area
+E06000053,Isles of Scilly,1799,1424,621,803,0,E06000053 Isles of Scilly,,Electoral Commission EU referendum results by counting area
+E06000054,Wiltshire,366555,288895,151637,137258,207,E06000054 Wiltshire,,Electoral Commission EU referendum results by counting area
+E06000055,Bedford,119530,86066,44569,41497,69,E06000055 Bedford,,Electoral Commission EU referendum results by counting area
+E06000056,Central Bedfordshire,204004,158804,89134,69670,90,E06000056 Central Bedfordshire,,Electoral Commission EU referendum results by counting area
+E06000057,Northumberland,240496,178721,96699,82022,94,E06000057 Northumberland,,Electoral Commission EU referendum results by counting area
+E06000058,"Bournemouth, Christchurch and Poole",285349,208424,118428,89996,132,E06000028 Bournemouth | E06000029 Poole | E07000048 Christchurch,votes added from 3 councils merged since 2016,Electoral Commission EU referendum results by counting area
+E06000059,Dorset,293877,232855,131089,101766,147,E07000049 East Dorset | E07000050 North Dorset | E07000051 Purbeck | E07000052 West Dorset | E07000053 Weymouth and Portland,votes added from 5 councils merged since 2016,Electoral Commission EU referendum results by counting area
+E06000060,Buckinghamshire,383874,300951,146495,154456,219,E07000004 Aylesbury Vale | E07000005 Chiltern | E07000006 South Bucks | E07000007 Wycombe,votes added from 4 councils merged since 2016,Electoral Commission EU referendum results by counting area
+E06000061,North Northamptonshire,236789,179703,110061,69642,119,E07000150 Corby | E07000152 East Northamptonshire | E07000153 Kettering | E07000156 Wellingborough,votes added from 4 councils merged since 2016,Electoral Commission EU referendum results by counting area
+E06000062,West Northamptonshire,277261,211264,121163,90101,174,E07000151 Daventry | E07000154 Northampton | E07000155 South Northamptonshire,votes added from 3 councils merged since 2016,Electoral Commission EU referendum results by counting area
+E06000063,Cumberland,208756,151868,91232,60636,96,E07000026 Allerdale | E07000028 Carlisle | E07000029 Copeland,votes added from 3 councils merged since 2016,Electoral Commission EU referendum results by counting area
+E06000064,Westmorland and Furness,177014,133123,69578,63545,99,E07000027 Barrow-in-Furness | E07000030 Eden | E07000031 South Lakeland,votes added from 3 councils merged since 2016,Electoral Commission EU referendum results by counting area
+E06000065,North Yorkshire,460941,357258,196282,160976,214,E07000163 Craven | E07000164 Hambleton | E07000165 Harrogate | E07000166 Richmondshire | E07000167 Ryedale | E07000168 Scarborough | E07000169 Selby,votes added from 7 councils merged since 2016,Electoral Commission EU referendum results by counting area
+E06000066,Somerset,412919,320803,178794,142009,230,E07000187 Mendip | E07000188 Sedgemoor | E07000189 South Somerset | E07000190 Taunton Deane | E07000191 West Somerset,votes added from 5 councils merged since 2016,Electoral Commission EU referendum results by counting area
+E07000008,Cambridge,80108,57799,15117,42682,53,E07000008 Cambridge,,Electoral Commission EU referendum results by counting area
+E07000009,East Cambridgeshire,62435,48086,24487,23599,38,E07000009 East Cambridgeshire,,Electoral Commission EU referendum results by counting area
+E07000010,Fenland,71447,52626,37571,15055,23,E07000010 Fenland,,Electoral Commission EU referendum results by counting area
+E07000011,Huntingdonshire,128486,99927,54198,45729,63,E07000011 Huntingdonshire,,Electoral Commission EU referendum results by counting area
+E07000012,South Cambridgeshire,114830,93189,37061,56128,61,E07000012 South Cambridgeshire,,Electoral Commission EU referendum results by counting area
+E07000032,Amber Valley,96760,73820,44501,29319,44,E07000032 Amber Valley,,Electoral Commission EU referendum results by counting area
+E07000033,Bolsover,58063,41972,29730,12242,27,E07000033 Bolsover,,Electoral Commission EU referendum results by counting area
+E07000034,Chesterfield,79905,57424,34478,22946,46,E07000034 Chesterfield,,Electoral Commission EU referendum results by counting area
+E07000035,Derbyshire Dales,57075,46728,24095,22633,28,E07000035 Derbyshire Dales,,Electoral Commission EU referendum results by counting area
+E07000036,Erewash,87596,66530,40739,25791,36,E07000036 Erewash,,Electoral Commission EU referendum results by counting area
+E07000037,High Peak,72487,54833,27717,27116,31,E07000037 High Peak,,Electoral Commission EU referendum results by counting area
+E07000038,North East Derbyshire,78855,59310,37235,22075,31,E07000038 North East Derbyshire,,Electoral Commission EU referendum results by counting area
+E07000039,South Derbyshire,73856,56695,34216,22479,23,E07000039 South Derbyshire,,Electoral Commission EU referendum results by counting area
+E07000040,East Devon,112527,88783,48040,40743,48,E07000040 East Devon,,Electoral Commission EU referendum results by counting area
+E07000041,Exeter,86417,63803,28533,35270,64,E07000041 Exeter,,Electoral Commission EU referendum results by counting area
+E07000042,Mid Devon,60532,48006,25606,22400,43,E07000042 Mid Devon,,Electoral Commission EU referendum results by counting area
+E07000043,North Devon,75548,58031,33100,24931,25,E07000043 North Devon,,Electoral Commission EU referendum results by counting area
+E07000044,South Hams,69121,55450,26142,29308,35,E07000044 South Hams,,Electoral Commission EU referendum results by counting area
+E07000045,Teignbridge,103740,82312,44363,37949,57,E07000045 Teignbridge,,Electoral Commission EU referendum results by counting area
+E07000046,Torridge,52881,41429,25200,16229,33,E07000046 Torridge,,Electoral Commission EU referendum results by counting area
+E07000047,West Devon,43823,35595,18937,16658,17,E07000047 West Devon,,Electoral Commission EU referendum results by counting area
+E07000061,Eastbourne,71726,53545,30700,22845,53,E07000061 Eastbourne,,Electoral Commission EU referendum results by counting area
+E07000062,Hastings,61957,44350,24339,20011,37,E07000062 Hastings,,Electoral Commission EU referendum results by counting area
+E07000063,Lewes,76428,59482,28508,30974,49,E07000063 Lewes,,Electoral Commission EU referendum results by counting area
+E07000064,Rother,72755,57669,33753,23916,46,E07000064 Rother,,Electoral Commission EU referendum results by counting area
+E07000065,Wealden,121141,96892,52808,44084,52,E07000065 Wealden,,Electoral Commission EU referendum results by counting area
+E07000066,Basildon,132771,97999,67251,30748,63,E07000066 Basildon,,Electoral Commission EU referendum results by counting area
+E07000067,Braintree,112562,86236,52713,33523,67,E07000067 Braintree,,Electoral Commission EU referendum results by counting area
+E07000068,Brentwood,58777,46704,27627,19077,21,E07000068 Brentwood,,Electoral Commission EU referendum results by counting area
+E07000069,Castle Point,68860,51845,37691,14154,64,E07000069 Castle Point,,Electoral Commission EU referendum results by counting area
+E07000070,Chelmsford,129971,100794,53249,47545,58,E07000070 Chelmsford,,Electoral Commission EU referendum results by counting area
+E07000071,Colchester,127520,95719,51305,44414,63,E07000071 Colchester,,Electoral Commission EU referendum results by counting area
+E07000072,Epping Forest,100016,76852,48176,28676,48,E07000072 Epping Forest,,Electoral Commission EU referendum results by counting area
+E07000073,Harlow,59124,43469,29602,13867,20,E07000073 Harlow,,Electoral Commission EU referendum results by counting area
+E07000074,Maldon,49073,38831,24302,14529,19,E07000074 Maldon,,Electoral Commission EU referendum results by counting area
+E07000075,Rochford,66589,52447,34937,17510,32,E07000075 Rochford,,Electoral Commission EU referendum results by counting area
+E07000076,Tendring,111167,82657,57447,25210,46,E07000076 Tendring,,Electoral Commission EU referendum results by counting area
+E07000077,Uttlesford,64735,51943,26324,25619,29,E07000077 Uttlesford,,Electoral Commission EU referendum results by counting area
+E07000078,Cheltenham,87060,66013,28932,37081,44,E07000078 Cheltenham,,Electoral Commission EU referendum results by counting area
+E07000079,Cotswold,68734,54821,26806,28015,26,E07000079 Cotswold,,Electoral Commission EU referendum results by counting area
+E07000080,Forest of Dean,66705,51643,30251,21392,34,E07000080 Forest of Dean,,Electoral Commission EU referendum results by counting area
+E07000081,Gloucester,89661,64577,37776,26801,29,E07000081 Gloucester,,Electoral Commission EU referendum results by counting area
+E07000082,Stroud,92631,74064,33618,40446,64,E07000082 Stroud,,Electoral Commission EU referendum results by counting area
+E07000083,Tewkesbury,67831,53652,28568,25084,34,E07000083 Tewkesbury,,Electoral Commission EU referendum results by counting area
+E07000084,Basingstoke and Deane,128677,100328,52071,48257,67,E07000084 Basingstoke and Deane,,Electoral Commission EU referendum results by counting area
+E07000085,East Hampshire,90588,73922,36576,37346,45,E07000085 East Hampshire,,Electoral Commission EU referendum results by counting area
+E07000086,Eastleigh,97280,76074,39902,36172,74,E07000086 Eastleigh,,Electoral Commission EU referendum results by counting area
+E07000087,Fareham,90175,71735,39525,32210,37,E07000087 Fareham,,Electoral Commission EU referendum results by counting area
+E07000088,Gosport,62781,46127,29456,16671,23,E07000088 Gosport,,Electoral Commission EU referendum results by counting area
+E07000089,Hart,69946,57795,27513,30282,32,E07000089 Hart,,Electoral Commission EU referendum results by counting area
+E07000090,Havant,95366,70629,44047,26582,41,E07000090 Havant,,Electoral Commission EU referendum results by counting area
+E07000091,New Forest,141061,111740,64541,47199,46,E07000091 New Forest,,Electoral Commission EU referendum results by counting area
+E07000092,Rushmoor,65790,48780,28396,20384,20,E07000092 Rushmoor,,Electoral Commission EU referendum results by counting area
+E07000093,Test Valley,94559,75261,39091,36170,55,E07000093 Test Valley,,Electoral Commission EU referendum results by counting area
+E07000094,Winchester,89595,72764,29886,42878,37,E07000094 Winchester,,Electoral Commission EU referendum results by counting area
+E07000095,Broxbourne,68997,50872,33706,17166,35,E07000095 Broxbourne,,Electoral Commission EU referendum results by counting area
+E07000096,Dacorum,108965,86244,43702,42542,63,E07000096 Dacorum,,Electoral Commission EU referendum results by counting area
+E07000098,Hertsmere,73295,56125,28532,27593,34,E07000098 Hertsmere,,Electoral Commission EU referendum results by counting area
+E07000099,North Hertfordshire,99316,77672,35438,42234,65,E07000099 North Hertfordshire,,Electoral Commission EU referendum results by counting area
+E07000102,Three Rivers,67380,52848,27097,25751,48,E07000102 Three Rivers,,Electoral Commission EU referendum results by counting area
+E07000103,Watford,65060,46586,23419,23167,49,E07000103 Watford,,Electoral Commission EU referendum results by counting area
+E07000105,Ashford,90516,69786,41472,28314,41,E07000105 Ashford,,Electoral Commission EU referendum results by counting area
+E07000106,Canterbury,109399,82048,41879,40169,57,E07000106 Canterbury,,Electoral Commission EU referendum results by counting area
+E07000107,Dartford,73951,55855,35870,19985,28,E07000107 Dartford,,Electoral Commission EU referendum results by counting area
+E07000108,Dover,85011,65016,40410,24606,41,E07000108 Dover,,Electoral Commission EU referendum results by counting area
+E07000109,Gravesham,72808,54519,35643,18876,34,E07000109 Gravesham,,Electoral Commission EU referendum results by counting area
+E07000110,Maidstone,117298,89127,52365,36762,46,E07000110 Maidstone,,Electoral Commission EU referendum results by counting area
+E07000111,Sevenoaks,87253,70349,38258,32091,44,E07000111 Sevenoaks,,Electoral Commission EU referendum results by counting area
+E07000112,Folkestone and Hythe,80879,60613,37729,22884,46,E07000112 Shepway,,Electoral Commission EU referendum results by counting area
+E07000113,Swale,102209,75869,47388,28481,44,E07000113 Swale,,Electoral Commission EU referendum results by counting area
+E07000114,Thanet,99108,72102,46037,26065,44,E07000114 Thanet,,Electoral Commission EU referendum results by counting area
+E07000115,Tonbridge and Malling,93019,74021,41229,32792,45,E07000115 Tonbridge and Malling,,Electoral Commission EU referendum results by counting area
+E07000116,Tunbridge Wells,82181,64996,29320,35676,43,E07000116 Tunbridge Wells,,Electoral Commission EU referendum results by counting area
+E07000117,Burnley,64461,43316,28854,14462,34,E07000117 Burnley,,Electoral Commission EU referendum results by counting area
+E07000118,Chorley,84159,63515,36098,27417,45,E07000118 Chorley,,Electoral Commission EU referendum results by counting area
+E07000119,Fylde,61174,46206,26317,19889,21,E07000119 Fylde,,Electoral Commission EU referendum results by counting area
+E07000120,Hyndburn,62042,40137,26568,13569,31,E07000120 Hyndburn,,Electoral Commission EU referendum results by counting area
+E07000121,Lancaster,100567,73041,37309,35732,57,E07000121 Lancaster,,Electoral Commission EU referendum results by counting area
+E07000122,Pendle,64534,45335,28631,16704,53,E07000122 Pendle,,Electoral Commission EU referendum results by counting area
+E07000123,Preston,94284,64745,34518,30227,49,E07000123 Preston,,Electoral Commission EU referendum results by counting area
+E07000124,Ribble Valley,46148,36442,20550,15892,24,E07000124 Ribble Valley,,Electoral Commission EU referendum results by counting area
+E07000125,Rossendale,52750,38181,23169,15012,24,E07000125 Rossendale,,Electoral Commission EU referendum results by counting area
+E07000126,South Ribble,84573,63724,37318,26406,31,E07000126 South Ribble,,Electoral Commission EU referendum results by counting area
+E07000127,West Lancashire,85834,63869,35323,28546,49,E07000127 West Lancashire,,Electoral Commission EU referendum results by counting area
+E07000128,Wyre,84471,62979,40163,22816,49,E07000128 Wyre,,Electoral Commission EU referendum results by counting area
+E07000129,Blaby,73832,56471,33583,22888,41,E07000129 Blaby,,Electoral Commission EU referendum results by counting area
+E07000130,Charnwood,133780,94172,50672,43500,85,E07000130 Charnwood,,Electoral Commission EU referendum results by counting area
+E07000131,Harborough,67420,54878,27850,27028,32,E07000131 Harborough,,Electoral Commission EU referendum results by counting area
+E07000132,Hinckley and Bosworth,85305,65470,39501,25969,46,E07000132 Hinckley and Bosworth,,Electoral Commission EU referendum results by counting area
+E07000133,Melton,37273,30305,17610,12695,22,E07000133 Melton,,Electoral Commission EU referendum results by counting area
+E07000134,North West Leicestershire,73944,57611,34969,22642,27,E07000134 North West Leicestershire,,Electoral Commission EU referendum results by counting area
+E07000135,Oadby and Wigston,42684,31465,17173,14292,24,E07000135 Oadby and Wigston,,Electoral Commission EU referendum results by counting area
+E07000136,Boston,39363,30404,22974,7430,12,E07000136 Boston,,Electoral Commission EU referendum results by counting area
+E07000137,East Lindsey,107009,80128,56613,23515,50,E07000137 East Lindsey,,Electoral Commission EU referendum results by counting area
+E07000138,Lincoln,63351,43894,24992,18902,34,E07000138 Lincoln,,Electoral Commission EU referendum results by counting area
+E07000139,North Kesteven,86468,67753,42183,25570,38,E07000139 North Kesteven,,Electoral Commission EU referendum results by counting area
+E07000140,South Holland,65701,49497,36423,13074,21,E07000140 South Holland,,Electoral Commission EU referendum results by counting area
+E07000141,South Kesteven,105457,82471,49424,33047,52,E07000141 South Kesteven,,Electoral Commission EU referendum results by counting area
+E07000142,West Lindsey,73499,54753,33847,20906,28,E07000142 West Lindsey,,Electoral Commission EU referendum results by counting area
+E07000143,Breckland,98989,73548,47235,26313,45,E07000143 Breckland,,Electoral Commission EU referendum results by counting area
+E07000144,Broadland,99254,77737,42268,35469,44,E07000144 Broadland,,Electoral Commission EU referendum results by counting area
+E07000145,Great Yarmouth,72634,50128,35844,14284,30,E07000145 Great Yarmouth,,Electoral Commission EU referendum results by counting area
+E07000146,King's Lynn and West Norfolk,113884,85080,56493,28587,48,E07000146 King's Lynn and West Norfolk,,Electoral Commission EU referendum results by counting area
+E07000147,North Norfolk,83065,63790,37576,26214,39,E07000147 North Norfolk,,Electoral Commission EU referendum results by counting area
+E07000148,Norwich,96091,66366,29040,37326,56,E07000148 Norwich,,Electoral Commission EU referendum results by counting area
+E07000149,South Norfolk,102395,80358,41541,38817,60,E07000149 South Norfolk,,Electoral Commission EU referendum results by counting area
+E07000170,Ashfield,91916,66899,46720,20179,47,E07000170 Ashfield,,Electoral Commission EU referendum results by counting area
+E07000171,Bassetlaw,85547,63967,43392,20575,36,E07000171 Bassetlaw,,Electoral Commission EU referendum results by counting area
+E07000172,Broxtowe,83593,65426,35754,29672,42,E07000172 Broxtowe,,Electoral Commission EU referendum results by counting area
+E07000173,Gedling,88298,67577,37542,30035,58,E07000173 Gedling,,Electoral Commission EU referendum results by counting area
+E07000174,Mansfield,77624,56344,39927,16417,26,E07000174 Mansfield,,Electoral Commission EU referendum results by counting area
+E07000175,Newark and Sherwood,87338,67087,40516,26571,41,E07000175 Newark and Sherwood,,Electoral Commission EU referendum results by counting area
+E07000176,Rushcliffe,86401,70410,29888,40522,60,E07000176 Rushcliffe,,Electoral Commission EU referendum results by counting area
+E07000177,Cherwell,108342,81836,41168,40668,72,E07000177 Cherwell,,Electoral Commission EU referendum results by counting area
+E07000178,Oxford,97331,70337,20913,49424,74,E07000178 Oxford,,Electoral Commission EU referendum results by counting area
+E07000179,South Oxfordshire,104231,84110,37865,46245,57,E07000179 South Oxfordshire,,Electoral Commission EU referendum results by counting area
+E07000180,Vale of White Horse,94487,76654,33192,43462,52,E07000180 Vale of White Horse,,Electoral Commission EU referendum results by counting area
+E07000181,West Oxfordshire,82441,65671,30435,35236,48,E07000181 West Oxfordshire,,Electoral Commission EU referendum results by counting area
+E07000192,Cannock Chase,75010,53578,36894,16684,29,E07000192 Cannock Chase,,Electoral Commission EU referendum results by counting area
+E07000193,East Staffordshire,83558,62116,39266,22850,45,E07000193 East Staffordshire,,Electoral Commission EU referendum results by counting area
+E07000194,Lichfield,80369,63278,37214,26064,40,E07000194 Lichfield,,Electoral Commission EU referendum results by counting area
+E07000195,Newcastle-under-Lyme,92816,68934,43457,25477,32,E07000195 Newcastle-under-Lyme,,Electoral Commission EU referendum results by counting area
+E07000196,South Staffordshire,85777,66692,43248,23444,47,E07000196 South Staffordshire,,Electoral Commission EU referendum results by counting area
+E07000197,Stafford,99612,77484,43386,34098,43,E07000197 Stafford,,Electoral Commission EU referendum results by counting area
+E07000198,Staffordshire Moorlands,79347,59760,38684,21076,33,E07000198 Staffordshire Moorlands,,Electoral Commission EU referendum results by counting area
+E07000199,Tamworth,56825,42129,28424,13705,22,E07000199 Tamworth,,Electoral Commission EU referendum results by counting area
+E07000200,Babergh,70628,55242,29933,25309,30,E07000200 Babergh,,Electoral Commission EU referendum results by counting area
+E07000202,Ipswich,91574,66353,38655,27698,47,E07000202 Ipswich,,Electoral Commission EU referendum results by counting area
+E07000203,Mid Suffolk,78325,61185,33794,27391,37,E07000203 Mid Suffolk,,Electoral Commission EU referendum results by counting area
+E07000207,Elmbridge,98613,77003,31162,45841,55,E07000207 Elmbridge,,Electoral Commission EU referendum results by counting area
+E07000208,Epsom and Ewell,56382,45303,21707,23596,40,E07000208 Epsom and Ewell,,Electoral Commission EU referendum results by counting area
+E07000209,Guildford,102209,78613,34458,44155,44,E07000209 Guildford,,Electoral Commission EU referendum results by counting area
+E07000210,Mole Valley,66730,54796,25708,29088,33,E07000210 Mole Valley,,Electoral Commission EU referendum results by counting area
+E07000211,Reigate and Banstead,103731,81161,40980,40181,39,E07000211 Reigate and Banstead,,Electoral Commission EU referendum results by counting area
+E07000212,Runnymede,58272,44294,24035,20259,32,E07000212 Runnymede,,Electoral Commission EU referendum results by counting area
+E07000213,Spelthorne,72674,56609,34135,22474,29,E07000213 Spelthorne,,Electoral Commission EU referendum results by counting area
+E07000214,Surrey Heath,65569,52305,26667,25638,25,E07000214 Surrey Heath,,Electoral Commission EU referendum results by counting area
+E07000215,Tandridge,64044,51420,27169,24251,46,E07000215 Tandridge,,Electoral Commission EU referendum results by counting area
+E07000216,Waverley,92291,75942,31601,44341,57,E07000216 Waverley,,Electoral Commission EU referendum results by counting area
+E07000217,Woking,71313,55221,24214,31007,40,E07000217 Woking,,Electoral Commission EU referendum results by counting area
+E07000218,North Warwickshire,49790,37954,25385,12569,21,E07000218 North Warwickshire,,Electoral Commission EU referendum results by counting area
+E07000219,Nuneaton and Bedworth,93978,69831,46095,23736,45,E07000219 Nuneaton and Bedworth,,Electoral Commission EU referendum results by counting area
+E07000220,Rugby,74137,58549,33199,25350,44,E07000220 Rugby,,Electoral Commission EU referendum results by counting area
+E07000221,Stratford-on-Avon,98014,79158,40817,38341,59,E07000221 Stratford-on-Avon,,Electoral Commission EU referendum results by counting area
+E07000222,Warwick,103099,81618,33642,47976,62,E07000222 Warwick,,Electoral Commission EU referendum results by counting area
+E07000223,Adur,48755,37229,20315,16914,22,E07000223 Adur,,Electoral Commission EU referendum results by counting area
+E07000224,Arun,117138,91129,56936,34193,70,E07000224 Arun,,Electoral Commission EU referendum results by counting area
+E07000225,Chichester,91659,71337,36326,35011,70,E07000225 Chichester,,Electoral Commission EU referendum results by counting area
+E07000226,Crawley,73575,53835,31447,22388,49,E07000226 Crawley,,Electoral Commission EU referendum results by counting area
+E07000227,Horsham,104270,85088,41303,43785,44,E07000227 Horsham,,Electoral Commission EU referendum results by counting area
+E07000228,Mid Sussex,108416,87528,41057,46471,60,E07000228 Mid Sussex,,Electoral Commission EU referendum results by counting area
+E07000229,Worthing,81384,61366,32515,28851,50,E07000229 Worthing,,Electoral Commission EU referendum results by counting area
+E07000234,Bromsgrove,74170,58815,32563,26252,40,E07000234 Bromsgrove,,Electoral Commission EU referendum results by counting area
+E07000235,Malvern Hills,60217,48497,25294,23203,41,E07000235 Malvern Hills,,Electoral Commission EU referendum results by counting area
+E07000236,Redditch,61038,45882,28579,17303,30,E07000236 Redditch,,Electoral Commission EU referendum results by counting area
+E07000237,Worcester,73516,54239,29114,25125,51,E07000237 Worcester,,Electoral Commission EU referendum results by counting area
+E07000238,Wychavon,94497,76389,44201,32188,36,E07000238 Wychavon,,Electoral Commission EU referendum results by counting area
+E07000239,Wyre Forest,77878,57632,36392,21240,34,E07000239 Wyre Forest,,Electoral Commission EU referendum results by counting area
+E07000240,St Albans,104859,86445,32237,54208,79,E07000240 St Albans,,Electoral Commission EU referendum results by counting area
+E07000241,Welwyn Hatfield,78146,58610,31060,27550,31,E07000241 Welwyn Hatfield,,Electoral Commission EU referendum results by counting area
+E07000242,East Hertfordshire,106260,85366,42994,42372,67,E07000242 East Hertfordshire,,Electoral Commission EU referendum results by counting area
+E07000243,Stevenage,62156,45785,27126,18659,26,E07000243 Stevenage,,Electoral Commission EU referendum results by counting area
+E07000244,East Suffolk,188586,144830,83256,61574,83,E07000205 Suffolk Coastal | E07000206 Waveney,votes added from 2 councils merged since 2016,Electoral Commission EU referendum results by counting area
+E07000245,West Suffolk,119675,90161,53384,36777,71,E07000201 Forest Heath | E07000204 St Edmundsbury,votes added from 2 councils merged since 2016,Electoral Commission EU referendum results by counting area
+E08000001,Bolton,197109,138080,80491,57589,100,E08000001 Bolton,,Electoral Commission EU referendum results by counting area
+E08000002,Bury,141600,101028,54674,46354,116,E08000002 Bury,,Electoral Commission EU referendum results by counting area
+E08000003,Manchester,338064,201814,79991,121823,253,E08000003 Manchester,,Electoral Commission EU referendum results by counting area
+E08000004,Oldham,158084,107403,65369,42034,90,E08000004 Oldham,,Electoral Commission EU referendum results by counting area
+E08000005,Rochdale,156621,103231,62014,41217,88,E08000005 Rochdale,,Electoral Commission EU referendum results by counting area
+E08000006,Salford,173668,109815,62385,47430,111,E08000006 Salford,,Electoral Commission EU referendum results by counting area
+E08000007,Stockport,221162,163489,77930,85559,95,E08000007 Stockport,,Electoral Commission EU referendum results by counting area
+E08000008,Tameside,168047,110947,67829,43118,69,E08000008 Tameside,,Electoral Commission EU referendum results by counting area
+E08000009,Trafford,165294,125311,53018,72293,89,E08000009 Trafford,,Electoral Commission EU referendum results by counting area
+E08000010,Wigan,235982,163273,104331,58942,108,E08000010 Wigan,,Electoral Commission EU referendum results by counting area
+E08000011,Knowsley,111647,70903,36558,34345,34,E08000011 Knowsley,,Electoral Commission EU referendum results by counting area
+E08000012,Liverpool,317924,203554,85101,118453,174,E08000012 Liverpool,,Electoral Commission EU referendum results by counting area
+E08000013,St. Helens,136096,93679,54357,39322,42,E08000013 St. Helens,,Electoral Commission EU referendum results by counting area
+E08000014,Sefton,206298,147878,71176,76702,92,E08000014 Sefton,,Electoral Commission EU referendum results by counting area
+E08000015,Wirral,242568,172000,83069,88931,137,E08000015 Wirral,,Electoral Commission EU referendum results by counting area
+E08000017,Doncaster,217432,151182,104260,46922,64,E08000017 Doncaster,,Electoral Commission EU referendum results by counting area
+E08000018,Rotherham,197623,137387,93272,44115,83,E08000018 Rotherham,,Electoral Commission EU referendum results by counting area
+E08000021,Newcastle upon Tyne,190735,129003,63598,65405,69,E08000021 Newcastle upon Tyne,,Electoral Commission EU referendum results by counting area
+E08000022,North Tyneside,156993,113462,60589,52873,45,E08000022 North Tyneside,,Electoral Commission EU referendum results by counting area
+E08000023,South Tyneside,115893,79079,49065,30014,38,E08000023 South Tyneside,,Electoral Commission EU referendum results by counting area
+E08000024,Sunderland,207221,134324,82394,51930,76,E08000024 Sunderland,,Electoral Commission EU referendum results by counting area
+E08000025,Birmingham,707293,450702,227251,223451,614,E08000025 Birmingham,,Electoral Commission EU referendum results by counting area
+E08000026,Coventry,221389,153064,85097,67967,170,E08000026 Coventry,,Electoral Commission EU referendum results by counting area
+E08000027,Dudley,244516,175226,118446,56780,107,E08000027 Dudley,,Electoral Commission EU referendum results by counting area
+E08000028,Sandwell,221429,147254,98250,49004,164,E08000028 Sandwell,,Electoral Commission EU referendum results by counting area
+E08000029,Solihull,160425,121950,68484,53466,70,E08000029 Solihull,,Electoral Commission EU referendum results by counting area
+E08000030,Walsall,194729,135579,92007,43572,106,E08000030 Walsall,,Electoral Commission EU referendum results by counting area
+E08000031,Wolverhampton,174760,117936,73798,44138,101,E08000031 Wolverhampton,,Electoral Commission EU referendum results by counting area
+E08000032,Bradford,342817,228488,123913,104575,239,E08000032 Bradford,,Electoral Commission EU referendum results by counting area
+E08000033,Calderdale,149195,105925,58975,46950,79,E08000033 Calderdale,,Electoral Commission EU referendum results by counting area
+E08000034,Kirklees,307081,217240,118755,98485,188,E08000034 Kirklees,,Electoral Commission EU referendum results by counting area
+E08000035,Leeds,543033,387337,192474,194863,340,E08000035 Leeds,,Electoral Commission EU referendum results by counting area
+E08000036,Wakefield,246096,175042,116165,58877,113,E08000036 Wakefield,,Electoral Commission EU referendum results by counting area
+E08000037,Gateshead,145866,102958,58529,44429,49,E08000037 Gateshead,,Electoral Commission EU referendum results by counting area
+E08000038,Barnsley,175809,122909,83958,38951,63,E08000016 Barnsley,2016 code E08000016 (recoded since),Electoral Commission EU referendum results by counting area
+E08000039,Sheffield,396406,266753,136018,130735,198,E08000019 Sheffield,2016 code E08000019 (recoded since),Electoral Commission EU referendum results by counting area
+E09000001,City of London,5987,4399,1087,3312,6,E09000001 City of London,,Electoral Commission EU referendum results by counting area
+E09000002,Barking and Dagenham,115812,73880,46130,27750,61,E09000002 Barking and Dagenham,,Electoral Commission EU referendum results by counting area
+E09000003,Barnet,223467,161033,60823,100210,185,E09000003 Barnet,,Electoral Commission EU referendum results by counting area
+E09000004,Bexley,170779,128489,80886,47603,81,E09000004 Bexley,,Electoral Commission EU referendum results by counting area
+E09000005,Brent,186793,121404,48881,72523,267,E09000005 Brent,,Electoral Commission EU referendum results by counting area
+E09000006,Bromley,231473,182432,90034,92398,138,E09000006 Bromley,,Electoral Commission EU referendum results by counting area
+E09000007,Camden,145425,95133,23838,71295,148,E09000007 Camden,,Electoral Commission EU referendum results by counting area
+E09000008,Croydon,245349,171134,78221,92913,155,E09000008 Croydon,,Electoral Commission EU referendum results by counting area
+E09000009,Ealing,212991,149041,59017,90024,227,E09000009 Ealing,,Electoral Commission EU referendum results by counting area
+E09000010,Enfield,198387,136906,60481,76425,150,E09000010 Enfield,,Electoral Commission EU referendum results by counting area
+E09000011,Greenwich,168967,117365,52117,65248,105,E09000011 Greenwich,,Electoral Commission EU referendum results by counting area
+E09000012,Hackney,163284,106266,22868,83398,156,E09000012 Hackney,,Electoral Commission EU referendum results by counting area
+E09000013,Hammersmith and Fulham,114863,80242,24054,56188,105,E09000013 Hammersmith and Fulham,,Electoral Commission EU referendum results by counting area
+E09000014,Haringey,150098,105846,25855,79991,186,E09000014 Haringey,,Electoral Commission EU referendum results by counting area
+E09000015,Harrow,162397,117225,53183,64042,127,E09000015 Harrow,,Electoral Commission EU referendum results by counting area
+E09000016,Havering,183082,139086,96885,42201,89,E09000016 Havering,,Electoral Commission EU referendum results by counting area
+E09000017,Hillingdon,193033,133022,74982,58040,148,E09000017 Hillingdon,,Electoral Commission EU referendum results by counting area
+E09000018,Hounslow,165050,115076,56321,58755,132,E09000018 Hounslow,,Electoral Commission EU referendum results by counting area
+E09000019,Islington,144514,101600,25180,76420,123,E09000019 Islington,,Electoral Commission EU referendum results by counting area
+E09000020,Kensington and Chelsea,83042,54739,17138,37601,62,E09000020 Kensington and Chelsea,,Electoral Commission EU referendum results by counting area
+E09000021,Kingston upon Thames,108838,85270,32737,52533,60,E09000021 Kingston upon Thames,,Electoral Commission EU referendum results by counting area
+E09000022,Lambeth,210800,141924,30340,111584,238,E09000022 Lambeth,,Electoral Commission EU referendum results by counting area
+E09000023,Lewisham,197514,124473,37518,86955,164,E09000023 Lewisham,,Electoral Commission EU referendum results by counting area
+E09000024,Merton,136352,100100,37097,63003,107,E09000024 Merton,,Electoral Commission EU referendum results by counting area
+E09000025,Newham,176985,104699,49371,55328,165,E09000025 Newham,,Electoral Commission EU referendum results by counting area
+E09000026,Redbridge,189843,128233,59020,69213,164,E09000026 Redbridge,,Electoral Commission EU referendum results by counting area
+E09000027,Richmond upon Thames,132632,108806,33410,75396,70,E09000027 Richmond upon Thames,,Electoral Commission EU referendum results by counting area
+E09000028,Southwark,195875,129502,35209,94293,175,E09000028 Southwark,,Electoral Commission EU referendum results by counting area
+E09000029,Sutton,140288,106560,57241,49319,73,E09000029 Sutton,,Electoral Commission EU referendum results by counting area
+E09000030,Tower Hamlets,167820,108235,35224,73011,185,E09000030 Tower Hamlets,,Electoral Commission EU referendum results by counting area
+E09000031,Waltham Forest,162983,108551,44395,64156,138,E09000031 Waltham Forest,,Electoral Commission EU referendum results by counting area
+E09000032,Wandsworth,219521,157884,39421,118463,134,E09000032 Wandsworth,,Electoral Commission EU referendum results by counting area
+E09000033,Westminster,120524,78196,24268,53928,129,E09000033 Westminster,,Electoral Commission EU referendum results by counting area
+N92000002,Northern Ireland,1260955,790149,349442,440707,374,N92000002 Northern Ireland,Northern Ireland counted as one area,Electoral Commission EU referendum results by counting area
+S12000005,Clackmannanshire,37841,25427,10736,14691,12,S12000005 Clackmannanshire,,Electoral Commission EU referendum results by counting area
+S12000006,Dumfries and Galloway,115837,82667,38803,43864,48,S12000006 Dumfries and Galloway,,Electoral Commission EU referendum results by counting area
+S12000008,East Ayrshire,91977,57833,23942,33891,26,S12000008 East Ayrshire,,Electoral Commission EU referendum results by counting area
+S12000010,East Lothian,77788,55764,19738,36026,36,S12000010 East Lothian,,Electoral Commission EU referendum results by counting area
+S12000011,East Renfrewshire,69575,52941,13596,39345,28,S12000011 East Renfrewshire,,Electoral Commission EU referendum results by counting area
+S12000013,Na h-Eileanan Siar,21259,14903,6671,8232,16,S12000013 Eilean Siar,,Electoral Commission EU referendum results by counting area
+S12000014,Falkirk,117392,79258,34271,44987,44,S12000014 Falkirk,,Electoral Commission EU referendum results by counting area
+S12000017,Highland,175563,125657,55349,70308,71,S12000017 Highland,,Electoral Commission EU referendum results by counting area
+S12000018,Inverclyde,58624,38698,14010,24688,24,S12000018 Inverclyde,,Electoral Commission EU referendum results by counting area
+S12000019,Midlothian,66758,45468,17251,28217,29,S12000019 Midlothian,,Electoral Commission EU referendum results by counting area
+S12000020,Moray,71370,48106,23992,24114,33,S12000020 Moray,,Electoral Commission EU referendum results by counting area
+S12000021,North Ayrshire,104572,67504,29110,38394,44,S12000021 North Ayrshire,,Electoral Commission EU referendum results by counting area
+S12000023,Orkney Islands,16658,11382,4193,7189,20,S12000023 Orkney Islands,,Electoral Commission EU referendum results by counting area
+S12000026,Scottish Borders,88440,64914,26962,37952,39,S12000026 Scottish Borders,,Electoral Commission EU referendum results by counting area
+S12000027,Shetland Islands,17375,12222,5315,6907,9,S12000027 Shetland Islands,,Electoral Commission EU referendum results by counting area
+S12000028,South Ayrshire,88116,61506,25241,36265,36,S12000028 South Ayrshire,,Electoral Commission EU referendum results by counting area
+S12000029,South Lanarkshire,248949,162592,60024,102568,91,S12000029 South Lanarkshire,,Electoral Commission EU referendum results by counting area
+S12000030,Stirling,66100,48899,15787,33112,32,S12000030 Stirling,,Electoral Commission EU referendum results by counting area
+S12000033,Aberdeen City,154266,104714,40729,63985,95,S12000033 Aberdeen City,,Electoral Commission EU referendum results by counting area
+S12000034,Aberdeenshire,196809,138961,62516,76445,53,S12000034 Aberdeenshire,,Electoral Commission EU referendum results by counting area
+S12000035,Argyll and Bute,66642,48696,19202,29494,38,S12000035 Argyll and Bute,,Electoral Commission EU referendum results by counting area
+S12000036,City of Edinburgh,346073,252294,64498,187796,187,S12000036 City of Edinburgh,,Electoral Commission EU referendum results by counting area
+S12000038,Renfrewshire,127294,88129,31010,57119,68,S12000038 Renfrewshire,,Electoral Commission EU referendum results by counting area
+S12000039,West Dunbartonshire,67595,43220,16426,26794,25,S12000039 West Dunbartonshire,,Electoral Commission EU referendum results by counting area
+S12000040,West Lothian,130925,88508,36948,51560,48,S12000040 West Lothian,,Electoral Commission EU referendum results by counting area
+S12000041,Angus,87137,59258,26511,32747,24,S12000041 Angus,,Electoral Commission EU referendum results by counting area
+S12000042,Dundee City,105554,66385,26697,39688,33,S12000042 Dundee City,,Electoral Commission EU referendum results by counting area
+S12000045,East Dunbartonshire,83031,62374,17840,44534,44,S12000045 East Dunbartonshire,,Electoral Commission EU referendum results by counting area
+S12000047,Fife,272995,182220,75466,106754,87,S12000015 Fife,2016 code S12000015 (recoded since); boundary adjusted slightly since 2016,Electoral Commission EU referendum results by counting area
+S12000048,Perth and Kinross,110224,81255,31614,49641,39,S12000024 Perth and Kinross,2016 code S12000024 (recoded since); boundary adjusted slightly since 2016,Electoral Commission EU referendum results by counting area
+S12000049,Glasgow City,449806,252809,84474,168335,191,S12000046 Glasgow City,2016 code S12000046 (recoded since),Electoral Commission EU referendum results by counting area
+S12000050,North Lanarkshire,254567,154949,59400,95549,96,S12000044 North Lanarkshire,2016 code S12000044 (recoded since),Electoral Commission EU referendum results by counting area
+W06000001,Isle of Anglesey,51445,37951,19333,18618,27,W06000001 Isle of Anglesey,,Electoral Commission EU referendum results by counting area
+W06000002,Gwynedd,84575,61182,25665,35517,63,W06000002 Gwynedd,,Electoral Commission EU referendum results by counting area
+W06000003,Conwy,91368,65504,35357,30147,50,W06000003 Conwy,,Electoral Commission EU referendum results by counting area
+W06000004,Denbighshire,75362,52072,28117,23955,36,W06000004 Denbighshire,,Electoral Commission EU referendum results by counting area
+W06000005,Flintshire,115964,86797,48930,37867,57,W06000005 Flintshire,,Electoral Commission EU referendum results by counting area
+W06000006,Wrexham,98384,70366,41544,28822,41,W06000006 Wrexham,,Electoral Commission EU referendum results by counting area
+W06000008,Ceredigion,53400,39742,18031,21711,30,W06000008 Ceredigion,,Electoral Commission EU referendum results by counting area
+W06000009,Pembrokeshire,92155,68522,39155,29367,33,W06000009 Pembrokeshire,,Electoral Commission EU referendum results by counting area
+W06000010,Carmarthenshire,139227,103035,55381,47654,91,W06000010 Carmarthenshire,,Electoral Commission EU referendum results by counting area
+W06000011,Swansea,172941,120243,61936,58307,119,W06000011 Swansea,,Electoral Commission EU referendum results by counting area
+W06000012,Neath Port Talbot,105766,75652,43001,32651,42,W06000012 Neath Port Talbot,,Electoral Commission EU referendum results by counting area
+W06000013,Bridgend,104492,74345,40622,33723,33,W06000013 Bridgend,,Electoral Commission EU referendum results by counting area
+W06000014,Vale of Glamorgan,95011,72309,35628,36681,39,W06000014 Vale of Glamorgan,,Electoral Commission EU referendum results by counting area
+W06000015,Cardiff,243689,169604,67816,101788,141,W06000015 Cardiff,,Electoral Commission EU referendum results by counting area
+W06000016,Rhondda Cynon Taf,172890,116563,62590,53973,82,W06000016 Rhondda Cynon Taf,,Electoral Commission EU referendum results by counting area
+W06000018,Caerphilly,130801,92473,53295,39178,52,W06000018 Caerphilly,,Electoral Commission EU referendum results by counting area
+W06000019,Blaenau Gwent,51136,34802,21587,13215,10,W06000019 Blaenau Gwent,,Electoral Commission EU referendum results by counting area
+W06000020,Torfaen,68957,48144,28781,19363,28,W06000020 Torfaen,,Electoral Commission EU referendum results by counting area
+W06000021,Monmouthshire,71607,55630,27569,28061,40,W06000021 Monmouthshire,,Electoral Commission EU referendum results by counting area
+W06000022,Newport,104977,73649,41236,32413,59,W06000022 Newport,,Electoral Commission EU referendum results by counting area
+W06000023,Powys,103270,79469,42707,36762,46,W06000023 Powys,,Electoral Commission EU referendum results by counting area
+W06000024,Merthyr Tydfil,42855,28865,16291,12574,16,W06000024 Merthyr Tydfil,,Electoral Commission EU referendum results by counting area

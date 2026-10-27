@@ -5,6 +5,7 @@ sources/council_control_history.csv   party in control of each council over time
 sources/council_leaders_history.csv   council leaders over time (Wikipedia; fetch_politics.py)
 sources/council_politics.csv          council control and leader in October 2026 (wins over the history for "now")
 sources/government_history.csv        Prime Ministers, First Ministers and Mayors of London since 1974
+sources/government_coalitions.csv     coalition partners in UK, Scottish and Welsh governments (cited, one row per coalition)
 """
 import csv, json, os
 
@@ -62,8 +63,13 @@ def main():
     for r in read("government_history.csv"):
         gov.setdefault(r["code"], []).append([r["start"], r["end"] or None, r["party"], r["leader"], r["title"], r["note"]])
     gov["E92000001"] = [x[:5] + ["England has no devolved government: the UK Government governs it directly"] for x in gov["K02000001"]]
+    # 1.7: coalition partners (sources/government_coalitions.csv, each row cited); England follows the UK Government
+    coal = {}
+    for r in read("government_coalitions.csv"):
+        coal.setdefault(r["code"], []).append([r["start"], r["end"] or None, r["parties"].split(";"), r["description"]])
+    coal["E92000001"] = coal.get("K02000001", [])
     out = {"now": NOW, "start": "1974-05-01", "parties": PARTIES, "control": control, "leaders": leaders, "gov": gov,
-           "approx": approx, "articles": articles}
+           "approx": approx, "articles": articles, "coalitions": coal}
     with open(os.path.join(DATA, "politics.js"), "w") as fh:
         fh.write("window.ATLAS_POL = " + json.dumps(out, separators=(",", ":"), ensure_ascii=False) + ";\n")
     print(f"Political history: {len(control)} councils, {sum(map(len, control.values()))} periods of control, "

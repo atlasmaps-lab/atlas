@@ -1,30 +1,84 @@
-# Atlas 1.6 — United Kingdom
+# Atlas 1.7 — United Kingdom
+
+Atlas 1.7 fills in the Political perspective: Westminster results since 1997, the EU referendum, council tax, council make-up, party positions, and the measures political scientists use to read them. It also makes Atlas say how sure it is about each number. Built on 1.6 in the GitHub repository (branch `mo/1.7-political`).
+
+## What's new in 1.7
+
+**Honest numbers.** Every new metric carries:
+- **How this is worked out:** a one-line formula on the pinned card and in the export's About sheet.
+- **Where it applies:** for example, Westminster results aren't shown for councils or wards, because the boundaries don't nest. Elsewhere the card says "Not meaningful at this level" and the map leaves the area unfilled, rather than averaging something that doesn't add up.
+- **Estimated values:**
+  - an "est." tag on cards and tables
+  - diagonal hatching on the map (Tools → Estimated values: Hatched / Plain)
+  - a `status` column in exports, for every metric: measured, estimated, missing or not meaningful
+- **Missing means missing:** a gap is shown as a gap, never as zero.
+
+**Westminster elections (1997–2024, plus by-elections since 2010).** Winning party (shaded by the winner's share), vote share for any party, turnout and turnout change, majority, marginality, votes to flip, second place, wins on under half the vote, wasted votes, two-party share, swing (Butler and Steed, for any pair of parties), volatility (Pedersen), effective number of parties (votes; seats for areas), disproportionality (Gallagher), and electors per MP against the electoral quota.
+- The time bar picks the latest election on or before the date.
+- Regions, nations and the UK add up their seats' votes and recompute; nothing is averaged.
+- Across the 2010 and 2024 boundary changes, comparisons use the House of Commons Library's notional results, and are marked as estimated.
+- Election charts draw a point at each election, joined by lines. By-elections are hollow points.
+
+**Referendums.**
+- **EU 2016:** Leave share and turnout by council, region, nation and the UK. Councils merged since 2016 add up their predecessors' votes. Northern Ireland was counted as one area. Gibraltar is left out (it isn't part of the UK).
+- **Constituency estimates:** Chris Hanretty's Leave estimates for the 2010–2024 seats, marked as estimated.
+
+**Local elections & councils.**
+- **Council tax, Band D:** nominal, real (CPIH, in the latest April's prices) and real change over 10 and 5 years. Northern Ireland: "not applicable" (it has domestic rates).
+- **Council make-up, 1973–2026:** seats by party, seat share for any party, majority, and fragmentation.
+
+**Representation.** Electorate as % of adults, for England and Wales by constituency. The card warns that this is not a measure of registration completeness.
+
+**Ideology.** Left–right centre of gravity, and polarisation (Dalton index), from the Chapel Hill Expert Survey. Each election uses the latest survey wave on or before it. The share of the vote covered by parties with a score is shown, and the value is missing when that share is under 75%.
+
+**Derived from what Atlas already had.**
+- **Party dominance:** share of days under the leading party.
+- **Longest continuous control.**
+- **Same party as government:** with coalitions counted, from a cited list in `government_coalitions.csv`.
+- **MPs:** years in the seat, MPs since 1997, and how often the seat changed hands.
+- **Protests:** trend, cause diversity, and protests by opposition parties and their allies.
+
+**Hex map.** Areas → Constituencies → **Hex map (equal area)**. One hexagon per seat, for the 2024 and 2010 seats, so big rural seats don't dominate. It uses the same colours, cards and clicks.
+
+The Political categories in the Perspectives dock are now: Government & control, Westminster elections, Local elections & councils, Referendums, Representation, Ideology, Protests (test case).
+
+### Sources
+
+| Metrics | Years | Levels | Source | Measured / estimated |
+|---|---|---|---|---|
+| Westminster results | 2010–2024, by-elections 2010– | constituency → UK | House of Commons Library, Election Results database (electionresults.parliament.uk) | measured |
+| Westminster results | 1997, 2001, 2005 | constituency → UK | House of Commons Library, briefing CBP-8647 (spreadsheet) | measured |
+| Changes across boundary reviews | 2005→2010, 2019→2024 | constituency | Library notional results (in the same database) | estimated |
+| EU referendum | 2016 | council → UK | Electoral Commission results by counting area; ONS Code History Database for merged councils | measured |
+| EU referendum by constituency | 2016 | 2010-set constituencies (GB) | Chris Hanretty, revised estimates (Aug 2016) | estimated |
+| Party left–right positions | waves 1999–2024 | (used in ideology metrics) | Chapel Hill Expert Survey trend file 1999–2024 | expert survey |
+| Band D council tax | England, Wales 1993–; Scotland 2014– | council (and its wards) | MHCLG live table; Scottish Government; StatsWales | measured |
+| Inflation | 1988– | — | ONS CPIH (L522), April values | measured |
+| Council composition | 1973–2026 (Scotland, Wales 1995–) | council (and its wards) | Open Council Data UK (CC BY-SA 4.0) | measured |
+| Electorate as % of adults | Dec 2025 / mid-2024 | 2024 constituencies (England, Wales) | ONS electoral statistics; ONS small-area population estimates (Nomis) | measured |
+| Coalitions | 1999– | — | `pipeline/sources/government_coalitions.csv`, one cited row per coalition | compiled |
+| Hex maps | 2010 and 2024 seats | constituency | Open Innovations HexJSON (MIT) | layout |
+
+Every downloaded file is listed, with its URL, licence, date and SHA-256, in `pipeline/sources/MANIFEST.csv`. The validation report is `pipeline/reports/validation_politics.md`.
+
+### Known gaps
+
+- **Not added (sources blocked or not yet done):**
+  - the Scottish independence referendum: the official per-council results sit behind browser checks
+  - devolved, mayoral and London elections
+  - ward-level local election results, and so local vote share, local turnout and the turnout gap
+  - combined authority boundaries and mayors
+  - Northern Ireland council make-up: the free file folds all NI parties into "other"
+- **By-elections before 2010** aren't in the data, though seat holders between elections still come from the Members API history.
+- **1997–2005:** the Library's file lists only the main parties; the rest are one "Other" group. The sheet's notes name the winners from that group (the Speaker, Martin Bell, Richard Taylor, George Galloway, Peter Law).
+- **No comparisons across the 1997 and 2005 boundary changes** (no notional results): swing, volatility and turnout change are missing for 1997, and for Scotland's seats in 2005.
+- **Ideology** is missing for Northern Ireland (its parties aren't in CHES), for 1997 (no earlier wave), and wherever parties with a score won under 75% of the vote.
+- **Two 2016 by-elections** (Sheffield Brightside and Hillsborough; Sleaford and North Hykeham): in the Library's database, the candidates' votes don't add up to its own valid-vote count. Both numbers are kept as published.
+
 
 Atlas 1.6 is about the data: what you can do with it, where you can put it, and how much of the map stays in view while you work. Built on 1.5 (Ruben's 0.3.3 merged with Mo's 1.4). Earlier versions stay unchanged in their own folders.
 
-## New on this branch: health, housing and government debt
 
-**Health** is now a working perspective, **Housing** sits under Markets and **Government debt** under Economic: 87 new metrics in all. Where each one has data:
-
-| Group | Metrics | Wards | Constituencies | Councils | Regions, nations |
-|---|---|---|---|---|---|
-| Health · Census 2021 | good / bad health, disability, day-to-day limits, unpaid carers | England & Wales | England & Wales | England & Wales | yes |
-| Health · Life expectancy, Deaths, Weight & lifestyle, Conditions, Environment | 33 indicators, most yearly since 2001–2010 | child obesity only (3-year) | — | England | England |
-| Markets · House prices | average price by type, first-time buyers, change, sales (UK HPI, 1995–2026); median price and affordability ratios (ONS, 1997–2025) | median price (1995–2022) | — | whole UK (HPI) | yes |
-| Markets · Rents | average rent, 1–3 bedrooms, change (2015–2026) | — | — | whole UK | yes |
-| Markets · Homes, Housing need | dwellings, empty homes, temporary accommodation, homelessness duties, fuel poverty | — | — | England | England |
-| Markets · Census 2021: homes | tenure, house type, overcrowding, bedrooms, heating, households, household size | England & Wales | England & Wales | England & Wales | yes |
-| Economic · Government debt | national debt (£, % of GDP, per person, 1975–2026); council borrowing, borrowing and debt need per resident, investments (2019–2025) | — | — | England | UK; England and regions (council borrowing) |
-
-- Census figures are added up from 188,880 output areas into Atlas's own wards (7,563 of 7,579 in England and Wales) and 2024 constituencies, so they line up exactly with the map.
-- Ward median prices are for 2021–22 wards. 3,910 wards match exactly; 1,305 redrawn wards use the old ward that covers most of them.
-- Council borrowing per resident includes a population share of the county council's borrowing in two-tier areas. Fire, police, combined authorities and the GLA (Greater London Authority) are not included.
-- Scotland and Northern Ireland have house prices and rents but not the Census or the health indicators (they run their own; not loaded yet).
-- Metrics with nothing for the boundaries on the map are greyed out in the Perspectives menu, as before.
-
-Rebuild with `python3 pipeline/fetch_extra.py` then `python3 pipeline/build_extra.py` (needs `pip install python-calamine`). Downloads go to `pipeline/sources/extra_raw/`, which isn't committed.
-
-## What's new in 1.6
 
 **Analyse relationships (ATLAS menu → Analyse relationships…).** Compares metrics without picking places. Tick metrics on the left, choose the level (councils, constituencies…), and choose **Within**: the whole UK, one nation or region, or your selection. You can also switch to **Over time** for one place. The methods offered depend on how many metrics are ticked:
 
@@ -337,7 +391,25 @@ python3 pipeline/build_constituencies.py   # data/constituencies*.js: 2024 seats
 python3 pipeline/fetch_extra.py           # health, housing and debt sources -> pipeline/sources/extra_raw/ (about 120 MB, not committed)
 python3 pipeline/build_extra.py           # data/extra.js and data/extra_wards.js (needs: pip install python-calamine)
 python3 pipeline/convert_old_constituencies.py <unzipped folder>   # one-off: ONS 2001/2005 shapefiles -> geometry/constituencies_1997.geojson (needs pyshp, pyproj)
+
+# 1.7: elections, referendums, council tax, councils, representation, ideology, hex maps
+python3 pipeline/fetch_elections.py        # Library election database; checks the CBP-8647 spreadsheet (download it in a browser: the Library blocks scripts)
+python3 pipeline/fetch_politics17.py       # EU referendum, ONS code history, Hanretty, CHES, hex maps, Band D (3 nations), CPIH, Open Council Data, ONS electorate, Nomis
+python3 pipeline/build_politics.py         # adds government_coalitions.csv to data/politics.js
+python3 pipeline/clean_elections.py        # -> sources/westminster_results.csv (fails if any seat doesn't join)
+python3 pipeline/clean_referendums.py      # -> sources/referendum_eu2016.csv, referendum_eu2016_pcon2010.csv
+python3 pipeline/clean_ches.py             # -> sources/ches_uk_lrgen.csv
+python3 pipeline/build_elections.py        # -> data/elections.js
+python3 pipeline/clean_counciltax.py       # -> sources/council_tax_band_d.csv, cpih_april.csv
+python3 pipeline/clean_councils.py         # -> sources/council_composition.csv
+python3 pipeline/clean_representation.py   # -> sources/registration_pcon2024.csv
+python3 pipeline/build_local.py            # -> data/local.js
+python3 pipeline/build_hexmap.py           # -> data/hex_constituencies.js
+python3 pipeline/validate_politics.py      # -> pipeline/reports/validation_politics.md
+python3 pipeline/manifest.py               # re-hash every downloaded file against MANIFEST.csv
 ```
+
+Large downloads go in `pipeline/sources/raw/`, which git ignores; the fetch scripts get them again. The coverage table in the validation report comes from the app itself: open `index.html?debug` and paste `pipeline/coverage_snippet.js` into the browser console.
 
 The constituency sources are in `pipeline/geometry/constituencies.geojson` (ONS Open Geography Portal, PCON July 2024 BGC), `pipeline/sources/constituency_mps.csv` and `pipeline/sources/constituency_population_mid2024.csv`.
 
@@ -345,6 +417,7 @@ The constituency sources are in `pipeline/geometry/constituencies.geojson` (ONS 
 
 ```
 index.html, app.js, config.js   the page, its behaviour and settings
+psephology.js                    election calculations as a plug-in (1.7): ENP, Pedersen, Butler, Steed, Gallagher, wasted votes, Dalton
 charts.js                        charts and story views (Mo's 1.4); interactive tooltips, scatter, histogram, heat map, effect and profile charts (1.6)
 stats.js                         statistics for Analyse (1.6): correlations with p-values, regression, partial correlation, PCA, k-means, Moran's I, lags
 engine.js                        decides calculations and visual encodings for each kind of data

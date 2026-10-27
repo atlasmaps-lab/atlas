@@ -3,7 +3,8 @@
  * Every metric declares what kind of data it is:
  *   scale     nominal (categories) | ordinal (ordered categories) | interval | ratio (true zero)
  *   nature    category | count | amount | rate | share | duration | change | event | text
- *   temporal  state (holds until it changes) | annual (one value per year) | event (dated happenings) | static
+ *   temporal  state (holds until it changes) | annual (one value per year) | event (dated happenings) | static |
+ *             election (a result holds from its polling day until the next election or by-election in that area)
  *   mid       a meaningful midpoint (e.g. 0 for growth), which makes the scale diverging
  *   weight    the metric to weight by when combining areas (e.g. population for a per-head rate)
  * From that, the engine answers:
@@ -197,6 +198,7 @@
     switch (m.temporal) {
       case "state": return [{ op: "at", label: "Value on the date" }, { op: "since", label: "Time since it last changed" }, { op: "changes", label: "Number of changes in a window" }];
       case "annual": return [{ op: "at", label: "Value in that year" }, { op: "change", label: "Change over N years" }, { op: "growth", label: "Growth (% per year)" }];
+      case "election": return [{ op: "at", label: "Latest election on or before the date" }, { op: "change", label: "Change since the previous election" }];
       case "event": return [{ op: "window", label: "Events in a window before the date" }, { op: "cumulative", label: "All events up to the date" }, { op: "rate", label: "Events per 100,000 people" }];
       default: return [{ op: "at", label: "Single snapshot (no history loaded)" }];
     }
