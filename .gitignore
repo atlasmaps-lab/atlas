@@ -9,3 +9,6 @@ config.local.js
 pipeline/sources/markets_ftse100.full.json
 
 pipeline/sources/extra_raw/
+
+# raw source downloads (rebuild with the fetch scripts; see pipeline/sources/MANIFEST.csv)
+pipeline/sources/raw/

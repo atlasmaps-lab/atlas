@@ -16,7 +16,7 @@
   "use strict";
   const C = window.ATLAS_CONFIG || {};
   const OS = window.ATLAS_OS, U = window.ATLAS_UK, G = window.ATLAS_UK_GEO, P = U.places, INFO = U.info, SRCS = U.sources;
-  const MK = window.ATLAS_MARKETS || null, CH = window.AtlasCharts;
+  const MK = window.ATLAS_MARKETS || null, CH = window.AtlasCharts, WM = window.AtlasWM;
   const POL = window.ATLAS_POL, SER = window.ATLAS_SERIES, PR = window.ATLAS_PROTESTS || { events: [], sites: [], causes: [] }, EN = window.AtlasEngine, XL = window.AtlasXLSX;
   // Westminster constituencies (0.3.1): their own boundary set, merged into the same places / info tables
   const PCON = window.ATLAS_PCON;
@@ -327,17 +327,18 @@
       const same = gp.parties.includes(ctl);
       return { v: same ? "same" : "differ", text: `${partyName(ctl)}: ${same ? "in" : "not in"} the ${govCode === UKC ? "UK Government" : gp.g.title.replace(/^First Minister/, "devolved government")}${gp.parties.length > 1 ? ` (${gp.label})` : ""}`, note: ukNote };
     } });
-  def({ id: "mp_tenure", p: "political", group: G31, label: "MP's years in the seat", scale: "ratio", nature: "duration", temporal: "state", levels: ["constituency"], breaks: [2, 5, 10, 20],
+  const MP_SPAN = () => [Object.values(SPANS).reduce((a, L) => L.length && L[0][0] < a ? L[0][0] : a, TODAY), TODAY];   // MPs: from the first recorded seat (1997)
+  def({ id: "mp_tenure", p: "political", group: G31, span: () => MP_SPAN(), label: "MP's years in the seat", scale: "ratio", nature: "duration", temporal: "state", levels: ["constituency"], breaks: [2, 5, 10, 20],
     how: "Years since the current MP first won this seat, counting continuous service in this seat only", desc: "How long the sitting MP has held the seat", fmt: v => v.toFixed(1) + " years", source: "UK Parliament Members API (spans in constituencies.js)",
     get(code, d) { const L = (SPANS[code] || []).filter(x => x[0] <= d); const cur = spanAt(code, d); if (!cur) return null; let s = cur[0];
       for (let i = L.length - 1; i >= 0; i--) { const x = L[i]; if (x[3] === cur[3] && (x[1] === s || x[0] === s)) s = x[0]; }
       const v = yearsBetween(s, d); return { v, text: `${this.fmt(v)} (${cur[3]}, since ${s.slice(0, 4)})` }; } });
-  def({ id: "mp_count", p: "political", group: G31, label: "MPs since 1997", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [2, 3, 4, 5],
+  def({ id: "mp_count", p: "political", group: G31, span: () => MP_SPAN(), label: "MPs since 1997", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [2, 3, 4, 5],
     how: "Distinct MPs for this seat from its first result (1997 at the earliest) to the date, within this boundary set only", desc: "How many different MPs the seat has had", fmt: v => fmtInt(v) + (v === 1 ? " MP" : " MPs"),
     get(code, d) { const L = (SPANS[code] || []).filter(x => x[0] <= d); if (!L.length) return null; const mps = new Set(L.map(x => x[3]));
       const by = (RES[code] || []).filter(x => ELX[x[0]].kind === "by" && ELX[x[0]].day <= d).length, defect = L.filter((x, i) => i && x[3] === L[i - 1][3] && x[2] !== L[i - 1][2]).length;
       return { v: mps.size, text: this.fmt(mps.size), note: `${by} by-election${by === 1 ? "" : "s"}, ${defect} defection${defect === 1 ? "" : "s"} · counted within this boundary set` }; } });
-  def({ id: "seat_flips", p: "political", group: G31, label: "Seat changed hands", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [1, 2, 3, 4],
+  def({ id: "seat_flips", p: "political", group: G31, span: () => MP_SPAN(), label: "Seat changed hands", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [1, 2, 3, 4],
     how: "Number of times the seat's party changed, at elections, by-elections or by defection, from its first result to the date", desc: "How often the seat has changed party", fmt: v => fmtInt(v) + (v === 1 ? " change" : " changes"),
     get(code, d) { const L = ownSpans(code).filter(x => x[0] <= d); if (!L.length) return null; let n = 0, def_ = 0; const raw = (SPANS[code] || []).filter(x => x[0] <= d);
       for (let i = 1; i < L.length; i++) if (L[i][2] !== L[i - 1][2]) n++;
@@ -510,7 +511,7 @@
     how: "Valid votes ÷ electorate (the Electoral Commission's own turnout also counts rejected ballots)", desc: "Share of the electorate who cast a valid vote in 2016",
     get(code, d) { const w = refWhen(d); if (w) return w; const r = euAt(code); if (!r || !r.electorate) return null; const v = 100 * r.valid / r.electorate;
       return { v, text: `${pct1(v)} (${fmtInt(r.valid)} of ${fmtInt(r.electorate)})`, yr: "2016 EU referendum", note: r.note || "" }; } });
-  def({ id: "eu_leave_est_pcon", p: "political", group: G5, label: "EU referendum: Leave (constituency estimate)", scale: "interval", nature: "share", temporal: "election", mid: 50, fmt: pct1, levels: ["constituency"],
+  def({ id: "eu_leave_est_pcon", p: "political", group: G5, span: () => [EU_DAY, TODAY], label: "EU referendum: Leave (constituency estimate)", scale: "interval", nature: "share", temporal: "election", mid: 50, fmt: pct1, levels: ["constituency"],
     nmText: { council: "Councils have counted results: see EU referendum: Leave", ward: NM_TEXT, region: NM_TEXT, nation: NM_TEXT, country: NM_TEXT }, source: EL && EL.sources.eu_pcon,
     how: "Chris Hanretty's estimates (2016): a model of council results by demographics, projected onto constituencies; where the BBC obtained ward counts, the known result. Great Britain, 2010 boundaries only",
     desc: "Estimated Leave share in each Westminster seat (results were counted by council, not by constituency)",
@@ -628,7 +629,7 @@
   def({ id: "gdp_growth", p: "economic", label: "Real GDP growth", scale: "interval", nature: "change", temporal: "annual", mid: 0, fmt: fmtPct, desc: "Change in GDP after inflation, on the year before",
     get(code, d) { const a = serAt("gdp_real", code, d); if (!a) return null; const b = serAt("gdp_real", code, (a.yr - 1) + "-07-01"); if (!b || b.yr !== a.yr - 1) return null; const v = (a.v / b.v - 1) * 100; return { v, text: this.fmt(v), yr: a.yr + (a.latest ? ", latest" : "") }; } });
   serMetric("population", "population", { p: "social", label: "Population", scale: "ratio", nature: "count", fmt: fmtInt, desc: "Mid-year estimate" });
-  def({ id: "density", p: "social", label: "Population density", scale: "ratio", nature: "rate", temporal: "annual", fmt: v => fmtInt(v) + " per km²", desc: "People per square kilometre",
+  def({ id: "density", span: () => metricSpan(M.population), p: "social", label: "Population density", scale: "ratio", nature: "rate", temporal: "annual", fmt: v => fmtInt(v) + " per km²", desc: "People per square kilometre",
     get(code, d) { const a = (INFO[code] || {}).area; const p = popAt(code, d); if (!a || !a[0] || !p) return null; const v = p / a[0]; return { v, text: this.fmt(v) }; } });
   def({ id: "pop_change", p: "social", label: "Population change (10 years)", scale: "interval", nature: "change", temporal: "annual", mid: 0, fmt: fmtPct, desc: "Growth over the 10 years to the date",
     get(code, d) { const a = serAt("population", code, d); if (!a) return null; const b = serAt("population", code, (a.yr - 10) + "-07-01"); if (!b || b.yr !== a.yr - 10) return null; const v = (a.v / b.v - 1) * 100; return { v, text: this.fmt(v), yr: `${b.yr}–${a.yr}` }; } });
@@ -716,7 +717,10 @@
   const map = new maplibregl.Map({ container: "map", style: key ? osStyle(key) : plainStyle(), center: HOME, zoom: HOME_Z, minZoom: C.minZoom || 4.6, maxZoom: 17,
     dragRotate: false, pitchWithRotate: false, attributionControl: false, preserveDrawingBuffer: true });
   window.atlasMap = map;
-  if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { M, P, METRICS, resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint() };   // for checks only (index.html?debug)
+  if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { M, P, METRICS, resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint(),   // for checks only (index.html?debug)
+    get TB() { return TB; }, setDate: d => setDate(d), metricSpan: id => metricSpan(M[id]), openCmp: () => openCmp(), openAnalyse: o => openAnalyse(o), openChart: o => openChart(o),
+    select: codes => codes.forEach(c => P[c] && addCompare({ code: c, level: P[c].level })),
+    mapOnly: ids => { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); } };
   map.boxZoom.disable(); map.touchZoomRotate.disableRotation();
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
   map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
@@ -1067,13 +1071,13 @@
     LAST.present[level] = present; LAST.presentB[level] = presentB;
   }
   function repaint() {
-    curPlan = EN.plan(planMetrics(), PS.prefs);
+    curPlan = EN.plan(planMetrics(), PS.prefs); syncRange();
     if (state.iso && state.iso.ch !== "nd" && !curPlan[state.iso.ch === "vbl" ? "hue" : state.iso.ch]) state.iso = null;
     if (map.getSource && map.getSource("councils")) { LEVELS.forEach(paintLevel); syncProtestLayer(); syncCompanyLayer(); }
     renderLegend(); renderDock(); renderSup(); renderTNote(); syncFocusColour();
     if (pmOpen) renderPMenu();
     if (state.focus) { renderMind(); refreshPinned(); }
-    renderTray(); if (!$("cmp").hidden) renderCmp();
+    renderTray(); if (!$("cmp").hidden) renderCmp(); if (!cpanel.hidden && CHART.drawn) renderChartBody();
     refreshGroupCards(); savePS();
   }
 
@@ -1311,10 +1315,48 @@
   const state = { sel: [], level: "nation", pinned: null, focus: null, editing: false, date: TODAY, playing: null, iso: null, tool: null };
   const slider = $("slider"), dateIn = $("date");
   slider.min = monthIdx(START); slider.max = monthIdx(TODAY); slider.step = 1;
+  // 1.8: the bar runs from the earliest to the latest date with data for what's on the map (the union across the metrics).
+  // "Full range" shows 1974 to today anyway, with the years outside the data hatched.
+  const TB = { lo: START, hi: TODAY, has: false, full: !!store.get("atlas-18-tb-full", false) };
+  const viewLo = () => TB.full ? START : TB.lo, viewHi = () => TB.full ? TODAY : TB.hi;
+  const EVENT_SPAN = PR.events.length ? [fromDay(Math.min(...PR.events.map(e => e.t0))), fromDay(Math.min(dayNum(TODAY), Math.max(...PR.events.map(e => e.end))))] : null;
+  const spanCache = {};
+  function metricSpan(m) { // [first, last] date with any value, over every boundary set where the metric means something; null = no dates (static)
+    if (m.temporal === "static" || m.nature === "text") return null;
+    if (m.temporal === "event") return EVENT_SPAN;
+    if (m.span) return typeof m.span === "function" ? m.span() : m.span;   // metrics on older constituencies, whose boundaries load only when needed
+    const key = m.id + "|" + (m.pick ? pickOf(m.id) : ""); if (key in spanCache) return spanCache[key];
+    const codes = [UKC]; (m.levels || LEVELS).forEach(l => { const cs = allLevelCodes(l), step = Math.max(1, Math.floor(cs.length / 40)); cs.forEach((c, i) => { if (i % step === 0) codes.push(c); }); });
+    const annual = m.temporal === "annual", y0 = +START.slice(0, 4), y1 = +TODAY.slice(0, 4);
+    const ok = (c, d, y) => { try { const r = m.get(c, d); return !!(r && r.v != null && !r.nm && (!annual || !r.yr || (String(r.yr).match(/\d{4}/g) || []).includes(String(y)))); } catch (e) { return false; } };
+    const has = (d, y) => codes.some(c => ok(c, d, y));
+    let lo = null, hi = null;
+    for (let y = y0; y <= y1 && !lo; y++) if (has(annual ? y + "-07-01" : (y === y1 ? TODAY : y + "-12-31"), y)) {
+      if (annual) lo = y + "-01-01";
+      else { for (let mo = 1; mo <= 12 && !lo; mo++) { const d = y + "-" + pad(mo) + "-28"; if (d > TODAY || has(d, y)) lo = y + "-" + pad(mo) + "-01"; } }
+    }
+    if (lo && annual) { for (let y = y1; y >= +lo.slice(0, 4) && !hi; y--) if (has(y === y1 ? TODAY : y + "-07-01", y)) hi = y === y1 ? TODAY : y + "-12-31"; }
+    else if (lo) hi = TODAY;
+    return (spanCache[key] = lo ? [lo < START ? START : lo, hi || TODAY] : null);
+  }
+  const allLevelCodes = l => Object.keys(P).filter(c => P[c].level === l);
+  function syncRange(quiet) { // the bar follows the metrics on the map; a date outside the new range moves to its nearest end
+    const spans = planMetrics().map(metricSpan).filter(Boolean);
+    TB.has = spans.length > 0;
+    TB.lo = TB.has ? spans.reduce((a, s) => s[0] < a ? s[0] : a, TODAY) : START;
+    TB.hi = TB.has ? spans.reduce((a, s) => s[1] > a ? s[1] : a, START) : TODAY;
+    slider.min = monthIdx(viewLo()); slider.max = monthIdx(viewHi());
+    const d = state.date, nd = d < viewLo() ? viewLo() : d > viewHi() ? viewHi() : d;
+    if (nd !== d) {
+      state.date = nd; dateIn.value = dmy(nd); syncPcon();
+      if (!quiet) toast(`The date moved to ${longDate(nd)}: what's on the map has data from ${shortDate(TB.lo)} to ${TB.hi >= TODAY ? "today" : shortDate(TB.hi)}.`);
+    }
+    slider.value = monthIdx(state.date); renderMarks();
+  }
   function setDate(d, opts) {
-    d = d < START ? START : d > TODAY ? TODAY : d;
+    d = d < viewLo() ? viewLo() : d > viewHi() ? viewHi() : d;
     if (d === state.date && !(opts && opts.force)) return;
-    state.date = d; slider.value = monthIdx(d); dateIn.value = dmy(d); dateIn.classList.remove("bad"); syncPcon();
+    state.date = d; slider.value = monthIdx(d); dateIn.value = dmy(d); dateIn.classList.remove("bad"); syncPcon(); placeCur();
     LEVELS.forEach(paintLevel); syncProtestLayer(); renderLegend(); renderTNote(); syncFocusColour();
     if (state.focus) { renderMind(); refreshPinned(); if (!hist.hidden) renderHist(); }
     else if (hovCode && !card.hidden) showHover(hovCode, lastPt || { x: 0, y: 0 });
@@ -1322,27 +1364,52 @@
     if (!cpanel.hidden && CHART.drawn) renderChartBody();
     renderTray(); if (!$("cmp").hidden) renderCmp(); refreshGroupCards();
   }
-  slider.addEventListener("input", () => { let d = +slider.value >= +slider.max ? TODAY : fromMonthIdx(+slider.value); if (PS.step > 1 && d !== TODAY) d = Math.round(+d.slice(0, 4) / PS.step) * PS.step + "-07-01"; setDate(d); });
+  slider.addEventListener("input", () => { let d = +slider.value >= +slider.max ? viewHi() : +slider.value <= +slider.min ? viewLo() : fromMonthIdx(+slider.value); if (PS.step > 1 && d !== viewHi() && d !== viewLo()) d = Math.round(+d.slice(0, 4) / PS.step) * PS.step + "-07-01"; setDate(d); });
   dateIn.addEventListener("keydown", e => { if (e.key === "Enter") { const d = parseDMY(dateIn.value); if (d) { setDate(d); dateIn.blur(); } else { dateIn.classList.add("bad"); toast("Type the date as dd/mm/yy, e.g. 07/05/15"); } } });
   dateIn.addEventListener("blur", () => { if (!parseDMY(dateIn.value)) dateIn.value = dmy(state.date); });
-  $("now").addEventListener("click", () => { stopPlay(); setDate(TODAY); });
+  $("now").addEventListener("click", () => { stopPlay(); setDate(viewHi()); });
   const PLAY_ICON = '<svg class="ico" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>', PAUSE_ICON = '<svg class="ico" viewBox="0 0 24 24"><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z"/></svg>';
   const playBtn = $("play"); playBtn.innerHTML = PLAY_ICON;
   function stopPlay() { if (state.playing) { clearInterval(state.playing); state.playing = null; playBtn.innerHTML = PLAY_ICON; playBtn.setAttribute("aria-label", "Play through time"); } }
   playBtn.addEventListener("click", () => {
     if (state.playing) return stopPlay();
     if (!curPlan.notes.some(n => n.ch)) toast("Put a metric on the map to see changes play out.");
-    if (state.date >= TODAY) setDate(PS.step > 1 ? (Math.ceil(+START.slice(0, 4) / PS.step) * PS.step) + "-07-01" : START);
+    if (state.date >= viewHi()) setDate(PS.step > 1 ? (Math.ceil(+viewLo().slice(0, 4) / PS.step) * PS.step) + "-07-01" : viewLo());
     playBtn.innerHTML = PAUSE_ICON; playBtn.setAttribute("aria-label", "Pause");
-    state.playing = setInterval(() => { const n = addYears(state.date, PS.step); if (n >= TODAY) { setDate(TODAY); stopPlay(); } else setDate(n); }, PS.step === 1 ? 850 : 1300);
+    state.playing = setInterval(() => { const n = addYears(state.date, PS.step); if (n >= viewHi()) { setDate(viewHi()); stopPlay(); } else setDate(n); }, PS.step === 1 ? 850 : 1300);
   });
   $("steps").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; PS.step = +b.dataset.step; renderSteps(); savePS(); });
-  function renderSteps() {
-    document.querySelectorAll("#steps button").forEach(b => b.classList.toggle("on", +b.dataset.step === PS.step));
-    const lo = +slider.min, hi = +slider.max, y0 = +START.slice(0, 4), y1 = +TODAY.slice(0, 4), out = [];
-    for (let y = y0 + 1; y <= y1; y++) { const major = y % 10 === 0, minor = y % PS.step === 0; if (!major && !minor) continue; out.push(`<span class="${major ? "" : "minor"}" style="left:${((y * 12 - lo) / (hi - lo) * 100).toFixed(2)}%">${y}</span>`); }
-    $("marks").innerHTML = out.join("");
+  function renderSteps() { document.querySelectorAll("#steps button").forEach(b => b.classList.toggle("on", +b.dataset.step === PS.step)); renderMarks(); }
+  // Labels fit the bar's width: full dates → years → every 2nd, 5th or 10th year → only the start and end. The current date
+  // always shows in a label above the handle, and no label overlaps another or runs off the bar.
+  const tbCtx = document.createElement("canvas").getContext("2d");
+  const tbW = t => { tbCtx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace"; return Math.ceil(tbCtx.measureText(t).width) + 4; };
+  const monYr = s => new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  function renderMarks() {
+    const marks = $("marks"), W = marks.clientWidth; if (!W) return;
+    const a = monthIdx(viewLo()), b = monthIdx(viewHi()), span = Math.max(1, b - a), X = m => (m - a) / span * W, ppy = 12 * W / span;
+    const y0 = +viewLo().slice(0, 4), y1 = +viewHi().slice(0, 4), full = ppy >= 84;
+    const lab = d => full ? monYr(d) : d.slice(0, 4);
+    const placed = [], out = [], GAP = 8;
+    const put = (x, text, cls, anchor) => { const w = tbW(text), l = anchor === "l" ? 0 : anchor === "r" ? W - w : x - w / 2; if (l < 0 || l + w > W + 0.5) return false; if (placed.some(p => l < p[1] + GAP && l + w + GAP > p[0])) return false; placed.push([l, l + w]); out.push(`<span class="${cls}" style="left:${l.toFixed(1)}px;width:${w}px">${esc(text)}</span>`); return true; };
+    put(0, lab(viewLo()), "edge l", "l"); put(W, lab(viewHi()), "edge r", "r");
+    const step = full ? 1 : [1, 2, 5, 10, 20, 25, 50].find(s => s * ppy >= 40) || 0;
+    if (step) for (let y = Math.ceil((y0 + 1) / step) * step; y <= y1; y += step) { const m = y * 12; if (m <= a || m >= b) continue; put(X(m), full ? "Jan " + y : String(y), y % 10 === 0 || step >= 10 ? "" : "minor"); }
+    // years with no data for what's on the map (Full range only)
+    const nd = TB.full && TB.has ? [[START, TB.lo], [TB.hi, TODAY]].filter(([p, q]) => q > p && monthIdx(q) - monthIdx(p) >= 1).map(([p, q]) => { const l = X(monthIdx(p)), r = X(monthIdx(q)); return `<i class="tb-nd" style="left:${l.toFixed(1)}px;width:${Math.max(2, r - l).toFixed(1)}px" title="No data for what's on the map, ${p.slice(0, 4)}–${q.slice(0, 4)}">${r - l > 52 ? "no data" : ""}</i>`; }).join("") : "";
+    marks.innerHTML = nd + out.join("");
+    marks.dataset.tier = full ? "dates" : step === 1 ? "years" : step ? "every-" + step : "ends";
+    $("tb-full").classList.toggle("on", TB.full); $("tb-full").title = TB.full ? "Showing 1974 to today. Click to fit the bar to the data on the map" : `Show 1974 to today (the data on the map runs ${TB.lo.slice(0, 4)}–${TB.hi >= TODAY ? "today" : TB.hi.slice(0, 4)})`;
+    placeCur();
   }
+  function placeCur() { // the date above the handle (the thumb is 14 px wide)
+    const c = $("tcur"), tr = slider.getBoundingClientRect(); if (!c || !tr.width) return;
+    const lo = +slider.min, hi = +slider.max, f = hi > lo ? (monthIdx(state.date) - lo) / (hi - lo) : 1, x = 7 + clamp(f, 0, 1) * (tr.width - 14);
+    c.textContent = tr.width < 220 ? monYr(state.date) : longDate(state.date);
+    const w = c.offsetWidth; c.style.left = clamp(x - w / 2, 0, Math.max(0, tr.width - w)).toFixed(1) + "px";
+  }
+  $("tb-full").addEventListener("click", () => { TB.full = !TB.full; store.set("atlas-18-tb-full", TB.full); syncRange(); if (TB.full) toast("Full range: 1974 to today. Hatched years have no data for what's on the map."); });
+  if (window.ResizeObserver) new ResizeObserver(() => renderMarks()).observe($("marks"));
   function renderTNote() {
     const ms = curPlan.notes.filter(n => n.ch).map(n => M[n.id]), note = $("tnote"), bits = [];
     if (!isNow()) bits.push(`Showing ${longDate(state.date)}`);
@@ -1915,8 +1982,8 @@
   // ---------- comparison page ----------
   const cmpEl = $("cmp");
   const CMP = { metrics: new Set(METRICS.filter(m => DEF_PS.active[m.id] && m.nature !== "event").map(m => m.id)), x: null, y: null, q: "" };
-  function openCmp() { closeMenu(); closePMenu(); closeTools(); closeExport(); closeHist(); cmpEl.hidden = false; renderCmp(); }
-  function closeCmp() { if (cmpEl.hidden) return false; cmpEl.hidden = true; return true; }
+  function openCmp() { closeMenu(); closePMenu(); closeTools(); closeHist(); WM.open(cmpEl); renderCmp(); }
+  function closeCmp() { return WM.close(cmpEl); }
   function renderCmp() {
     const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id));
     const side = PERSPECTIVES.map(p => `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + (p.ready
@@ -1930,11 +1997,11 @@
     if (codes.length < 2) main += `<div class="empty-big">Pick at least two places to compare. Add them here, Shift-click them on the map, or hold the mouse still and drag a box over them.</div>`;
     else if (!ms.length) main += `<div class="empty-big">Tick the metrics you want to compare on the left. They can come from the same perspective or different ones.</div>`;
     else {
-      main += `<section><h3>Side by side${!isNow() ? " · as of " + esc(longDate(state.date)) : ""}</h3><div style="overflow:auto">${tableHTML(codes, ms, false)}</div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn" data-cexp>Export to Excel / CSV…</button><button class="btn" data-cws>Send table to workspace</button><button class="btn" data-ctile>Send places as a tile</button><button class="btn" data-can>Analyse these metrics…</button></div></section>`;
+      main += `<section><h3>Side by side${!isNow() ? " · as of " + esc(longDate(state.date)) : ""}</h3><div class="tscroll">${tableHTML(codes, ms, false)}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-cexp>Export to Excel / CSV…</button><button class="btn" data-cws>Send table to workspace</button><button class="btn" data-ctile>Send places as a tile</button><button class="btn" data-can>Analyse these metrics…</button></div></section>`;
       main += `<section><h3>Patterns between two metrics</h3>` + (usable.length < 2 ? `<div class="empty-big">Tick two or more metrics to look for a pattern between them.</div>` : patternHTML(codes, M[CMP.x], M[CMP.y], usable)) + `</section>`;
     }
     cmpEl.innerHTML = `<div class="cmp-page" role="dialog" aria-label="Compare"><div class="cmp-top"><div><h2>Compare</h2><p>Choose places and any metrics, from one perspective or several. Uses the date on the time bar.</p></div><button class="btn" data-close>Close</button></div><div class="cmp-side">${side}</div><div class="cmp-main">${main}</div></div>`;
-    addFctl(cmpEl, ".cmp-top");
+    addFctl(cmpEl);
     const q = $("cmp-q"); if (q && CMP.q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); showCmpHits(); }
   }
   const shortFmt = t => String(t).replace(/ years?$/, "").replace(/ changes?$/, "").replace(/ per km²$/, "").replace(/ protests?$/, "").replace(/ per 100k$/, "");
@@ -1974,7 +2041,7 @@
       pts.forEach(p => { t[p.x + "|" + p.y] = (t[p.x + "|" + p.y] || 0) + 1; });
       const mxn = Math.max(...Object.values(t)), v = EN.cramersV(pts.map(p => [p.x, p.y]));
       const A = ka.sort((a, b) => pts.filter(p => p.x === b).length - pts.filter(p => p.x === a).length).slice(0, 10), B = kb.sort((a, b) => pts.filter(p => p.y === b).length - pts.filter(p => p.y === a).length).slice(0, 8);
-      return `<div class="scatter-wrap"><div style="overflow:auto"><table class="cmp xt"><thead><tr><th>${esc(mx.label)} ↓ · ${esc(my.label)} →</th>${B.map(b => `<th><i class="sw" style="background:${my.colour(b)}"></i>${esc(my.catName(b))}</th>`).join("")}</tr></thead><tbody>
+      return `<div class="scatter-wrap"><div class="tscroll"><table class="cmp xt"><thead><tr><th>${esc(mx.label)} ↓ · ${esc(my.label)} →</th>${B.map(b => `<th><i class="sw" style="background:${my.colour(b)}"></i>${esc(my.catName(b))}</th>`).join("")}</tr></thead><tbody>
         ${A.map(a => `<tr><th><i class="sw" style="background:${mx.colour(a)}"></i>${esc(mx.catName(a))}</th>${B.map(b => { const n = t[a + "|" + b] || 0, bg = n ? mix("#ffffff", "#5b3a8c", 0.15 + 0.75 * n / mxn) : "transparent"; return `<td class="num" style="background:${bg};color:${n ? textOn(bg) : "var(--ink-3)"}">${n || "·"}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>
         <div class="scatter-ctrl">${ctrl}<div class="r">Cramér's V = ${v == null ? "—" : v.toFixed(2)}<br><span style="font-family:var(--f);color:var(--ink-2)">${esc(EN.strength(v))} across ${pts.length} areas</span></div><div style="font-size:11.5px;color:var(--ink-2)">Each cell counts areas with that pair. Dark cells away from the usual pattern are where to look.</div></div></div>`;
     }
@@ -1993,8 +2060,8 @@
     else if (b.dataset.none) { METRICS.filter(m => m.p === b.dataset.none).forEach(m => CMP.metrics.delete(m.id)); renderCmp(); }
     else if (b.hasAttribute("data-cws")) sendToWS({ type: "table", title: `Table: ${state.sel.length} places`, codes: state.sel.map(x => x.code), metrics: [...CMP.metrics] });
     else if (b.hasAttribute("data-ctile")) sendTile(state.sel.map(x => x.code));
-    else if (b.hasAttribute("data-can")) openAnalyse({ metrics: [...CMP.metrics] });
-    else if (b.hasAttribute("data-cexp")) openExport({ places: "sel", metrics: [...CMP.metrics] });
+    else if (b.hasAttribute("data-can")) openAnalyse({ metrics: [...CMP.metrics], from: cmpEl });
+    else if (b.hasAttribute("data-cexp")) openExport({ places: "sel", metrics: [...CMP.metrics], from: cmpEl });
   });
   $("open-cmp").addEventListener("click", openCmp);
 
@@ -2003,12 +2070,11 @@
   const EXP = { metrics: new Set(), places: "council", time: "date", from: 2010, to: +TODAY.slice(0, 4), fmt: "xlsx" };
   function openExport(o) {
     o = o || {}; closeMenu(); closePMenu(); closeTools(); closeHist();
-    EXP.back = closeCmp() ? "cmp" : null; // only one full page at a time: the comparison closes, with a way back
     EXP.metrics = new Set(o.metrics && o.metrics.length ? o.metrics : (curPlan.notes.filter(n => n.ch).map(n => n.id).concat(comparable().slice(0, 4).map(m => m.id))).slice(0, 8));
     if (o.places) EXP.places = o.places; else EXP.places = state.sel.length >= 2 ? "sel" : state.level;
-    expEl.hidden = false; renderExport();
+    WM.open(expEl, { parent: o.from }); renderExport();
   }
-  function closeExport() { if (expEl.hidden) return false; expEl.hidden = true; return true; }
+  function closeExport() { return WM.close(expEl); }
   function exportCodes() { if (EXP.places === "sel") return state.sel.map(s => s.code); if (EXP.places === "country") return [UKC]; return allCodesAt(EXP.places); }
   function exportRows() {
     const ms = METRICS.filter(m => EXP.metrics.has(m.id)), codes = exportCodes();
@@ -2022,9 +2088,9 @@
   function renderExport() {
     const groups = PERSPECTIVES.filter(p => p.ready).map(p => `<fieldset><legend style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</legend>${METRICS.filter(m => m.p === p.id).map(m => `<label><input type="checkbox" data-em="${m.id}" ${EXP.metrics.has(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("")}</fieldset>`).join("");
     const n = EXP.metrics.size, codes = exportCodes(), years = EXP.time === "date" ? 1 : Math.max(0, EXP.to - EXP.from + 1), rowsN = codes.length * years;
-    const preview = n >= 2 && codes.length ? (() => { const { rows } = exportRowsLimited(6); return `<div style="overflow:auto"><table class="cmp"><thead><tr>${rows[0].map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`; })() : "";
-    setTimeout(() => addFctl(expEl, ".cmp-top"), 0);
-    expEl.innerHTML = `<div class="cmp-page exp" role="dialog" aria-label="Export"><div class="cmp-top"><div><h2>Export a table</h2><p>Pick two or more metrics, the places and the dates. Opens in Excel, Numbers, Google Sheets or anything that reads CSV.</p></div><span style="display:flex;gap:6px">${EXP.back ? `<button class="btn" data-eback>← Back to comparison</button>` : ""}<button class="btn" data-close>Close</button></span></div>
+    const preview = n >= 2 && codes.length ? (() => { const { rows } = exportRowsLimited(6); return `<div class="tscroll"><table class="cmp"><thead><tr>${rows[0].map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`; })() : "";
+    setTimeout(() => addFctl(expEl), 0);
+    expEl.innerHTML = `<div class="cmp-page exp" role="dialog" aria-label="Export"><div class="cmp-top"><div><h2>Export a table</h2><p>Pick two or more metrics, the places and the dates. Opens in Excel, Numbers, Google Sheets or anything that reads CSV.</p></div><span style="display:flex;gap:6px"><button class="btn" data-close>Close</button></span></div>
       <div class="cmp-side exp-side">${groups}<div class="quick"><button class="btn" data-eall>All</button><button class="btn" data-enone>None</button></div></div>
       <div class="cmp-main"><section><h3>Places</h3><div class="seg wrap">${[["sel", `Selected (${state.sel.length})`], ["country", "United Kingdom"], ["nation", "All nations"], ["region", "All regions"], ["council", "All councils (361)"], ["constituency", "All constituencies (650)"], ["ward", "All wards (8,396)"]].map(([k, l]) => `<button data-ep="${k}" class="${EXP.places === k ? "on" : ""}" ${k === "sel" && !state.sel.length ? "disabled" : ""}>${l}</button>`).join("")}</div></section>
       <section><h3>Dates</h3><div class="seg wrap"><button data-et="date" class="${EXP.time === "date" ? "on" : ""}">On ${esc(longDate(state.date))}</button><button data-et="years" class="${EXP.time === "years" ? "on" : ""}">Every year</button></div>
@@ -2060,7 +2126,6 @@
     if (e.target === expEl) return closeExport();
     const b = e.target.closest("button"); if (!b) return;
     if (b.hasAttribute("data-close")) closeExport();
-    else if (b.hasAttribute("data-eback")) openCmp();
     else if (b.dataset.ep) { EXP.places = b.dataset.ep; renderExport(); } else if (b.dataset.et) { EXP.time = b.dataset.et; renderExport(); } else if (b.dataset.ef) { EXP.fmt = b.dataset.ef; renderExport(); }
     else if (b.hasAttribute("data-eall")) { METRICS.filter(m => PER[m.p].ready).forEach(m => EXP.metrics.add(m.id)); renderExport(); } else if (b.hasAttribute("data-enone")) { EXP.metrics.clear(); renderExport(); }
     else if (b.hasAttribute("data-edl")) doExport(); else if (b.hasAttribute("data-eprot")) exportProtests();
@@ -2232,7 +2297,7 @@
     CHART.rebase = CHART.companies.length > 1; CHART.index = false;
     CHART.from = spanFor(CHART.metrics.map(mOf)); CHART.to = +TODAY.slice(0, 4);
     CHART.style = o.style || null; CHART.drawn = !!o.style;
-    cpanel.hidden = false; bubble.classList.remove("nudge"); bubble.classList.add("open"); document.body.classList.add("charting"); renderChartPanel();
+    WM.open(cpanel, { parent: o.from }); bubble.classList.remove("nudge"); bubble.classList.add("open"); document.body.classList.add("charting"); renderChartPanel();
   }
   const mOf = id => id === "__price" ? PRICE : M[id];
   function chartStylesFor(spec) { const ms = spec.metrics.map(mOf); return EN.chartStyles(ms, spec.companies.length || spec.places.length); }
@@ -2316,9 +2381,9 @@
       <div class="cp-what">${whatHTML(spec, "c")}</div><div class="cp-styles">${stylesHTML(spec, CHART.drawn, "c")}</div><div class="cp-body" id="cp-body"></div>
       ${CHART.drawn ? `<div class="cp-foot"><button class="btn" data-ccsv>Copy data (CSV)</button><span class="tip">Pie, ranked and story views use the date on the time bar.</span></div>` : ""}`;
     if (CHART.drawn) renderChartBody();
-    addFctl(cpanel, ".cp-head");
+    addFctl(cpanel);
   }
-  function renderChartBody() { const b = $("cp-body"); if (!b) return; if (!CHART.style) CHART.style = chartStylesFor(specNow()).best; b.innerHTML = drawChart(specNow(), Math.max(360, cpanel.offsetWidth - 30)); }
+  function renderChartBody() { const b = $("cp-body"); if (!b) return; if (!CHART.style) CHART.style = chartStylesFor(specNow()).best; b.innerHTML = drawChart(specNow(), Math.max(280, cpanel.offsetWidth - 30)); }
   function editSpec(target, ds, el) { // shared by the panel (target = CHART) and tabs
     if (ds.rmm) { target.metrics = target.metrics.filter(x => x !== ds.rmm); target.from = Math.max(target.from, spanFor(target.metrics.map(mOf))); }
     else if (ds.rmp) target.places = target.places.filter(x => x !== ds.rmp);
@@ -2350,7 +2415,7 @@
     return true;
   }
   cpanel.addEventListener("change", e => { if (specInput(CHART, e.target)) renderChartPanel(); });
-  function closeChart() { cpanel.hidden = true; bubble.classList.remove("open"); document.body.classList.remove("charting"); }
+  function closeChart() { const was = WM.close(cpanel); bubble.classList.remove("open"); document.body.classList.remove("charting"); return was; }
   bubble.addEventListener("click", () => { if (!cpanel.hidden) return closeChart(); openChart(); });
   // tabs: the map is always the first tab; any chart can open full screen in its own tab
   const TABS = [{ id: "map", label: "Map" }, { id: "ws", label: "Workspace" }]; let activeTab = "map", tabSeq = 0;
@@ -2417,33 +2482,8 @@
   map.on("render", placeZoneLabels);
 
 
-  // ---------- floating windows: drag by the header, resize from the corner, expand or shrink ----------
-  // Used by the chart panel, the comparison page, the export page and the Analyse window, so the map stays usable behind them.
-  function floating(el, handleSel, key, def) {
-    el.classList.add("fwin");
-    const fit = p => ({ x: clamp(p.x, 4, innerWidth - 120), y: clamp(p.y, 50, innerHeight - 40), w: clamp(p.w, 300, innerWidth - 8), h: clamp(p.h, 120, innerHeight - 56) });
-    const st = fit(Object.assign({}, def(), store.get(key, {})));
-    const apply = () => { Object.assign(el.style, { left: st.x + "px", top: st.y + "px", width: st.w + "px", height: el.classList.contains("shrunk") ? "" : st.h + "px", right: "auto", bottom: "auto" }); };
-    apply();
-    el.addEventListener("pointerdown", e => {
-      const h = e.target.closest(handleSel); if (!h || e.button || e.target.closest("button,input,select,textarea,a,label,[contenteditable]")) return;
-      e.preventDefault(); const ox = e.clientX - st.x, oy = e.clientY - st.y; el.classList.add("dragging"); h.setPointerCapture(e.pointerId);
-      const mv = ev => { Object.assign(st, fit({ x: ev.clientX - ox, y: ev.clientY - oy, w: st.w, h: st.h })); apply(); };
-      const up = () => { h.removeEventListener("pointermove", mv); el.classList.remove("dragging"); store.set(key, st); };
-      h.addEventListener("pointermove", mv); h.addEventListener("pointerup", up, { once: true });
-    });
-    resizable(el, null, { minW: 300, minH: 140, done: () => { st.w = el.offsetWidth; st.h = el.offsetHeight; store.set(key, st); el.dispatchEvent(new Event("fwin-resized")); } });
-    if (window.ResizeObserver) new ResizeObserver(() => { if (el.hidden || el.classList.contains("shrunk") || el.classList.contains("maxed")) return; const w = el.offsetWidth, h = el.offsetHeight; if (Math.abs(w - st.w) > 2 || Math.abs(h - st.h) > 2) { st.w = w; st.h = h; store.set(key, st); clearTimeout(el._rt); el._rt = setTimeout(() => el.dispatchEvent(new Event("fwin-resized")), 250); } }).observe(el);
-    el.addEventListener("click", e => {
-      const b = e.target.closest("[data-fmax],[data-fshrink]"); if (!b) return;
-      if (b.hasAttribute("data-fmax")) { el.classList.remove("shrunk"); if (el.classList.toggle("maxed")) { el._prev = Object.assign({}, st); Object.assign(st, { x: 8, y: 54, w: innerWidth - 16, h: innerHeight - 62 }); } else if (el._prev) Object.assign(st, el._prev); apply(); el.dispatchEvent(new Event("fwin-resized")); }
-      else { el.classList.toggle("shrunk"); apply(); }
-    });
-    el.addEventListener("dblclick", e => { if (e.target.closest(handleSel) && !e.target.closest("button,input,select")) el.querySelector("[data-fmax]") && el.querySelector("[data-fmax]").click(); });
-    return st;
-  }
-  const FCTL = `<span class="fctl"><button type="button" data-fshrink title="Shrink to the title bar (click again to open)">–</button><button type="button" data-fmax title="Expand to fill the screen (click again to restore)">⤢</button></span>`;
-  function addFctl(el, handleSel) { const h = el.querySelector(handleSel); if (h && !h.querySelector(".fctl")) { const close = h.querySelector("[data-close],[data-cpx],[data-anx]"); if (close) close.insertAdjacentHTML("beforebegin", FCTL); else h.insertAdjacentHTML("beforeend", FCTL); } }
+  // ---------- floating windows (1.8): windows.js owns stacking, focus, size and position; this puts back the header buttons ----------
+  function addFctl(el) { WM.decorate(el); }
 
   // ---------- interactive tables: sort by any column, hover a row to find the place, click to focus it ----------
   document.addEventListener("click", e => {
@@ -2717,16 +2757,16 @@
         <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
         ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Show on map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy data (CSV)</button>` : ""}</div>` : ""}
       </div></div>`;
-    addFctl(anEl, ".an-head"); anEl._last = res;
+    addFctl(anEl); anEl._last = res;
   }
-  function openAnalyse(o) { closeMenu(); closePMenu(); if (o && o.metrics) AN.metrics = o.metrics.filter(id => M[id] && EN.isNum(M[id])); if (o && o.level) AN.level = o.level; anEl.hidden = false; renderAnalyse(); }
-  const sideWin = (max, share) => { const w = Math.round(Math.min(max, innerWidth - 40, Math.max(600, innerWidth * share))); return { x: Math.max(20, innerWidth - w - 66), y: 60, w, h: innerHeight - 96 }; };   // docked right, leaving the map on the left
-  floating(anEl, ".an-head", "atlas-16-an-pos", () => sideWin(1000, 0.66));
-  anEl.addEventListener("fwin-resized", renderAnalyse);
+  // o.from: the window it was opened from (e.g. Compare): Analyse opens above it, with a way back
+  function openAnalyse(o) { o = o || {}; closeMenu(); closePMenu(); if (o.metrics) AN.metrics = o.metrics.filter(id => M[id] && EN.isNum(M[id])); if (o.level) AN.level = o.level; WM.open(anEl, { parent: o.from }); renderAnalyse(); }
+  function closeAnalyse() { return WM.close(anEl); }
+  WM.register(anEl, { type: "analyse", title: "Analyse", handle: ".an-head", min: { w: 360, h: 260 }, onResize: renderAnalyse, close: closeAnalyse });
   anEl.addEventListener("click", e => {
     const a = e.target.closest("[data-go]"); if (a) { focus(a.dataset.go); return; }
     const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
-    if (b.hasAttribute("data-anx")) { anEl.hidden = true; return; }
+    if (b.hasAttribute("data-anx")) { closeAnalyse(); return; }
     if (ds.antrim) AN.trim = ds.antrim === "1"; else if (ds.anmode) AN.mode = ds.anmode; else if (ds.anmethod) AN.method = ds.anmethod; else if (ds.ancorr) AN.corr = ds.ancorr;
     else if (b.hasAttribute("data-anclear")) AN.metrics = [];
     else if (b.hasAttribute("data-anws")) { const cfg = Object.assign({}, AN, { date: state.date }); sendToWS({ type: "analysis", title: anEl._last.title, cfg }); return; }
@@ -2955,10 +2995,9 @@
     const lines = codes.slice(0, 6).map(c => `<li><b>${esc(nameOf(c))}</b>: ${ms.map(m => { const r = m.get(c, state.date); return `${esc(m.label)} ${esc(r ? r.text : "—")}`; }).join(" · ")}</li>`).join("");
     sendToWS({ type: "tile", title: codes.length <= 3 ? codes.map(nameOf).join(", ") : `${codes.length} places`, codes, fills, lines, w: 420, h: 420 });
   }
-  floating(cpanel, ".cp-head", "atlas-16-chart-pos", () => ({ x: innerWidth - 660, y: Math.max(60, innerHeight - 700), w: 640, h: Math.min(620, innerHeight - 140) }));
-  cpanel.addEventListener("fwin-resized", () => { if (CHART.drawn) renderChartBody(); });
-  floating(cmpEl, ".cmp-top", "atlas-16-cmp-pos", () => sideWin(980, 0.62));
-  floating(expEl, ".cmp-top", "atlas-16-exp-pos", () => sideWin(900, 0.6));
+  WM.register(cpanel, { type: "chart", title: "Chart", handle: ".cp-head", min: { w: 340, h: 240 }, onResize: () => { if (CHART.drawn) renderChartBody(); }, close: closeChart });
+  WM.register(cmpEl, { type: "compare", title: "Compare", handle: ".cmp-top", min: { w: 360, h: 260 }, close: closeCmp });
+  WM.register(expEl, { type: "export", title: "Export", handle: ".cmp-top", min: { w: 360, h: 260 }, close: closeExport });
   $("open-analyse").addEventListener("click", () => openAnalyse());
   ovEl.addEventListener("click", e => { const b = e.target.closest("[data-ov]"); ovEl.hidden = true; if (b) goTab(b.dataset.ov); });
 
@@ -2987,10 +3026,10 @@
     if (ecardPinned) { ecard.hidden = true; ecardPinned = false; return; }
     if (!ovEl.hidden) { ovEl.hidden = true; return; }
     if (activeTab !== "map" && activeTab !== "split" && VIEW.mode === "map") { activateTab("map"); return; }
-    if (!anEl.hidden) { anEl.hidden = true; return; }
-    if (!cpanel.hidden) { closeChart(); return; }
+    if (closePMenu() || closeBrowse() || closeMenu() || closeTools()) return;   // menus first: they sit above windows
+    if (WM.closeTop()) return;   // then the top window only (1.8)
     if (!notesEl.hidden) { notesEl.hidden = true; notesH.classList.remove("open"); return; }
-    if (closePMenu() || closeHist() || closeExport() || closeCmp() || closeBrowse() || closeMenu() || closeTools() || clearGroup()) return;
+    if (closeHist() || clearGroup()) return;
     if (state.iso) { state.iso = null; LEVELS.forEach(paintLevel); renderLegend(); return; }
     if (state.focus || state.pinned) { unfocus(); return; }
     if (anyMapped()) clearAllLayers();
@@ -3223,7 +3262,7 @@
   document.body.classList.toggle("hot", !!PS.hot); renderTabs();
   slider.value = monthIdx(state.date); dateIn.value = dmy(state.date);
   document.documentElement.dataset.mode = look.mode;
-  curPlan = EN.plan(planMetrics(), PS.prefs);
+  curPlan = EN.plan(planMetrics(), PS.prefs); syncRange(true);
   renderLegend(); renderTNote();
   document.documentElement.style.setProperty("--veil-a", (0.55 * TOOLS.soften).toFixed(3));
   document.documentElement.style.setProperty("--veil-blur", (3 * TOOLS.soften * TOOLS.soften * 1.6).toFixed(2) + "px");

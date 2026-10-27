@@ -609,7 +609,7 @@ table.cmp.sortable thead th { cursor: pointer; user-select: none; }
 table.cmp thead th[data-dir="asc"]::after { content: " ▲"; font-size: 9px; } table.cmp thead th[data-dir="desc"]::after { content: " ▼"; font-size: 9px; }
 table.cmp tbody tr[data-code]:hover th, table.cmp tbody tr[data-code]:hover td { box-shadow: inset 0 0 0 9999px rgba(59,120,181,.08); }
 /* floating windows */
-.fwin { position: absolute !important; resize: both; overflow: hidden; inset: auto; box-shadow: 0 12px 40px rgba(0,0,0,.22); border-radius: 10px; }
+.fwin { position: absolute !important; resize: none; overflow: hidden; box-sizing: border-box; inset: auto; box-shadow: 0 12px 40px rgba(0,0,0,.22); border-radius: 10px; }
 .fwin.dragging { opacity: .93; user-select: none; }
 .fwin.shrunk { resize: none; height: auto !important; }
 .fctl { display: inline-flex; gap: 2px; margin-left: 6px; }
@@ -692,7 +692,7 @@ svg.tile { width: 100%; height: auto; display: block; background: #f6f4ef; borde
 /* printing (PDF) */
 #print-area { display: none; }
 @media print { body.printing > *:not(#print-area) { display: none !important; } body.printing { overflow: visible; background: #fff; } body.printing #print-area { display: block; } .pitem { page-break-after: always; padding: 10mm; } .pitem h2 { font-size: 18pt; margin: 0 0 4pt; } .ptitle h1 { font-size: 30pt; margin-top: 60mm; } .pmeta { color: #777; font-size: 10pt; margin-bottom: 8pt; } .pitem .cp-styles, .pitem .fctl { display: none; } }
-@media (max-width: 1100px) { #timebar { width: calc(100% - 420px); min-width: 300px; } .steps { display: none; } }
+@media (max-width: 1100px) { #timebar { width: calc(100% - 420px); min-width: 320px; } }
 @media (max-width: 900px) { .search > input { width: 140px; } .tray { left: 120px; right: 12px; transform: none; width: auto; min-width: 0; } #timebar { left: 120px; right: 12px; transform: none; width: auto; min-width: 0; } #legend { width: 230px; } .cmp-page { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; } .cmp-side { max-height: 150px; border-right: 0; border-bottom: 1px solid var(--rule); } .scatter-wrap { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } }
 
@@ -744,6 +744,50 @@ sup.est { margin-left: 3px; }
 .lvhex { padding-left: 30px; font-size: 12px; } body.hexmode .maplibregl-canvas { background: #eef1f2; }
 .compbar { display: flex; height: 9px; border-radius: 3px; overflow: hidden; margin: 2px 0 2px; } .compbar i { display: block; height: 100%; }
 .sw.hatchsw { background: repeating-linear-gradient(135deg, rgba(26,34,38,.55) 0 1.5px, transparent 1.5px 5px), #eee; }
+
+/* 1.8: one window manager (windows.js). Windows stack from z-index 100; menus, the top bar, tooltips and toasts stay above them */
+#top { z-index: 700; } #menu, #tools, #tools-btn, #pmenu { z-index: 720; } #ach-tip { z-index: 3000 !important; } .toast { z-index: 2000; } #keybox { z-index: 2100; } #tab-overview { z-index: 1500; }
+#cmp.fwin, #export-dlg.fwin, #analyse.fwin, #chartp.fwin, .wmwin { container-type: inline-size; }
+.wm-top { box-shadow: 0 16px 48px rgba(0,0,0,.28); }
+.wm-pulse { animation: wmpulse .7s ease-out; }
+@keyframes wmpulse { 0% { box-shadow: 0 0 0 0 rgba(59,120,181,.75), 0 16px 48px rgba(0,0,0,.28); } 100% { box-shadow: 0 0 0 14px rgba(59,120,181,0), 0 16px 48px rgba(0,0,0,.28); } }
+.wm-back { border: 1px solid var(--rule); background: var(--chip, #f1eee6); color: var(--ink); border-radius: 12px; padding: 2px 9px; font-size: 11.5px; white-space: nowrap; cursor: pointer; }
+.wm-back:hover { border-color: var(--ink-3); }
+.fwin.maxed .rgrip { display: none; }
+.wmwin { background: var(--solid); border: 1px solid var(--rule); display: flex; flex-direction: column; }
+.wm-head { display: flex; gap: 8px; align-items: center; padding: 8px 10px 8px 12px; border-bottom: 1px solid var(--rule); cursor: grab; }
+.wm-head .wm-title { font-size: 13.5px; margin-right: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-head .x { border: 0; background: none; font-size: 18px; color: var(--ink-3); padding: 0 2px; }
+.wm-body { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px 14px; font-size: 12.5px; }
+.fwin.shrunk .wm-body { display: none; }
+/* content reflows with the window: narrow windows put their side column on top */
+@container (max-width: 760px) {
+  .cmp-page { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
+  .cmp-side { max-height: 150px; border-right: 0 !important; border-bottom: 1px solid var(--rule); }
+  .scatter-wrap { grid-template-columns: 1fr !important; }
+  .an-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .an-side { max-height: 190px; border-right: 0 !important; border-bottom: 1px solid var(--rule); }
+  .cmp-top p, .an-head .cp-sub { display: none; }
+}
+.tscroll { overflow: auto; max-height: min(58vh, 520px); border: 1px solid var(--rule); border-radius: 6px; }
+.tscroll table.cmp { min-width: 100%; }
+#chartp.fwin { overflow: hidden; } #chartp.fwin .cp-body { overflow: auto; }
+/* 1.8: time bar labels fit the width; the current date sits above the handle; the range follows the data */
+#timebar { container-type: inline-size; min-width: 320px; }
+.track { padding-top: 15px; min-width: 0; }
+.tcur { position: absolute; top: 0; left: 0; font: 600 10px var(--mono); color: var(--ink); white-space: nowrap; padding: 0 3px; border-radius: 3px; background: var(--panel); pointer-events: none; line-height: 14px; }
+.marks span { transform: none; text-align: center; white-space: nowrap; }
+.marks span.edge { color: var(--ink-2); }
+.marks span.edge.l::before { left: 0; } .marks span.edge.r::before { left: auto; right: 0; }
+.marks span.minor { color: var(--ink-3); opacity: .8; }
+.marks .tb-nd { position: absolute; top: -17px; height: 28px; background: repeating-linear-gradient(135deg, rgba(26,34,38,.22) 0 1.5px, transparent 1.5px 5px); font: 9px var(--mono); color: var(--ink-2); display: flex; align-items: flex-end; justify-content: center; pointer-events: none; border-radius: 2px; }
+.tb-full { border: 1px solid var(--rule); background: var(--solid); border-radius: 5px; font: 10.5px var(--f); padding: 4px 6px; color: var(--ink-2); white-space: nowrap; }
+.tb-full.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+@container (max-width: 700px) { .steps { display: none; } }
+@container (max-width: 560px) { #now { display: none; } }
+@container (max-width: 430px) { #date { display: none; } .tb-full { padding: 4px 5px; font-size: 10px; } }
+/* narrow screens: the time bar sits between the Perspectives panel and the chart button; the tabs never run under Tools */
+@media (max-width: 1100px) { #timebar:not(.moved) { left: 300px; right: 76px; transform: none; width: auto !important; } .tabs { max-width: calc(100vw - 830px); } }
+@media (max-width: 1240px) { .tab:not(.on) span { display: none; } }
 </style>
 </head>
 <body>
@@ -796,11 +840,12 @@ sup.est { margin-left: 3px; }
 <div id="timebar">
   <div class="grip" id="tb-grip" title="Drag to move the time bar · double-click to put it back" aria-hidden="true"></div>
   <button id="play" aria-label="Play through time"></button>
-  <div class="track"><input type="range" id="slider" aria-label="Date"><div class="marks" id="marks"></div></div>
+  <div class="track"><span class="tcur" id="tcur" aria-hidden="true"></span><input type="range" id="slider" aria-label="Date"><div class="marks" id="marks"></div></div>
   <div class="tright">
     <input id="date" aria-label="Date (dd/mm/yy)" placeholder="dd/mm/yy" maxlength="10">
     <div class="steps" id="steps" role="group" aria-label="Play step"><button data-step="1">1y</button><button data-step="5">5y</button><button data-step="10">10y</button></div>
-    <button class="btn" id="now">Today</button>
+    <button class="btn" id="now" title="The latest date with data for what's on the map">Latest</button>
+    <button class="tb-full" id="tb-full" aria-label="Full range">Full range</button>
   </div>
   <div class="tnote" id="tnote"></div>
 </div>
@@ -856,11 +901,11 @@ sup.est { margin-left: 3px; }
 <script src="data/local.js"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="stats.js?v=17170435"></script>
-<script src="psephology.js?v=17170435"></script>
-<script src="charts.js?v=17170435"></script>
-<script src="engine.js?v=17170435"></script>
-<script src="xlsx.js?v=17170435"></script>
+<script src="stats.js?v=18272149"></script>
+<script src="psephology.js?v=18272149"></script>
+<script src="charts.js?v=18272149"></script>
+<script src="engine.js?v=18272149"></script>
+<script src="xlsx.js?v=18272149"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -870,6 +915,7 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="app.js?v=17170435"></script>
+<script src="windows.js?v=18272149"></script>
+<script src="app.js?v=18272149"></script>
 </body>
 </html>
