@@ -2,6 +2,30 @@
 
 Atlas 1.6 is about the data: what you can do with it, where you can put it, and how much of the map stays in view while you work. Built on 1.5 (Ruben's 0.3.3 merged with Mo's 1.4). Earlier versions stay unchanged in their own folders.
 
+## New on this branch: health, housing and government debt
+
+**Boundary lines** now keep the same thickness on screen at every zoom, with a soft halo so they stay readable over busy basemap detail. The Look → thickness slider still scales them.
+
+**Health** is now a working perspective, **Housing** sits under Markets and **Government debt** under Economic: 87 new metrics in all. Where each one has data:
+
+| Group | Metrics | Wards | Constituencies | Councils | Regions, nations |
+|---|---|---|---|---|---|
+| Health · Census 2021 | good / bad health, disability, day-to-day limits, unpaid carers | England & Wales | England & Wales | England & Wales | yes |
+| Health · Life expectancy, Deaths, Weight & lifestyle, Conditions, Environment | 33 indicators, most yearly since 2001–2010 | child obesity only (3-year) | — | England | England |
+| Markets · House prices | average price by type, first-time buyers, change, sales (UK HPI, 1995–2026); median price and affordability ratios (ONS, 1997–2025) | median price (1995–2022) | — | whole UK (HPI) | yes |
+| Markets · Rents | average rent, 1–3 bedrooms, change (2015–2026) | — | — | whole UK | yes |
+| Markets · Homes, Housing need | dwellings, empty homes, temporary accommodation, homelessness duties, fuel poverty | — | — | England | England |
+| Markets · Census 2021: homes | tenure, house type, overcrowding, bedrooms, heating, households, household size | England & Wales | England & Wales | England & Wales | yes |
+| Economic · Government debt | national debt (£, % of GDP, per person, 1975–2026); council borrowing, borrowing and debt need per resident, investments (2019–2025) | — | — | England | UK; England and regions (council borrowing) |
+
+- Census figures are added up from 188,880 output areas into Atlas's own wards (7,563 of 7,579 in England and Wales) and 2024 constituencies, so they line up exactly with the map.
+- Ward median prices are for 2021–22 wards. 3,910 wards match exactly; 1,305 redrawn wards use the old ward that covers most of them.
+- Council borrowing per resident includes a population share of the county council's borrowing in two-tier areas. Fire, police, combined authorities and the GLA (Greater London Authority) are not included.
+- Scotland and Northern Ireland have house prices and rents but not the Census or the health indicators (they run their own; not loaded yet).
+- Metrics with nothing for the boundaries on the map are greyed out in the Perspectives menu, as before.
+
+Rebuild with `python3 pipeline/fetch_extra.py` then `python3 pipeline/build_extra.py` (needs `pip install python-calamine`). Downloads go to `pipeline/sources/extra_raw/`, which isn't committed.
+
 ## What's new in 1.6
 
 **Analyse relationships (ATLAS menu → Analyse relationships…).** Compares metrics without picking places. Tick metrics on the left, choose the level (councils, constituencies…), and choose **Within**: the whole UK, one nation or region, or your selection. You can also switch to **Over time** for one place. The methods offered depend on how many metrics are ticked:
@@ -312,6 +336,8 @@ python3 pipeline/fetch_politics.py         # council control and leaders from Wi
 python3 pipeline/fetch_protests.py         # protests from Wikipedia and Wikidata
 python3 pipeline/build.py                  # everything in data/ (runs build_politics, build_series, build_protests)
 python3 pipeline/build_constituencies.py   # data/constituencies*.js: 2024 seats, plus the 2010 and 1997 sets and every seat's MP history
+python3 pipeline/fetch_extra.py           # health, housing and debt sources -> pipeline/sources/extra_raw/ (about 120 MB, not committed)
+python3 pipeline/build_extra.py           # data/extra.js and data/extra_wards.js (needs: pip install python-calamine)
 python3 pipeline/convert_old_constituencies.py <unzipped folder>   # one-off: ONS 2001/2005 shapefiles -> geometry/constituencies_1997.geojson (needs pyshp, pyproj)
 ```
 
@@ -325,10 +351,10 @@ charts.js                        charts and story views (Mo's 1.4); interactive 
 stats.js                         statistics for Analyse (1.6): correlations with p-values, regression, partial correlation, PCA, k-means, Moran's I, lags
 engine.js                        decides calculations and visual encodings for each kind of data
 xlsx.js                          writes Excel files in the browser
-data/                            generated: uk-data.js, uk-geo.js, politics.js, series.js, protests.js, constituencies.js, markets.js, wards/, os-style.js, edits.js
+data/                            generated: uk-data.js, uk-geo.js, politics.js, series.js, protests.js, constituencies.js, markets.js, extra.js, extra_wards.js, wards/, os-style.js, edits.js
 pipeline/                        fetch_*.py, build*.py, import_acled.py, xlsx_read.py, sources/, geometry/
 ```
 
 ## Credits
 
-Contains OS data © Crown copyright and database right 2026. © OpenStreetMap contributors. Tiles and imagery © MapTiler. ONS data and boundaries: Open Government Licence v3.0. Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Political and protest information: Wikipedia (CC BY-SA 4.0) and Wikidata (CC0). Map engine: MapLibre GL JS.
+Contains OS data © Crown copyright and database right 2026. © OpenStreetMap contributors. Tiles and imagery © MapTiler. ONS data and boundaries: Open Government Licence v3.0. Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Health indicators: Office for Health Improvement and Disparities (Fingertips), Open Government Licence v3.0. House prices: HM Land Registry data © Crown copyright and database right 2026, Open Government Licence v3.0 (UK HPI includes Registers of Scotland and Land & Property Services Northern Ireland data). Census 2021, rents, affordability, public sector finances: ONS, Open Government Licence v3.0. Dwelling stock and council finance: MHCLG, Open Government Licence v3.0. Political and protest information: Wikipedia (CC BY-SA 4.0) and Wikidata (CC0). Map engine: MapLibre GL JS.

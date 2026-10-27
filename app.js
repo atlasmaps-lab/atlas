@@ -196,7 +196,7 @@
     { id: "political", name: "Political", hue: "#7b4fa6", ready: true, ramp: ["#efe7f6", "#d2bde6", "#ad8fd0", "#8560b5", "#5b3a8c"], desc: "Who governs each area and how that changed since 1974, plus notable protests (test case)." },
     { id: "economic", name: "Economic", hue: "#13876b", ready: true, ramp: ["#e3f4ee", "#b3e0cf", "#73c2a6", "#33997b", "#0f6b52"], desc: "Output and income, every year since 1998." },
     { id: "social", name: "Social", hue: "#d0701c", ready: true, ramp: ["#fdeedc", "#f9cf9f", "#f2a65c", "#d97a26", "#a3510f"], desc: "Population every year since 1998; age latest only." },
-    { id: "health", name: "Health", hue: "#c2364b", ready: false, planned: ["Life expectancy", "Healthy life expectancy", "Patients per GP", "Obesity rate"], desc: "Not loaded yet." },
+    { id: "health", name: "Health", hue: "#c2364b", ready: false, ramp: ["#fbe9ec", "#f3bcc5", "#e48596", "#c94f66", "#8f2338"], planned: ["Life expectancy", "Healthy life expectancy", "Patients per GP", "Obesity rate"], desc: "Not loaded yet." },
     { id: "transport", name: "Transportation", hue: "#2b6cb0", ready: false, planned: ["Commute time", "Households without a car", "Rail stations", "Bus services"], desc: "Not loaded yet." },
     { id: "analysis", name: "Analysis", hue: "#4a4f55", ready: false, hidden: true, ramp: ["#eef0f1", "#cfd4d8", "#a3abb2", "#6f7880", "#3d444b"], planned: [], desc: "Results you put on the map from the Analyse window: clusters, residuals, component scores, hot spots." },
     { id: "markets", name: "Markets", hue: "#a07a12", ready: !!MK, ramp: ["#fbf3d5", "#f1dc93", "#ddb94f", "#b8902a", "#7d5f12"], planned: ["House prices", "Rents", "Business births", "Broadband speed"], desc: "Test case: FTSE 100 companies headquartered in London, and London's financial districts." },
@@ -301,6 +301,51 @@
     get(code, d) { const a = serAt("population", code, d); if (!a) return null; const b = serAt("population", code, (a.yr - 10) + "-07-01"); if (!b || b.yr !== a.yr - 10) return null; const v = (a.v / b.v - 1) * 100; return { v, text: this.fmt(v), yr: `${b.yr}–${a.yr}` }; } });
   def({ id: "average_age", p: "social", label: "Average age", scale: "ratio", nature: "rate", temporal: "static", fmt: v => v.toFixed(1) + " years", desc: "Mean age (latest year only)",
     get(code) { const x = (INFO[code] || {}).average_age; return x ? { v: x[0], text: x[0].toFixed(1) + " years", yr: x[2] } : null; } });
+
+  // ---------- extra metrics: Health, Housing (Markets) and Government debt (Economic), from pipeline/build_extra.py ----------
+  // data/extra.js holds councils, constituencies, regions, nations and the UK; data/extra_wards.js holds wards.
+  // A number is a single-date figure (Census 2021); an array is one value per year from the metric's first year.
+  const EX = window.ATLAS_EXTRA || null, EXW = window.ATLAS_EXTRA_W || null;
+  const EXW_AT = EXW ? Object.fromEntries(EXW.codes.map((c, i) => [c, i])) : {};
+  const fmtMoney = v => Math.abs(v) >= 1e6 ? (v < 0 ? "−" : "") + fmtGDP(Math.abs(v)) : (v < 0 ? "−£" : "£") + fmtInt(Math.abs(v));
+  function exFmt(m) {
+    const dp = m.dp || 0, f = v => v.toLocaleString("en-GB", { minimumFractionDigits: dp, maximumFractionDigits: dp });
+    if (m.mid === 0 && m.unit === "%") return fmtPct;
+    switch (m.unit) {
+      case "%": return v => f(v) + "%";
+      case "% of GDP": return v => f(v) + "% of GDP";
+      case "£": return fmtMoney;
+      case "£ a month": return v => "£" + fmtInt(v) + " a month";
+      case "years": return v => f(v) + " years";
+      case "people": return v => f(v) + " people";
+      case "per 100k": return v => fmtInt(v) + " per 100,000";
+      case "× earnings": return v => f(v) + "× earnings";
+      case "": return v => fmtInt(v);
+      default: return v => f(v) + " " + m.unit;
+    }
+  }
+  function exRaw(id, code) {
+    const i = EXW_AT[code];
+    if (i != null) { const a = EXW.v[id]; return a ? a[i] : undefined; }
+    const d = EX.v[id]; return d ? d[code] : undefined;
+  }
+  if (EX) {
+    PER.health.ready = true; PER.health.planned = null; PER.health.desc = "Life expectancy, causes of death, weight and lifestyle, conditions (England), and Census 2021 health and care for every ward and constituency in England and Wales.";
+    PER.markets.ready = true; PER.markets.desc = "House prices and rents across the UK, homes and tenure (Census 2021, every ward and constituency in England and Wales), empty homes and housing need" + (MK ? ", plus FTSE 100 head offices in London (test case)." : ".");
+    PER.economic.desc = "Output and income since 1998; national debt, and councils' borrowing in England.";
+    EX.metrics.forEach(x => {
+      const ys = EX.y0 + (x.ys || 0), fmt = exFmt(x), src = x.src, census = x.census;
+      def({ id: x.id, p: x.p, group: x.group, label: x.label, scale: x.scale || "ratio", nature: x.nature || "rate", temporal: census ? "static" : "annual", fmt, desc: x.desc,
+        weight: x.weight || (x.nature === "rate" ? "population" : undefined), mid: x.mid, src, unit: x.unit, extra: true,
+        get(code, d) {
+          const r = exRaw(x.id, code); if (r == null) return null;
+          if (typeof r === "number") return { v: r, text: fmt(r), yr: census || "" };
+          let i = Math.min(+d.slice(0, 4) - ys, r.length - 1), latest = +d.slice(0, 4) - ys > r.length - 1; if (i < 0) return null;
+          while (i >= 0 && r[i] == null) { i--; latest = true; } if (i < 0) return null;
+          return { v: r[i], text: fmt(r[i]), yr: (ys + i) + (latest ? ", latest" : "") };
+        } });
+    });
+  }
 
   const DEF_PS = {
     order: ["political"], on: { political: true },
