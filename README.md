@@ -141,6 +141,28 @@ Projects are saved in this browser.
 - Focusing a place before the map has loaded waits instead of failing.
 - Map pictures get the sea behind them instead of black.
 
+## From Ruben's branch: health, housing and government debt
+
+**Health** is now a working perspective, **Housing** sits under Markets and **Government debt** under Economic: 87 new metrics in all. Where each one has data:
+
+| Group | Metrics | Wards | Constituencies | Councils | Regions, nations |
+|---|---|---|---|---|---|
+| Health · Census 2021 | good / bad health, disability, day-to-day limits, unpaid carers | England & Wales | England & Wales | England & Wales | yes |
+| Health · Life expectancy, Deaths, Weight & lifestyle, Conditions, Environment | 33 indicators, most yearly since 2001–2010 | child obesity only (3-year) | — | England | England |
+| Markets · House prices | average price by type, first-time buyers, change, sales (UK HPI, 1995–2026); median price and affordability ratios (ONS, 1997–2025) | median price (1995–2022) | — | whole UK (HPI) | yes |
+| Markets · Rents | average rent, 1–3 bedrooms, change (2015–2026) | — | — | whole UK | yes |
+| Markets · Homes, Housing need | dwellings, empty homes, temporary accommodation, homelessness duties, fuel poverty | — | — | England | England |
+| Markets · Census 2021: homes | tenure, house type, overcrowding, bedrooms, heating, households, household size | England & Wales | England & Wales | England & Wales | yes |
+| Economic · Government debt | national debt (£, % of GDP, per person, 1975–2026); council borrowing, borrowing and debt need per resident, investments (2019–2025) | — | — | England | UK; England and regions (council borrowing) |
+
+- Census figures are added up from 188,880 output areas into Atlas's own wards (7,563 of 7,579 in England and Wales) and 2024 constituencies, so they line up exactly with the map.
+- Ward median prices are for 2021–22 wards. 3,910 wards match exactly; 1,305 redrawn wards use the old ward that covers most of them.
+- Council borrowing per resident includes a population share of the county council's borrowing in two-tier areas. Fire, police, combined authorities and the GLA (Greater London Authority) are not included.
+- Scotland and Northern Ireland have house prices and rents but not the Census or the health indicators (they run their own; not loaded yet).
+- Metrics with nothing for the boundaries on the map are greyed out in the Perspectives menu, as before.
+
+Rebuild with `python3 pipeline/fetch_extra.py` then `python3 pipeline/build_extra.py` (needs `pip install python-calamine`). Downloads go to `pipeline/sources/extra_raw/`, which isn't committed.
+
 ## From 1.5: how the two lines fit together
 
 | | |

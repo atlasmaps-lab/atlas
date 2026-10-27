@@ -8,3 +8,4 @@ config.local.js
 # full market data with prices stays local (not republishable)
 pipeline/sources/markets_ftse100.full.json
 
+pipeline/sources/extra_raw/
