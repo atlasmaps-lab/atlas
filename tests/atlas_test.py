@@ -19,7 +19,9 @@ def server():
         def log_message(self, *a):
             pass
     handler = functools.partial(Quiet, directory=ROOT)
-    httpd = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
+    class Server(http.server.ThreadingHTTPServer):
+        request_queue_size = 256   # the map loads dozens of ward files at once
+    httpd = Server(("127.0.0.1", port), handler)
     t = threading.Thread(target=httpd.serve_forever, daemon=True); t.start()
     try:
         yield f"http://127.0.0.1:{port}/"
@@ -49,6 +51,7 @@ def open_atlas(b, base, size=(1280, 800), storage=None, query="debug"):
     page.errors = []
     page.on("console", lambda m: page.errors.append(m.text) if m.type == "error" else None)
     page.on("pageerror", lambda e: page.errors.append(str(e)))
+    page.on("requestfailed", lambda r: page.errors.append(f"request failed: {r.url} ({r.failure})"))
     page.goto(base + "index.html?" + query, wait_until="load", timeout=120000)
     page.wait_for_function("window.atlasMap && window.atlasMap.getSource && window.atlasMap.getSource('councils') && window.AtlasDebug", timeout=120000)
     page.wait_for_timeout(800)

@@ -720,6 +720,8 @@
   if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { M, P, METRICS, resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint(),   // for checks only (index.html?debug)
     get TB() { return TB; }, setDate: d => setDate(d), metricSpan: id => metricSpan(M[id]), openCmp: () => openCmp(), openAnalyse: o => openAnalyse(o), openChart: o => openChart(o),
     select: codes => codes.forEach(c => P[c] && addCompare({ code: c, level: P[c].level })),
+    focus: c => focus(c), unfocus: () => unfocus(), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); if (!on) setLevelOn("auto", true); },
+    closeAll: () => { while (WM.closeTop()); },
     mapOnly: ids => { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); } };
   map.boxZoom.disable(); map.touchZoomRotate.disableRotation();
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
