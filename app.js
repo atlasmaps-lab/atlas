@@ -722,6 +722,7 @@
     select: codes => codes.forEach(c => P[c] && addCompare({ code: c, level: P[c].level })),
     focus: c => focus(c), unfocus: () => unfocus(), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); if (!on) setLevelOn("auto", true); },
     closeAll: () => { while (WM.closeTop()); },
+    setCmpMetrics: ids => { CMP.metrics = new Set(ids); CMP.items = []; }, cmpTable: sp => cmpTable(sp), get CMP() { return CMP; },
     openProtestCard: i => openProtestCard(i), setHeat: () => { PS.prefs.protest_events = "heat"; repaint(); },
     setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), openExport: o => openExport(o),
     mapOnly: ids => { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); } };
@@ -2163,10 +2164,104 @@
   const CMP = { metrics: new Set(METRICS.filter(m => DEF_PS.active[m.id] && m.nature !== "event").map(m => m.id)), x: null, y: null, q: "" };
   function openCmp() { closeMenu(); closePMenu(); closeTools(); closeHist(); WM.open(cmpEl); renderCmp(); }
   function closeCmp() { return WM.close(cmpEl); }
+  // ---------- 1.8: Compare makes tables and charts from what's chosen ----------
+  // A table has a layout (places × metrics at one date; places × years for one metric; metrics × years for one place) and
+  // dates. Totals only where they mean something: sums for counts and amounts, population-weighted averages for rates
+  // (never a plain average of rates), nothing for categories, lengths of time or results recalculated from votes.
+  // Everything made here stays in the list on the left until closed; the current table and chart sit side by side.
+  Object.assign(CMP, { items: [], at: null, ac: null, mk: null, tw: 0.5, form: { layout: "pm", when: "bar", year: +TODAY.slice(0, 4), from: 2010, to: +TODAY.slice(0, 4), metric: null, place: null }, seq: 0 });
+  const LAYOUTS = { pm: "Places × metrics, at one date", py: "Places × years, for one metric", my: "Metrics × years, for one place" };
+  const yearDate = y => y >= +TODAY.slice(0, 4) ? TODAY : y + "-07-01";
+  function colTotal(m, codes, rs, d) { // the total or weighted average of one column, or why there's none
+    if (!EN.isNum(m)) return { text: "", title: "Categories and text aren't added up" };
+    if (m.levels) return { text: "—", title: "Recalculated from the underlying votes or counts, not added up: see the region or nation itself" };
+    if (new Set(codes.map(c => P[c] && P[c].level)).size > 1) return { text: "—", title: "Places at different levels (e.g. a region and its councils): no total, so nothing is counted twice" };
+    const ok = codes.map((c, i) => [c, rs[i]]).filter(([, r]) => r && r.v != null && !r.nm), miss = codes.length - ok.length, agg = EN.aggregate(m), f = m.fmt || (v => CH.compact(v));
+    if (!ok.length) return { text: "—", title: "No values" };
+    const est = ok.some(([, r]) => r.est);
+    if (agg.fn === "sum") { const t = ok.reduce((a, [, r]) => a + r.v, 0); return { v: t, est, text: f(t) + (miss ? "*" : ""), title: `Total of ${ok.length} places${miss ? `; ${miss} with no value left out (*)` : ""}` }; }
+    if (agg.fn === "ratio" || agg.fn === "wmean") {
+      const w = ok.map(([c]) => popAt(c, d)), lack = ok.filter((_, i) => !w[i]).map(([c]) => nameOf(c));
+      if (lack.length) return { text: "—", title: `Population not known for ${lack.slice(0, 3).join(", ")}${lack.length > 3 ? "…" : ""}: no weighted average (a plain average of rates would mislead)` };
+      const v = ok.reduce((a, [, r], i) => a + r.v * w[i], 0) / w.reduce((a, b) => a + b, 0);
+      return { v, est, text: f(v) + (miss ? "*" : ""), title: `Average weighted by population (for a rate per head this is the rate of the places combined)${miss ? `; ${miss} with no value left out (*)` : ""}` };
+    }
+    return { text: "—", title: agg.fn === "mean" ? "Lengths of time aren't added up or averaged across places" : "Changes are recalculated for each area, not added up" };
+  }
+  function cmpTable(spec) { // -> { title, head, rows, foot, csv }
+    const ms = (spec.layout === "py" ? [spec.metric] : spec.metrics).map(id => M[id]).filter(Boolean), codes = spec.codes.filter(c => P[c]);
+    const cell = (m, r) => !r ? { text: "—" } : r.nm ? { text: "n/a", nm: true, title: r.text } : EN.isNum(m) ? (r.v == null ? { text: "—", title: r.text } : { v: r.v, text: (m.fmt || String)(r.v), est: r.est, title: r.estWhy || "" })
+      : EN.isCat(m) ? { text: r.text || "—", sw: r.v ? m.colour(r.v) : null, est: r.est } : { text: r.text || "—" };
+    let title, head, rows, foot = null, raw = [];
+    if (spec.layout === "pm") {
+      const d = spec.when === "bar" ? state.date : yearDate(spec.year);
+      title = `${codes.length} places × ${ms.length} metrics · ${longDate(d)}`;
+      head = ms.map(m => ({ text: m.label, m }));
+      rows = codes.map(c => { const rs = ms.map(m => m.get(c, d)); raw.push(rs); return { code: c, label: nameOf(c), sub: LABEL[P[c].level], cells: ms.map((m, j) => cell(m, rs[j])) }; });
+      foot = ms.map((m, j) => colTotal(m, codes, raw.map(r => r[j]), d));
+    } else if (spec.layout === "py") {
+      const m = ms[0], ys = []; for (let y = spec.from; y <= spec.to; y++) ys.push(y);
+      title = `${m ? m.label : "?"} · ${codes.length} places · ${spec.from}–${spec.to}`;
+      head = ys.map(y => ({ text: String(y), m }));
+      rows = codes.map(c => ({ code: c, label: nameOf(c), sub: LABEL[P[c].level], cells: ys.map(y => { const r = m.get(c, yearDate(y)), ok = r && r.v != null && (m.temporal !== "annual" || !r.yr || (String(r.yr).match(/\d{4}/g) || []).includes(String(y))); return cell(m, ok ? r : r && r.nm ? r : null); }) }));
+      foot = m ? ys.map((y, k) => colTotal(m, codes, codes.map(c => { const v = rows[codes.indexOf(c)].cells[k]; return v.v != null ? { v: v.v, est: v.est } : null; }), yearDate(y))) : null;
+    } else {
+      const c = spec.place, ys = []; for (let y = spec.from; y <= spec.to; y++) ys.push(y);
+      title = `${nameOf(c)} · ${ms.length} metrics · ${spec.from}–${spec.to}`;
+      head = ys.map(y => ({ text: String(y) }));
+      rows = ms.map(m => ({ label: m.label, sub: PER[m.p].name, m, cells: ys.map(y => { const r = m.get(c, yearDate(y)), ok = r && r.v != null && (m.temporal !== "annual" || !r.yr || (String(r.yr).match(/\d{4}/g) || []).includes(String(y))); return cell(m, ok ? r : null); }) }));
+    }
+    const first = spec.layout === "my" ? "Metric" : "Place";
+    const csv = [[first, ...head.map(h => h.text)], ...rows.map(r => [r.label, ...r.cells.map(x => x.v != null ? +(+x.v).toFixed(6) : x.text === "—" ? "" : x.text)])];
+    if (foot && foot.some(f => f.text)) csv.push([spec.layout === "py" ? "Total / weighted average" : "Total / weighted average", ...foot.map(f => f.v != null ? +(+f.v).toFixed(6) : "")]);
+    return { title, head, rows, foot, csv, first };
+  }
+  function cmpTableHTML(spec) {
+    const T = cmpTable(spec), shade = (vals, m) => { const ok = vals.filter(v => v != null); const lo = Math.min(...ok), hi = Math.max(...ok); return v => { if (v == null || !(hi > lo)) return ""; const k = Math.min(4, Math.floor((v - lo) / (hi - lo) * 5)), bg = m && m.mid != null ? DIV[k] : PER[(m || {}).p || "economic"].ramp[k]; return `background:${bg};color:${textOn(bg)}`; }; };
+    const colShade = spec.layout === "pm" ? T.head.map((h, j) => EN.isNum(h.m) ? shade(T.rows.map(r => r.cells[j].v), h.m) : () => "") : null;
+    const allShade = spec.layout === "py" && T.head[0] && EN.isNum(T.head[0].m) ? shade(T.rows.flatMap(r => r.cells.map(c => c.v)), T.head[0].m) : null;
+    const td = (x, j, r) => { const st = x.v != null ? (colShade ? colShade[j](x.v) : allShade ? allShade(x.v) : r.m && EN.isNum(r.m) ? shade(r.cells.map(c => c.v), r.m)(x.v) : "") : "";
+      return `<td class="${x.v != null ? "num" : x.nm ? "nm" : ""}" ${x.v != null ? `data-v="${x.v}"` : ""} style="${st}" ${x.title ? `title="${esc(x.title)}"` : ""}>${x.sw ? `<i class="sw" style="background:${x.sw}"></i>` : ""}${esc(x.text)}${x.est ? '<sup class="est" title="Estimated">est.</sup>' : ""}</td>`; };
+    const est = T.rows.some(r => r.cells.some(c => c.est));
+    return `<div class="tscroll"><table class="cmp sortable ctab"><thead><tr><th title="Click to sort">${T.first}</th>${T.head.map(h => `<th title="Click to sort" ${h.m && spec.layout === "pm" ? `style="--c:${PER[h.m.p].hue}"` : ""}>${h.m && spec.layout === "pm" ? svgIcon(h.m.p) : ""}${esc(h.text)}</th>`).join("")}</tr></thead>
+      <tbody>${T.rows.map(r => `<tr ${r.code ? `data-code="${r.code}" title="Hover to find it on the map; double-click to focus it"` : ""}><th>${esc(r.label)}<small>${esc(r.sub || "")}</small></th>${r.cells.map((x, j) => td(x, j, r)).join("")}</tr>`).join("")}</tbody>
+      ${T.foot && T.foot.some(f => f.text) ? `<tfoot><tr><th title="Sums for counts and amounts; population-weighted averages for rates; nothing where adding up would mislead">Total / weighted avg.</th>${T.foot.map(f => `<td class="num" ${f.title ? `title="${esc(f.title)}"` : ""}>${esc(f.text)}${f.est ? '<sup class="est">est.</sup>' : ""}</td>`).join("")}</tr></tfoot>` : ""}</table></div>
+      <p class="tnote2">${T.foot && T.foot.some(f => f.text) ? "Bottom row: sums for counts and amounts, population-weighted averages for rates; hover a figure for how it was worked out. " : ""}${est ? "est. = estimated, not measured. " : ""}Click a heading to sort.</p>`;
+  }
+  function cmpChartSpec(codes, ms) {
+    const usable = ms.filter(m => m.nature !== "text" && m.nature !== "event" && m.nature !== "site");
+    const timed = usable.filter(m => m.temporal !== "static"), pick = (timed.length ? timed : usable).slice(0, 4);
+    return { metrics: pick.map(m => m.id), places: codes.slice(0, 10), companies: [], style: null, from: spanFor(pick), to: +TODAY.slice(0, 4), rebase: false, index: false };
+  }
+  function cmpAdd(item) { item.id = "k" + (++CMP.seq); CMP.items.push(item); if (item.kind === "table") CMP.at = item.id; else CMP.ac = item.id; CMP.mk = null; renderCmp(); }
+  function cmpWorkHTML() {
+    const T = CMP.items.find(i => i.id === CMP.at), C = CMP.items.find(i => i.id === CMP.ac);
+    if (!T && !C) return "";
+    const tPane = T ? `<div class="cmp-tpane"><div class="cmp-ph"><b>${esc(cmpTable(T.spec).title)}</b><span class="cmp-pacts"><button class="btn sm" data-kcsv="${T.id}">Copy as CSV</button><button class="btn sm" data-kxlsx="${T.id}" title="Download as an Excel file">.xlsx</button><button class="btn sm" data-kcsvf="${T.id}" title="Download as a CSV file">.csv</button><button class="btn sm" data-kws="${T.id}">→ Workspace</button><button class="btn sm" data-ktab="${T.id}">Open in tab</button></span></div>${cmpTableHTML(T.spec)}</div>` : "";
+    const cPane = C ? `<div class="cmp-cpane"><div class="cmp-ph"><b>${esc(C.title)}</b><span class="cmp-pacts">${C.spec.style ? `<button class="btn sm" data-kccsv="${C.id}">Copy data (CSV)</button><button class="btn sm" data-kws="${C.id}">→ Workspace</button><button class="btn sm" data-ktab="${C.id}">Open in tab</button>` : ""}</span></div>
+      <div class="cp-styles">${stylesHTML(C.spec, !!C.spec.style, "k")}</div><div class="cmp-chart" data-kchart="${C.id}"></div></div>` : "";
+    return `<div class="cmp-work${T && C ? " two" : ""}" style="--tw:${(CMP.tw * 100).toFixed(1)}%">${tPane}${T && C ? `<div class="cmp-div" title="Drag to share the space between the table and the chart"></div>` : ""}${cPane}</div>`;
+  }
+  function cmpBuilderHTML(codes, ms) {
+    const F = CMP.form, num = ms.filter(m => m.nature !== "text"), yr = TODAY.slice(0, 4);
+    if (!F.metric || !num.some(m => m.id === F.metric)) F.metric = (num.find(m => m.temporal !== "static") || num[0] || {}).id || null;
+    if (!F.place || !codes.includes(F.place)) F.place = codes[0] || null;
+    return `<section class="cmp-mk"><div class="cmp-mkh"><b>Make a table</b><button class="x" data-kmkx aria-label="Close">×</button></div>
+      <div class="seg wrap">${Object.entries(LAYOUTS).map(([k, l]) => `<button data-klay="${k}" class="${F.layout === k ? "on" : ""}" ${k === "my" && !codes.length ? "disabled" : ""}>${l}</button>`).join("")}</div>
+      <div class="cmp-mkf">${F.layout === "pm" ? `<label>Date <select data-kf="when"><option value="bar" ${F.when === "bar" ? "selected" : ""}>The time bar's (${esc(longDate(state.date))})</option><option value="year" ${F.when === "year" ? "selected" : ""}>A year…</option></select></label>${F.when === "year" ? `<label>Year <input type="number" data-kf="year" min="1974" max="${yr}" value="${F.year}"></label>` : ""}`
+        : `${F.layout === "py" ? `<label>Metric <select data-kf="metric">${num.map(m => `<option value="${m.id}" ${m.id === F.metric ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : `<label>Place <select data-kf="place">${codes.map(c => `<option value="${c}" ${c === F.place ? "selected" : ""}>${esc(nameOf(c))}</option>`).join("")}</select></label>`}
+           <label>Years <input type="number" data-kf="from" min="1974" max="${yr}" value="${F.from}"> to <input type="number" data-kf="to" min="1974" max="${yr}" value="${F.to}"></label>`}
+        <button class="btn primary" data-kmake ${(F.layout === "py" && !F.metric) || !codes.length || !num.length ? "disabled" : ""}>Make table</button></div></section>`;
+  }
+  function drawCmpCharts() {
+    cmpEl.querySelectorAll("[data-kchart]").forEach(el => { const it = CMP.items.find(i => i.id === el.dataset.kchart); if (!it || !it.spec.style) { el.innerHTML = ""; return; } el.innerHTML = drawChart(it.spec, Math.max(260, el.clientWidth - 8)); });
+  }
   const cmpEmpty = (m, codes) => m.nature !== "text" && codes.every(c => { try { const r = m.get(c, state.date); return !r || r.nm || r.v == null; } catch (e) { return true; } });
   function renderCmp() {
     const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id));
-    const side = PERSPECTIVES.map(p => `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + (p.ready
+    if (!CMP.items.length && codes.length >= 2 && ms.length) { CMP.items.push({ id: "k" + (++CMP.seq), kind: "table", title: "Places × metrics", spec: { layout: "pm", when: "bar", codes: codes.slice(), metrics: [...CMP.metrics].filter(id => M[id]) } }); CMP.at = "k" + CMP.seq; }   // the side-by-side table, as before
+    const made = CMP.items.length ? `<div class="cmp-made"><h4>Made here</h4>${CMP.items.map(it => `<div class="cmp-it${it.id === CMP.at || it.id === CMP.ac ? " on" : ""}" data-kshow="${it.id}" title="Show it"><span class="cmp-ik">${it.kind === "table" ? "▦" : sIcon(it.spec.style || "line")}</span><span class="cmp-in">${esc(it.title)}</span><button data-kdel="${it.id}" aria-label="Close ${esc(it.title)}">×</button></div>`).join("")}</div>` : "";
+    const side = made + PERSPECTIVES.map(p => `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + (p.ready
       ? METRICS.filter(m => m.p === p.id).map(m => { const on = CMP.metrics.has(m.id), nd = !on && codes.length && cmpEmpty(m, codes); return `<label style="--c:${p.hue}" class="${nd ? "dis" : ""}" ${nd ? `title="No data for these places on this date"` : ""}><input type="checkbox" data-cm="${m.id}" ${on ? "checked" : ""} ${nd ? "disabled" : ""}>${esc(m.label)}</label>`; }).join("") + `<div class="quick"><button class="btn" data-all="${p.id}">All</button><button class="btn" data-none="${p.id}">None</button></div>`
       : `<p class="small">Not available yet</p>` + p.planned.map(n => `<label class="dis" title="Not available yet"><input type="checkbox" disabled>${esc(n)}</label>`).join(""))).join("");
     const usable = ms.filter(m => m.nature !== "text");
@@ -2177,11 +2272,14 @@
     if (codes.length < 2) main += `<div class="empty-big">Pick at least two places to compare. Add them here, Shift-click them on the map, or hold the mouse still and drag a box over them.</div>`;
     else if (!ms.length) main += `<div class="empty-big">Tick the metrics you want to compare on the left. They can come from the same perspective or different ones.</div>`;
     else {
-      main += `<section><h3>Side by side${!isNow() ? " · as of " + esc(longDate(state.date)) : ""}</h3><div class="tscroll">${tableHTML(codes, ms, false)}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-cexp>Export to Excel / CSV…</button><button class="btn" data-cws>Send table to workspace</button><button class="btn" data-ctile>Send places as a tile</button><button class="btn" data-can>Analyse these metrics…</button></div></section>`;
-      main += `<section><h3>Patterns between two metrics</h3>` + (usable.length < 2 ? `<div class="empty-big">Tick two or more metrics to look for a pattern between them.</div>` : patternHTML(codes, M[CMP.x], M[CMP.y], usable)) + `</section>`;
+      const anyNum = ms.some(m => EN.isNum(m));
+      main += `<section class="cmp-acts"><button class="btn primary" data-kmk="table" title="Choose a layout and dates">Make table ▾</button><button class="btn primary" data-kmk="chart" title="Choose a chart style for these places and metrics">Make chart</button><button class="btn" data-can ${anyNum ? "" : `disabled title="Analyse needs at least one numeric metric"`}>Analyse these…</button><button class="btn" data-ctile title="The places as a small map in the workspace">Places as a tile → workspace</button><button class="btn" data-cexp>Export…</button></section>`;
+      if (CMP.mk === "table") main += cmpBuilderHTML(codes, ms);
+      main += cmpWorkHTML();
+      main += `<details class="cmp-pat"${CMP.patOpen ? " open" : ""}><summary>Patterns between two metrics</summary>` + (usable.length < 2 ? `<div class="empty-big">Tick two or more metrics to look for a pattern between them.</div>` : patternHTML(codes, M[CMP.x], M[CMP.y], usable)) + `</details>`;
     }
     cmpEl.innerHTML = `<div class="cmp-page" role="dialog" aria-label="Compare"><div class="cmp-top"><div><h2>Compare</h2><p>Choose places and any metrics, from one perspective or several. Uses the date on the time bar.</p></div><button class="btn" data-close>Close</button></div><div class="cmp-side">${side}</div><div class="cmp-main">${main}</div></div>`;
-    addFctl(cmpEl);
+    addFctl(cmpEl); requestAnimationFrame(drawCmpCharts);
     const q = $("cmp-q"); if (q && CMP.q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); showCmpHits(); }
   }
   const shortFmt = t => String(t).replace(/ years?$/, "").replace(/ changes?$/, "").replace(/ per km²$/, "").replace(/ protests?$/, "").replace(/ per 100k$/, "");
@@ -2229,11 +2327,44 @@
   }
   function showCmpHits() { const ul = $("cmp-hits"), q = CMP.q.trim().toLowerCase(); if (!ul) return; const hs = q.length < 2 ? [] : searchNames(q); ul.innerHTML = hs.map(c => `<li data-add="${c}">${esc(nameOf(c))}<small>${LABEL[P[c].level]}</small></li>`).join(""); ul.hidden = !hs.length; }
   cmpEl.addEventListener("input", e => { if (e.target.id === "cmp-q") { CMP.q = e.target.value; showCmpHits(); } });
-  cmpEl.addEventListener("change", e => { const t = e.target; if (t.dataset.cm) { t.checked ? CMP.metrics.add(t.dataset.cm) : CMP.metrics.delete(t.dataset.cm); renderCmp(); } else if (t.dataset.ax) { CMP[t.dataset.ax] = t.value; renderCmp(); } });
+  cmpEl.addEventListener("change", e => { const t = e.target;
+    if (t.dataset.cm) { t.checked ? CMP.metrics.add(t.dataset.cm) : CMP.metrics.delete(t.dataset.cm); renderCmp(); }
+    else if (t.dataset.ax) { CMP[t.dataset.ax] = t.value; renderCmp(); }
+    else if (t.dataset.kf) { const k = t.dataset.kf, F = CMP.form; F[k] = ["year", "from", "to"].includes(k) ? clamp(+t.value || 1974, 1974, +TODAY.slice(0, 4)) : t.value; if (F.from > F.to) [F.from, F.to] = [F.to, F.from]; renderCmp(); } });
+  cmpEl.addEventListener("toggle", e => { if (e.target.classList && e.target.classList.contains("cmp-pat")) CMP.patOpen = e.target.open; }, true);
+  cmpEl.addEventListener("pointerdown", e => { // the divider between the table and the chart
+    const dv = e.target.closest(".cmp-div"); if (!dv) return; e.preventDefault(); const work = dv.parentNode, r = work.getBoundingClientRect(); dv.setPointerCapture(e.pointerId); document.body.classList.add("resizing");
+    const mv = ev => { CMP.tw = clamp((ev.clientX - r.left) / r.width, 0.2, 0.8); work.style.setProperty("--tw", (CMP.tw * 100).toFixed(1) + "%"); };
+    const up = () => { dv.removeEventListener("pointermove", mv); document.body.classList.remove("resizing"); drawCmpCharts(); };
+    dv.addEventListener("pointermove", mv); dv.addEventListener("pointerup", up, { once: true });
+  });
+  if (window.ResizeObserver) { let t; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (!cmpEl.hidden) drawCmpCharts(); }, 150); }).observe(cmpEl); }
+  function cmpItemAction(b) { // buttons in the workbench; true if handled
+    const ds = b.dataset, it = id => CMP.items.find(i => i.id === id);
+    if (ds.kmk) { if (ds.kmk === "table") { CMP.mk = CMP.mk === "table" ? null : "table"; renderCmp(); } else { const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id)); const spec = cmpChartSpec(codes, ms); cmpAdd({ kind: "chart", title: "Chart: " + spec.metrics.map(id => M[id].label).join(" & "), spec }); } return true; }
+    if (b.hasAttribute("data-kmkx")) { CMP.mk = null; renderCmp(); return true; }
+    if (ds.klay) { CMP.form.layout = ds.klay; renderCmp(); return true; }
+    if (b.hasAttribute("data-kmake")) { const F = CMP.form, codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id) && m.nature !== "text");
+      const spec = { layout: F.layout, when: F.when, year: F.year, from: F.from, to: F.to, codes: codes.slice(), metrics: F.layout === "pm" ? [...CMP.metrics].filter(id => M[id]) : [...CMP.metrics].filter(id => M[id] && M[id].nature !== "text"), metric: F.metric, place: F.place };
+      cmpAdd({ kind: "table", title: F.layout === "pm" ? `Places × metrics${F.when === "year" ? ", " + F.year : ""}` : F.layout === "py" ? `${M[F.metric].label}, ${F.from}–${F.to}` : `${nameOf(F.place)}, ${F.from}–${F.to}`, spec }); return true; }
+    if (ds.kshow) { const x = it(ds.kshow); if (x.kind === "table") CMP.at = x.id; else CMP.ac = x.id; renderCmp(); return true; }
+    if (ds.kdel) { CMP.items = CMP.items.filter(i => i.id !== ds.kdel); if (CMP.at === ds.kdel) CMP.at = (CMP.items.filter(i => i.kind === "table").pop() || {}).id || null; if (CMP.ac === ds.kdel) CMP.ac = (CMP.items.filter(i => i.kind === "chart").pop() || {}).id || null; renderCmp(); return true; }
+    if (ds.kcsv) { copy(XL.csv(cmpTable(it(ds.kcsv).spec).csv), "the table (CSV)"); return true; }
+    if (ds.kxlsx || ds.kcsvf) { const x = it(ds.kxlsx || ds.kcsvf), T = cmpTable(x.spec), stamp = state.date.replace(/-/g, ""); const fmt = ds.kxlsx ? "xlsx" : "csv";
+      if (fmt === "csv") download(new Blob(["\ufeff" + XL.csv(T.csv)], { type: "text/csv;charset=utf-8" }), `atlas-table-${stamp}.csv`); else download(XL.build([{ name: "Table", rows: T.csv }, { name: "About", rows: [["Atlas table", T.title], ["Bottom row", "Sums for counts and amounts; population-weighted averages for rates; blank where adding up would mislead"], ["Exported", longDate(TODAY)]] }]), `atlas-table-${stamp}.xlsx`); return true; }
+    if (ds.kccsv) { copy(chartCSV(it(ds.kccsv).spec)); return true; }
+    if (ds.kws) { const x = it(ds.kws); if (x.kind === "table") sendToWS({ type: "ctable", title: cmpTable(x.spec).title, spec: JSON.parse(JSON.stringify(x.spec)) }); else { if (!x.spec.style) x.spec.style = chartStylesFor(x.spec).best; sendToWS({ type: "chart", title: x.title, spec: JSON.parse(JSON.stringify(x.spec)) }); } return true; }
+    if (ds.ktab) { const x = it(ds.ktab); if (x.kind === "table") openTableTab(JSON.parse(JSON.stringify(x.spec)), cmpTable(x.spec).title); else { if (!x.spec.style) x.spec.style = chartStylesFor(x.spec).best; openTab(JSON.parse(JSON.stringify(x.spec))); } return true; }
+    if (b.hasAttribute("data-kdraw")) { const x = CMP.items.find(i => i.id === CMP.ac); if (x) { x.spec.style = x.spec.style || chartStylesFor(x.spec).best; renderCmp(); } return true; }
+    if (ds.kstyle) { const x = CMP.items.find(i => i.id === CMP.ac); if (x) { x.spec.style = ds.kstyle; x.title = "Chart: " + x.spec.metrics.map(id => M[id].label).join(" & "); renderCmp(); } return true; }
+    return false;
+  }
   cmpEl.addEventListener("click", e => {
     if (e.target === cmpEl) return closeCmp();
     const li = e.target.closest("[data-add]"); if (li) { CMP.q = ""; addCompare({ code: li.dataset.add, level: P[li.dataset.add].level }); renderCmp(); return; }
+    const it0 = e.target.closest("[data-kshow]"); if (it0 && !e.target.closest("button")) { cmpItemAction(it0); return; }
     const b = e.target.closest("button"); if (!b) return;
+    if (cmpItemAction(b)) return;
     if (b.hasAttribute("data-close")) closeCmp(); else if (b.dataset.rmc) toggleCompare({ code: b.dataset.rmc, level: P[b.dataset.rmc].level });
     else if (b.hasAttribute("data-clearall")) { clearCompare(); renderCmp(); }
     else if (b.dataset.all) { const codes = state.sel.map(x => x.code); METRICS.filter(m => m.p === b.dataset.all && !(codes.length && cmpEmpty(m, codes))).forEach(m => CMP.metrics.add(m.id)); renderCmp(); }
@@ -2288,6 +2419,11 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-edl ${n < 2 || !codes.length ? "disabled" : ""}>Download</button><button class="btn" data-eprot>Download the protest list</button></div></section></div></div>`;
   }
   function exportRowsLimited(k) { const codes = exportCodes().slice(0, k); const ms = METRICS.filter(m => EXP.metrics.has(m.id)); const d = EXP.time === "date" ? state.date : (EXP.to === +TODAY.slice(0, 4) ? TODAY : EXP.to + "-07-01"); const rows = [["code", "name", "date", ...ms.map(m => m.id)]]; codes.forEach(c => rows.push([c, nameOf(c), d, ...ms.map(m => { const r = m.get(c, d); return r && !r.nm ? (EN.isNum(m) ? (r.v == null ? "" : m.fmt(r.v) + (r.est ? " (est.)" : "")) : EN.isCat(m) ? (r.v == null ? "" : m.catName(r.v) + (r.est ? " (est.)" : "")) : r.text) : r && r.nm ? "n/a" : ""; })])); return { rows }; }
+  function copy(text, what) { // to the clipboard, with a fallback for browsers that block it
+    const ok = () => toast(`Copied ${what || "the data (CSV)"}. Paste it into a spreadsheet.`);
+    const old = () => { const t = document.createElement("textarea"); t.value = text; t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select(); let done = false; try { done = document.execCommand("copy"); } catch (e) {} t.remove(); if (done) ok(); else { download(new Blob([text], { type: "text/csv" }), "atlas-data.csv"); toast("This browser blocked copying, so the data was saved as a file instead."); } };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, old); else old();
+  }
   function download(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
   function aboutRows(ms) {
     const rows = [["column", "label", "perspective", "kind of data", "over time", "how areas are combined", "how this is worked out", "valid at", "source / notes"], ["code", "ONS area code", "", "", "", "", "", "", "ONS Open Geography Portal"], ["date", "date the values refer to", "", "", "", "", "", "", "Atlas time bar"],
@@ -2611,9 +2747,10 @@
     const m = mOf(spec.metrics[0]), label = (spec.companies.length ? (spec.companies.length === 1 ? COS[spec.companies[0]].n : spec.companies.length + " companies") : (spec.metrics.length > 1 ? spec.metrics.length + " metrics" : m.label)) + (spec.places.length === 1 ? " · " + nameOf(spec.places[0]) : "");
     const t = { id: "t" + (++tabSeq), label, spec: JSON.parse(JSON.stringify(spec)) }; TABS.push(t); activateTab(t.id);
   }
+  function openTableTab(spec, label) { const t = { id: "t" + (++tabSeq), label: label || "Table", table: spec }; TABS.push(t); activateTab(t.id); }
   function renderTabs() {
     const on = t => t.id === "map" ? VIEW.mode !== "ws" && (activeTab === "map" || activeTab === "split" || VIEW.mode === "split") : t.id === "ws" ? VIEW.mode !== "map" : t.id === activeTab;
-    const icon = t => t.id === "map" ? `<svg class="ico" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/></svg>` : t.id === "ws" ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/></svg>` : sIcon(t.spec.style);
+    const icon = t => t.table ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>` : t.id === "map" ? `<svg class="ico" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/></svg>` : t.id === "ws" ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/></svg>` : sIcon(t.spec.style);
     const label = t => t.id === "ws" ? `Workspace${proj().items.length ? ` (${proj().items.length})` : ""}` : t.label;
     tabsEl.innerHTML = TABS.map(t => `<button class="tab${on(t) ? " on" : ""}" data-tab="${t.id}">${icon(t)}<span>${esc(label(t).length > 28 ? label(t).slice(0, 27) + "…" : label(t))}</span>${t.id === "map" || t.id === "ws" ? "" : `<i data-tabx="${t.id}" aria-label="Close tab">×</i>`}</button>`).join("") +
       `<button class="tab tool${VIEW.mode === "split" ? " on" : ""}" data-split title="Map and workspace side by side (drag the divider to change the share)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></button><button class="tab tool" data-overview title="All tabs (or swipe up over the top bar)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>`;
@@ -2621,7 +2758,12 @@
   }
   function activateTab(id) {
     activeTab = id; renderTabs(); const t = TABS.find(x => x.id === id);
+    document.body.classList.toggle("tab-on", !!t && !!(t.spec || t.table));   // floating windows step aside while a chart or table has the screen
     if (!t || id === "map" || id === "ws" || id === "split") { tabview.hidden = true; return; }
+    if (t.table) {
+      tabview.innerHTML = `<div class="tv-wrap"><div class="tv-head"><h2>${esc(t.label)}</h2><span class="cp-sub">${t.table.layout === "pm" && t.table.when === "bar" ? "Values on the time bar's date · " : ""}${esc(LAYOUTS[t.table.layout])}</span><button class="btn" data-tcsv>Copy as CSV</button><button class="btn" data-tback>Back to the map</button></div><div class="tv-body">${cmpTableHTML(t.table)}</div></div>`;
+      tabview.hidden = false; return;
+    }
     const spec = t.spec, D = mOf(spec.metrics[0]);
     tabview.innerHTML = `<div class="tv-wrap"><div class="tv-head"><h2>${esc(t.label)}</h2><span class="cp-sub">${!isNow() ? "As of " + esc(longDate(state.date)) + " · " : ""}${spec.companies.length ? esc(MK ? MK.sources : "") : esc(D.desc || "")}</span><button class="btn" data-tcsv>Copy data (CSV)</button><button class="btn" data-tback>Back to the map</button></div>
       <div class="cp-what">${whatHTML(spec, "t")}</div><div class="cp-styles">${stylesHTML(spec, true, "t")}</div><div class="tv-body">${drawChart(spec, Math.min(1100, window.innerWidth - 80))}</div></div>`;
@@ -2631,7 +2773,7 @@
   tabview.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return; const t = TABS.find(x => x.id === activeTab); if (!t) return;
     if (b.hasAttribute("data-tback")) return activateTab("map");
-    if (b.hasAttribute("data-tcsv")) return copy(chartCSV(t.spec));
+    if (b.hasAttribute("data-tcsv")) return t.table ? copy(XL.csv(cmpTable(t.table).csv), "the table (CSV)") : copy(chartCSV(t.spec));
     const ds = Object.fromEntries(Object.entries(b.dataset).map(([k, v]) => [k.replace(/^t/, "").replace(/^./, x => x.toLowerCase()), v]));
     if (editSpec(t.spec, ds)) activateTab(t.id);
   });
@@ -3018,6 +3160,7 @@
     switch (it.type) {
       case "chart": return `<div class="cp-styles">${stylesHTML(it.spec, true, "w")}</div>` + withDate(it.date, () => drawChart(it.spec, w));
       case "table": return `<div class="wsmeta">Values on ${esc(longDate(it.date))}</div><div class="wstab">${withDate(it.date, () => tableHTML(it.codes.filter(c => P[c]), it.metrics.map(id => M[id]).filter(Boolean), false))}</div>`;
+      case "ctable": return `<div class="wsmeta">${esc(LAYOUTS[it.spec.layout])}${it.spec.layout === "pm" && it.spec.when === "bar" ? " · values on " + esc(longDate(it.date)) : ""}</div><div class="wstab">${withDate(it.date, () => cmpTableHTML(it.spec))}</div>`;
       case "analysis": { const r = withDate(it.cfg.date || it.date, () => anResult(it.cfg, w)); return `<div class="an-res">${it.cfg.trim ? (r.trim || "").replace(/<button[^>]*>.*?<\/button>/g, "") : ""}${r.html}</div>`; }
       case "card": return `<div class="wscard">${it.html}</div>`;
       case "tile": return tileSVG(it.codes, it.fills, w, Math.max(160, it.h - 120)) + `<div class="wsmeta">${it.codes.map(c => esc(nameOf(c))).join(" · ")}${it.lines ? `</div><ul class="extra">${it.lines}</ul>` : "</div>"}`;
@@ -3027,7 +3170,7 @@
     }
     return "";
   }
-  const LIVE = { chart: 1, table: 1, analysis: 1 };
+  const LIVE = { chart: 1, table: 1, ctable: 1, analysis: 1 };
   function renderWS() {
     const p = proj();
     wsEl.innerHTML = `<div class="ws-bar"><select data-wsproj aria-label="Project">${WS.projects.map(q => `<option value="${q.id}" ${q.id === p.id ? "selected" : ""}>${esc(q.name)}</option>`).join("")}</select>
@@ -3165,7 +3308,7 @@
     wsEl.hidden = mode === "map"; wsDiv.hidden = mode !== "split";
     if (mode !== "map") renderWS();
     activeTab = mode === "map" ? "map" : mode === "ws" ? "ws" : activeTab === "ws" || activeTab === "map" ? "split" : activeTab;
-    if (mode !== "map" && tabview && !tabview.hidden) tabview.hidden = true;
+    if (mode !== "map" && tabview && !tabview.hidden) { tabview.hidden = true; document.body.classList.remove("tab-on"); }
     renderTabs(); setTimeout(() => { map.resize(); refit(); }, 60);
   }
   function refit() { // keep the focused place (or the places shown together) and their cards inside the map pane

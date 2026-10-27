@@ -814,6 +814,30 @@ sup.est { margin-left: 3px; }
 .prl { list-style: none; margin: 0; padding: 0; } .prl li { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: baseline; padding: 4px 4px; border-bottom: 1px solid var(--rule); cursor: pointer; font-size: 12.5px; }
 .prl li:hover { background: var(--hover); } .prl li small { color: var(--ink-3); white-space: nowrap; } .prl li.empty { display: block; color: var(--ink-3); cursor: default; }
 .marks .tb-ev { position: absolute; top: -13px; width: 1px; height: 7px; background: #8560b5; opacity: .8; pointer-events: none; }
+/* 1.8: Compare's workbench: tables and charts made here, side by side, with the list on the left */
+.cmp-made { padding: 4px 0 8px; border-bottom: 1px solid var(--rule); margin-bottom: 4px; }
+.cmp-made h4 { margin: 8px 16px 4px; font-size: 12.5px; }
+.cmp-it { display: grid; grid-template-columns: 18px 1fr auto; gap: 6px; align-items: center; padding: 3px 10px 3px 16px; font-size: 12px; cursor: pointer; }
+.cmp-it:hover { background: var(--hover); } .cmp-it.on { background: color-mix(in srgb, #3b78b5 12%, transparent); font-weight: 600; }
+.cmp-it .ico { width: 14px; height: 14px; } .cmp-ik { color: var(--ink-3); text-align: center; } .cmp-in { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmp-it button { border: 0; background: none; color: var(--ink-3); padding: 0 2px; font-size: 14px; }
+.cmp-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.cmp-mk { border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; background: var(--chip); display: grid; gap: 8px; }
+.cmp-mkh { display: flex; justify-content: space-between; align-items: center; } .cmp-mkh .x { border: 0; background: none; font-size: 16px; color: var(--ink-3); }
+.cmp-mkf { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 12.5px; } .cmp-mkf input[type=number] { width: 66px; } .cmp-mkf select, .cmp-mkf input { border: 1px solid var(--rule); border-radius: 5px; padding: 2px 5px; background: var(--solid); }
+.cmp-work { display: grid; grid-template-columns: 1fr; gap: 10px; min-width: 0; }
+.cmp-work.two { grid-template-columns: minmax(0, var(--tw, 50%)) 6px minmax(0, 1fr); gap: 6px; }
+.cmp-div { cursor: col-resize; background: var(--rule); border-radius: 3px; min-height: 120px; } .cmp-div:hover { background: var(--ink-3); }
+.cmp-tpane, .cmp-cpane { min-width: 0; }
+.cmp-ph { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 12.5px; }
+.cmp-pacts { display: flex; flex-wrap: wrap; gap: 4px; }
+.cmp-chart { min-height: 120px; overflow: auto; }
+.cmp-pat > summary { cursor: pointer; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 6px; }
+table.ctab tfoot td, table.ctab tfoot th { position: sticky; bottom: 0; background: var(--chip, #f1eee6); font-weight: 600; border-top: 2px solid var(--rule); }
+table.ctab tfoot th { left: 0; z-index: 2; }
+.tnote2 { font-size: 11px; color: var(--ink-3); margin: 4px 0 0; }
+@container (max-width: 900px) { .cmp-work.two { grid-template-columns: 1fr; } .cmp-div { display: none; } }
+body.tab-on .wm { visibility: hidden; }
 </style>
 </head>
 <body>
@@ -927,11 +951,11 @@ sup.est { margin-left: 3px; }
 <script src="data/local.js"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="stats.js?v=18272210"></script>
-<script src="psephology.js?v=18272210"></script>
-<script src="charts.js?v=18272210"></script>
-<script src="engine.js?v=18272210"></script>
-<script src="xlsx.js?v=18272210"></script>
+<script src="stats.js?v=18272235"></script>
+<script src="psephology.js?v=18272235"></script>
+<script src="charts.js?v=18272235"></script>
+<script src="engine.js?v=18272235"></script>
+<script src="xlsx.js?v=18272235"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -941,7 +965,7 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="windows.js?v=18272210"></script>
-<script src="app.js?v=18272210"></script>
+<script src="windows.js?v=18272235"></script>
+<script src="app.js?v=18272235"></script>
 </body>
 </html>
