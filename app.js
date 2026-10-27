@@ -105,6 +105,7 @@
   const yearsBetween = (a, b) => (Date.parse(b) - Date.parse(a)) / (365.25 * 864e5);
   const dayNum = s => Math.round(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 864e5);
   const fromDay = n => new Date(n * 864e5).toISOString().slice(0, 10);
+  const addDays = (s, n) => fromDay(dayNum(s) + n);
   const isNow = () => state.date >= POL.now;
 
   // ---------- politics over time ----------
@@ -204,7 +205,24 @@
   const PER = Object.fromEntries(PERSPECTIVES.map(p => [p.id, p]));
   const M = {}, METRICS = [];
   const DEF_GROUP = { economic: "Output & growth", social: "Population & age" };
-  const def = m => { m.group = m.group || DEF_GROUP[m.p] || ""; M[m.id] = m; METRICS.push(m); };
+  // Data honesty (1.7). A metric may declare:
+  //   how      a one-line formula in plain words (cards, export)
+  //   levels   the boundary sets where it means something; elsewhere get() answers "Not meaningful at this level" and the map
+  //            leaves the area unfilled (never silently averaged)
+  //   valid    (code) -> null, or the reason it doesn't apply to that place (e.g. "Scotland only")
+  //   source   where the numbers come from (export's About sheet; every value traces to pipeline/sources/MANIFEST.csv)
+  // and get() may return est: true (estimated, e.g. notional) and note.
+  const NM_TEXT = "Not meaningful at this level";
+  const def = m => {
+    m.group = m.group || DEF_GROUP[m.p] || "";
+    if (m.levels || m.valid) { const g = m.get; m.get = function (code, d) {
+      const p = P[code]; if (!p) return null;
+      if (m.levels && !m.levels.includes(p.level)) return { v: null, text: (m.nmText && m.nmText[p.level]) || NM_TEXT, nm: true };
+      const why = m.valid && m.valid(code); if (why) return { v: null, text: why, nm: true };
+      return g.call(this, code, d); }; }
+    M[m.id] = m; METRICS.push(m); };
+  const statusOf = (r, m) => r && r.nm ? "not meaningful" : !r || (r.v == null && !(m && m.nature === "text" && r.text)) ? "missing" : r.est ? "estimated" : "measured";
+  const estTag = r => r && r.est ? ` <span class="tag est" title="${esc(r.estWhy || "Estimated, not measured")}">est.</span>` : "";
   const partyCat = { colour: partyCol, catName: partyName, cats: () => Object.keys(PARTY) };
   const lvlOf = c => P[c].level, isLocal = c => lvlOf(c) === "council" || lvlOf(c) === "ward" || lvlOf(c) === "zone", isPcon = c => lvlOf(c) === "constituency";
   // constituencies: who held each seat on a date (since 1997), from data/constituencies.js
@@ -266,6 +284,211 @@
     get(code, d) { const es = eventsIn(code, d); if (!es.length) return null; const n = {}; es.forEach(e => e.al.forEach(a => { n[a] = (n[a] || 0) + 1; })); const top = Object.keys(n).sort((a, b) => n[b] - n[a])[0]; return top ? { v: top, text: `${top} (${n[top]} of ${es.length})`, counts: n } : { v: null, text: "No organisers recorded" }; } });
   def({ id: "protest_parties", p: "political", group: G2, label: "Parties involved", scale: "nominal", nature: "text", temporal: "event", desc: "Parties named among organisers or participants",
     get(code, d) { const s = new Set(); eventsIn(code, d).forEach(e => e.pa.forEach(p => s.add(p))); return { text: s.size ? [...s].map(partyName).join(", ") : "None named" }; } });
+  // political: derived from data Atlas already has (1.7)
+  const COAL = POL.coalitions || {};
+  // parties in government on a date: UK (K02000001), Scotland, Wales (coalitions from government_coalitions.csv); NI: power-sharing
+  function govParties(code, d) {
+    const g = govAt(code, d); if (!g || !g.party) return null;
+    if (code === "N92000002" && !g.direct) return { parties: [], label: "Power-sharing executive", ps: true, g };
+    const c = seg(COAL[code === "E92000001" ? UKC : code], d) || (g.direct ? seg(COAL[UKC], d) : null);
+    return { parties: c ? c[2] : [g.party], label: c ? c[3] : g.title, g };
+  }
+  function ownSpans(code) { // [start, end, party] for a council (control) or a constituency (MP's party), merging repeats
+    const L = P[code].level === "constituency" ? (SPANS[code] || []).map(x => [x[0], x[1], x[2]]) : (POL.control[councilOf(code)] || []).map(x => [x[0], x[1], x[2]]);
+    const out = []; L.slice().sort((a, b) => a[0] < b[0] ? -1 : 1).forEach(s => { const l = out[out.length - 1]; if (l && l[2] === s[2] && (l[1] === s[0] || !l[1])) l[1] = s[1]; else out.push(s.slice()); });
+    return out;
+  }
+  function daysByParty(code, d) { // days under each party from the start of the record (1974 for councils, the seat's first result) to d
+    const by = {}; let tot = 0;
+    ownSpans(code).forEach(([s, e, p]) => { if (s > d) return; const a = dayNum(s), b = dayNum(e && e < d ? e : d); if (b > a) { by[p] = (by[p] || 0) + b - a; tot += b - a; } });
+    return { by, tot };
+  }
+  const G31 = G1, LV31 = ["council", "ward", "constituency"];
+  def({ id: "dominance", p: "political", group: G31, label: "Party dominance", scale: "ratio", nature: "share", temporal: "state", levels: LV31, breaks: [40, 55, 70, 85],
+    how: "Share of days since the record starts (1 May 1974 for councils; the seat's creation, 1997 at the earliest, for constituencies) under the party that held it longest",
+    desc: "How much of its recorded history one party has run the area", fmt: v => v.toFixed(0) + "%", source: "Council control: Wikipedia via politics.js; MPs: UK Parliament Members API",
+    get(code, d) { const { by, tot } = daysByParty(code, d); if (!tot) return null; const top = Object.keys(by).sort((a, b) => by[b] - by[a])[0], v = 100 * by[top] / tot;
+      return { v, text: `${this.fmt(v)} under ${partyName(top)}${P[code].level === "ward" ? " (its council)" : ""}`, cat: top, note: `since ${fromDay(dayNum(d) - tot).slice(0, 4)}` }; } });
+  def({ id: "longest_run", p: "political", group: G31, label: "Longest continuous control", scale: "ratio", nature: "duration", temporal: "state", levels: LV31, breaks: [5, 10, 20, 30],
+    how: "Longest unbroken spell of one party in control (council) or holding the seat (constituency), up to the date", desc: "The longest single run by one party", fmt: v => v.toFixed(1) + " years",
+    get(code, d) { let best = null; ownSpans(code).forEach(([s, e, p]) => { if (s > d) return; const y = yearsBetween(s, e && e < d ? e : d); if (!best || y > best[0]) best = [y, p, s, e && e < d ? e : null]; });
+      return best ? { v: best[0], text: `${this.fmt(best[0])}, ${partyName(best[1])} (${best[2].slice(0, 4)}–${best[3] ? best[3].slice(0, 4) : "now"})`, cat: best[1] } : null; } });
+  const ALIGN_CATS = ["same", "differ", "noc", "ps"], ALIGN_NAME = { same: "Same party as government", differ: "Different party", noc: "No overall control", ps: "Power-sharing executive" };
+  def({ id: "gov_aligned", p: "political", group: G31, label: "Same party as government", scale: "nominal", nature: "category", temporal: "state", levels: LV31,
+    how: "Is the controlling party (council control, or the MP's party) part of the government on the date? English councils and all constituencies: the UK Government. Scottish, Welsh and Northern Irish councils: their devolved government. Coalitions count every member party",
+    desc: "Whether the area is run by a party in government", colour: k => ({ same: "#3b78b5", differ: "#d9822b", noc: "#c9c3b6", ps: "#7a9a7a" })[k], catName: k => ALIGN_NAME[k], cats: () => ALIGN_CATS,
+    source: "government_history.csv and government_coalitions.csv (cited); council control; Members API",
+    get(code, d) {
+      const pcon = P[code].level === "constituency", ctl = pcon ? (spanAt(code, d) || [])[2] : (seg(POL.control[councilOf(code)], d) || [])[2]; if (!ctl) return null;
+      const nat = nationOf(code), govCode = pcon || nat === "E92000001" ? UKC : nat, gp = govParties(govCode, d); if (!gp) return null;
+      const uk = govParties(UKC, d), ukNote = govCode !== UKC && uk ? `UK Government: ${uk.parties.includes(ctl) ? "same party" : "different party"}` : "";
+      if (ctl === "noc") return { v: "noc", text: "No overall control", note: ukNote };
+      if (gp.ps) return { v: "ps", text: `Power-sharing executive in Northern Ireland (${partyName(ctl)} here)`, note: ukNote };
+      const same = gp.parties.includes(ctl);
+      return { v: same ? "same" : "differ", text: `${partyName(ctl)}: ${same ? "in" : "not in"} the ${govCode === UKC ? "UK Government" : gp.g.title.replace(/^First Minister/, "devolved government")}${gp.parties.length > 1 ? ` (${gp.label})` : ""}`, note: ukNote };
+    } });
+  def({ id: "mp_tenure", p: "political", group: G31, label: "MP's years in the seat", scale: "ratio", nature: "duration", temporal: "state", levels: ["constituency"], breaks: [2, 5, 10, 20],
+    how: "Years since the current MP first won this seat, counting continuous service in this seat only", desc: "How long the sitting MP has held the seat", fmt: v => v.toFixed(1) + " years", source: "UK Parliament Members API (spans in constituencies.js)",
+    get(code, d) { const L = (SPANS[code] || []).filter(x => x[0] <= d); const cur = spanAt(code, d); if (!cur) return null; let s = cur[0];
+      for (let i = L.length - 1; i >= 0; i--) { const x = L[i]; if (x[3] === cur[3] && (x[1] === s || x[0] === s)) s = x[0]; }
+      const v = yearsBetween(s, d); return { v, text: `${this.fmt(v)} (${cur[3]}, since ${s.slice(0, 4)})` }; } });
+  def({ id: "mp_count", p: "political", group: G31, label: "MPs since 1997", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [2, 3, 4, 5],
+    how: "Distinct MPs for this seat from its first result (1997 at the earliest) to the date, within this boundary set only", desc: "How many different MPs the seat has had", fmt: v => fmtInt(v) + (v === 1 ? " MP" : " MPs"),
+    get(code, d) { const L = (SPANS[code] || []).filter(x => x[0] <= d); if (!L.length) return null; const mps = new Set(L.map(x => x[3]));
+      const by = (RES[code] || []).filter(x => ELX[x[0]].kind === "by" && ELX[x[0]].day <= d).length, defect = L.filter((x, i) => i && x[3] === L[i - 1][3] && x[2] !== L[i - 1][2]).length;
+      return { v: mps.size, text: this.fmt(mps.size), note: `${by} by-election${by === 1 ? "" : "s"}, ${defect} defection${defect === 1 ? "" : "s"} · counted within this boundary set` }; } });
+  def({ id: "seat_flips", p: "political", group: G31, label: "Seat changed hands", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [1, 2, 3, 4],
+    how: "Number of times the seat's party changed, at elections, by-elections or by defection, from its first result to the date", desc: "How often the seat has changed party", fmt: v => fmtInt(v) + (v === 1 ? " change" : " changes"),
+    get(code, d) { const L = ownSpans(code).filter(x => x[0] <= d); if (!L.length) return null; let n = 0, def_ = 0; const raw = (SPANS[code] || []).filter(x => x[0] <= d);
+      for (let i = 1; i < L.length; i++) if (L[i][2] !== L[i - 1][2]) n++;
+      for (let i = 1; i < raw.length; i++) if (raw[i][3] === raw[i - 1][3] && raw[i][2] !== raw[i - 1][2]) def_++;
+      return { v: n, text: this.fmt(n), note: def_ ? `${def_} by defection` : "" }; } });
+  // protests: trend, diversity and opposition (same windows as the other protest metrics)
+  const ALIGN_PARTY = { "Labour": "lab", "Conservative": "con", "Liberal Democrat": "ld", "Green": "grn", "Scottish nationalist": "snp", "Welsh nationalist": "pc", "Irish republican": "sf",
+    "Irish nationalist (constitutional)": "sdlp", "Unionist / loyalist": "unionist", "Right (Brexit / Reform)": "right", "Labour movement (unions)": "lab" };
+  function eventsBetween(code, d, back) { const a = protestAgg(addDays(d, -back)); const s = a.ev[code]; return s ? [...s].map(i => PR.events[i]) : []; }
+  def({ id: "protest_trend", p: "political", group: G2, label: "Protest trend", scale: "interval", nature: "change", temporal: "event", mid: 0,
+    how: "Protests in the current window minus protests in the window of the same length just before it; % change shown when the earlier window has 5 or more", desc: "More or fewer protests than the window before", fmt: v => (v > 0 ? "+" : "") + fmtInt(v),
+    get(code, d) { const now = (protestAgg(d).ev[code] || new Set()).size, before = eventsBetween(code, d, PS.win).length; if (!now && !before) return null; const v = now - before;
+      return { v, text: `${this.fmt(v)} (${now} now, ${before} in the window before)${before >= 5 ? ` · ${fmtPct(100 * v / before)}` : ""}` }; } });
+  def({ id: "protest_diversity", p: "political", group: G2, label: "Cause diversity", scale: "ratio", nature: "rate", temporal: "event", breaks: [0.2, 0.4, 0.6, 0.8],
+    how: "Normalised Shannon entropy of causes, H / ln(k), from 0 (one cause) to 1 (evenly spread); missing with fewer than 5 protests", desc: "Whether protests here are about one thing or many", fmt: v => v.toFixed(2),
+    get(code, d) { const es = eventsIn(code, d); if (es.length < 5) return es.length ? { v: null, text: `Only ${es.length} protests: too few to say` } : null;
+      const n = {}; es.forEach(e => { n[e.c] = (n[e.c] || 0) + 1; }); const k = CAUSES.length, H = -Object.values(n).reduce((a, c) => a + (c / es.length) * Math.log(c / es.length), 0), v = H / Math.log(k);
+      return { v, text: `${this.fmt(v)} (${Object.keys(n).length} causes among ${es.length} protests)` }; } });
+  def({ id: "protest_opposition", p: "political", group: G2, label: "Protests against the governing party", scale: "ratio", nature: "share", temporal: "event", breaks: [20, 40, 60, 80],
+    how: "Share of protests whose organisers are a party, or a group aligned with one, that is not in the UK Government on the protest's date. Protests with no party alignment are left out",
+    desc: "How much protest here comes from opposition parties and their allies", fmt: v => v.toFixed(0) + "%",
+    get(code, d) { const es = eventsIn(code, d); let used = 0, opp = 0;
+      es.forEach(e => { const ps = e.al.map(a => ALIGN_PARTY[a]).filter(Boolean); if (!ps.length) return; used++; const g = govParties(UKC, fromDay(e.t0)); if (g && ps.some(p => !g.parties.includes(p))) opp++; });
+      if (!used) return es.length ? { v: null, text: "No party-aligned organisers among these protests" } : null; const v = 100 * opp / used;
+      return { v, text: `${this.fmt(v)} of ${used} party-aligned protests`, note: `${es.length - used} with no party alignment left out` }; } });
+
+  // political: Westminster elections (1.7), from data/elections.js; calculations in psephology.js
+  const EL = window.ATLAS_EL || null, PSE = window.AtlasPseph, G4 = "Westminster elections";
+  if (EL) Object.entries(EL.parties).forEach(([k, v]) => { if (!PARTY[k]) PARTY[k] = v; });
+  const ELX = EL ? EL.elections.map(([id, day, kind, set, label]) => ({ id, day, kind, set, label })) : [], RES = EL ? EL.res : {}, AREA = EL ? EL.area : {};
+  const GE_DAYS = [...new Set(ELX.filter(e => e.kind === "general").map(e => e.day))].sort();
+  function decode(x) {
+    if (x._d) return x._d; const c = []; for (let i = 7; i < x.length; i += 2) c.push([x[i], x[i + 1]]);
+    // t: votes by party (shares); cl: each candidate on its own (winner, runner-up, majority: two independents are two candidates, not one party)
+    const t = PSE.tally(c), cl = c.slice().sort((a, b) => b[1] - a[1]).map(([p, v]) => [p, v, t.total ? v / t.total : 0]);
+    return (x._d = { e: ELX[x[0]], electorate: x[1], valid: x[2] || t.total, invalid: x[3], winner: x[4], spk: !!x[5], est: !!x[6], t, cl });
+  }
+  // a seat's result on a date: the latest general or by-election on or before it (notional results are only ever a "before")
+  function resAt(code, d) { const L = RES[code]; if (!L) return null; for (let i = L.length - 1; i >= 0; i--) { const r = decode(L[i]); if (r.e.kind !== "notional" && r.e.day <= d) return r; } return null; }
+  function prevOf(code, r) { // the previous general election in the same seat; across a boundary change, the Library's notional result (estimated)
+    const L = RES[code] || []; for (let i = L.length - 1; i >= 0; i--) { const q = decode(L[i]); if (q.e.kind !== "by" && q.e.day < r.e.day) return q; } return null;
+  }
+  const geAt = d => { let g = null; for (const x of GE_DAYS) if (x <= d) g = x; return g; };
+  const aggCache = {};
+  function aggregateEl(code, day) { // every seat at one general election inside the area, votes summed and then recomputed (never averaged)
+    const ck = code + "|" + day; if (ck in aggCache) return aggCache[ck];
+    const lv = P[code].level, by = {}, seats = {}; let valid = 0, electorate = 0, elect_valid = 0, n = 0, wasted = 0;
+    for (const c in RES) { const a = AREA[c]; if (!a) continue; if (lv === "nation" && a[0] !== code) continue; if (lv === "region" && a[1] !== code) continue;
+      for (const x of RES[c]) { const r = decode(x); if (r.e.day !== day || r.e.kind !== "general") continue;
+        n++; valid += r.valid; if (r.electorate) { electorate += r.electorate; elect_valid += r.valid; }
+        r.t.list.forEach(([p, v]) => { by[p] = (by[p] || 0) + v; }); const w = r.spk ? "spk" : r.cl[0][0]; seats[w] = (seats[w] || 0) + 1;
+        const ws = PSE.wasted(r.cl, r.valid); if (ws) wasted += ws.votes; } }
+    if (!n) return (aggCache[ck] = null);
+    const t = PSE.tally(Object.entries(by));
+    return (aggCache[ck] = { agg: true, day, e: { day, kind: "general", label: `${day.slice(0, 4)} general election` }, n, valid, electorate, elect_valid, t, cl: t.list, seats, wasted, est: false });
+  }
+  const resultFor = (code, d) => { const p = P[code]; if (!p) return null; if (p.level === "constituency") return resAt(code, d); const g = geAt(d); return g ? aggregateEl(code, g) : null; };
+  const previousFor = (code, r) => { if (!r) return null; if (!r.agg) return prevOf(code, r); const i = GE_DAYS.indexOf(r.day); return i > 0 ? aggregateEl(code, GE_DAYS[i - 1]) : null; };
+  const shareOf = (r, p) => r.t.total ? (r.t.by[p] || 0) / r.t.total : 0;
+  const sharesOf = r => Object.fromEntries(r.t.list.map(([p, , s]) => [p, s]));
+  const winnerOf = r => r.spk ? "spk" : r.cl[0][0];
+  const elWhen = r => r.e.label;
+  const pct1 = v => v.toFixed(1) + "%", pts = v => (v > 0 ? "+" : v < 0 ? "−" : "±") + Math.abs(v).toFixed(1) + " pts";
+  const MINOR = p => p.startsWith("x-") || p === "ind" || p === "oth";
+  const groupMinor = p => MINOR(p) ? "oth" : p;
+  const WM_LEVELS = ["constituency", "region", "nation", "country"], SEAT_ONLY = ["constituency"], AREA_ONLY = ["region", "nation", "country"];
+  const WM_NM = { council: "Not meaningful at this level: Westminster seats don't nest in councils", ward: "Not meaningful at this level: Westminster seats don't nest in wards" };
+  const WM_SRC = EL ? EL.sources.westminster : "";
+  const bar = r => { const L = r.agg ? Object.entries(r.seats).sort((a, b) => b[1] - a[1]) : r.cl.slice(0, 6).map(([p, v]) => [p, v]); const tot = L.reduce((a, x) => a + x[1], 0);
+    return `<div class="compbar">${L.map(([p, v]) => `<i style="width:${(100 * v / tot).toFixed(2)}%;background:${partyCol(p)}" title="${esc(partyName(p))}: ${r.agg ? v + " seats" : fmtInt(v) + " votes"}"></i>`).join("")}</div><small>${L.slice(0, 5).map(([p, v]) => `${esc(partyName(p))} ${r.agg ? v : pct1(100 * v / tot)}`).join(" · ")}</small>`; };
+  const wm = o => def(Object.assign({ p: "political", group: G4, temporal: "election", levels: WM_LEVELS, nmText: WM_NM, source: WM_SRC }, o));
+  const PS_PICK_DEF = { ge_share: "lab", ge_swing_butler: "con-lab", ge_swing_steed: "con-lab" };
+  const pickOf = id => (PS.pick && PS.pick[id]) || PS_PICK_DEF[id];
+  wm({ id: "ge_winner", label: "Winning party", scale: "nominal", nature: "category", desc: "Who won the seat; for a region, nation or the UK, the party with most seats", pairShare: "ge_win_share",
+    how: "Seat: the candidate with most votes (the Speaker shown as Speaker). Region, nation, UK: the party that won most seats there", ...partyCat,
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const top = r.agg ? Object.keys(r.seats).sort((a, b) => r.seats[b] - r.seats[a] || (r.t.by[b] || 0) - (r.t.by[a] || 0))[0] : winnerOf(r);
+      const text = r.agg ? `${partyName(top)}: ${r.seats[top]} of ${r.n} seats (${pct1(100 * shareOf(r, top))} of votes)` : `${partyName(top)}${r.winner ? ` (${r.winner})` : ""} · ${pct1(100 * r.cl[0][2])}`;
+      return { v: top, text, yr: elWhen(r), counts: r.agg ? r.seats : null, tot: r.n, detail: bar(r) }; } });
+  wm({ id: "ge_win_share", label: "Winner's vote share", scale: "ratio", nature: "share", breaks: [35, 42, 50, 60], fmt: pct1, desc: "The winning party's share of the vote (shades the winner's colour)",
+    how: "Winner's votes ÷ valid votes (for an area: the leading party's summed votes ÷ all valid votes)",
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const top = r.agg ? r.cl[0][0] : winnerOf(r), v = 100 * (r.agg ? r.cl[0][2] : r.cl[0][2]);
+      return { v, text: `${pct1(v)} (${partyName(top)})`, yr: elWhen(r) }; } });
+  wm({ id: "ge_share", label: "Vote share (choose party)", scale: "ratio", nature: "share", fmt: pct1, pick: "party", desc: "One party's share of the vote; choose the party in the key",
+    how: "Party's votes ÷ valid votes; for an area, summed votes ÷ summed valid votes",
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const p = pickOf("ge_share"), v = 100 * shareOf(r, p); return { v, text: `${pct1(v)} for ${partyName(p)}${r.t.by[p] ? "" : " (did not stand)"}`, yr: elWhen(r) }; } });
+  wm({ id: "ge_turnout", label: "Turnout", scale: "ratio", nature: "share", fmt: pct1, breaks: [55, 60, 65, 70], desc: "Share of the electorate who cast a valid vote",
+    how: "Valid votes ÷ electorate (the House of Commons Library's definition; rejected ballots are not counted)",
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const e = r.agg ? r.electorate : r.electorate, vv = r.agg ? r.elect_valid : r.valid; if (!e) return { v: null, text: "Electorate not recorded" };
+      const v = 100 * vv / e; return { v, text: `${pct1(v)} (${fmtInt(vv)} of ${fmtInt(e)})`, yr: elWhen(r) }; } });
+  const turnoutOf = r => { const e = r.electorate, vv = r.agg ? r.elect_valid : r.valid; return e ? 100 * vv / e : null; };
+  wm({ id: "ge_turnout_change", label: "Turnout change", scale: "interval", nature: "change", mid: 0, fmt: pts, desc: "Turnout against the previous general election",
+    how: "Turnout now minus turnout at the previous general election, in percentage points. Across a boundary change the previous figure is the Library's notional result (estimated)",
+    get(code, d) { const r = resultFor(code, d), q = previousFor(code, r); if (!r || !q) return r ? { v: null, text: "No comparable previous election" } : null;
+      const a = turnoutOf(r), b = turnoutOf(q); if (a == null || b == null) return { v: null, text: "Electorate not recorded" };
+      return { v: a - b, text: `${pts(a - b)} (${pct1(b)} → ${pct1(a)})`, yr: `${elWhen(q)} → ${elWhen(r)}`, est: q.est, estWhy: "Compared with a notional result on the new boundaries" }; } });
+  wm({ id: "ge_majority", label: "Majority", scale: "ratio", nature: "share", levels: SEAT_ONLY, fmt: pct1, breaks: [5, 10, 20, 30], desc: "Winner's lead over the runner-up",
+    how: "(Winner's votes − runner-up's votes) ÷ valid votes, as a %", nmText: Object.assign({ region: "A majority belongs to a single seat", nation: "A majority belongs to a single seat", country: "A majority belongs to a single seat" }, WM_NM),
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const m = PSE.majority(r.cl, r.t.total); return { v: m.pct, text: `${pct1(m.pct)} (${fmtInt(m.votes)} votes)`, yr: elWhen(r) }; } });
+  const MARG = ["vm", "m", "fs", "s"], MARG_NAME = { vm: "Very marginal (under 5%)", m: "Marginal (5–10%)", fs: "Fairly safe (10–20%)", s: "Safe (20% or more)" };
+  wm({ id: "ge_marginality", label: "Marginality", scale: "nominal", nature: "category", levels: SEAT_ONLY, nmText: M.ge_majority.nmText, desc: "How safe the seat is (bands of the majority)",
+    how: "A view of the majority: under 5% very marginal, 5–10% marginal, 10–20% fairly safe, 20% or more safe. These bands are Atlas's convention, not an official definition",
+    colour: k => ({ vm: "#b2182b", m: "#ef8a62", fs: "#92c5de", s: "#2166ac" })[k], catName: k => MARG_NAME[k], cats: () => MARG,
+    get(code, d) { const r = M.ge_majority.get(code, d); if (!r || r.v == null) return r; const k = r.v < 5 ? "vm" : r.v < 10 ? "m" : r.v < 20 ? "fs" : "s"; return { v: k, text: `${MARG_NAME[k]}: ${r.text}`, yr: r.yr }; } });
+  wm({ id: "ge_to_flip", label: "Votes to flip", scale: "ratio", nature: "count", levels: SEAT_ONLY, nmText: M.ge_majority.nmText, fmt: v => fmtInt(v) + " votes", desc: "Voters who would have to switch from the winner to the runner-up",
+    how: "floor(majority in votes ÷ 2) + 1: each voter who switches takes one vote off the winner and gives one to the runner-up",
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const m = PSE.majority(r.cl, r.t.total), v = PSE.toFlip(m.votes); return { v, text: `${fmtInt(v)} voters switching to ${partyName(r.cl[1] ? r.cl[1][0] : "")}`, yr: elWhen(r) }; } });
+  wm({ id: "ge_second", label: "Second-placed party", scale: "nominal", nature: "category", levels: SEAT_ONLY, nmText: M.ge_majority.nmText, desc: "Who came second", how: "The candidate with the second most votes", ...partyCat,
+    get(code, d) { const r = resultFor(code, d); if (!r || !r.cl[1]) return null; const p = r.cl[1][0]; return { v: p, text: `${partyName(p)} · ${pct1(100 * r.cl[1][2])}`, yr: elWhen(r) }; } });
+  wm({ id: "ge_minority_win", label: "Won on under half the vote", scale: "nominal", nature: "category", levels: SEAT_ONLY, nmText: M.ge_majority.nmText, desc: "Whether the winner had less than 50% of the vote",
+    how: "Yes when the winner's share of valid votes is below 50%", colour: k => k === "yes" ? "#d9822b" : "#5b8db8", catName: k => k === "yes" ? "Yes: under half" : "No: half or more", cats: () => ["yes", "no"],
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const s = 100 * r.cl[0][2]; return { v: s < 50 ? "yes" : "no", text: `${s < 50 ? "Yes" : "No"}: winner had ${pct1(s)}`, yr: elWhen(r) }; } });
+  wm({ id: "ge_wasted", label: "Wasted votes", scale: "ratio", nature: "share", fmt: pct1, breaks: [50, 60, 70, 80], desc: "Votes that made no difference to who won",
+    how: "(Votes for all losing candidates + the winner's votes beyond the runner-up's + 1) ÷ valid votes; for an area, summed over its seats",
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const w = r.agg ? { votes: r.wasted, pct: 100 * r.wasted / r.valid } : PSE.wasted(r.cl, r.t.total); return { v: w.pct, text: `${pct1(w.pct)} (${fmtInt(w.votes)} votes)`, yr: elWhen(r) }; } });
+  wm({ id: "ge_two_party", label: "Two-party share", scale: "ratio", nature: "share", fmt: pct1, desc: "Conservative and Labour together", how: "(Conservative + Labour votes) ÷ valid votes",
+    valid: code => nationOf(code) === "N92000002" ? "Not meaningful in Northern Ireland: these parties barely stand" : null,
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const v = 100 * (shareOf(r, "con") + shareOf(r, "lab")); return { v, text: pct1(v), yr: elWhen(r) }; } });
+  const PAIRS = [["con-lab", "Conservative v Labour"], ["lab-ref", "Labour v Reform UK"], ["con-ref", "Conservative v Reform UK"], ["snp-lab", "SNP v Labour"], ["con-ld", "Conservative v Liberal Democrats"], ["lab-ld", "Labour v Liberal Democrats"], ["lab-grn", "Labour v Green"], ["lab-pc", "Labour v Plaid Cymru"]];
+  const pairOf = id => pickOf(id).split("-");
+  const swingGet = kind => function (code, d) {
+    const r = resultFor(code, d), q = previousFor(code, r); if (!r || !q) return r ? { v: null, text: "No comparable previous election" } : null;
+    const [a, b] = pairOf(this.id), now = sharesOf(r), before = sharesOf(q);
+    const v = kind === "butler" ? PSE.butler(now, before, a, b) : PSE.steed(now, before, a, b); if (v == null) return { v: null, text: "Neither party stood in both elections" };
+    return { v, text: `${pts(Math.abs(v))} towards ${partyName(v >= 0 ? a : b)}`, yr: `${elWhen(q)} → ${elWhen(r)}`, est: q.est, estWhy: "Compared with a notional result on the new boundaries" };
+  };
+  wm({ id: "ge_swing_butler", label: "Swing (Butler)", scale: "interval", nature: "change", mid: 0, fmt: pts, pick: "pair", desc: "Movement between two parties since the previous election; positive = towards the first party",
+    how: "((first party's share now − before) − (second party's share now − before)) ÷ 2, in points of the total vote. Across a boundary change, 'before' is the Library's notional result", get: swingGet("butler") });
+  wm({ id: "ge_swing_steed", label: "Swing (Steed, two-party)", scale: "interval", nature: "change", mid: 0, fmt: pts, pick: "pair", desc: "Movement between two parties, counting only their votes",
+    how: "Change in first party ÷ (first + second party), in points", get: swingGet("steed") });
+  wm({ id: "ge_volatility", label: "Volatility (Pedersen)", scale: "ratio", nature: "rate", fmt: v => v.toFixed(1) + " pts", breaks: [5, 10, 15, 20], desc: "How much the vote moved between all parties since the previous election",
+    how: "½ × the sum, over all parties, of the change in vote share; parties outside the main ones and independents count together as 'Other' in both elections",
+    get(code, d) { const r = resultFor(code, d), q = previousFor(code, r); if (!r || !q) return r ? { v: null, text: "No comparable previous election" } : null;
+      const v = PSE.pedersen(sharesOf(r), sharesOf(q), groupMinor); return { v, text: this.fmt(v), yr: `${elWhen(q)} → ${elWhen(r)}`, est: q.est, estWhy: "Compared with a notional result on the new boundaries" }; } });
+  wm({ id: "ge_enp_votes", label: "Effective number of parties (votes)", scale: "ratio", nature: "rate", fmt: v => v.toFixed(2), breaks: [2, 2.5, 3, 3.5], desc: "How fragmented the vote is",
+    how: "1 ÷ the sum of each party's squared vote share (shares as proportions; Laakso & Taagepera)",
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const v = PSE.enp(r.cl.map(x => x[2])); return { v, text: this.fmt(v), yr: elWhen(r) }; } });
+  const AREA_NM = Object.assign({ constituency: "Not meaningful for a single seat" }, WM_NM);
+  wm({ id: "ge_enp_seats", label: "Effective number of parties (seats)", scale: "ratio", nature: "rate", levels: AREA_ONLY, nmText: AREA_NM, fmt: v => v.toFixed(2), desc: "How fragmented the seats are",
+    how: "1 ÷ the sum of each party's squared share of the seats won in the area",
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const v = PSE.enp(Object.values(r.seats).map(n => n / r.n)); return { v, text: `${this.fmt(v)} (${r.n} seats)`, yr: elWhen(r) }; } });
+  wm({ id: "ge_gallagher", label: "Disproportionality (Gallagher)", scale: "ratio", nature: "rate", levels: AREA_ONLY, nmText: AREA_NM, fmt: v => v.toFixed(1), desc: "How far seats differ from votes",
+    how: "√(½ × the sum over parties of (vote % − seat %)²), all parties including those with no seats",
+    get(code, d) { const r = resultFor(code, d); if (!r) return null; const parties = new Set([...Object.keys(r.t.by), ...Object.keys(r.seats)]);
+      const v = PSE.gallagher([...parties].map(p => ({ votes: shareOf(r, p), seats: (r.seats[p] || 0) / r.n }))); return { v, text: `${this.fmt(v)} (${r.n} seats)`, yr: elWhen(r) }; } });
+  const QUOTA_2023 = 73393;
+  const meanElectorate = day => { const a = aggregateEl(UKC, day); return a && a.n ? a.electorate / a.n : null; };
+  wm({ id: "electors_per_mp", label: "Electors per MP", scale: "interval", nature: "change", mid: 0, fmt: v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1) + "%", desc: "Electorate per seat, against the electoral quota (2024 seats) or the UK average (before)",
+    how: "The seat's electorate at the election. On the 2024 boundaries: % above or below the 2023 review's UK electoral quota of 73,393. Before 2024: % above or below that election's UK mean electorate per seat. For an area: electorate ÷ seats",
+    get(code, d) { const r = resultFor(code, d); if (!r || !r.electorate) return r ? { v: null, text: "Electorate not recorded" } : null; const per = r.agg ? r.electorate / r.n : r.electorate;
+      const quota = r.e.day >= "2024-07-04" ? QUOTA_2023 : meanElectorate(r.agg ? r.day : (geAt(r.e.day) || r.e.day)); if (!quota) return null; const v = 100 * (per / quota - 1);
+      return { v, text: `${fmtInt(per)} electors${r.agg ? " per seat" : ""} (${this.fmt(v)} against ${r.e.day >= "2024-07-04" ? "the 2023 quota of 73,393" : "the UK mean of " + fmtInt(quota)})`, yr: elWhen(r) }; } });
   // markets: FTSE 100 companies headquartered in London (test case)
   const COS = MK ? MK.companies : [], GRP_COL = MK ? Object.fromEntries(MK.groups) : {}, G3 = "FTSE 100 in London (test case)";
   COS.forEach((c, i) => { c.i = i; });
@@ -306,14 +529,14 @@
     order: ["political"], on: { political: true },
     mapped: { political: ["control", "protest_events"], economic: ["gdp_per_head"], social: ["population"], markets: ["market_sites", "market_value"] },
     active: Object.fromEntries(METRICS.map(m => [m.id, !["party", "gdp", "density"].includes(m.id)])),
-    card: { control: true, protest_events: true }, prefs: {}, biv: { pal: "pt", n: 3 }, step: 1, win: 1826, detail: "detailed", hot: false,
+    card: { control: true, protest_events: true }, prefs: {}, pick: {}, biv: { pal: "pt", n: 3 }, step: 1, win: 1826, detail: "detailed", hot: false,
   };
   const PS = (() => {
     const s = store.get("atlas-15-persp", {}), o = JSON.parse(JSON.stringify(DEF_PS));
-    ["on", "active", "card", "prefs", "biv"].forEach(k => Object.assign(o[k], s[k] || {}));
+    ["on", "active", "card", "prefs", "biv", "pick"].forEach(k => Object.assign(o[k], s[k] || {}));
     Object.entries(s.mapped || {}).forEach(([p, v]) => { if (PER[p]) o.mapped[p] = (Array.isArray(v) ? v : [v]).filter(id => M[id]); });
     if (Array.isArray(s.order)) o.order = s.order.filter(p => PER[p]);
-    ["step", "win", "detail", "hot"].forEach(k => { if (s[k] != null) o[k] = s[k]; });
+    ["step", "win", "detail", "hot", "hatch"].forEach(k => { if (s[k] != null) o[k] = s[k]; });
     return o;
   })();
   // 0.3.1: a perspective is "on" exactly when something in it is ticked (there is no separate perspective switch any more)
@@ -338,6 +561,7 @@
   const map = new maplibregl.Map({ container: "map", style: key ? osStyle(key) : plainStyle(), center: HOME, zoom: HOME_Z, minZoom: C.minZoom || 4.6, maxZoom: 17,
     dragRotate: false, pitchWithRotate: false, attributionControl: false, preserveDrawingBuffer: true });
   window.atlasMap = map;
+  if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { M, P, METRICS, resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint() };   // for checks only (index.html?debug)
   map.boxZoom.disable(); map.touchZoomRotate.disableRotation();
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
   map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
@@ -456,6 +680,12 @@
     x.beginPath(); x.arc(s / 2, s / 2, r, 0, Math.PI * 2); x.fillStyle = "#ffffff"; x.fill(); x.lineWidth = 1.8; x.strokeStyle = "#1a2226"; x.stroke();
     return x.getImageData(0, 0, s, s);
   }
+  function hatchImage() { // thin diagonal lines: "estimated, not measured"
+    const s = 16, cv = document.createElement("canvas"); cv.width = cv.height = s; const x = cv.getContext("2d");
+    x.strokeStyle = "rgba(26,34,38,.55)"; x.lineWidth = 1.6; x.beginPath();
+    for (let o = -s; o <= s; o += 8) { x.moveTo(o, s); x.lineTo(o + s, 0); } x.stroke();
+    return x.getImageData(0, 0, s, s);
+  }
   map.on("load", () => {
     before = (map.getStyle().layers.find(l => l.type === "symbol") || {}).id;
     ["nation", "region", "council", "constituency"].forEach(l => {
@@ -472,11 +702,14 @@
     map.addSource("tool", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addSource("grid", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     for (let k = 0; k < 5; k++) map.addImage("dot-" + k, dotImage(k), { pixelRatio: 2 });
+    map.addImage("hatch", hatchImage(), { pixelRatio: 2 });
     LEVELS.forEach(l => {
       const range = { minzoom: VIS[l][0], maxzoom: VIS[l][1] };
       map.addLayer(Object.assign({ id: "pf-" + l, type: "fill", source: SRC[l], paint: { "fill-color": ["to-color", ["coalesce", ["feature-state", "fc"], "#000000"], "#000000"], "fill-opacity": pfOpacity() } }, range), before);
       for (let k = 0; k < 5; k++) map.addLayer(Object.assign({ id: `pdt-${l}-${k}`, type: "fill", source: SRC[l], paint: { "fill-pattern": "dot-" + k,
         "fill-opacity": ["case", ["boolean", ["feature-state", "dim"], false], 0, ["==", ["coalesce", ["feature-state", "dt"], -1], k], 1, 0] } }, range), before);
+      map.addLayer(Object.assign({ id: "pes-" + l, type: "fill", source: SRC[l], paint: { "fill-pattern": "hatch",
+        "fill-opacity": ["case", ["boolean", ["feature-state", "dim"], false], 0, ["boolean", ["feature-state", "est"], false], 0.9, 0] } }, range), before);
     });
     LEVELS.forEach(l => map.addLayer({ id: l + "-fill", type: "fill", source: SRC[l], minzoom: VIS[l][0], maxzoom: VIS[l][1],
       paint: { "fill-color": "#3b5b78", "fill-opacity": ["case", ["boolean", ["feature-state", "sel"], false], 0.18, ["boolean", ["feature-state", "hover"], false], 0.14, 0], "fill-opacity-transition": { duration: 250 } } }, before));
@@ -611,20 +844,23 @@
   const qCache = {};
   function breaksFor(m, level, k) {
     // time-varying metrics are classified over every year (sampled), so a colour means the same on every date
-    const pooled = m.temporal === "annual" || m.temporal === "event";
+    const pooled = m.temporal === "annual" || m.temporal === "event" || m.temporal === "election";
     const ck = [m.id, level, k, pooled ? "" : state.date, m.temporal === "event" ? PS.win : ""].join("|");
     if (qCache[ck]) return qCache[ck];
     const codes = allCodesAt(level === "nation" ? "nation" : level);
     let dates = [state.date];
     if (m.temporal === "annual") dates = SY.filter((y, i) => i % 2 === 0 || y === SY[SY.length - 1]).map(y => y + "-07-01");
     if (m.temporal === "event") { dates = []; for (let y = 1976; y <= +TODAY.slice(0, 4); y += 3) dates.push(y + "-12-31"); }
+    if (m.temporal === "election") dates = level === "constituency" ? [state.date] : GE_DAYS.map(x => addDays(x, 1));   // seats: the set on screen; areas: every general election
     const vals = []; dates.forEach(d => codes.forEach(c => { const r = m.get(c, d); if (r && r.v != null && (m.nature !== "count" || r.v > 0)) vals.push(r.v); }));
     const res = EN.classify(m, vals, k); if (pooled && res.method !== "fixed") res.why += " Classes are fixed across all years, so colours compare through time.";
     return (qCache[ck] = res);
   }
   const LAST = { fc: {}, k: {}, present: {}, presentB: {} };
   const NODATA = "#b9bcbd";
-  const noDataKey = level => LAST.present[level] && LAST.present[level].has("__nd") ? `<div class="ndkey"><span ${isoAttr("nd", 1)}><i class="sw" style="background:${NODATA}"></i>No data</span></div>` : "";
+  const noDataKey = level => (LAST.present[level] && LAST.present[level].has("__nd") ? `<div class="ndkey"><span ${isoAttr("nd", 1)}><i class="sw" style="background:${NODATA}"></i>No data</span></div>` : "") +
+    (LAST.present[level] && LAST.present[level].has("__nm") ? `<div class="ndkey"><span><i class="sw" style="background:transparent;border:1px dashed var(--ink-3)"></i>Unfilled: not meaningful at this level</span></div>` : "") +
+    (LAST.present[level] && LAST.present[level].has("__est") ? `<div class="ndkey"><span><i class="sw hatchsw"></i>Hatched: estimated (e.g. notional results on new boundaries)</span></div>` : "");
   let curPlan = { notes: [] };
   function planMetrics() { return onPersps().flatMap(p => (PS.mapped[p] || []).filter(id => M[id] && PS.active[id] && M[id].nature !== "text").map(id => M[id])); }
   function isoMatch(iso, k) {
@@ -640,7 +876,9 @@
     const br = (m, k) => m ? breaksFor(m, level, k).breaks : null;
     const shB = br(PL.shade, PL.grid ? nb : 5), grB = br(PL.grid, nb), dvB = br(PL.diverge, 5), dtB = br(PL.dots, 5);
     const grid = PL.grid ? bivGrid(PS.biv.pal, nb) : null;
-    const val = (m, c) => { if (!m) return null; const r = m.get(c, d); return r && r.v != null ? r.v : null; };
+    const memo = new Map(), rOf = (m, c) => { const k = m.id + "|" + c; if (!memo.has(k)) memo.set(k, m.get(c, d)); return memo.get(k); };
+    const val = (m, c) => { if (!m) return null; const r = rOf(m, c); return r && r.v != null ? r.v : null; };
+    const fillMs = [PL.hue, PL.shade, PL.grid, PL.diverge].filter(Boolean), hatch = PS.hatch !== false;
     let smax = 0; const sv = PL.size ? codes.map(c => { const v = val(PL.size, c); if (v > smax) smax = v; return v; }) : null;
     const present = new Set(), presentB = new Set(), isoS = state.iso;
     codes.forEach((c, i) => {
@@ -652,11 +890,14 @@
       else if (PL.grid) { if (k.sh != null && k.gr != null) fc = grid[k.gr][k.sh]; }
       else if (PL.shade) { if (k.sh != null) fc = PER[PL.shade.p].ramp[k.sh]; }
       else if (PL.diverge) { if (k.dv != null) fc = DIV[k.dv]; }
-      if (fills && !fc) { fc = NODATA; k.nd = true; present.add("__nd"); }   // a fill layer is on but this area has no value: grey, "No data"
+      const nm = fills && fillMs.every(m => { const r = rOf(m, c); return r && r.nm; });   // not meaningful here: leave it unfilled, not "no data"
+      if (nm) present.add("__nm");
+      else if (fills && !fc) { fc = NODATA; k.nd = true; present.add("__nd"); }   // a fill layer is on but this area has no value: grey, "No data"
       if (bgv != null) presentB.add(bgv);
       const dim = !!isoS && !isoMatch(isoS, k);
       LAST.fc[c] = fc; LAST.k[c] = k;
-      try { map.setFeatureState({ source: SRC[level], id: c }, { fc, dt: k.dt == null ? -1 : k.dt, dim }); } catch (e) {}
+      const est = hatch && !!fc && fc !== NODATA && fillMs.some(m => { const r = rOf(m, c); return r && r.est; }); if (est) present.add("__est");
+      try { map.setFeatureState({ source: SRC[level], id: c }, { fc, dt: k.dt == null ? -1 : k.dt, dim, est }); } catch (e) {}
       if (map.getSource("pt-" + level)) {
         const v = sv && sv[i];
         try { map.setFeatureState({ source: "pt-" + level, id: c }, { dr: v != null && v > 0 && smax > 0 ? 3 + 19 * Math.sqrt(v / smax) : 0, dc: PL.size ? PER[PL.size.p].hue : "#000", br: bgv != null ? 5.5 : 0, bc: bgv != null ? PL.badge.colour(bgv) : "#000", dim }); } catch (e) {}
@@ -679,7 +920,13 @@
   const legend = $("legend");
   const CH_NAME = { hue: "colour", shade: "lightness", grid: "colour grid", diverge: "two-sided colour", badge: "centre marker", dots: "dots", size: "circles", points: "points", heat: "heat", sites: "points" };
   function chooser(m) { const chs = EN.channels(m).map(c => c.ch); const cur = Object.keys(CH_NAME).find(ch => curPlan[ch] === m); return chs.length > 1 ? `<select class="as" data-as="${m.id}" aria-label="Show ${esc(m.label)} as">${chs.map(ch => `<option value="${ch}" ${ch === cur ? "selected" : ""}>${CH_NAME[ch]}</option>`).join("")}</select>` : `<small>${CH_NAME[cur] || ""}</small>`; }
-  const lhead = (m, extra) => `<h5 style="--c:${PER[m.p].hue}">${svgIcon(m.p)}<span>${esc(m.label)}</span>${chooser(m)}${extra || ""}<button class="lrm" data-lrm="${m.id}" title="Take ${esc(m.label)} off the map" aria-label="Remove ${esc(m.label)}">×</button></h5>`;
+  function picker(m) {
+    if (m.pick === "party") { const r = resultFor(UKC, state.date) || resultFor(UKC, TODAY); const ps = r ? r.t.list.filter(x => !MINOR(x[0])).slice(0, 14).map(x => x[0]) : ["lab", "con"]; const cur = pickOf(m.id); if (!ps.includes(cur)) ps.unshift(cur);
+      return `<select class="as" data-pick="${m.id}" aria-label="Party">${ps.map(p => `<option value="${p}" ${p === cur ? "selected" : ""}>${esc(partyName(p))}</option>`).join("")}</select>`; }
+    if (m.pick === "pair") { const cur = pickOf(m.id); return `<select class="as" data-pick="${m.id}" aria-label="Pair of parties">${PAIRS.map(([k, l]) => `<option value="${k}" ${k === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`; }
+    return "";
+  }
+  const lhead = (m, extra) => `<h5 style="--c:${PER[m.p].hue}">${svgIcon(m.p)}<span>${esc(m.label)}</span>${picker(m)}${chooser(m)}${extra || ""}<button class="lrm" data-lrm="${m.id}" title="Take ${esc(m.label)} off the map" aria-label="Remove ${esc(m.label)}">×</button></h5>`;
   const isoAttr = (ch, v) => { const on = state.iso && state.iso.ch === ch && JSON.stringify(state.iso.v) === JSON.stringify(v); return `data-iso='${esc(JSON.stringify({ ch, v }))}' class="iso${on ? " on" : ""}"`; };
   function ticks(m, level, n) {
     const b = breaksFor(m, level, n); const f = m.fmt || String;
@@ -691,7 +938,7 @@
   const PLURAL_L = { nation: "Nations", region: "Regions", council: "Councils", constituency: "Constituencies", ward: "Wards" };
   function renderLegend() {
     const PL = curPlan, level = state.level, parts = [];
-    const cats = (m, set) => [...(set || [])].filter(x => x !== "__nd").sort((a, b) => m.cats().indexOf(a) - m.cats().indexOf(b));
+    const cats = (m, set) => [...(set || [])].filter(x => x !== "__nd" && x !== "__est" && x !== "__nm").sort((a, b) => m.cats().indexOf(a) - m.cats().indexOf(b));
     if (PL.hue && PL.shade) {
       const ks = cats(PL.hue, LAST.present[level]).slice(0, 9);
       parts.push(`<div class="lg">${lhead(PL.hue)}${lhead(PL.shade)}<div class="vbl"><div class="vbl-ax"><span>${esc(PL.shade.label)}: low</span><span>high →</span></div>
@@ -796,6 +1043,7 @@
   legend.addEventListener("change", e => {
     const t = e.target;
     if (t.dataset.as) { PS.prefs[t.dataset.as] = t.value; repaint(); }
+    else if (t.dataset.pick) { PS.pick[t.dataset.pick] = t.value; for (const k in qCache) if (k.startsWith(t.dataset.pick + "|")) delete qCache[k]; repaint(); }
     else if (t.hasAttribute("data-bivpal")) { PS.biv.pal = t.value; repaint(); }
     else if (t.hasAttribute("data-bivn")) { PS.biv.n = +t.value; repaint(); }
     else if (t.dataset.bivc != null) { PS.biv.cust = (PS.biv.cust || BIV_CUSTOM_DEF).slice(); PS.biv.cust[+t.dataset.bivc] = t.value; repaint(); }
@@ -835,7 +1083,8 @@
   }
   function toggleMapped(id) {
     const m = M[id], arr = PS.mapped[m.p] = PS.mapped[m.p] || [];
-    if (isMapped(id)) arr.splice(arr.indexOf(id), 1); else { if (!arr.includes(id)) arr.push(id); PS.active[id] = true; }
+    if (isMapped(id)) { arr.splice(arr.indexOf(id), 1); if (m.pairShare && arr.includes(m.pairShare)) arr.splice(arr.indexOf(m.pairShare), 1); }
+    else { if (!arr.includes(id)) arr.push(id); PS.active[id] = true; if (m.pairShare && M[m.pairShare] && !arr.includes(m.pairShare)) { arr.push(m.pairShare); PS.active[m.pairShare] = true; PS.prefs[m.pairShare] = "shade"; } }
     syncOn(m.p); repaint();
     const n = curPlan.notes.find(x => x.id === id); if (arr.includes(id) && n) toast(n.ch ? `${m.label}: ${CH_NAME[n.ch]}. ${n.why}` : n.why);
   }
@@ -1022,7 +1271,7 @@
     const items = CORE.map(f => { let v = value(code, f.id); if (past && (f.id === "ruler" || f.id === "party")) v = { text: M[f.id].get(code, d).text, yr: "" }; return `<li><b>${esc(f.label)}:</b> ${esc(v.text)}${v.yr ? ` <small>(${esc(v.yr)})</small>` : ""}${v.edited ? ` <span class="tag">edited</span>` : ""}</li>`; });
     ((rec && rec.fields) || []).forEach(f => { if (f.label) items.push(`<li><b>${esc(f.label)}:</b> ${esc(f.value || "—")}</li>`); });
     const onMap = planMetrics(); // everything ticked shows in the card, drawn or not
-    const mapped = onMap.map(m => { const r = m.get(code, d); return `<li>${swatchOf(m, code)}<span><b>${esc(m.label)}:</b> ${esc(r && (r.v != null || !EN.isNum(m)) ? r.text : "No data")}${r && r.note ? ` <small>· ${esc(r.note)}</small>` : ""}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}${sparkFor(m, code)}</span></li>`; });
+    const mapped = onMap.map(m => { const r = m.get(code, d); return `<li${r && r.nm ? ' class="nm"' : ""}>${swatchOf(m, code)}<span><b>${esc(m.label)}:</b> ${esc(r && (r.v != null || !EN.isNum(m) || r.nm) ? r.text : "No data")}${estTag(r)}${r && r.note ? ` <small>· ${esc(r.note)}</small>` : ""}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}${r && r.nm ? "" : sparkFor(m, code)}${pinned && m.how && !(r && r.nm) ? `<small class="how">How this is worked out: ${esc(m.how)}</small>` : ""}${pinned && r && r.detail ? `<div class="mdet">${r.detail}</div>` : ""}</span></li>`; });
     if (PS.detail === "simple" && !pinned) return `<div class="lvl"><span>${esc(LABEL[p.level])}</span></div><h3>${esc(nameOf(code))}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : `<div class="hint2">Put a metric on the map to see it here.</div>`}`;
     if (curPlan.grid && curPlan.shade) { const k = LAST.k[code] || {}; if (k.sh != null && k.gr != null) mapped.push(`<li class="bivw"><i class="sw" style="background:${LAST.fc[code]}"></i><span>${esc(bivWords(k.sh, k.gr, PS.biv.n, curPlan.shade, curPlan.grid))}</span></li>`); }
     const extra = METRICS.filter(m => m.nature === "text" && PS.card[m.id] && PS.active[m.id] && PER[m.p].ready && !["ruler", "party"].includes(m.id)).map(m => { const r = m.get(code, d); return `<li><i class="sw empty"></i><span><b>${esc(m.label)}:</b> ${esc(r ? r.text : "—")}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}</span></li>`; });
@@ -1467,8 +1716,9 @@
     const cols = metrics.map(m => { const vals = codes.map(c => m.get(c, d)); let lo = Infinity, hi = -Infinity; if (EN.isNum(m)) vals.forEach(r => { if (r && r.v != null) { lo = Math.min(lo, r.v); hi = Math.max(hi, r.v); } }); return { m, vals, lo, hi }; });
     const cell = (col, r) => {
       if (!r) return `<td style="color:var(--ink-3)">—</td>`;
+      if (r.nm) return `<td class="nm" title="${esc(r.text)}">n/a</td>`;
       if (EN.isCat(col.m)) return `<td>${r.v ? `<i class="sw" style="background:${col.m.colour(r.v)}"></i>` : ""}${esc(r.text)}</td>`;
-      if (EN.isNum(col.m)) { if (r.v == null) return `<td class="num">—</td>`; const k = col.hi > col.lo ? Math.min(4, Math.floor((r.v - col.lo) / (col.hi - col.lo) * 5)) : 2; const bg = col.m.mid != null ? DIV[k] : PER[col.m.p].ramp[k]; return `<td class="num" data-v="${r.v}" style="background:${bg};color:${textOn(bg)}">${esc(col.m.fmt(r.v))}</td>`; }
+      if (EN.isNum(col.m)) { if (r.v == null) return `<td class="num">—</td>`; const k = col.hi > col.lo ? Math.min(4, Math.floor((r.v - col.lo) / (col.hi - col.lo) * 5)) : 2; const bg = col.m.mid != null ? DIV[k] : PER[col.m.p].ramp[k]; return `<td class="num" data-v="${r.v}" style="background:${bg};color:${textOn(bg)}">${esc(col.m.fmt(r.v))}${r.est ? '<sup class="est" title="Estimated">est.</sup>' : ""}</td>`; }
       return `<td>${esc(r.text)}</td>`;
     };
     return `<table class="cmp sortable"><thead><tr><th title="Click to sort">Place</th>${metrics.map(m => `<th title="Click to sort" style="--c:${PER[m.p].hue}">${svgIcon(m.p)}${esc(m.label)}</th>`).join("")}</tr></thead><tbody>
@@ -1590,9 +1840,10 @@
   function exportRows() {
     const ms = METRICS.filter(m => EXP.metrics.has(m.id)), codes = exportCodes();
     const dates = EXP.time === "date" ? [state.date] : (() => { const out = []; for (let y = EXP.from; y <= EXP.to; y++) out.push(y === +TODAY.slice(0, 4) ? TODAY : y + "-07-01"); return out; })();
-    const head = ["code", "name", "level", "part_of", "date", ...ms.map(m => m.id)];
+    const head = ["code", "name", "level", "part_of", "date", ...ms.flatMap(m => [m.id, m.id + "_status"])];
     const rows = [head];
-    dates.forEach(d => codes.forEach(c => rows.push([c, nameOf(c), P[c].level, parentOf(c) && P[parentOf(c)] ? nameOf(parentOf(c)) : "", d, ...ms.map(m => { const r = m.get(c, d); if (!r) return ""; if (EN.isNum(m) || m.nature === "event") return r.v == null ? "" : +(+r.v).toFixed(4); if (EN.isCat(m)) return r.v == null ? "" : m.catName(r.v); return r.text; })])));
+    const cellOf = (m, r) => { if (!r || r.nm) return ""; if (EN.isNum(m) || m.nature === "event") return r.v == null ? "" : +(+r.v).toFixed(4); if (EN.isCat(m)) return r.v == null ? "" : m.catName(r.v); return r.text; };
+    dates.forEach(d => codes.forEach(c => rows.push([c, nameOf(c), P[c].level, parentOf(c) && P[parentOf(c)] ? nameOf(parentOf(c)) : "", d, ...ms.flatMap(m => { const r = m.get(c, d); return [cellOf(m, r), statusOf(r, m)]; })])));
     return { rows, ms, codes, dates };
   }
   function renderExport() {
@@ -1609,13 +1860,14 @@
       <section><h3>Preview</h3>${n < 2 ? `<div class="empty-big">Tick at least two metrics on the left.</div>` : preview}<p class="small">${fmtInt(rowsN)} rows × ${n + 5} columns.${rowsN > 60000 ? " That's large: it may take a few seconds." : ""}</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-edl ${n < 2 || !codes.length ? "disabled" : ""}>Download</button><button class="btn" data-eprot>Download the protest list</button></div></section></div></div>`;
   }
-  function exportRowsLimited(k) { const codes = exportCodes().slice(0, k); const ms = METRICS.filter(m => EXP.metrics.has(m.id)); const d = EXP.time === "date" ? state.date : (EXP.to === +TODAY.slice(0, 4) ? TODAY : EXP.to + "-07-01"); const rows = [["code", "name", "date", ...ms.map(m => m.id)]]; codes.forEach(c => rows.push([c, nameOf(c), d, ...ms.map(m => { const r = m.get(c, d); return r ? (EN.isNum(m) ? (r.v == null ? "" : m.fmt(r.v)) : EN.isCat(m) ? (r.v == null ? "" : m.catName(r.v)) : r.text) : ""; })])); return { rows }; }
+  function exportRowsLimited(k) { const codes = exportCodes().slice(0, k); const ms = METRICS.filter(m => EXP.metrics.has(m.id)); const d = EXP.time === "date" ? state.date : (EXP.to === +TODAY.slice(0, 4) ? TODAY : EXP.to + "-07-01"); const rows = [["code", "name", "date", ...ms.map(m => m.id)]]; codes.forEach(c => rows.push([c, nameOf(c), d, ...ms.map(m => { const r = m.get(c, d); return r && !r.nm ? (EN.isNum(m) ? (r.v == null ? "" : m.fmt(r.v) + (r.est ? " (est.)" : "")) : EN.isCat(m) ? (r.v == null ? "" : m.catName(r.v) + (r.est ? " (est.)" : "")) : r.text) : r && r.nm ? "n/a" : ""; })])); return { rows }; }
   function download(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
   function aboutRows(ms) {
-    const rows = [["column", "label", "perspective", "kind of data", "over time", "how areas are combined", "source / notes"], ["code", "ONS area code", "", "", "", "", "ONS Open Geography Portal"], ["date", "date the values refer to", "", "", "", "", "Atlas time bar"]];
+    const rows = [["column", "label", "perspective", "kind of data", "over time", "how areas are combined", "how this is worked out", "valid at", "source / notes"], ["code", "ONS area code", "", "", "", "", "", "", "ONS Open Geography Portal"], ["date", "date the values refer to", "", "", "", "", "", "", "Atlas time bar"],
+      ["<metric>_status", "measured / estimated / missing / not meaningful", "", "", "", "", "Estimated = modelled or notional (e.g. results recalculated on new boundaries); missing is never shown as zero", "", ""]];
     const SRCN = { political: "Wikipedia (council control and leaders, from each council's article); government history compiled by hand", economic: SER ? SER.sources.gdp : "", social: SER ? SER.sources.population : "" };
-    ms.forEach(m => rows.push([m.id, m.label, PER[m.p].name, `${m.scale}, ${m.nature}`, m.temporal, EN.aggregate(m).why, m.group === G2 ? "Protests: Wikipedia articles and Wikidata (notable protests since 1974); crowd = Wikipedia's estimate; alignment = Atlas lookup (organiser_alignment.csv)" : SRCN[m.p] || ""]));
-    rows.push([], ["Exported from Atlas 1.3 on " + longDate(TODAY)]);
+    ms.forEach(m => rows.push([m.id, m.label, PER[m.p].name, `${m.scale}, ${m.nature}`, m.temporal, m.levels ? "Not combined: recalculated from the underlying votes or counts where valid" : EN.aggregate(m).why, m.how || "", m.levels ? m.levels.join(", ") : "all levels", m.source ? m.source : m.group === G2 ? "Protests: Wikipedia articles and Wikidata (notable protests since 1974); crowd = Wikipedia's estimate; alignment = Atlas lookup (organiser_alignment.csv)" : SRCN[m.p] || ""]));
+    rows.push([], ["Exported from Atlas on " + longDate(TODAY) + ". Every value traces to a row of pipeline/sources/MANIFEST.csv in the Atlas repository."]);
     return rows;
   }
   function doExport() {
@@ -1650,6 +1902,7 @@
     tbMenu.innerHTML = `<div class="tb-tools">${[["measure", "Measure", "Click points to measure distance; three or more points give an area. Double-click or Esc to finish", '<path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>'], ["lasso", "Lasso", "Draw any shape around areas to select them (areas whose centre falls inside)", '<path d="M12 4c5 0 9 2.4 9 5.5S17 15 12 15s-9-2.4-9-5.5S7 4 12 4z"/><path d="M6.5 13.6c-.9 1-1 2.4-.1 3.3.8.8 2.2.8 3-.1M8.8 16.3 8 21"/>'], ["shot", "To workspace", "Send a picture of the map to the workspace", '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 9v6M9 12h6"/>'], ["copy", "Copy view", "Copy a picture of the map to paste elsewhere", '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>']].map(([id, l, t, ic]) => `<button data-tool="${id}" class="${state.tool === id ? "on" : ""}" title="${esc(t)}"><svg class="ico" viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("")}</div>
       <div class="tb-row"><span>Panels</span><div class="seg sm"><button data-hot="0" class="${PS.hot ? "" : "on"}">Always shown</button><button data-hot="1" class="${PS.hot ? "on" : ""}">Near edges</button></div></div>
       <div class="tb-row"><span>Hover cards</span><div class="seg sm"><button data-detail="simple" class="${PS.detail === "simple" ? "on" : ""}">Simple</button><button data-detail="detailed" class="${PS.detail !== "simple" ? "on" : ""}">Detailed</button></div></div>
+      <div class="tb-row"><span>Estimated values</span><div class="seg sm"><button data-hatch="1" class="${PS.hatch !== false ? "on" : ""}" title="Estimated areas (e.g. notional results) get diagonal lines">Hatched</button><button data-hatch="0" class="${PS.hatch === false ? "on" : ""}">Plain</button></div></div>
       <div class="tb-row"><span>Grid lines</span><div class="seg sm">${[["off", "Off"], ["deg", "Lat/long"], ["km", "km"]].map(([k, l]) => `<button data-grid="${k}" class="${TOOLS.grid === k ? "on" : ""}">${l}</button>`).join("")}</div></div>
       ${SLIDERS.map(([k, l, t]) => `<div class="tb-slider" title="${esc(t)}"><label for="tb-${k}">${l}</label><input type="range" id="tb-${k}" data-sl="${k}" min="0" max="1" step="0.01" value="${TOOLS[k]}"><input type="number" class="tb-num" data-sn="${k}" min="0" max="1" step="0.01" value="${(+TOOLS[k]).toFixed(2)}" aria-label="${esc(l)} value"></div>`).join("")}
       <div class="tb-foot"><button class="btn" data-treset>Reset to defaults</button><span>All sliders run from 0 to 1.</span></div>`;
@@ -1661,6 +1914,7 @@
     else if (b.dataset.grid) { TOOLS.grid = b.dataset.grid; applyTools(); renderTools(); }
     else if (b.dataset.hot) { PS.hot = b.dataset.hot === "1"; document.body.classList.toggle("hot", PS.hot); savePS(); renderTools(); toast(PS.hot ? "Panels now hide. Move the pointer to the left or bottom edge to bring them back." : "Panels always shown."); }
     else if (b.dataset.detail) { PS.detail = b.dataset.detail; savePS(); renderTools(); }
+    else if (b.dataset.hatch) { PS.hatch = b.dataset.hatch === "1"; savePS(); renderTools(); repaint(); }
     else if (b.hasAttribute("data-treset")) { Object.assign(TOOLS, { zoom: 0.5, cursor: 0.5, contrast: 0.5, overlay: 0.5, soften: 0.25, grid: "off" }); applyTools(); renderTools(); }
   });
   tbMenu.addEventListener("input", e => { const t = e.target, k = t.dataset.sl || t.dataset.sn; if (!k) return; const v = clamp(+t.value || 0, 0, 1); TOOLS[k] = v; const o = tbMenu.querySelector(t.dataset.sl ? `[data-sn="${k}"]` : `[data-sl="${k}"]`); if (o) o.value = t.dataset.sl ? v.toFixed(2) : v; applyTools(); });

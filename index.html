@@ -734,6 +734,15 @@ body.resizing, body.resizing * { cursor: nwse-resize !important; user-select: no
 /* Split view: keep the time bar clear of the Perspectives panel in the narrower map pane */
 body.split #timebar:not(.moved) { left: calc(296px + (100vw - var(--wsw) - 296px) / 2); width: min(560px, calc(100vw - var(--wsw) - 316px)); min-width: 260px; }
 body.split #timebar:not(.moved) .steps { display: none; }
+
+/* 1.7: data honesty */
+.tag.est, sup.est { color: #8a5a00; background: rgba(230,171,2,.16); border-radius: 3px; padding: 0 3px; font-size: 10px; font-weight: 600; }
+sup.est { margin-left: 3px; }
+.card .how { display: block; color: var(--ink-3); font-size: 11px; margin-top: 2px; }
+.card li.nm, td.nm { color: var(--ink-3); } td.nm { font-style: italic; }
+.card .mdet { margin-top: 4px; font-size: 11.5px; }
+.compbar { display: flex; height: 9px; border-radius: 3px; overflow: hidden; margin: 2px 0 2px; } .compbar i { display: block; height: 100%; }
+.sw.hatchsw { background: repeating-linear-gradient(135deg, rgba(26,34,38,.55) 0 1.5px, transparent 1.5px 5px), #eee; }
 </style>
 </head>
 <body>
@@ -841,10 +850,12 @@ body.split #timebar:not(.moved) .steps { display: none; }
 <script src="data/protests.js"></script>
 <script src="data/constituencies.js"></script>
 <script src="data/markets.js"></script>
-<script src="stats.js?v=061"></script>
-<script src="charts.js?v=061"></script>
-<script src="engine.js?v=061"></script>
-<script src="xlsx.js?v=061"></script>
+<script src="data/elections.js"></script>
+<script src="stats.js?v=17163056"></script>
+<script src="psephology.js?v=17163056"></script>
+<script src="charts.js?v=17163056"></script>
+<script src="engine.js?v=17163056"></script>
+<script src="xlsx.js?v=17163056"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -854,6 +865,6 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="app.js?v=061"></script>
+<script src="app.js?v=17163056"></script>
 </body>
 </html>

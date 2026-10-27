@@ -7,3 +7,5 @@ Thumbs.db
 config.local.js
 # full market data with prices stays local (not republishable)
 pipeline/sources/markets_ftse100.full.json
+# large downloaded source files: re-fetch with the pipeline/fetch_*.py scripts (see README, "Rebuilding the data")
+pipeline/sources/raw/

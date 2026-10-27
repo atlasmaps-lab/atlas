@@ -1,0 +1,21 @@
+{
+ "_note": "CBP-8647 seat names (normalised, by year) -> Atlas 1997-set names (normalised). Same seats, different spelling.",
+ "1997:chester city of": "city of chester",
+ "1997:durham city of": "city of durham",
+ "1997:york city of": "city of york",
+ "1997:wrekin the": "the wrekin",
+ "1997:richmond": "richmond yorks",
+ "1997:regent s park and kensington north": "regent s park and north kensington",
+ "2001:chester city of": "city of chester",
+ "2001:durham city of": "city of durham",
+ "2001:york city of": "city of york",
+ "2001:wrekin the": "the wrekin",
+ "2001:richmond": "richmond yorks",
+ "2001:regent s park and kensington north": "regent s park and north kensington",
+ "2005:chester city of": "city of chester",
+ "2005:durham city of": "city of durham",
+ "2005:york city of": "city of york",
+ "2005:wrekin the": "the wrekin",
+ "2005:richmond": "richmond yorks",
+ "2005:regent s park and kensington north": "regent s park and north kensington"
+}
