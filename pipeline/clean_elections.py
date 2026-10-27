@@ -142,6 +142,13 @@ def from_xlsx(cur, s97, s10, spans):
             if b and str(b).strip().lower() == "votes" and last:
                 cols.append((i, last))
         tv = next(i for i, b in enumerate(h2) if b and str(b).strip().lower() == "total votes")
+        notes = {}
+        for r in rows:
+            t = " ".join(str(v) for v in r if v not in (None, ""))
+            m = re.match(r"\d+\. (.+?) was won by (.+?)(?: standing (?:as|for) (?:an? )?(.+?))? with ([\d,]+) votes", t)
+            if m:
+                who = m.group(2); pname = m.group(3) or ("Speaker" if who == "The Speaker" else "Other")
+                notes[norm(m.group(1))] = (who, pname, int(m.group(4).replace(",", "")))
         for r in rows[4:]:
             if not r or len(r) < 7 or not r[2] or r[6] is None:
                 continue
@@ -176,7 +183,19 @@ def from_xlsx(cur, s97, s10, spans):
             parties.sort(key=lambda p: -p[2])
             top = parties[0]
             spk = 0
-            if top[0] == "oth":
+            note = notes.get(norm(name))
+            if top[0] == "oth" and note:
+                # the sheet's own note names the winner of the "Other" column, their party and their votes: split them out
+                who, pname, votes = note
+                key = "spk" if pname == "Speaker" else "ind" if pname == "Independent" else PARTY.get(pname) or ("x-khhc" if "Kidderminster" in pname else "resp" if pname == "Respect" else "oth")
+                rest = top[2] - votes
+                parties[0] = [key, pname, votes, who]
+                if rest > 0:
+                    parties.append(["oth", "Other", rest])
+                parties.sort(key=lambda p: -p[2])
+                spk = int(key == "spk")
+                top = parties[0]
+            elif top[0] == "oth":
                 # the winner stood for a party the sheet folds into "Other": take who won from the Members API history
                 s = span_at(spans, code, (day[:8] + "%02d" % (int(day[8:]) + 1)))
                 if s:
@@ -187,11 +206,12 @@ def from_xlsx(cur, s97, s10, spans):
                     top[0], top[1] = SPAN_PARTY.get(k, k), pname
                     spk = int(k == "spk")
                     top.append(s[3])
+            src_note = "HoC Library CBP-8647" + (" (winner from the sheet's notes)" if note and len(parties[0]) > 3 else "")
             for j, p in enumerate(parties):
                 out.append({"election": day, "kind": "general", "set": st, "code": code, "source_code": sid, "name": place["name"], "nation": nat,
                             "region": place["parent"] if place["parent"].startswith("E12") else "", "electorate": electorate, "valid": valid, "invalid": "",
                             "party": p[0], "party_name": p[1], "candidate": p[3] if len(p) > 3 else "", "votes": p[2], "winner": int(j == 0),
-                            "speaker": spk if j == 0 else 0, "est": 0, "source": "HoC Library CBP-8647" + (" + Members API (winner of 'Other')" if len(p) > 3 else "")})
+                            "speaker": spk if j == 0 else 0, "est": 0, "source": src_note if j == 0 else "HoC Library CBP-8647"})
     return out, unmatched
 
 

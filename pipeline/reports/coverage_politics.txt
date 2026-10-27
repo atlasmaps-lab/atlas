@@ -1,0 +1,73 @@
+# Coverage of the 1.7 political metrics, computed in the app (index.html?debug) on 2026-10-27.
+# metric|level|year:areas,with value,estimated,missing,not meaningful ...|first missing areas (at the first date with gaps)
+# Rows where every area at every date has a value (most region and nation rows) are left out for brevity; wards were not counted (they load per council).
+dominance|nation|2026:4,0,0,0,4|
+dominance|region|2026:9,0,0,0,9|
+dominance|council|2026:361,361,0,0,0|
+dominance|constituency|2026:650,650,0,0,0|
+longest_run|nation|2026:4,0,0,0,4|
+longest_run|region|2026:9,0,0,0,9|
+longest_run|council|2026:361,361,0,0,0|
+longest_run|constituency|2026:650,650,0,0,0|
+gov_aligned|nation|2026:4,0,0,0,4|
+gov_aligned|region|2026:9,0,0,0,9|
+gov_aligned|council|2026:361,361,0,0,0|
+gov_aligned|constituency|2026:650,650,0,0,0|
+mp_tenure|council|2026:361,0,0,0,361|
+mp_tenure|constituency|2026:650,650,0,0,0|
+mp_count|constituency|2026:650,650,0,0,0|
+seat_flips|constituency|2026:650,650,0,0,0|
+protest_trend|nation|2026:4,4,0,0,0|
+protest_trend|region|2026:9,9,0,0,0|
+protest_trend|council|2026:361,32,0,329,0|Hartlepool;Middlesbrough;Redcar and Cleveland;Stockton-on-Tees;Darlington;Halton
+protest_trend|constituency|2026:650,37,0,613,0|Aldershot;Aldridge-Brownhills;Altrincham and Sale West;Amber Valley;Arundel and South Downs;Ashfield
+protest_diversity|nation|2026:4,1,0,3,0|Northern Ireland;Scotland;Wales
+protest_diversity|region|2026:9,2,0,7,0|North East;Yorkshire and The Humber;East Midlands;West Midlands;East of England;South East
+protest_diversity|council|2026:361,1,0,360,0|Hartlepool;Middlesbrough;Redcar and Cleveland;Stockton-on-Tees;Darlington;Halton
+protest_diversity|constituency|2026:650,1,0,649,0|Aldershot;Aldridge-Brownhills;Altrincham and Sale West;Amber Valley;Arundel and South Downs;Ashfield
+protest_opposition|nation|2026:4,3,0,1,0|Scotland
+protest_opposition|region|2026:9,4,0,5,0|North East;Yorkshire and The Humber;East Midlands;East of England;South West
+protest_opposition|council|2026:361,6,0,355,0|Hartlepool;Middlesbrough;Redcar and Cleveland;Stockton-on-Tees;Darlington;Halton
+protest_opposition|constituency|2026:650,7,0,643,0|Aldershot;Aldridge-Brownhills;Altrincham and Sale West;Amber Valley;Arundel and South Downs;Ashfield
+ge_winner|nation|1997:4,4,0,0,0 2001:4,4,0,0,0 2005:4,4,0,0,0 2010:4,4,0,0,0 2015:4,4,0,0,0 2017:4,4,0,0,0 2019:4,4,0,0,0 2024:4,4,0,0,0 2026:4,4,0,0,0|
+ge_winner|region|1997:9,9,0,0,0 2001:9,9,0,0,0 2005:9,9,0,0,0 2010:9,9,0,0,0 2015:9,9,0,0,0 2017:9,9,0,0,0 2019:9,9,0,0,0 2024:9,9,0,0,0 2026:9,9,0,0,0|
+ge_winner|council|2026:361,0,0,0,361|
+ge_winner|constituency|1997:659,659,0,0,0 2001:659,659,0,0,0 2005:646,646,0,0,0 2010:650,650,0,0,0 2015:650,650,0,0,0 2017:650,650,0,0,0 2019:650,650,0,0,0 2024:650,650,0,0,0 2026:650,650,0,0,0|
+ge_share|constituency|1997:659,659,0,0,0 2001:659,659,0,0,0 2005:646,646,0,0,0 2010:650,650,0,0,0 2015:650,650,0,0,0 2017:650,650,0,0,0 2019:650,650,0,0,0 2024:650,650,0,0,0 2026:650,650,0,0,0|
+ge_turnout|constituency|1997:659,659,0,0,0 2001:659,659,0,0,0 2005:646,646,0,0,0 2010:650,650,0,0,0 2015:650,650,0,0,0 2017:650,650,0,0,0 2019:650,650,0,0,0 2024:650,650,0,0,0 2026:650,650,0,0,0|
+ge_turnout_change|nation|1997:4,0,0,4,0 2001:4,4,0,0,0 2005:4,4,0,0,0 2010:4,4,0,0,0 2015:4,4,0,0,0 2017:4,4,0,0,0 2019:4,4,0,0,0 2024:4,4,0,0,0 2026:4,4,0,0,0|England;Northern Ireland;Scotland;Wales
+ge_turnout_change|constituency|1997:659,0,0,659,0 2001:659,659,0,0,0 2005:646,587,0,59,0 2010:650,650,591,0,0 2015:650,650,0,0,0 2017:650,650,0,0,0 2019:650,650,0,0,0 2024:650,650,650,0,0 2026:650,650,644,0,0|Aldershot;Aldridge-Brownhills;Altrincham and Sale West;Amber Valley;Arundel and South Downs;Ashfield
+ge_majority|constituency|1997:659,659,0,0,0 2001:659,659,0,0,0 2005:646,646,0,0,0 2010:650,650,0,0,0 2015:650,650,0,0,0 2017:650,650,0,0,0 2019:650,650,0,0,0 2024:650,650,0,0,0 2026:650,650,0,0,0|
+ge_majority|nation|2026:4,0,0,0,4|
+ge_two_party|nation|1997:4,3,0,0,1 2024:4,3,0,0,1|
+ge_two_party|constituency|1997:659,641,0,0,18 2024:650,632,0,0,18|
+ge_swing_butler|constituency|1997:659,0,0,659,0 2001:659,659,0,0,0 2005:646,587,0,59,0 2010:650,650,591,0,0 2015:650,650,0,0,0 2017:650,650,0,0,0 2019:650,650,0,0,0 2024:650,650,650,0,0 2026:650,650,644,0,0|Aldershot;Aldridge-Brownhills;Altrincham and Sale West;Amber Valley;Arundel and South Downs;Ashfield
+ge_swing_steed|nation|1997:4,0,0,4,0 2001:4,3,0,1,0 2010:4,3,0,1,0 2015:4,3,0,1,0 2024:4,4,0,0,0|England;Northern Ireland;Scotland;Wales
+ge_swing_steed|constituency|1997:659,0,0,659,0 2001:659,639,0,20,0 2005:646,571,0,75,0 2010:650,630,572,20,0 2015:650,631,0,19,0 2017:650,638,0,12,0 2019:650,634,0,16,0 2024:650,632,632,18,0 2026:650,631,626,19,0|West Bromwich West;Glasgow Springburn;Belfast East;Buckingham;Chorley
+ge_volatility|constituency|1997:659,0,0,659,0 2001:659,659,0,0,0 2005:646,587,0,59,0 2010:650,650,591,0,0 2015:650,650,0,0,0 2017:650,650,0,0,0 2019:650,650,0,0,0 2024:650,650,650,0,0 2026:650,650,644,0,0|Aldershot;Aldridge-Brownhills;Altrincham and Sale West;Amber Valley;Arundel and South Downs;Ashfield
+ge_enp_votes|constituency|1997:659,659,0,0,0 2024:650,650,0,0,0|
+ge_enp_seats|nation|1997:4,4,0,0,0 2024:4,4,0,0,0|
+ge_enp_seats|constituency|2026:650,0,0,0,650|
+ge_gallagher|nation|1997:4,4,0,0,0 2024:4,4,0,0,0|
+ge_gallagher|constituency|2026:650,0,0,0,650|
+electors_per_mp|constituency|1997:659,659,0,0,0 2001:659,659,0,0,0 2005:646,646,0,0,0 2010:650,650,0,0,0 2015:650,650,0,0,0 2017:650,650,0,0,0 2019:650,650,0,0,0 2024:650,650,0,0,0 2026:650,650,0,0,0|
+eu_leave|nation|2026:4,4,0,0,0|
+eu_leave|region|2026:9,9,0,0,0|
+eu_leave|council|2026:361,361,0,0,0|
+eu_leave|constituency|2026:650,0,0,0,650|
+eu_turnout|council|2026:361,361,0,0,0|
+eu_leave_est_pcon|constituency|2026:650,0,0,0,650|
+ideo_centre|nation|1997:4,0,0,4,0 2001:4,3,0,1,0 2024:4,3,0,1,0 2026:4,3,0,1,0|England;Northern Ireland;Scotland;Wales
+ideo_centre|constituency|1997:659,0,0,659,0 2001:659,638,16,21,0 2005:646,621,54,25,0 2010:650,628,5,22,0 2015:650,631,5,19,0 2017:650,630,3,20,0 2019:650,627,5,23,0 2024:650,612,37,38,0 2026:650,611,36,39,0|Bethnal Green and Stepney;Birmingham Hall Green and Moseley;Birmingham Hodge Hill and Solihull North
+ideo_polarisation|constituency|1997:659,0,0,659,0 2001:659,638,16,21,0 2005:646,621,54,25,0 2010:650,628,5,22,0 2015:650,631,5,19,0 2017:650,630,3,20,0 2019:650,627,5,23,0 2024:650,612,37,38,0 2026:650,611,36,39,0|Bethnal Green and Stepney;Birmingham Hall Green and Moseley;Birmingham Hodge Hill and Solihull North
+band_d|council|2026:361,350,0,0,11|
+band_d|region|2026:9,0,0,0,9|
+band_d_real|council|2026:361,350,0,0,11|
+band_d_change|council|2026:361,339,0,11,11|Bournemouth, Christchurch and Poole;Dorset;Buckinghamshire;North Northamptonshire;West Northamptonshire;Cumberland
+council_seats|council|2026:361,350,0,0,11|
+council_seat_share|council|2026:361,350,0,0,11|
+council_majority|council|2026:361,350,0,0,11|
+council_enp|council|2026:361,350,0,0,11|
+registration_ratio|nation|2026:4,2,0,0,2|
+registration_ratio|region|2026:9,9,0,0,0|
+registration_ratio|constituency|2026:650,575,0,0,75|

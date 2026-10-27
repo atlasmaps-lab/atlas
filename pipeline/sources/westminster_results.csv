@@ -2388,8 +2388,9 @@ election,kind,set,code,source_code,name,nation,region,electorate,valid,invalid,p
 1997-05-01,general,1997,P97-453,289,Tamworth,E92000001,E12000005,67205,49854,,con,Conservative,,18312,0,0,0,HoC Library CBP-8647
 1997-05-01,general,1997,P97-453,289,Tamworth,E92000001,E12000005,67205,49854,,ld,Liberal Democrat,,4025,0,0,0,HoC Library CBP-8647
 1997-05-01,general,1997,P97-453,289,Tamworth,E92000001,E12000005,67205,49854,,oth,Other,,1709,0,0,0,HoC Library CBP-8647
-1997-05-01,general,1997,P97-454,431,Tatton,E92000001,E12000002,64099,48792,,ind,Independent,Mr Martin Bell,30515,1,0,0,HoC Library CBP-8647 + Members API (winner of 'Other')
+1997-05-01,general,1997,P97-454,431,Tatton,E92000001,E12000002,64099,48792,,ind,Independent,Martin Bell,29354,1,0,0,HoC Library CBP-8647 (winner from the sheet's notes)
 1997-05-01,general,1997,P97-454,431,Tatton,E92000001,E12000002,64099,48792,,con,Conservative,,18277,0,0,0,HoC Library CBP-8647
+1997-05-01,general,1997,P97-454,431,Tatton,E92000001,E12000002,64099,48792,,oth,Other,,1161,0,0,0,HoC Library CBP-8647
 1997-05-01,general,1997,P97-455,256,Taunton,E92000001,E12000009,79783,61011,,ld,Liberal Democrat,,26064,1,0,0,HoC Library CBP-8647
 1997-05-01,general,1997,P97-455,256,Taunton,E92000001,E12000009,79783,61011,,con,Conservative,,23621,0,0,0,HoC Library CBP-8647
 1997-05-01,general,1997,P97-455,256,Taunton,E92000001,E12000009,79783,61011,,lab,Labour,,8248,0,0,0,HoC Library CBP-8647
@@ -2587,7 +2588,8 @@ election,kind,set,code,source_code,name,nation,region,electorate,valid,invalid,p
 1997-05-01,general,1997,P97-497,319,West Bromwich East,E92000001,E12000005,63432,41487,,con,Conservative,,10126,0,0,0,HoC Library CBP-8647
 1997-05-01,general,1997,P97-497,319,West Bromwich East,E92000001,E12000005,63432,41487,,ld,Liberal Democrat,,6179,0,0,0,HoC Library CBP-8647
 1997-05-01,general,1997,P97-497,319,West Bromwich East,E92000001,E12000005,63432,41487,,oth,Other,,1472,0,0,0,HoC Library CBP-8647
-1997-05-01,general,1997,P97-498,320,West Bromwich West,E92000001,E12000005,67513,36696,,spk,Speaker,Baroness Boothroyd,36696,1,1,0,HoC Library CBP-8647 + Members API (winner of 'Other')
+1997-05-01,general,1997,P97-498,320,West Bromwich West,E92000001,E12000005,67513,36696,,spk,Speaker,The Speaker,23969,1,1,0,HoC Library CBP-8647 (winner from the sheet's notes)
+1997-05-01,general,1997,P97-498,320,West Bromwich West,E92000001,E12000005,67513,36696,,oth,Other,,12727,0,0,0,HoC Library CBP-8647
 1997-05-01,general,1997,P97-499,46,West Chelmsford,E92000001,E12000006,76271,58577,,con,Conservative,,23781,1,0,0,HoC Library CBP-8647
 1997-05-01,general,1997,P97-499,46,West Chelmsford,E92000001,E12000006,76271,58577,,ld,Liberal Democrat,,17090,0,0,0,HoC Library CBP-8647
 1997-05-01,general,1997,P97-499,46,West Chelmsford,E92000001,E12000006,76271,58577,,lab,Labour,,15436,0,0,0,HoC Library CBP-8647
@@ -3822,9 +3824,10 @@ election,kind,set,code,source_code,name,nation,region,electorate,valid,invalid,p
 2001-06-07,general,1997,P97-522,271,Worcester,E92000001,E12000005,71255,44210,,con,Conservative,,15712,0,0,0,HoC Library CBP-8647
 2001-06-07,general,1997,P97-522,271,Worcester,E92000001,E12000005,71255,44210,,ld,Liberal Democrats,,5578,0,0,0,HoC Library CBP-8647
 2001-06-07,general,1997,P97-522,271,Worcester,E92000001,E12000005,71255,44210,,oth,Other,,1442,0,0,0,HoC Library CBP-8647
-2001-06-07,general,1997,P97-527,272,Wyre Forest,E92000001,E12000005,72152,49062,,ind,Independent,Dr Richard Taylor,28855,1,0,0,HoC Library CBP-8647 + Members API (winner of 'Other')
+2001-06-07,general,1997,P97-527,272,Wyre Forest,E92000001,E12000005,72152,49062,,x-khhc,Independent Kidderminster Hospital and Health Concern,Dr Richard Taylor,28487,1,0,0,HoC Library CBP-8647 (winner from the sheet's notes)
 2001-06-07,general,1997,P97-527,272,Wyre Forest,E92000001,E12000005,72152,49062,,lab,Labour,,10857,0,0,0,HoC Library CBP-8647
 2001-06-07,general,1997,P97-527,272,Wyre Forest,E92000001,E12000005,72152,49062,,con,Conservative,,9350,0,0,0,HoC Library CBP-8647
+2001-06-07,general,1997,P97-527,272,Wyre Forest,E92000001,E12000005,72152,49062,,oth,Other,,368,0,0,0,HoC Library CBP-8647
 2001-06-07,general,1997,P97-270,273,Ludlow,E92000001,E12000005,63514,43124,,ld,Liberal Democrats,,18620,1,0,0,HoC Library CBP-8647
 2001-06-07,general,1997,P97-270,273,Ludlow,E92000001,E12000005,63514,43124,,con,Conservative,,16990,0,0,0,HoC Library CBP-8647
 2001-06-07,general,1997,P97-270,273,Ludlow,E92000001,E12000005,63514,43124,,lab,Labour,,5785,0,0,0,HoC Library CBP-8647
@@ -5227,8 +5230,9 @@ election,kind,set,code,source_code,name,nation,region,electorate,valid,invalid,p
 2001-06-07,general,1997,P97-644,613,Glasgow Shettleston,S92000003,,51557,20465,,oth,Other,,1626,0,0,0,HoC Library CBP-8647
 2001-06-07,general,1997,P97-644,613,Glasgow Shettleston,S92000003,,51557,20465,,ld,Liberal Democrats,,1105,0,0,0,HoC Library CBP-8647
 2001-06-07,general,1997,P97-644,613,Glasgow Shettleston,S92000003,,51557,20465,,con,Conservative,,1082,0,0,0,HoC Library CBP-8647
-2001-06-07,general,1997,P97-645,614,Glasgow Springburn,S92000003,,55192,24104,,spk,Speaker,Lord Martin of Springburn,19429,1,1,0,HoC Library CBP-8647 + Members API (winner of 'Other')
+2001-06-07,general,1997,P97-645,614,Glasgow Springburn,S92000003,,55192,24104,,spk,Speaker,Michael Martin,16053,1,1,0,HoC Library CBP-8647 (winner from the sheet's notes)
 2001-06-07,general,1997,P97-645,614,Glasgow Springburn,S92000003,,55192,24104,,snp,SNP,,4675,0,0,0,HoC Library CBP-8647
+2001-06-07,general,1997,P97-645,614,Glasgow Springburn,S92000003,,55192,24104,,oth,Other,,3376,0,0,0,HoC Library CBP-8647
 2001-06-07,general,1997,P97-646,615,Gordon,S92000003,,60059,35001,,ld,Liberal Democrats,,15928,1,0,0,HoC Library CBP-8647
 2001-06-07,general,1997,P97-646,615,Gordon,S92000003,,60059,35001,,con,Conservative,,8049,0,0,0,HoC Library CBP-8647
 2001-06-07,general,1997,P97-646,615,Gordon,S92000003,,60059,35001,,snp,SNP,,5760,0,0,0,HoC Library CBP-8647
@@ -5618,10 +5622,11 @@ election,kind,set,code,source_code,name,nation,region,electorate,valid,invalid,p
 2005-05-05,general,1997,P97-025,513,Berwick-upon-Tweed,E92000001,E12000001,56930,36090,,ld,Liberal Democrat,,19052,1,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-025,513,Berwick-upon-Tweed,E92000001,E12000001,56930,36090,,con,Conservative,,10420,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-025,513,Berwick-upon-Tweed,E92000001,E12000001,56930,36090,,lab,Labour,,6618,0,0,0,HoC Library CBP-8647
-2005-05-05,general,1997,P97-026,143,Bethnal Green and Bow,E92000001,E12000007,82157,44007,,resp,Respect Party,George Galloway,17857,1,0,0,HoC Library CBP-8647 + Members API (winner of 'Other')
+2005-05-05,general,1997,P97-026,143,Bethnal Green and Bow,E92000001,E12000007,82157,44007,,resp,Respect,George Galloway,15891,1,0,0,HoC Library CBP-8647 (winner from the sheet's notes)
 2005-05-05,general,1997,P97-026,143,Bethnal Green and Bow,E92000001,E12000007,82157,44007,,lab,Labour,,14978,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-026,143,Bethnal Green and Bow,E92000001,E12000007,82157,44007,,con,Conservative,,6244,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-026,143,Bethnal Green and Bow,E92000001,E12000007,82157,44007,,ld,Liberal Democrat,,4928,0,0,0,HoC Library CBP-8647
+2005-05-05,general,1997,P97-026,143,Bethnal Green and Bow,E92000001,E12000007,82157,44007,,oth,Other,,1966,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-027,368,Beverley and Holderness,E92000001,E12000003,77460,50202,,con,Conservative,,20434,1,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-027,368,Beverley and Holderness,E92000001,E12000003,77460,50202,,lab,Labour,,17854,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-027,368,Beverley and Holderness,E92000001,E12000003,77460,50202,,ld,Liberal Democrat,,9578,0,0,0,HoC Library CBP-8647
@@ -5701,11 +5706,12 @@ election,kind,set,code,source_code,name,nation,region,electorate,valid,invalid,p
 2005-05-05,general,1997,P97-046,465,Blackpool South,E92000001,E12000002,74246,38342,,con,Conservative,,11453,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-046,465,Blackpool South,E92000001,E12000002,74246,38342,,ld,Liberal Democrat,,5552,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-046,465,Blackpool South,E92000001,E12000002,74246,38342,,oth,Other,,1962,0,0,0,HoC Library CBP-8647
-2005-05-05,general,1997,P97-532,541,Blaenau Gwent,W92000004,,53383,35251,,ind,Independent,Peter Law,20697,1,0,0,HoC Library CBP-8647 + Members API (winner of 'Other')
+2005-05-05,general,1997,P97-532,541,Blaenau Gwent,W92000004,,53383,35251,,ind,Independent,Peter Law,20505,1,0,0,HoC Library CBP-8647 (winner from the sheet's notes)
 2005-05-05,general,1997,P97-532,541,Blaenau Gwent,W92000004,,53383,35251,,lab,Labour,,11384,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-532,541,Blaenau Gwent,W92000004,,53383,35251,,ld,Liberal Democrat,,1511,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-532,541,Blaenau Gwent,W92000004,,53383,35251,,pc,Plaid Cymru,,843,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-532,541,Blaenau Gwent,W92000004,,53383,35251,,con,Conservative,,816,0,0,0,HoC Library CBP-8647
+2005-05-05,general,1997,P97-532,541,Blaenau Gwent,W92000004,,53383,35251,,oth,Other,,192,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-047,517,Blaydon,E92000001,E12000001,62758,39053,,lab,Labour,,20120,1,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-047,517,Blaydon,E92000001,E12000001,62758,39053,,ld,Liberal Democrat,,14785,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-047,517,Blaydon,E92000001,E12000001,62758,39053,,con,Conservative,,3129,0,0,0,HoC Library CBP-8647
@@ -6440,7 +6446,8 @@ election,kind,set,code,source_code,name,nation,region,electorate,valid,invalid,p
 2005-05-05,general,2005S,P10-S14000031,S14000031,Glasgow North,S92000003,,55711,27921,,snp,SNP,,3614,0,0,0,HoC Library CBP-8647
 2005-05-05,general,2005S,P10-S14000031,S14000031,Glasgow North,S92000003,,55711,27921,,oth,Other,,3202,0,0,0,HoC Library CBP-8647
 2005-05-05,general,2005S,P10-S14000031,S14000031,Glasgow North,S92000003,,55711,27921,,con,Conservative,,2441,0,0,0,HoC Library CBP-8647
-2005-05-05,general,2005S,P10-S14000032,S14000032,Glasgow North East,S92000003,,61918,28418,,spk,Speaker,Lord Martin of Springburn,23399,1,1,0,HoC Library CBP-8647 + Members API (winner of 'Other')
+2005-05-05,general,2005S,P10-S14000032,S14000032,Glasgow North East,S92000003,,61918,28418,,spk,Speaker,Michael Martin,15153,1,1,0,HoC Library CBP-8647 (winner from the sheet's notes)
+2005-05-05,general,2005S,P10-S14000032,S14000032,Glasgow North East,S92000003,,61918,28418,,oth,Other,,8246,0,0,0,HoC Library CBP-8647
 2005-05-05,general,2005S,P10-S14000032,S14000032,Glasgow North East,S92000003,,61918,28418,,snp,SNP,,5019,0,0,0,HoC Library CBP-8647
 2005-05-05,general,2005S,P10-S14000033,S14000033,Glasgow North West,S92000003,,61800,34061,,lab,Labour,,16748,1,0,0,HoC Library CBP-8647
 2005-05-05,general,2005S,P10-S14000033,S14000033,Glasgow North West,S92000003,,61800,34061,,ld,Liberal Democrat,,6655,0,0,0,HoC Library CBP-8647
@@ -8104,9 +8111,10 @@ election,kind,set,code,source_code,name,nation,region,electorate,valid,invalid,p
 2005-05-05,general,1997,P97-526,21,Wycombe,E92000001,E12000008,71450,44427,,lab,Labour,,13280,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-526,21,Wycombe,E92000001,E12000008,71450,44427,,ld,Liberal Democrat,,8780,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-526,21,Wycombe,E92000001,E12000008,71450,44427,,oth,Other,,2036,0,0,0,HoC Library CBP-8647
-2005-05-05,general,1997,P97-527,272,Wyre Forest,E92000001,E12000005,73172,46987,,ind,Independent,Dr Richard Taylor,22782,1,0,0,HoC Library CBP-8647 + Members API (winner of 'Other')
+2005-05-05,general,1997,P97-527,272,Wyre Forest,E92000001,E12000005,73172,46987,,x-khhc,Independent Kidderminster Hospital and Health Concern,Dr Richard Taylor,18739,1,0,0,HoC Library CBP-8647 (winner from the sheet's notes)
 2005-05-05,general,1997,P97-527,272,Wyre Forest,E92000001,E12000005,73172,46987,,con,Conservative,,13489,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-527,272,Wyre Forest,E92000001,E12000005,73172,46987,,lab,Labour,,10716,0,0,0,HoC Library CBP-8647
+2005-05-05,general,1997,P97-527,272,Wyre Forest,E92000001,E12000005,73172,46987,,oth,Other,,4043,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-528,462,Wythenshawe and Sale East,E92000001,E12000002,70615,36184,,lab,Labour,,18878,1,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-528,462,Wythenshawe and Sale East,E92000001,E12000002,70615,36184,,con,Conservative,,8051,0,0,0,HoC Library CBP-8647
 2005-05-05,general,1997,P97-528,462,Wythenshawe and Sale East,E92000001,E12000002,70615,36184,,ld,Liberal Democrat,,7766,0,0,0,HoC Library CBP-8647
