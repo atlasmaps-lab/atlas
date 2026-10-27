@@ -722,6 +722,7 @@
     select: codes => codes.forEach(c => P[c] && addCompare({ code: c, level: P[c].level })),
     focus: c => focus(c), unfocus: () => unfocus(), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); if (!on) setLevelOn("auto", true); },
     closeAll: () => { while (WM.closeTop()); },
+    openProtestCard: i => openProtestCard(i), setHeat: () => { PS.prefs.protest_events = "heat"; repaint(); },
     setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), openExport: o => openExport(o),
     mapOnly: ids => { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); } };
   map.boxZoom.disable(); map.touchZoomRotate.disableRotation();
@@ -861,6 +862,10 @@
     map.addSource("focus", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addSource("group", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addSource("protests", { type: "geojson", data: protestFeatures() });
+    map.addSource("protests-cl", { type: "geojson", data: { type: "FeatureCollection", features: [] }, cluster: true, clusterRadius: 38, clusterMaxZoom: 14,
+      clusterProperties: Object.fromEntries(CAUSES.map((_, k) => ["c" + k, ["+", ["case", ["==", ["get", "c"], k], 1, 0]]])) });
+    map.addSource("pr-spider", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addSource("pr-hl", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addSource("tool", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addSource("grid", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     for (let k = 0; k < 5; k++) map.addImage("dot-" + k, dotImage(k), { pixelRatio: 2 });
@@ -893,10 +898,17 @@
     map.addLayer({ id: "pr-heat", type: "heatmap", source: "protests", layout: { visibility: "none" }, paint: {
       "heatmap-weight": ["interpolate", ["linear"], ["get", "lw"], 0, 0.15, 6, 1], "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 4, 0.8, 10, 2.2], "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 4, 14, 10, 40],
       "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(91,58,140,0)", 0.2, "#d2bde6", 0.45, "#ad8fd0", 0.7, "#8560b5", 1, "#3b1f63"], "heatmap-opacity": 0.85 } });
-    map.addLayer({ id: "pr-pts", type: "circle", source: "protests", layout: { visibility: "none", "circle-sort-key": ["-", 0, ["get", "r"]] }, paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, ["*", ["get", "r"], 0.85], 10, ["*", ["get", "r"], 1.5]], "circle-color": ["get", "fill"], "circle-stroke-color": ["get", "stroke"], "circle-stroke-width": 1.6, "circle-opacity": 0.9, "circle-stroke-opacity": 0.95 } });
-    map.addLayer({ id: "pr-new", type: "circle", source: "protests", layout: { visibility: "none" }, paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, ["+", 5, ["*", ["get", "r"], 0.85]], 10, ["+", 5, ["*", ["get", "r"], 1.5]]], "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": ["get", "col"], "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
+    const PR_R = ["interpolate", ["linear"], ["zoom"], 5, ["*", ["get", "r"], 0.85], 10, ["*", ["get", "r"], 1.5]];
+    map.addLayer({ id: "pr-cl", type: "circle", source: "protests-cl", filter: ["has", "point_count"], layout: { visibility: "none" }, paint: {   // hit area under each group's donut marker
+      "circle-radius": ["step", ["get", "point_count"], 14, 5, 17, 15, 21, 40, 25], "circle-color": "rgba(0,0,0,0.01)" } });
+    map.addLayer({ id: "pr-pts", type: "circle", source: "protests-cl", filter: ["!", ["has", "point_count"]], layout: { visibility: "none", "circle-sort-key": ["-", 0, ["get", "r"]] }, paint: {
+      "circle-radius": PR_R, "circle-color": ["get", "fill"], "circle-stroke-color": ["get", "stroke"], "circle-stroke-width": 1.6, "circle-opacity": ["get", "op"], "circle-stroke-opacity": ["get", "op"] } });
+    map.addLayer({ id: "pr-new", type: "circle", source: "protests-cl", filter: ["all", ["!", ["has", "point_count"]], ["==", ["get", "nw"], 1]], layout: { visibility: "none" }, paint: {
+      "circle-radius": ["+", 5, PR_R], "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": ["get", "col"], "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
+    map.addLayer({ id: "pr-sp-line", type: "line", source: "pr-spider", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#1f2a2e", "line-width": 1, "line-opacity": 0.6 } });
+    map.addLayer({ id: "pr-sp-pts", type: "circle", source: "pr-spider", filter: ["==", ["geometry-type"], "Point"], paint: {
+      "circle-radius": ["max", 6, ["*", ["get", "r"], 1.2]], "circle-color": ["get", "fill"], "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.8 } });
+    map.addLayer({ id: "pr-hl", type: "circle", source: "pr-hl", paint: { "circle-radius": 13, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2.6, "circle-stroke-opacity": 0.9 } });
     if (MK) {
       map.addSource("zones", { type: "geojson", data: MK.zones, promoteId: "code" });
       map.addSource("zone-pts", { type: "geojson", data: { type: "FeatureCollection", features: ZONES.map(ptFeature) } });
@@ -985,6 +997,14 @@
   function featureOf(code) { const p = P[code]; if (!p) return null; if (p.level === "zone") return ZONES.find(f => f.properties.code === code); if (p.level === "ward") return wardFeatures.find(x => x.properties.code === code); const src = p.level === "country" ? null : G[SRC[p.level]]; return src ? src.features.find(x => x.properties.code === code) : null; }
 
   // ---------- protests on the map ----------
+  // the protests in the time window, for the clustered source: older ones fade (op), the newest get a ring (nw)
+  function protestWindowFeatures() {
+    const D = dayNum(state.date), W = PS.win, lo = D - W, fresh = D - Math.max(60, W * 0.12);
+    return { type: "FeatureCollection", features: PR.sites.map((s, i) => [s, i]).filter(([s]) => { const e = PR.events[s[0]]; return e.t0 <= D && e.end > lo; }).map(([s, i]) => {
+      const e = PR.events[s[0]], col = CAUSE_COL[CAUSES[e.c]] || "#999", r = e.mid ? clamp(3 + 3.1 * Math.log10(e.mid / e.ns / 100 + 1), 3, 15) : 3.4;
+      return { type: "Feature", geometry: { type: "Point", coordinates: [s[2], s[1]] }, properties: { i, e: s[0], c: e.c, col, fill: col, stroke: e.mid ? "#ffffff" : "#1a2226", r,
+        op: +clamp(0.95 - 0.65 * (D - e.t0) / Math.max(1, W), 0.3, 0.95).toFixed(2), nw: e.t0 > fresh ? 1 : 0 } }; }) };
+  }
   function protestFeatures() {
     return { type: "FeatureCollection", features: PR.sites.map((s, i) => {
       const e = PR.events[s[0]], col = CAUSE_COL[CAUSES[e.c]] || "#999", r = e.mid ? clamp(3 + 3.1 * Math.log10(e.mid / e.ns / 100 + 1), 3, 15) : 3.4;
@@ -996,14 +1016,63 @@
     if (!map.getLayer("pr-pts")) return;
     const on = curPlan.points || curPlan.heat, mode = curPlan.heat ? "heat" : "points";
     const D = dayNum(state.date), W = PS.win, lo = D - W;
-    const filter = ["all", ["<=", ["get", "t"], D], [">", ["get", "t1"], lo]];
-    ["pr-pts", "pr-new", "pr-heat"].forEach(id => map.setFilter(id, filter));
-    map.setFilter("pr-new", ["all", ["<=", ["get", "t"], D], [">", ["get", "t"], D - Math.max(60, W * 0.12)]]);
-    const age = ["interpolate", ["linear"], ["-", D, ["get", "t"]], 0, 0.95, W, 0.3];
-    setP("pr-pts", "circle-opacity", age); setP("pr-pts", "circle-stroke-opacity", age);
-    map.setLayoutProperty("pr-pts", "visibility", on && mode === "points" ? "visible" : "none");
-    map.setLayoutProperty("pr-new", "visibility", on && mode === "points" ? "visible" : "none");
+    map.setFilter("pr-heat", ["all", ["<=", ["get", "t"], D], [">", ["get", "t1"], lo]]);
+    const pts = on && mode === "points", key = pts ? state.date + "|" + W : "";
+    if (pts && key !== syncProtestLayer.key) { map.getSource("protests-cl").setData(protestWindowFeatures()); unspider(); }
+    syncProtestLayer.key = key;
+    ["pr-pts", "pr-new", "pr-cl"].forEach(id => map.setLayoutProperty(id, "visibility", pts ? "visible" : "none"));
     map.setLayoutProperty("pr-heat", "visibility", on && mode === "heat" ? "visible" : "none");
+    if (!pts) { unspider(); clusterMarkers(true); } else requestAnimationFrame(() => clusterMarkers());
+    if (!$("prlist") || !prList || prList.el.hidden) return; renderProtestList();
+  }
+  // groups: a donut of causes with the number of protests; click to zoom in (or fan out places that share one point)
+  const CLM = new Map();
+  function donutSVG(counts, n) {
+    const R = n >= 40 ? 25 : n >= 15 ? 21 : n >= 5 ? 17 : 14, r0 = R * 0.58, tot = counts.reduce((a, b) => a + b, 0) || 1; let a0 = -Math.PI / 2, segs = "";
+    counts.forEach((v, k) => { if (!v) return; const a1 = a0 + 2 * Math.PI * v / tot, big = a1 - a0 > Math.PI ? 1 : 0, P = (a, r) => [R + r * Math.cos(a), R + r * Math.sin(a)];
+      if (v === tot) { segs += `<circle cx="${R}" cy="${R}" r="${(R + r0) / 2}" fill="none" stroke="${CAUSE_COL[CAUSES[k]]}" stroke-width="${R - r0}"/>`; }
+      else { const [x0, y0] = P(a0, R), [x1, y1] = P(a1, R), [x2, y2] = P(a1, r0), [x3, y3] = P(a0, r0); segs += `<path d="M${x0} ${y0}A${R} ${R} 0 ${big} 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 ${big} 0 ${x3} ${y3}Z" fill="${CAUSE_COL[CAUSES[k]]}"/>`; }
+      a0 = a1; });
+    return `<svg width="${2 * R}" height="${2 * R}" viewBox="0 0 ${2 * R} ${2 * R}">${segs}<circle cx="${R}" cy="${R}" r="${r0}" fill="var(--solid,#fff)"/><text x="${R}" y="${R + 4}" text-anchor="middle">${n}</text></svg>`;
+  }
+  function clusterMarkers(clear) {
+    const seen = new Set();
+    if (!clear && map.getSource("protests-cl") && map.getLayoutProperty("pr-pts", "visibility") === "visible") {
+      map.querySourceFeatures("protests-cl").forEach(f => {
+        const pr = f.properties; if (!pr.cluster) return; const id = pr.cluster_id; if (seen.has(id)) return; seen.add(id);
+        let mk = CLM.get(id);
+        if (!mk) {
+          const counts = CAUSES.map((_, k) => pr["c" + k] || 0), top = counts.map((v, k) => [v, k]).sort((a, b) => b[0] - a[0]).filter(x => x[0]).slice(0, 3);
+          const el = document.createElement("div"); el.className = "prcl"; el.innerHTML = donutSVG(counts, pr.point_count);
+          el.title = `${pr.point_count} protests here: ${top.map(([v, k]) => `${v} ${CAUSES[k].toLowerCase()}`).join(", ")}${top.length < counts.filter(Boolean).length ? ", …" : ""}. Click to zoom in`;
+          el.addEventListener("click", ev => { ev.stopPropagation(); openCluster(id, f.geometry.coordinates); });
+          mk = new maplibregl.Marker({ element: el }).setLngLat(f.geometry.coordinates).addTo(map); CLM.set(id, mk);
+        }
+      });
+    }
+    for (const [id, mk] of CLM) if (!seen.has(id)) { mk.remove(); CLM.delete(id); }
+  }
+  map.on("render", () => { if (map.getSource("protests-cl") && map.getLayoutProperty("pr-pts", "visibility") === "visible" && !clusterMarkers.t) clusterMarkers.t = requestAnimationFrame(() => { clusterMarkers.t = null; clusterMarkers(); }); });
+  function openCluster(id, at) {
+    const src = map.getSource("protests-cl");
+    Promise.resolve(src.getClusterExpansionZoom(id)).then(z => {
+      if (z <= 14 && z <= map.getMaxZoom()) { map.easeTo({ center: at, zoom: z + 0.2, duration: 600 }); return; }
+      return Promise.resolve(src.getClusterLeaves(id, 200, 0)).then(leaves => spiderfy(at, leaves.map(l => l.properties)));
+    }).catch(() => {});
+  }
+  // places that share exactly one point (many London events geocode to the same centre) fan out into a ring, joined to the centre
+  const SPIDER = { on: false };
+  function spiderfy(at, props) {
+    const c = map.project(at), n = props.length, R = clamp(18 + n * 4.5, 30, 110), feats = [];
+    props.forEach((pr, k) => { const a = 2 * Math.PI * k / n - Math.PI / 2, q = map.unproject([c.x + R * Math.cos(a), c.y + R * Math.sin(a)]), xy = [q.lng, q.lat];
+      feats.push({ type: "Feature", geometry: { type: "LineString", coordinates: [at, xy] }, properties: {} }, { type: "Feature", geometry: { type: "Point", coordinates: xy }, properties: pr }); });
+    map.getSource("pr-spider").setData({ type: "FeatureCollection", features: feats }); SPIDER.on = true; SPIDER.at = at;
+  }
+  function unspider() { if (!SPIDER.on || !map.getSource("pr-spider")) return; map.getSource("pr-spider").setData({ type: "FeatureCollection", features: [] }); SPIDER.on = false; }
+  map.on("zoomstart", unspider);
+  function highlightSites(ei) { // rings round every site of one event (Show all sites, list hover)
+    if (!map.getSource("pr-hl")) return;
+    map.getSource("pr-hl").setData({ type: "FeatureCollection", features: ei == null ? [] : PR.sites.filter(s => s[0] === ei).map(s => ({ type: "Feature", geometry: { type: "Point", coordinates: [s[2], s[1]] }, properties: {} })) });
   }
 
   // ---------- painting the plan ----------
@@ -1140,10 +1209,10 @@
     const ev = PL.points || PL.heat;
     if (ev) {
       const present = new Set(); PR.sites.forEach(s => { const e = PR.events[s[0]], D = dayNum(state.date); if (e.t0 <= D && e.end > D - PS.win) present.add(e.c); });
-      parts.push(`<div class="lg">${lhead(ev)}<div class="seg sm" role="group" aria-label="Time window">${[[365, "1y"], [1826, "5y"], [3652, "10y"], [99999, "All"]].map(([w, l]) => `<button data-win="${w}" class="${PS.win === w ? "on" : ""}">${l}</button>`).join("")}</div>
+      parts.push(`<div class="lg">${lhead(ev)}<div class="seg sm" role="group" aria-label="Time window">${[[365, "1y"], [1826, "5y"], [3652, "10y"], [99999, "All"]].map(([w, l]) => `<button data-win="${w}" class="${PS.win === w ? "on" : ""}">${l}</button>`).join("")}</div><button class="btn sm prl-open" data-prlist title="List the protests in this window, for the area in focus or the visible map">List</button>
         ${PL.points ? `<div class="cats2">${[...present].sort((a, b) => a - b).map(c => `<span><i class="sw dot" style="background:${CAUSE_COL[CAUSES[c]]}"></i>${esc(CAUSES[c])}</span>`).join("") || `<span style="color:var(--ink-3)">No protests ${esc(winLabel())}</span>`}</div>
         <div class="dots" style="--c:#8560b5">${[1000, 20000, 500000].map(v => { const r = clamp(3 + 3.1 * Math.log10(v / 100 + 1), 3, 15) * 1.3; return `<span><i style="width:${r * 2}px;height:${r * 2}px;background:#888"></i>${fmtBig(v)}</span>`; }).join("")}<span><i style="width:8px;height:8px;background:#888;border:1.6px solid #1a2226"></i>size unknown</span></div>
-        <div class="note">Colour = cause. Size = crowd. Newer protests are solid and ringed; older ones fade. Window: protests ${esc(winLabel())}. Click a point for its story.</div>` : `<div class="note">Darker = more people protesting nearby, ${esc(winLabel())}.</div>`}</div>`);
+        <div class="note">Colour = cause. Size = crowd. Newer protests are solid and ringed; older ones fade. Window: protests ${esc(winLabel())}. Numbered circles are groups of nearby protests (the ring shows their causes): click to zoom in. Click a point for its card.</div>` : `<div class="note">Darker = more people protesting nearby, ${esc(winLabel())}.</div>`}</div>`);
     }
     const nd = noDataKey(level); if (nd && parts.length) parts[0] = parts[0].replace(/<\/div>$/, nd + "</div>");
     const unplaced = curPlan.notes.filter(n => !n.ch);
@@ -1205,6 +1274,7 @@
     if (i) { const v = JSON.parse(i.dataset.iso); state.iso = state.iso && JSON.stringify(state.iso) === JSON.stringify(v) ? null : v; LEVELS.forEach(paintLevel); renderLegend(); toast(state.iso ? "Showing only those areas. Click again to show all." : "Showing all areas."); return; }
     const rm = e.target.closest("[data-lrm]"); if (rm) { const m = M[rm.dataset.lrm]; if (m && isMapped(m.id)) { toggleMapped(m.id); toast(`${m.label} taken off the map.`); } return; }
     if (e.target.closest("[data-lclear]")) { clearAllLayers(); return; }
+    if (e.target.closest("[data-prlist]")) { openProtestList(); return; }
     if (e.target.closest("[data-bivswap]")) { const a = curPlan.shade, b = curPlan.grid; if (a && b) { PS.prefs[a.id] = "grid"; PS.prefs[b.id] = "shade"; repaint(); toast("Axes swapped."); } return; }
     const w = e.target.closest("[data-win]"); if (w) { PS.win = +w.dataset.win; for (const k in qCache) if (k.includes("|") && /protest/.test(k)) delete qCache[k]; repaint(); }
   });
@@ -1396,6 +1466,12 @@
     if (!curPlan.notes.some(n => n.ch)) toast("Put a metric on the map to see changes play out.");
     if (state.date >= viewHi()) setDate(PS.step > 1 ? (Math.ceil(+viewLo().slice(0, 4) / PS.step) * PS.step) + "-07-01" : viewLo());
     playBtn.innerHTML = PAUSE_ICON; playBtn.setAttribute("aria-label", "Pause");
+    if (planMetrics().some(m => m.temporal === "event")) {   // protests on the map: play steps from one protest to the next
+      const days = [...new Set(PR.events.map(e => fromDay(e.t0)))].filter(d => d >= viewLo() && d <= viewHi()).sort();
+      if (!days.some(d => d > state.date)) setDate(days[0] || viewLo());
+      state.playing = setInterval(() => { const n = days.find(d => d > state.date); if (!n) stopPlay(); else setDate(n); }, 900);
+      return;
+    }
     state.playing = setInterval(() => { const n = addYears(state.date, PS.step); if (n >= viewHi()) { setDate(viewHi()); stopPlay(); } else setDate(n); }, PS.step === 1 ? 850 : 1300);
   });
   $("steps").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; PS.step = +b.dataset.step; renderSteps(); savePS(); });
@@ -1417,7 +1493,9 @@
     if (step) for (let y = Math.ceil((y0 + 1) / step) * step; y <= y1; y += step) { const m = y * 12; if (m <= a || m >= b) continue; put(X(m), full ? "Jan " + y : String(y), y % 10 === 0 || step >= 10 ? "" : "minor"); }
     // years with no data for what's on the map (Full range only)
     const nd = TB.full && TB.has ? [[START, TB.lo], [TB.hi, TODAY]].filter(([p, q]) => q > p && monthIdx(q) - monthIdx(p) >= 1).map(([p, q]) => { const l = X(monthIdx(p)), r = X(monthIdx(q)); return `<i class="tb-nd" style="left:${l.toFixed(1)}px;width:${Math.max(2, r - l).toFixed(1)}px" title="No data for what's on the map, ${p.slice(0, 4)}–${q.slice(0, 4)}">${r - l > 52 ? "no data" : ""}</i>`; }).join("") : "";
-    marks.innerHTML = nd + out.join("");
+    // small ticks where protests happen (when protests are on the map)
+    const evTicks = planMetrics().some(m => m.temporal === "event") ? (() => { const px = new Set(); return PR.events.map(e => e.t0).filter(t => { const d = fromDay(t); return d >= viewLo() && d <= viewHi(); }).map(t => Math.round(X(monthIdx(fromDay(t))))).filter(x => !px.has(x) && px.add(x)).map(x => `<i class="tb-ev" style="left:${x}px"></i>`).join(""); })() : "";
+    marks.innerHTML = nd + evTicks + out.join("");
     marks.dataset.tier = full ? "dates" : step === 1 ? "years" : step ? "every-" + step : "ends";
     $("tb-full").classList.toggle("on", TB.full); $("tb-full").title = TB.full ? "Showing 1974 to today. Click to fit the bar to the data on the map" : `Show 1974 to today (the data on the map runs ${TB.lo.slice(0, 4)}–${TB.hi >= TODAY ? "today" : TB.hi.slice(0, 4)})`;
     placeCur();
@@ -1542,7 +1620,7 @@
       <h3>${esc(nameOf(code))}${rec ? ` <span class="tag">edited</span>` : ""}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}<ul>${items.join("")}</ul>
       ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
       ${rec && rec.notes ? `<div class="notes">${esc(rec.notes)}</div>` : ""}
-      ${pinned ? `<div class="acts"><button class="btn primary" data-edit>Edit</button><button class="btn" data-chartme>Chart</button><button class="btn" data-wscard title="Send this card to the workspace">Card → workspace</button><button class="btn" data-wstile title="Send this place as a tile (a small map) to the workspace">Tile → workspace</button><button class="btn" data-addcmp>${state.sel.some(s => s.code === code) ? "✓ Selected" : "+ Compare"}</button><button class="btn" data-zoom>Zoom to</button><button class="btn" data-outline title="Turn this place's outline into a shape you can drag over other places, at its real size">Drag outline</button></div>` : ""}`;
+      ${pinned ? `<div class="acts"><button class="btn primary" data-edit>Edit</button><button class="btn" data-chartme>Chart</button><button class="btn" data-wscard title="Send this card to the workspace">Card → workspace</button><button class="btn" data-wstile title="Send this place as a tile (a small map) to the workspace">Tile → workspace</button><button class="btn" data-addcmp>${state.sel.some(s => s.code === code) ? "✓ Selected" : "+ Compare"}</button><button class="btn" data-zoom>Zoom to</button><button class="btn" data-outline title="Turn this place's outline into a shape you can drag over other places, at its real size">Drag outline</button>${PR.events.length ? `<button class="btn" data-prhere title="The protests here ${esc(winLabel())}">Protests here</button>` : ""}</div>` : ""}`;
   }
   function editHTML(code) {
     const p = P[code], rec = E.areas[code] || {}, vals = rec.values || {};
@@ -1578,6 +1656,7 @@
     else if (b.hasAttribute("data-wscard")) sendToWS({ type: "card", title: nameOf(code), html: cardHTML(code, false), w: 340, h: 380 });
     else if (b.hasAttribute("data-wstile")) sendTile([code]);
     else if (b.hasAttribute("data-chartzone")) openChart({ companies: cosIn(code).map(c => c.i) });
+    else if (b.hasAttribute("data-prhere")) openProtestList();
   });
   card.addEventListener("click", e => { const li = e.target.closest("[data-co]"); if (!li) return; const c = COS[+li.dataset.co]; ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = companyHTML(c.i, true); ecard.hidden = false; const r = card.getBoundingClientRect(); place(r.left - 350, r.top, ecard); });
   card.addEventListener("submit", e => {
@@ -1606,6 +1685,71 @@
       <div class="sect">Local politics at the time</div><ul><li><b>${esc(s0 ? nameOf(s0[3]) : "")} council:</b> ${esc(ctl ? partyName(ctl[2]) : "No record")}</li><li><b>Government:</b> ${esc(gov && gov.party ? partyName(gov.party) + (gov.leader ? ` (${gov.leader})` : "") : "—")}</li></ul>
       <div class="note2">No dataset records how protesters vote. Shown instead: parties named as organisers or participants, and the politics of the place.</div>
       <div class="acts">${sites.length > 1 ? `<button class="btn" data-fit="${ei}">Show all ${sites.length} places</button>` : ""}${e.u ? `<a class="btn" href="${esc(e.u)}" target="_blank" rel="noopener">Source</a>` : ""}<button class="btn" data-goto="${e.t0}">Set date to this</button></div>`;
+  }
+  // 1.8: a protest's own card, a floating window (several can be open; they cascade). Fields from the build: dates, every
+  // site, cause and category, organisers and parties, crowd estimates with who made them, the result, the Wikipedia lead
+  // (CC BY-SA, with the link) and the Wikidata ID. Missing fields are left out.
+  const protestCards = new Map(), CROWD_SRC = { police: "police", organisers: "organisers", media: "media", Wikidata: "Wikidata" };
+  function protestCardHTML(ei) {
+    const e = PR.events[ei], sites = PR.sites.filter(s => s[0] === ei), d0 = fromDay(e.t0), d1 = e.t1 ? fromDay(e.t1) : null;
+    const places = sites.map(s => s[5]).filter((x, i, a) => a.indexOf(x) === i), councils = [...new Set(sites.map(s => nameOf(s[3])))];
+    const cr = (e.cr || []).length ? e.cr.map(([lo, hi, t]) => `${lo === hi ? fmtBig(lo) : `${fmtBig(lo)} – ${fmtBig(hi)}`}${CROWD_SRC[t] ? ` <small>(${CROWD_SRC[t]})</small>` : ""}`).join(" · ") : e.lo ? (e.lo === e.hi ? fmtBig(e.lo) : `${fmtBig(e.lo)} – ${fmtBig(e.hi)}`) : "";
+    const s0 = sites[0], ctl = s0 ? seg(POL.control[s0[3]], d0) : null, gov = s0 ? govAt(P[s0[3]].nation, d0) : (e.scope || []).length ? govAt(e.scope.find(c => c !== UKC) || UKC, d0) : null;
+    const row = (k, v) => v ? `<li><b>${k}:</b> ${v}</li>` : "";
+    return `<div class="pcard">${e.intl ? `<div class="pintl">UK part of an international protest</div>` : ""}<div class="lvl"><span>Protest${e.src === "ACLED" ? " · ACLED" : ""}</span><span>${esc(longDate(d0))}${d1 && d1 !== d0 ? " – " + esc(longDate(d1)) : ""}</span></div>
+      ${e.sum ? `<p class="psum">${esc(e.sum)} <small class="pattr">From <a href="${esc(e.u)}" target="_blank" rel="noopener">Wikipedia</a> (CC BY-SA 4.0)</small></p>` : ""}
+      <ul>${row("Cause", `<i class="sw dot" style="background:${CAUSE_COL[CAUSES[e.c]]}"></i> ${esc(CAUSES[e.c])}${e.ct ? `<br><small>${esc(e.ct.slice(0, 220))}</small>` : ""}`)}
+      ${row(`Where (${places.length || "no single place"})`, places.length ? esc(places.slice(0, 14).join(", ")) + (places.length > 14 ? ` and ${places.length - 14} more` : "") + (councils.length ? `<br><small>${esc(councils.slice(0, 8).join(", "))}${councils.length > 8 ? "…" : ""}</small>` : "") : (e.scope || []).length ? esc(e.scope.map(nameOf).join(", ")) + " <small>(no town named: counted for the nation)</small>" : "")}
+      ${row("Crowd estimates", cr + (e.sn ? `<br><small>${esc(e.sn)}</small>` : ""))}${!cr && e.sn ? row("Crowd", `<small>${esc(e.sn)}</small>`) : ""}
+      ${row("Organisers / sides", e.org ? esc(e.org.slice(0, 240)) : "")}
+      ${row("Parties named", e.pa.length ? e.pa.map(p => `<span class="pchip" style="--pc:${partyCol(p)}">${esc(partyName(p))}</span>`).join(" ") : "")}
+      ${row("Organisers' alignment", e.al.length ? e.al.map(a => `<span class="pchip" style="--pc:${ALIGN_COL[a] || "#999"}">${esc(a)}</span>`).join(" ") + ` <small>(Atlas lookup, editable)</small>` : "")}
+      ${row("Result", e.out ? esc(e.out) : "")}${row("Wikidata", e.q ? `<a href="https://www.wikidata.org/wiki/${esc(e.q)}" target="_blank" rel="noopener">${esc(e.q)}</a>` : "")}</ul>
+      ${s0 || gov ? `<div class="sect">Politics at the time</div><ul>${s0 ? `<li><b>${esc(nameOf(s0[3]))} council:</b> ${esc(ctl ? partyName(ctl[2]) : "No record")}</li>` : ""}<li><b>Government:</b> ${esc(gov && gov.party ? partyName(gov.party) + (gov.leader ? ` (${gov.leader})` : "") : "—")}</li></ul>` : ""}
+      <div class="acts">${e.u ? `<a class="btn primary" href="${esc(e.u)}" target="_blank" rel="noopener">Read more on Wikipedia ↗</a>` : ""}${sites.length ? `<button class="btn" data-pfit="${ei}">Show all sites${sites.length > 1 ? ` (${sites.length})` : ""}</button>` : ""}<button class="btn" data-pgoto="${e.t0}">Set date to this</button></div></div>`;
+  }
+  function openProtestCard(ei) {
+    const have = protestCards.get(ei); if (have && WM.isOpen(have.el)) { WM.front(have.el); WM.pulse(have.el); return have; }
+    const w = WM.make({ type: "protest", title: PR.events[ei].n, html: protestCardHTML(ei), cascade: true, min: { w: 300, h: 220 },
+      def: () => ({ x: innerWidth - 400 - 16, y: 80, w: 400, h: Math.min(600, innerHeight - 110) }), onClose: () => { protestCards.delete(ei); if (protestCards.hlFor === ei) { highlightSites(null); protestCards.hlFor = null; } } });
+    w.el.addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return;
+      if (b.dataset.pfit) { const i = +b.dataset.pfit, ss = PR.sites.filter(x => x[0] === i); highlightSites(i); protestCards.hlFor = i; let bb = [180, 90, -180, -90]; ss.forEach(x => { bb = [Math.min(bb[0], x[2]), Math.min(bb[1], x[1]), Math.max(bb[2], x[2]), Math.max(bb[3], x[1])]; }); map.fitBounds([[bb[0], bb[1]], [bb[2], bb[3]]], { padding: { top: 100, bottom: 140, left: 340, right: 440 }, maxZoom: 11, duration: 900 }); toast(`${ss.length} ${ss.length === 1 ? "site" : "sites"} ringed on the map.`); }
+      else if (b.dataset.pgoto) setDate(fromDay(+b.dataset.pgoto)); });
+    protestCards.set(ei, w); WM.open(w.el); return w;
+  }
+  // the protest list: protests active or within the window at the date, for the area in focus or the visible map
+  let prList = null; const PRL = { sort: "date", cause: "", align: "" };
+  function prListEvents() {
+    const D = dayNum(state.date), lo = D - PS.win, code = state.focus;
+    let evs;
+    if (code) evs = eventsIn(code, state.date).map(e => PR.events.indexOf(e));
+    else { const b = map.getBounds(), ids = new Set(); PR.sites.forEach(s => { const e = PR.events[s[0]]; if (e.t0 <= D && e.end > lo && b.contains([s[2], s[1]])) ids.add(s[0]); }); evs = [...ids]; }
+    evs = evs.filter(i => (PRL.cause === "" || PR.events[i].c === +PRL.cause) && (PRL.align === "" || PR.events[i].al.includes(PRL.align)));
+    const key = { date: i => -PR.events[i].t0, size: i => -(PR.events[i].mid || 0), cause: i => PR.events[i].c * 1e6 - PR.events[i].t0 / 1e3 }[PRL.sort];
+    return evs.sort((a, b) => key(a) - key(b));
+  }
+  function renderProtestList() {
+    if (!prList || prList.el.hidden) return;
+    const evs = prListEvents(), where = state.focus ? nameOf(state.focus) : "the visible map";
+    const aligns = [...new Set(PR.events.flatMap(e => e.al))].sort();
+    prList.setTitle(`Protests · ${where}`);
+    prList.setBody(`<div class="prl-bar"><label>Sort <select data-prl="sort">${[["date", "Newest"], ["size", "Largest crowd"], ["cause", "Cause"]].map(([k, l]) => `<option value="${k}" ${PRL.sort === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+        <label>Cause <select data-prl="cause"><option value="">All</option>${CAUSES.map((c, k) => `<option value="${k}" ${PRL.cause === String(k) ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
+        <label>Alignment <select data-prl="align"><option value="">All</option>${aligns.map(a => `<option ${PRL.align === a ? "selected" : ""}>${esc(a)}</option>`).join("")}</select></label></div>
+      <p class="prl-sub">${evs.length} ${evs.length === 1 ? "protest" : "protests"} ${esc(winLabel())} (to ${esc(longDate(state.date))}), ${state.focus ? "in " + esc(where) : "on the visible map"}. Hover to find one; click for its card.</p>
+      <ul class="prl">${evs.map(i => { const e = PR.events[i]; return `<li data-pev="${i}"><i class="sw dot" style="background:${CAUSE_COL[CAUSES[e.c]]}"></i><span class="prl-n">${esc(e.n)}${e.intl ? ` <small>(UK part)</small>` : ""}</span><small>${esc(shortDate(fromDay(e.t0)))}${e.mid ? " · " + esc(fmtBig(e.mid)) : ""}</small></li>`; }).join("") || `<li class="empty">None ${esc(winLabel())}. Try a longer window (key: 1y · 5y · 10y · All) or zoom out.</li>`}</ul>`);
+  }
+  function openProtestList() {
+    if (!prList) {
+      prList = WM.make({ type: "protest-list", title: "Protests", min: { w: 300, h: 240 }, dispose: false, def: () => ({ x: innerWidth - 380 - 16, y: 56, w: 380, h: Math.round(innerHeight * 0.62) }), onClose: () => highlightSites(protestCards.hlFor != null ? protestCards.hlFor : null) });
+      prList.el.id = "prlist";
+      prList.el.addEventListener("change", e => { const k = e.target.dataset.prl; if (k) { PRL[k] = e.target.value; renderProtestList(); } });
+      prList.el.addEventListener("mouseover", e => { const li = e.target.closest("[data-pev]"); if (li) highlightSites(+li.dataset.pev); });
+      prList.el.addEventListener("mouseleave", () => highlightSites(protestCards.hlFor != null ? protestCards.hlFor : null));
+      prList.el.addEventListener("click", e => { const li = e.target.closest("[data-pev]"); if (li) openProtestCard(+li.dataset.pev); });
+      map.on("moveend", () => { if (!state.focus) renderProtestList(); });
+    }
+    WM.open(prList.el); renderProtestList();
   }
   ecard.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
@@ -1638,7 +1782,11 @@
   function pickZone(e) { if (!map.getLayer("zone-fill") || map.getZoom() < ZONE_Z) return null; const f = map.queryRenderedFeatures(e.point, { layers: ["zone-fill"] })[0]; return f ? { code: f.properties.code, level: "zone" } : null; }
   function pickCompany(e) { if (!map.getLayer("co-pts") || map.getLayoutProperty("co-pts", "visibility") === "none") return null; const b = 4, f = map.queryRenderedFeatures([[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]], { layers: ["co-pts"] })[0]; return f ? f.properties.i : null; }
   function pick(e) { const z = pickZone(e); if (z) return z; const l = state.level; const f = map.queryRenderedFeatures(e.point, { layers: [l + "-fill"] })[0]; return f ? { code: f.properties.code, level: l } : null; }
-  function pickProtest(e) { if (!map.getLayer("pr-pts") || map.getLayoutProperty("pr-pts", "visibility") === "none") return null; const b = 4, f = map.queryRenderedFeatures([[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]], { layers: ["pr-pts"] })[0]; return f ? f.properties.e : null; }
+  const pbox = (e, b) => [[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]];
+  function pickProtest(e) {
+    if (SPIDER.on) { const f = map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-sp-pts"] })[0]; if (f) return f.properties.e; }
+    if (!map.getLayer("pr-pts") || map.getLayoutProperty("pr-pts", "visibility") === "none") return null; const f = map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-pts"] })[0]; return f ? f.properties.e : null;
+  }
   function setFS(t, s) { try { map.setFeatureState({ source: SRC[t.level], id: t.code }, s); } catch (e) {} }
   const hoverMs = () => Math.round(1200 * Math.pow(1 - TOOLS.cursor, 1.5) + 60);
   let cand = null, hov = null, timer = null, lastPt = null;
@@ -1672,8 +1820,19 @@
     if (map.getLayer("zone-dot") && map.getZoom() < ZONE_Z && map.queryRenderedFeatures([[e.point.x - 5, e.point.y - 5], [e.point.x + 5, e.point.y + 5]], { layers: ["zone-dot"] }).length) { map.flyTo({ center: [-0.1, 51.512], zoom: 11.6, duration: 1200 }); toast("London's financial districts: click a gold tile to explore it."); return; }
     const pc = pickCompany(e);
     if (pc != null) { ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = companyHTML(pc, true); ecard.hidden = false; place(e.point.x + 10, e.point.y - 40, ecard); bubbleNudge(); return; }
+    const cl = map.getLayer("pr-cl") && map.getLayoutProperty("pr-cl", "visibility") !== "none" ? map.queryRenderedFeatures(pbox(e, 2), { layers: ["pr-cl"] })[0] : null;
+    if (cl) { openCluster(cl.properties.cluster_id, cl.geometry.coordinates); return; }
+    const onSpider = SPIDER.on && map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-sp-pts"] }).length;
     const pe = pickProtest(e);
-    if (pe != null) { ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = eventHTML(pe, true); ecard.hidden = false; place(e.point.x + 10, e.point.y - 40, ecard); return; }
+    if (pe != null) {
+      if (!onSpider) {   // several protests on exactly this point: fan them out first
+        const fs = map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-pts"] }), at = fs[0].geometry.coordinates;
+        const same = fs.filter(f => Math.abs(f.geometry.coordinates[0] - at[0]) < 1e-6 && Math.abs(f.geometry.coordinates[1] - at[1]) < 1e-6);
+        if (new Set(same.map(f => f.properties.e)).size > 1) { ecard.hidden = true; spiderfy(at, same.map(f => f.properties)); return; }
+      }
+      ecard.hidden = true; ecardPinned = false; openProtestCard(pe); return;
+    }
+    if (SPIDER.on) unspider();
     const t = pick(e);
     if (!t) { unfocus(); clearGroup(); cancelAutoGroup(); return; }
     if (e.originalEvent.shiftKey || state.tool === "select" || state.tool === "lasso") { toggleCompare(t); if (e.originalEvent.shiftKey) armAutoGroup(); return; }
@@ -1780,7 +1939,7 @@
     syncFocusColour(); veil.classList.add("on"); document.body.classList.add("focused");
     card.className = "card pinned"; card.innerHTML = cardHTML(code, true); card.hidden = false; hist.hidden = true;
     if (!(opts && opts.noFly)) flyTo(code, 0, true);
-    renderMind(); updateOverlay(); bubbleNudge();
+    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList();
   }
   function unfocus() {
     if (!state.focus && !state.pinned) return;
@@ -1788,7 +1947,7 @@
     veil.classList.remove("on"); document.body.classList.remove("focused"); veil.style.clipPath = ""; veil.style.webkitClipPath = ""; mind.innerHTML = ""; card.hidden = true; hist.hidden = true;
     setP("focus-lift", "fill-opacity", 0); setP("focus-edge", "line-opacity", 0); setP("focus-shadow", "line-opacity", 0);
     setTimeout(() => { if (!state.focus && map.getSource("focus")) map.getSource("focus").setData({ type: "FeatureCollection", features: [] }); }, 320);
-    renderTray();
+    renderTray(); renderProtestList();
   }
   function syncFocusColour() { if (!FX) return; const c = LAST.fc[FX.code]; setP("focus-lift", "fill-color", c || (look.mode === "dark" ? "#2a3237" : "#ffffff")); }
   function updateOverlay() {
@@ -3077,6 +3236,7 @@
     if (ecardPinned) { ecard.hidden = true; ecardPinned = false; return; }
     if (!ovEl.hidden) { ovEl.hidden = true; return; }
     if (activeTab !== "map" && activeTab !== "split" && VIEW.mode === "map") { activateTab("map"); return; }
+    if (SPIDER.on) { unspider(); return; }
     if (closePMenu() || closeBrowse() || closeMenu() || closeTools()) return;   // menus first: they sit above windows
     if (WM.closeTop()) return;   // then the top window only (1.8)
     if (!notesEl.hidden) { notesEl.hidden = true; notesH.classList.remove("open"); return; }

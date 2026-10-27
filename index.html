@@ -800,6 +800,20 @@ sup.est { margin-left: 3px; }
 .an-methods button.no { opacity: .45; border-style: dashed; cursor: help; }
 .warnline { color: #8a5a00; }
 .cmp-side label.dis { color: var(--ink-3); cursor: not-allowed; }
+/* 1.8: protests: groups (donuts), fanned-out points, cards and the list */
+.prcl { cursor: pointer; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+.prcl svg { display: block; } .prcl text { font: 700 11px var(--f); fill: var(--ink); }
+.pcard .lvl { margin-bottom: 6px; } .pcard ul { padding-left: 0; list-style: none; margin: 6px 0; display: grid; gap: 4px; }
+.pcard li small { color: var(--ink-3); } .pcard .sect { font: 600 10px var(--f); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-top: 8px; }
+.psum { margin: 4px 0 8px; line-height: 1.45; } .pattr { display: block; color: var(--ink-3); font-size: 10.5px; margin-top: 2px; } .pattr a, .pcard li a { color: #3b78b5; }
+.pintl { display: inline-block; font-size: 11px; font-weight: 600; color: #7a4e00; background: rgba(230,171,2,.16); border-radius: 4px; padding: 1px 6px; margin-bottom: 4px; }
+.pcard .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; } .pcard .acts a.btn { text-decoration: none; }
+.prl-open { margin-left: 6px; }
+.prl-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 11.5px; color: var(--ink-2); } .prl-bar select { font-size: 11.5px; max-width: 150px; border: 1px solid var(--rule); border-radius: 5px; background: var(--solid); padding: 1px 3px; }
+.prl-sub { font-size: 11px; color: var(--ink-3); margin: 6px 0; }
+.prl { list-style: none; margin: 0; padding: 0; } .prl li { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: baseline; padding: 4px 4px; border-bottom: 1px solid var(--rule); cursor: pointer; font-size: 12.5px; }
+.prl li:hover { background: var(--hover); } .prl li small { color: var(--ink-3); white-space: nowrap; } .prl li.empty { display: block; color: var(--ink-3); cursor: default; }
+.marks .tb-ev { position: absolute; top: -13px; width: 1px; height: 7px; background: #8560b5; opacity: .8; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -913,11 +927,11 @@ sup.est { margin-left: 3px; }
 <script src="data/local.js"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="stats.js?v=18272155"></script>
-<script src="psephology.js?v=18272155"></script>
-<script src="charts.js?v=18272155"></script>
-<script src="engine.js?v=18272155"></script>
-<script src="xlsx.js?v=18272155"></script>
+<script src="stats.js?v=18272210"></script>
+<script src="psephology.js?v=18272210"></script>
+<script src="charts.js?v=18272210"></script>
+<script src="engine.js?v=18272210"></script>
+<script src="xlsx.js?v=18272210"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -927,7 +941,7 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="windows.js?v=18272155"></script>
-<script src="app.js?v=18272155"></script>
+<script src="windows.js?v=18272210"></script>
+<script src="app.js?v=18272210"></script>
 </body>
 </html>
