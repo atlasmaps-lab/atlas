@@ -489,6 +489,34 @@
     get(code, d) { const r = resultFor(code, d); if (!r || !r.electorate) return r ? { v: null, text: "Electorate not recorded" } : null; const per = r.agg ? r.electorate / r.n : r.electorate;
       const quota = r.e.day >= "2024-07-04" ? QUOTA_2023 : meanElectorate(r.agg ? r.day : (geAt(r.e.day) || r.e.day)); if (!quota) return null; const v = 100 * (per / quota - 1);
       return { v, text: `${fmtInt(per)} electors${r.agg ? " per seat" : ""} (${this.fmt(v)} against ${r.e.day >= "2024-07-04" ? "the 2023 quota of 73,393" : "the UK mean of " + fmtInt(quota)})`, yr: elWhen(r) }; } });
+  // political: referendums (1.7)
+  const G5 = "Referendums", REF = EL ? EL.ref || {} : {}, EU_DAY = "2016-06-23";
+  function euAt(code) { // a council's row, or votes summed over the councils in a region, nation or the UK (never averaged)
+    const E = REF.eu; if (!E) return null; const lv = P[code].level;
+    if (lv === "council") { const r = E[code] || (code[0] === "N" ? E.N92000002 : null); return r ? { electorate: r[0], valid: r[1], leave: r[2], remain: r[3], note: code[0] === "N" ? "Northern Ireland counted as one area" : r[5] } : null; }
+    if (code === "N92000002") { const r = E.N92000002; return r && { electorate: r[0], valid: r[1], leave: r[2], remain: r[3], note: "Northern Ireland counted as one area" }; }
+    const cs = (UNDER[code] || []).filter(c => c[0] !== "N"); const o = { electorate: 0, valid: 0, leave: 0, remain: 0, n: 0 };
+    cs.forEach(c => { const r = E[c]; if (!r) return; o.electorate += r[0]; o.valid += r[1]; o.leave += r[2]; o.remain += r[3]; o.n++; });
+    if (lv === "country" && E.N92000002) { const r = E.N92000002; o.electorate += r[0]; o.valid += r[1]; o.leave += r[2]; o.remain += r[3]; o.note = "Gibraltar, which voted but is not part of the UK, is left out"; }
+    return o.n ? o : null;
+  }
+  const refWhen = d => d < EU_DAY ? { v: null, text: "The referendum was held on 23 June 2016" } : null;
+  const EU_SRC = EL && EL.sources.eu, EU_LV = ["council", "region", "nation", "country"], EU_NM = { ward: "Counted by council area, not by ward", constituency: "Counted by council area: see the constituency Leave estimate", zone: NM_TEXT };
+  def({ id: "eu_leave", p: "political", group: G5, label: "EU referendum: Leave", scale: "interval", nature: "share", temporal: "election", mid: 50, fmt: pct1, levels: EU_LV, nmText: EU_NM, source: EU_SRC,
+    how: "Leave votes ÷ valid votes. Councils merged since 2016 add up their predecessors' votes; regions, nations and the UK add up their councils' votes", desc: "Share voting Leave in the 2016 EU referendum",
+    get(code, d) { const w = refWhen(d); if (w) return w; const r = euAt(code); if (!r) return null; const v = 100 * r.leave / r.valid;
+      return { v, text: `${pct1(v)} Leave (${fmtInt(r.leave)} v ${fmtInt(r.remain)})`, yr: "2016 EU referendum", note: r.note || "" }; } });
+  def({ id: "eu_turnout", p: "political", group: G5, label: "EU referendum: turnout", scale: "ratio", nature: "share", temporal: "election", fmt: pct1, breaks: [65, 70, 75, 80], levels: EU_LV, nmText: EU_NM, source: EU_SRC,
+    how: "Valid votes ÷ electorate (the Electoral Commission's own turnout also counts rejected ballots)", desc: "Share of the electorate who cast a valid vote in 2016",
+    get(code, d) { const w = refWhen(d); if (w) return w; const r = euAt(code); if (!r || !r.electorate) return null; const v = 100 * r.valid / r.electorate;
+      return { v, text: `${pct1(v)} (${fmtInt(r.valid)} of ${fmtInt(r.electorate)})`, yr: "2016 EU referendum", note: r.note || "" }; } });
+  def({ id: "eu_leave_est_pcon", p: "political", group: G5, label: "EU referendum: Leave (constituency estimate)", scale: "interval", nature: "share", temporal: "election", mid: 50, fmt: pct1, levels: ["constituency"],
+    nmText: { council: "Councils have counted results: see EU referendum: Leave", ward: NM_TEXT, region: NM_TEXT, nation: NM_TEXT, country: NM_TEXT }, source: EL && EL.sources.eu_pcon,
+    how: "Chris Hanretty's estimates (2016): a model of council results by demographics, projected onto constituencies; where the BBC obtained ward counts, the known result. Great Britain, 2010 boundaries only",
+    desc: "Estimated Leave share in each Westminster seat (results were counted by council, not by constituency)",
+    valid: code => !code.startsWith("P10-") ? (code[0] === "N" || code.startsWith("P97-N") ? "Not estimated for Northern Ireland" : "Estimates exist for the 2010–2024 boundaries only (move the time bar to 2010–2024)") : null,
+    get(code, d) { const w = refWhen(d); if (w) return w; const r = (REF.eu_pcon || {})[code]; if (!r) return code.includes("-N") ? { v: null, text: "Not estimated for Northern Ireland" } : null;
+      return { v: r[0], text: `${pct1(r[0])} Leave`, yr: "2016 EU referendum", est: true, estWhy: r[1] ? "Known result from ward counts (BBC), compiled by Chris Hanretty" : "Modelled estimate by Chris Hanretty", note: r[1] ? "known result (BBC ward counts), via Chris Hanretty" : "estimate by Chris Hanretty" }; } });
   // markets: FTSE 100 companies headquartered in London (test case)
   const COS = MK ? MK.companies : [], GRP_COL = MK ? Object.fromEntries(MK.groups) : {}, G3 = "FTSE 100 in London (test case)";
   COS.forEach((c, i) => { c.i = i; });
