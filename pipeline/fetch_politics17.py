@@ -2,7 +2,7 @@
 Atlas 1.7: fetch the referendum, ideology, hex map, council tax and inflation sources into pipeline/sources/raw/ and record
 each in pipeline/sources/MANIFEST.csv   (python3 pipeline/fetch_politics17.py [name ...]; standard library + curl)
 
-Names: eu, chd, lad2425, hanretty, ches, hex, bandd_england, bandd_scotland, bandd_wales, cpih (default: all).
+Names: councils, electorate, eu, chd, lad2425, hanretty, ches, hex, bandd_england, bandd_scotland, bandd_wales, cpih (default: all).
 Westminster results are fetched by fetch_elections.py. Sources that refuse scripted access are listed at the end, with what
 to do instead; nothing here tries to get round a block.
 """
@@ -106,7 +106,27 @@ def cpih():
     manifest.record("raw/ons_cpih_L522.csv", "Office for National Statistics", "CPIH index 00: all items 2015=100 (L522)", u, manifest.OGL, "UK, monthly 1988-", "April values used")
 
 
-ALL = {"eu": eu, "chd": chd, "lad2425": lad2425, "hanretty": hanretty, "ches": ches, "hex": hexmaps,
+def electorate():
+    u = "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/elections/electoralregistration/datasets/electoralstatisticsforuk/december2025/offsenelectoralregistrationstatistics2025.xlsx"
+    curl(u, os.path.join(RAW, "ons_electoral_statistics_2025.xlsx"))
+    manifest.record("raw/ons_electoral_statistics_2025.xlsx", "Office for National Statistics", "Electoral registration statistics, UK, December 2025", u, manifest.OGL,
+                    "650 Westminster constituencies (2024 boundaries), parliamentary registrations, 1 December 2025", "No local authority table in this edition")
+    u = ("https://www.nomisweb.co.uk/api/v01/dataset/NM_2014_1.data.csv?geography=TYPE172&date=latest&gender=0&c_age=202,204&measures=20100"
+         "&select=date_name,geography_code,geography_name,c_age,obs_value")
+    curl(u, os.path.join(RAW, "nomis_pcon2024_age16plus_1617.csv"))
+    manifest.record("raw/nomis_pcon2024_age16plus_1617.csv", "Office for National Statistics (Nomis)", "Population estimates, small area based by single year of age (NM_2014_1): aged 16+ and 16-17",
+                    u, manifest.OGL, "575 constituencies in England and Wales (2024 boundaries), mid-2024", "Adults 18+ = aged 16+ minus aged 16 to 17")
+
+
+def councils():
+    for f, yrs in (("history1973-2015.csv", "1973-2015"), ("history2016-26.csv", "2016-2026")):
+        u = "https://opencouncildata.co.uk/" + f
+        curl(u, os.path.join(RAW, "ocd_" + f))
+        manifest.record("raw/ocd_" + f, "Open Council Data UK (Lawson Data Services)", f"50 Years+ of GB Council Compositions ({yrs})", u, "CC BY-SA 4.0",
+                        f"GB councils (and county councils), seats by party shortly after each May's elections, {yrs}", "Northern Irish parties are all 'other' in this file")
+
+
+ALL = {"councils": councils, "electorate": electorate, "eu": eu, "chd": chd, "lad2425": lad2425, "hanretty": hanretty, "ches": ches, "hex": hexmaps,
        "bandd_england": bandd_england, "bandd_scotland": bandd_scotland, "bandd_wales": bandd_wales, "cpih": cpih}
 BLOCKED = [("Scottish independence referendum 2014 by council", "electoralcommission.org.uk and the Scottish Parliament's research archive ask for a browser check; "
             "emb.scot's council pages give turnout but mostly not Yes/No votes. Download the Electoral Commission's results file in a browser into sources/raw/ to add it.")]

@@ -409,7 +409,7 @@
   const bar = r => { const L = r.agg ? Object.entries(r.seats).sort((a, b) => b[1] - a[1]) : r.cl.slice(0, 6).map(([p, v]) => [p, v]); const tot = L.reduce((a, x) => a + x[1], 0);
     return `<div class="compbar">${L.map(([p, v]) => `<i style="width:${(100 * v / tot).toFixed(2)}%;background:${partyCol(p)}" title="${esc(partyName(p))}: ${r.agg ? v + " seats" : fmtInt(v) + " votes"}"></i>`).join("")}</div><small>${L.slice(0, 5).map(([p, v]) => `${esc(partyName(p))} ${r.agg ? v : pct1(100 * v / tot)}`).join(" · ")}</small>`; };
   const wm = o => def(Object.assign({ p: "political", group: G4, temporal: "election", levels: WM_LEVELS, nmText: WM_NM, source: WM_SRC }, o));
-  const PS_PICK_DEF = { ge_share: "lab", ge_swing_butler: "con-lab", ge_swing_steed: "con-lab" };
+  const PS_PICK_DEF = { council_seat_share: "lab", ge_share: "lab", ge_swing_butler: "con-lab", ge_swing_steed: "con-lab" };
   const pickOf = id => (PS.pick && PS.pick[id]) || PS_PICK_DEF[id];
   wm({ id: "ge_winner", label: "Winning party", scale: "nominal", nature: "category", desc: "Who won the seat; for a region, nation or the UK, the party with most seats", pairShare: "ge_win_share",
     how: "Seat: the candidate with most votes (the Speaker shown as Speaker). Region, nation, UK: the party that won most seats there", ...partyCat,
@@ -563,6 +563,42 @@
     get(code, d) { const y = fyOf(d), real = yy => { const v = atYear((LOC.bandd || {})[councilOf(code)], yy), c = cpihAt(yy); return v != null && c ? v / c : null; };
       const now = real(y), b10 = real(y - 10), b5 = real(y - 5); if (now == null || b10 == null) return { v: null, text: now == null ? `No figure for ${fyName(y)}` : `No figure for ${fyName(y - 10)}` };
       const v = 100 * (now / b10 - 1); return { v, text: `${this.fmt(v)} over 10 years${b5 != null ? `, ${this.fmt(100 * (now / b5 - 1))} over 5` : ""}`, yr: `${fyName(y - 10)} to ${fyName(y)}` }; } });
+  // political: council composition (1.7), Open Council Data UK
+  function compAt(code, d) { const L = (LOC.comp || {})[councilOf(code)]; if (!L) return null; const y = +d.slice(0, 4) - (d.slice(5) < "05-15" ? 1 : 0); let r = null; for (const x of L) if (x[0] <= y) r = x; return r && r[0] >= y - 4 ? r : null; }
+  const COMP_VALID = code => nationOf(code) === "N92000002" ? "Not yet for Northern Ireland: the free composition file folds all Northern Irish parties into 'other'" : null;
+  const COMP_LV = ["council", "ward"], COMP_NM = { region: "Shown for councils only", nation: "Shown for councils only", country: "Shown for councils only", constituency: "Councils, not constituencies" };
+  const compBar = r => { const L = Object.entries(r[2]).sort((a, b) => b[1] - a[1]); return `<div class="compbar">${L.map(([p, n]) => `<i style="width:${(100 * n / r[1]).toFixed(2)}%;background:${partyCol(p)}" title="${esc(partyName(p))}: ${n}"></i>`).join("")}</div><small>${L.slice(0, 6).map(([p, n]) => `${esc(partyName(p))} ${n}`).join(" · ")} (of ${r[1]})</small>`; };
+  const compSrc = LOC.sources && LOC.sources.comp, compWhen = r => `after the May ${r[0]} elections`;
+  def({ id: "council_seats", p: "political", group: G7, label: "Council seats by party", scale: "nominal", nature: "category", temporal: "state", levels: COMP_LV, nmText: COMP_NM, valid: COMP_VALID, source: compSrc, ...partyCat,
+    how: "Seats held by each party shortly after each May's elections; the colour is the largest party ('Other' groups independents and local parties)", desc: "The party make-up of the council",
+    get(code, d) { const r = compAt(code, d); if (!r) return null; const L = Object.entries(r[2]).sort((a, b) => b[1] - a[1]); if (!L.length) return null;
+      return { v: L[0][0], text: `Largest: ${partyName(L[0][0])}, ${L[0][1]} of ${r[1]} seats`, yr: compWhen(r), counts: r[2], tot: r[1], detail: compBar(r) }; } });
+  def({ id: "council_seat_share", p: "political", group: G7, label: "Council seat share (choose party)", scale: "ratio", nature: "share", temporal: "state", fmt: pct1, pick: "party", levels: COMP_LV, nmText: COMP_NM, valid: COMP_VALID, source: compSrc,
+    how: "Party's seats ÷ all seats on the council", desc: "One party's share of the council's seats; choose the party in the key",
+    get(code, d) { const r = compAt(code, d); if (!r) return null; const p = pickOf("council_seat_share"), n = r[2][p] || 0, v = 100 * n / r[1]; return { v, text: `${pct1(v)} (${n} of ${r[1]} seats, ${partyName(p)})`, yr: compWhen(r) }; } });
+  def({ id: "council_majority", p: "political", group: G7, label: "Majority on the council", scale: "interval", nature: "change", temporal: "state", mid: 0, fmt: v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v) + " seats", levels: COMP_LV, nmText: COMP_NM, valid: COMP_VALID, source: compSrc,
+    how: "Largest party's seats minus all other seats; negative means no single party has a majority", desc: "How big the largest party's majority is (or how far short it falls)",
+    get(code, d) { const r = compAt(code, d); if (!r) return null; const L = Object.entries(r[2]).sort((a, b) => b[1] - a[1]); if (!L.length) return null; const v = L[0][1] - (r[1] - L[0][1]);
+      return { v, text: `${this.fmt(v)} (${partyName(L[0][0])})${v <= 0 ? " · no overall control" : ""}`, yr: compWhen(r) }; } });
+  def({ id: "council_enp", p: "political", group: G7, label: "Council fragmentation", scale: "ratio", nature: "rate", temporal: "state", fmt: v => v.toFixed(2), breaks: [1.5, 2, 2.5, 3], levels: COMP_LV, nmText: COMP_NM, valid: COMP_VALID, source: compSrc,
+    how: "Effective number of parties on seats: 1 ÷ the sum of each party's squared seat share ('Other' counts as one group, so this understates fragmentation where many independents sit)",
+    desc: "How many parties effectively share the council",
+    get(code, d) { const r = compAt(code, d); if (!r) return null; const v = PSE.enp(Object.values(r[2]).map(n => n / r[1])); return v ? { v, text: this.fmt(v), yr: compWhen(r) } : null; } });
+  // political: representation (1.7)
+  const G8 = "Representation";
+  function regAt(code) { // 2024 constituencies; regions and nations add up their constituencies (England and Wales: adults by seat)
+    const R = LOC.reg; if (!R) return null; const lv = P[code].level;
+    if (lv === "constituency") { const r = R[code]; return r ? { reg: r[0], adults: r[1], n: 1 } : null; }
+    let reg = 0, adults = 0, n = 0; for (const c in R) { const p = P[c]; if (!p || !R[c][1]) continue; if (lv === "region" && p.parent !== code) continue; if (lv === "nation" && p.nation !== code) continue; reg += R[c][0]; adults += R[c][1]; n++; }
+    return n ? { reg, adults, n } : null;
+  }
+  def({ id: "registration_ratio", p: "political", group: G8, label: "Electorate as % of adults", scale: "ratio", nature: "share", temporal: "static", fmt: pct1, breaks: [75, 80, 85, 90],
+    levels: ["constituency", "region", "nation"], nmText: { council: "The December 2025 statistics give parliamentary electorates by constituency only", ward: NM_TEXT, country: "England and Wales only: adults aged 18+ by constituency aren't published here for Scotland and Northern Ireland" },
+    valid: code => /^(S|N)/.test(nationOf(code) || "") ? "England and Wales only (adults aged 18+ by constituency come from ONS small-area estimates)" : null, source: LOC.sources && LOC.sources.reg,
+    how: "Parliamentary electoral registrations (1 December 2025) ÷ residents aged 18+ (mid-2024). This is NOT registration completeness: the parliamentary franchise leaves out most EU and other foreign nationals, so areas with many of them score low. The Electoral Commission's completeness studies are the proper measure",
+    desc: "Registered parliamentary electors per 100 adults (2024 constituencies)",
+    get(code, d) { const r = regAt(code); if (!r) return null; if (!r.adults) return { v: null, text: "Adults aged 18+ not available here" }; const v = 100 * r.reg / r.adults;
+      return { v, text: `${pct1(v)} (${fmtInt(r.reg)} electors, ${fmtInt(r.adults)} adults)`, yr: "Dec 2025 electorate, mid-2024 adults", note: "not a measure of registration completeness" }; } });
   // markets: FTSE 100 companies headquartered in London (test case)
   const COS = MK ? MK.companies : [], GRP_COL = MK ? Object.fromEntries(MK.groups) : {}, G3 = "FTSE 100 in London (test case)";
   COS.forEach((c, i) => { c.i = i; });
