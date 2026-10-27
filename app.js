@@ -173,10 +173,10 @@
   }
   const pconCache = new Map();
   function pconOfSite(s) { // which constituency a protest site falls in (point in polygon, worked out once)
-    if (!G.constituencies) return null; const ck = pconSig + "|" + PR.sites.indexOf(s); if (pconCache.has(ck)) return pconCache.get(ck);
+    if (!G.constituencies) return null; const ck = pconSig + "|" + PR.sites.indexOf(s);   // real boundaries, even when the hex map is shown if (pconCache.has(ck)) return pconCache.get(ck);
     const x = s[2], y = s[1]; let hit = null;
     const inRing = r => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const a = r[i], b = r[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
-    for (const f of G.constituencies.features) { const g = f.geometry, ps = g.type === "Polygon" ? [g.coordinates] : g.coordinates; if (ps.some(p => inRing(p[0]))) { hit = f.properties.code; break; } }
+    for (const f of (G.pconReal || G.constituencies).features) { const g = f.geometry, ps = g.type === "Polygon" ? [g.coordinates] : g.coordinates; if (ps.some(p => inRing(p[0]))) { hit = f.properties.code; break; } }
     pconCache.set(ck, hit); return hit;
   }
   const winLabel = () => PS.win >= 99999 ? "since 1974" : PS.win >= 3650 ? "in the 10 years to the date" : PS.win >= 1826 ? "in the 5 years to the date" : "in the year to the date";
@@ -517,6 +517,27 @@
     valid: code => !code.startsWith("P10-") ? (code[0] === "N" || code.startsWith("P97-N") ? "Not estimated for Northern Ireland" : "Estimates exist for the 2010–2024 boundaries only (move the time bar to 2010–2024)") : null,
     get(code, d) { const w = refWhen(d); if (w) return w; const r = (REF.eu_pcon || {})[code]; if (!r) return code.includes("-N") ? { v: null, text: "Not estimated for Northern Ireland" } : null;
       return { v: r[0], text: `${pct1(r[0])} Leave`, yr: "2016 EU referendum", est: true, estWhy: r[1] ? "Known result from ward counts (BBC), compiled by Chris Hanretty" : "Modelled estimate by Chris Hanretty", note: r[1] ? "known result (BBC ward counts), via Chris Hanretty" : "estimate by Chris Hanretty" }; } });
+  // political: ideology (1.7). The calculation is the plug-in AtlasPseph.ideology (Vision.md point 4); party scores: CHES lrgen
+  const G6 = "Ideology", CHES = EL ? EL.ches || {} : {}, CHES_WAVES = Object.keys(CHES).sort();
+  const waveFor = day => { let w = null; for (const y of CHES_WAVES) if (+y <= +day.slice(0, 4)) w = y; return w; };
+  function ideoAt(code, d) {
+    const r = resultFor(code, d); if (!r) return null; const w = waveFor(r.e.day);
+    if (!w) return { miss: `No CHES wave on or before the ${r.e.label} (the first is 1999)`, r };
+    const sc = CHES[w], I = PSE.ideology(r.t.list.map(([p, , sh]) => ({ share: sh, x: sc[p] })));
+    const cov = 100 * I.covered, ni = nationOf(code) === "N92000002";
+    if (cov < 75) return { miss: `Parties with a CHES score won only ${cov.toFixed(0)}% of the vote here${ni ? " (Northern Irish parties are not in CHES)" : ""}`, r };
+    return { I, cov, w, r, note: `CHES ${w} wave · scored parties ${cov.toFixed(0)}% of the vote${cov < 90 ? " (under 90%: read with care)" : ""}` };
+  }
+  def({ id: "ideo_centre", p: "political", group: G6, label: "Left–right centre of gravity", scale: "interval", nature: "rate", temporal: "election", mid: 5, fmt: v => v.toFixed(2), levels: WM_LEVELS, nmText: WM_NM,
+    source: EL && EL.sources.ches, how: "Vote-weighted mean of the parties' CHES left–right scores (0 = far left, 10 = far right), over parties with a score; missing when they won under 75% of the vote",
+    desc: "Where the vote sits on the left–right scale (Westminster)",
+    get(code, d) { const x = ideoAt(code, d); if (!x) return null; if (x.miss) return { v: null, text: x.miss, yr: x.r.e.label };
+      return { v: x.I.centre, text: `${this.fmt(x.I.centre)} (${x.I.centre < 5 ? "left of" : "right of"} centre)`, yr: x.r.e.label, note: x.note, est: x.cov < 90, estWhy: "Scored parties won under 90% of the vote" }; } });
+  def({ id: "ideo_polarisation", p: "political", group: G6, label: "Polarisation (Dalton index)", scale: "ratio", nature: "rate", temporal: "election", fmt: v => v.toFixed(2), breaks: [0.2, 0.3, 0.4, 0.5], levels: WM_LEVELS, nmText: WM_NM,
+    source: EL && EL.sources.ches, how: "√(Σ vᵢ × ((xᵢ − x̄) ÷ 5)²): vᵢ = vote share renormalised over parties with a CHES score, xᵢ = the party's left–right score, x̄ = the centre of gravity. 0 = everyone votes for the same position, 1 = split between the two ends",
+    desc: "How spread out the vote is across left and right (Westminster)",
+    get(code, d) { const x = ideoAt(code, d); if (!x) return null; if (x.miss) return { v: null, text: x.miss, yr: x.r.e.label };
+      return { v: x.I.polarisation, text: this.fmt(x.I.polarisation), yr: x.r.e.label, note: x.note, est: x.cov < 90, estWhy: "Scored parties won under 90% of the vote" }; } });
   // markets: FTSE 100 companies headquartered in London (test case)
   const COS = MK ? MK.companies : [], GRP_COL = MK ? Object.fromEntries(MK.groups) : {}, G3 = "FTSE 100 in London (test case)";
   COS.forEach((c, i) => { c.i = i; });
@@ -564,7 +585,7 @@
     ["on", "active", "card", "prefs", "biv", "pick"].forEach(k => Object.assign(o[k], s[k] || {}));
     Object.entries(s.mapped || {}).forEach(([p, v]) => { if (PER[p]) o.mapped[p] = (Array.isArray(v) ? v : [v]).filter(id => M[id]); });
     if (Array.isArray(s.order)) o.order = s.order.filter(p => PER[p]);
-    ["step", "win", "detail", "hot", "hatch"].forEach(k => { if (s[k] != null) o[k] = s[k]; });
+    ["step", "win", "detail", "hot", "hatch", "hex"].forEach(k => { if (s[k] != null) o[k] = s[k]; });
     return o;
   })();
   // 0.3.1: a perspective is "on" exactly when something in it is ticked (there is no separate perspective switch any more)
@@ -731,6 +752,7 @@
     map.addSource("grid", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     for (let k = 0; k < 5; k++) map.addImage("dot-" + k, dotImage(k), { pixelRatio: 2 });
     map.addImage("hatch", hatchImage(), { pixelRatio: 2 });
+    if (PS.hex) setTimeout(() => syncPcon(true), 0);   // the hex map was on last time
     LEVELS.forEach(l => {
       const range = { minzoom: VIS[l][0], maxzoom: VIS[l][1] };
       map.addLayer(Object.assign({ id: "pf-" + l, type: "fill", source: SRC[l], paint: { "fill-color": ["to-color", ["coalesce", ["feature-state", "fc"], "#000000"], "#000000"], "fill-opacity": pfOpacity() } }, range), before);
@@ -821,10 +843,15 @@
     if (sig !== "2024" && !pconInUse()) return; // not on screen: switch later, when the layer is used
     const need = PCON_NEED[sig], missing = need.filter(k => !PSETS[k]);
     if (missing.length) { missing.forEach(k => { if (pconLoading.has(k)) return; pconLoading.add(k); const sc = document.createElement("script"); sc.src = `data/constituencies_${k}.js`; sc.onerror = () => { pconLoading.delete(k); toast("Couldn't load the older constituency boundaries."); }; document.body.appendChild(sc); }); toast("Loading the constituency boundaries for that date…"); return; }
-    const feats = sig === "2024" ? PSETS["2024"].features : need.flatMap(k => PSETS[k].features).filter(f => activeAt(f.properties.code, state.date));
-    G.constituencies = { type: "FeatureCollection", features: feats }; pconSig = sig;
+    const real = sig === "2024" ? PSETS["2024"].features : need.flatMap(k => PSETS[k].features).filter(f => activeAt(f.properties.code, state.date));
+    // 1.7: hex map (equal area): the same seats and codes as hexagons, from data/hex_constituencies.js (2024 and 2010 sets only)
+    const HX = window.ATLAS_HEX, hexOn = !!PS.hex && HX && HX[sig === "2010" ? "2010" : sig];
+    if (PS.hex && !hexOn && !syncPcon.warned) { syncPcon.warned = true; toast("There's no hex map for the 1997 boundaries: showing the real ones."); }
+    const feats = hexOn ? HX[sig === "2010" ? "2010" : sig].features.filter(f => activeAt(f.properties.code, state.date)) : real;
+    G.pconReal = { type: "FeatureCollection", features: real }; G.constituencies = { type: "FeatureCollection", features: feats }; pconSig = sig;
+    document.body.classList.toggle("hexmode", !!hexOn);
     map.getSource("constituencies").setData(G.constituencies);
-    map.getSource("pt-constituency").setData({ type: "FeatureCollection", features: feats.map(f => ({ type: "Feature", properties: { code: f.properties.code }, geometry: { type: "Point", coordinates: PT[f.properties.code] || repPoint(f.geometry) } })) });
+    map.getSource("pt-constituency").setData({ type: "FeatureCollection", features: feats.map(f => ({ type: "Feature", properties: { code: f.properties.code }, geometry: { type: "Point", coordinates: hexOn ? f.properties.pt : PT[f.properties.code] || repPoint(f.geometry) } })) });
     for (const k in paCache) delete paCache[k]; for (const k in qCache) delete qCache[k];
     // anything picked on the old boundaries goes
     const gone = c => P[c] && P[c].level === "constituency" && !activeAt(c, state.date);
@@ -3050,9 +3077,11 @@
     $("browse-lv").textContent = PLURAL[state.level] || "Areas";
     el.innerHTML = `<div class="lvt">Boundaries on the map <small>${LV.auto ? "following the zoom" : "at every zoom"}</small></div>
       <label class="lvrow lvauto"><input type="checkbox" data-lv="auto" ${LV.auto ? "checked" : ""}><span>Automatic</span><small>switch with zoom</small></label>
-      ${["nation", "region", "council", "constituency", "ward"].map(l => { const on = !LV.auto && LV.on.includes(l), act = state.level === l; return `<div class="lvrow${act ? " act" : ""}${on ? " on" : ""}"><input type="checkbox" id="lv-${l}" data-lv="${l}" ${on ? "checked" : ""} aria-label="Show ${PLURAL[l]} on the map"><button data-mk="${l}" title="${act ? "Colours, hover cards and clicks use this set" : "Use this set for colours, hover cards and clicks"}">${PLURAL[l]}</button>${act ? `<small>colours &amp; hover</small>` : on ? `<small>outline</small>` : ""}</div>`; }).join("")}`;
+      ${["nation", "region", "council", "constituency", "ward"].map(l => { const on = !LV.auto && LV.on.includes(l), act = state.level === l; return `<div class="lvrow${act ? " act" : ""}${on ? " on" : ""}"><input type="checkbox" id="lv-${l}" data-lv="${l}" ${on ? "checked" : ""} aria-label="Show ${PLURAL[l]} on the map"><button data-mk="${l}" title="${act ? "Colours, hover cards and clicks use this set" : "Use this set for colours, hover cards and clicks"}">${PLURAL[l]}</button>${act ? `<small>colours &amp; hover</small>` : on ? `<small>outline</small>` : ""}</div>${l === "constituency" && window.ATLAS_HEX ? `<label class="lvrow lvhex"><input type="checkbox" data-hex ${PS.hex ? "checked" : ""}><span>Hex map (equal area)</span><small>one hexagon per seat</small></label>` : ""}`; }).join("")}`;
   }
-  $("lvpick").addEventListener("change", e => { const t = e.target.closest("[data-lv]"); if (t) setLevelOn(t.dataset.lv, t.checked); renderBrowse(); });
+  $("lvpick").addEventListener("change", e => {
+    if (e.target.hasAttribute("data-hex")) { PS.hex = e.target.checked; savePS(); syncPcon.warned = false; if (PS.hex && state.level !== "constituency") makeActive("constituency"); syncPcon(true); renderLevelPicker(); toast(PS.hex ? "Hex map: every seat the same size, so big rural seats don't dominate. Positions are approximate." : "Back to the real boundaries."); return; }
+    const t = e.target.closest("[data-lv]"); if (t) setLevelOn(t.dataset.lv, t.checked); renderBrowse(); });
   $("lvpick").addEventListener("click", e => { const b = e.target.closest("[data-mk]"); if (b) { makeActive(b.dataset.mk); renderBrowse(); } });
   function closeBrowse() { if (browse.hidden) return false; browse.hidden = true; bbtn.setAttribute("aria-expanded", "false"); return true; }
   bbtn.addEventListener("click", () => { if (!browse.hidden) return closeBrowse(); browse.hidden = false; bbtn.setAttribute("aria-expanded", "true"); closeMenu(); renderLevelPicker(); renderBrowse(); $("pfilter").focus(); });

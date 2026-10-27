@@ -741,6 +741,7 @@ sup.est { margin-left: 3px; }
 .card .how { display: block; color: var(--ink-3); font-size: 11px; margin-top: 2px; }
 .card li.nm, td.nm { color: var(--ink-3); } td.nm { font-style: italic; }
 .card .mdet { margin-top: 4px; font-size: 11.5px; }
+.lvhex { padding-left: 30px; font-size: 12px; } body.hexmode .maplibregl-canvas { background: #eef1f2; }
 .compbar { display: flex; height: 9px; border-radius: 3px; overflow: hidden; margin: 2px 0 2px; } .compbar i { display: block; height: 100%; }
 .sw.hatchsw { background: repeating-linear-gradient(135deg, rgba(26,34,38,.55) 0 1.5px, transparent 1.5px 5px), #eee; }
 </style>
@@ -851,11 +852,12 @@ sup.est { margin-left: 3px; }
 <script src="data/constituencies.js"></script>
 <script src="data/markets.js"></script>
 <script src="data/elections.js"></script>
-<script src="stats.js?v=17163910"></script>
-<script src="psephology.js?v=17163910"></script>
-<script src="charts.js?v=17163910"></script>
-<script src="engine.js?v=17163910"></script>
-<script src="xlsx.js?v=17163910"></script>
+<script src="data/hex_constituencies.js"></script>
+<script src="stats.js?v=17164215"></script>
+<script src="psephology.js?v=17164215"></script>
+<script src="charts.js?v=17164215"></script>
+<script src="engine.js?v=17164215"></script>
+<script src="xlsx.js?v=17164215"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -865,6 +867,6 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="app.js?v=17163910"></script>
+<script src="app.js?v=17164215"></script>
 </body>
 </html>

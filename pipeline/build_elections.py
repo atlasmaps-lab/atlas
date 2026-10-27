@@ -79,8 +79,13 @@ def main():
     p_pc = os.path.join(SRC, "referendum_eu2016_pcon2010.csv")
     if os.path.exists(p_pc):   # 2010-set constituency: [leave %, known result 0/1]
         ref["eu_pcon"] = {r["code"]: [float(r["leave_pct"]), int(r["known"])] for r in csv.DictReader(open(p_pc, encoding="utf-8"))}
-    out = {"elections": elections, "res": res, "area": area, "parties": parties, "ref": ref,
-           "sources": {"eu": "Electoral Commission: EU referendum results by counting area (2016); merged councils joined with ONS's Code History Database",
+    ches = {}
+    p_ch = os.path.join(SRC, "ches_uk_lrgen.csv")
+    if os.path.exists(p_ch):   # wave year -> {party: lrgen}
+        for r in csv.DictReader(open(p_ch, encoding="utf-8")):
+            ches.setdefault(r["wave"], {})[r["party"]] = float(r["lrgen"])
+    out = {"elections": elections, "res": res, "area": area, "parties": parties, "ref": ref, "ches": ches,
+           "sources": {"ches": "Chapel Hill Expert Survey trend file 1999-2024 (lrgen, 0 = far left, 10 = far right)", "eu": "Electoral Commission: EU referendum results by counting area (2016); merged councils joined with ONS's Code History Database",
                        "eu_pcon": "Chris Hanretty, revised estimates of Leave vote share in Westminster constituencies (August 2016), 2010 boundaries, Great Britain",
                        "westminster": "House of Commons Library: Election Results database (electionresults.parliament.uk; general elections 2010-2024, "
                                       "by-elections since 2010, notional 2005 and 2019 results) and briefing CBP-8647 (1997, 2001, 2005). Open Parliament Licence v3.0"}}
