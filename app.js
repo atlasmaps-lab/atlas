@@ -406,7 +406,7 @@
   const WM_LEVELS = ["constituency", "region", "nation", "country"], SEAT_ONLY = ["constituency"], AREA_ONLY = ["region", "nation", "country"];
   const WM_NM = { council: "Not meaningful at this level: Westminster seats don't nest in councils", ward: "Not meaningful at this level: Westminster seats don't nest in wards" };
   const WM_SRC = EL ? EL.sources.westminster : "";
-  const bar = r => { const L = r.agg ? Object.entries(r.seats).sort((a, b) => b[1] - a[1]) : r.cl.slice(0, 6).map(([p, v]) => [p, v]); const tot = L.reduce((a, x) => a + x[1], 0);
+  const bar = r => { const L = r.agg ? Object.entries(r.seats).sort((a, b) => b[1] - a[1]) : r.cl.map(([p, v]) => [p, v]); const tot = r.agg ? r.n : r.t.total;
     return `<div class="compbar">${L.map(([p, v]) => `<i style="width:${(100 * v / tot).toFixed(2)}%;background:${partyCol(p)}" title="${esc(partyName(p))}: ${r.agg ? v + " seats" : fmtInt(v) + " votes"}"></i>`).join("")}</div><small>${L.slice(0, 5).map(([p, v]) => `${esc(partyName(p))} ${r.agg ? v : pct1(100 * v / tot)}`).join(" · ")}</small>`; };
   const wm = o => def(Object.assign({ p: "political", group: G4, temporal: "election", levels: WM_LEVELS, nmText: WM_NM, source: WM_SRC }, o));
   const PS_PICK_DEF = { council_seat_share: "lab", ge_share: "lab", ge_swing_butler: "con-lab", ge_swing_steed: "con-lab" };
@@ -1175,7 +1175,10 @@
   // The panel folds away (smoothly) after 15 seconds untouched, to give the key more room; click its heading to open it.
   const dock = $("dock"), pmenu = $("pmenu");
   let pmOpen = null, dockOpenP = null;
-  const groupsOfP = p => p.ready ? [...new Set(METRICS.filter(m => m.p === p.id).map(m => m.group))] : ["Planned"];
+  // 1.7: the Political categories in a fixed order (protests, the test case, last)
+  const GROUP_ORDER = ["Government & control", "Westminster elections", "Local elections & councils", "Referendums", "Devolved & mayoral elections", "Representation", "Ideology", "Protests (test case)"];
+  const byGroupOrder = gs => gs.sort((a, b) => (GROUP_ORDER.indexOf(a) + 1 || 99) - (GROUP_ORDER.indexOf(b) + 1 || 99));
+  const groupsOfP = p => p.ready ? byGroupOrder([...new Set(METRICS.filter(m => m.p === p.id).map(m => m.group))]) : ["Planned"];
   const mappedIn = (pid, g) => METRICS.filter(m => m.p === pid && (g == null || m.group === g) && isMapped(m.id)).length;
   const cardIn = (pid, g) => METRICS.filter(m => m.p === pid && (g == null || m.group === g) && m.nature === "text" && PS.card[m.id] && PS.active[m.id]).length;
   function renderDock() {
@@ -1369,6 +1372,10 @@
     step = step || 1; const pts = [];
     if (m.temporal === "static") { const r = m.get(code, state.date); return r && r.v != null ? [[+state.date.slice(0, 4), r.v]] : []; }
     if (m.temporal === "annual") { y0 = Math.max(y0, SY[0] || y0); }
+    if (m.temporal === "election") { // a point at each election (by-elections marked), joined by lines: not a smooth yearly line
+      const lv = P[code] && P[code].level, days = lv === "constituency" ? (RES[code] || []).map(x => ELX[x[0]]).filter(e => e.kind !== "notional").map(e => [e.day, e.kind === "by" ? "b" : "e"]) : m.id.startsWith("eu_") ? [[EU_DAY, "e"]] : GE_DAYS.map(x => [x, "e"]);
+      return days.filter(([day]) => +day.slice(0, 4) >= y0 && +day.slice(0, 4) <= y1).map(([day, k]) => { const r = m.get(code, day); const y = +day.slice(0, 4); return [y + (dayNum(day) - dayNum(y + "-01-01")) / 365.25, r && r.v != null ? +r.v : null, k]; });
+    }
     for (let y = y0; y <= y1; y += step) { const d = y === +TODAY.slice(0, 4) ? TODAY : y + "-07-01"; const r = m.get(code, d); const ok = r && r.v != null && (!r.yr || String(r.yr).slice(0, 4) === String(y) || m.temporal !== "annual"); pts.push([y, ok ? +r.v : null]); }
     return pts;
   }
@@ -1388,7 +1395,12 @@
     ((rec && rec.fields) || []).forEach(f => { if (f.label) items.push(`<li><b>${esc(f.label)}:</b> ${esc(f.value || "—")}</li>`); });
     const onMap = planMetrics(); // everything ticked shows in the card, drawn or not
     const mapped = onMap.map(m => { const r = m.get(code, d); return `<li${r && r.nm ? ' class="nm"' : ""}>${swatchOf(m, code)}<span><b>${esc(m.label)}:</b> ${esc(r && (r.v != null || !EN.isNum(m) || r.nm) ? r.text : "No data")}${estTag(r)}${r && r.note ? ` <small>· ${esc(r.note)}</small>` : ""}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}${r && r.nm ? "" : sparkFor(m, code)}${pinned && m.how && !(r && r.nm) ? `<small class="how">How this is worked out: ${esc(m.how)}</small>` : ""}${pinned && r && r.detail ? `<div class="mdet">${r.detail}</div>` : ""}</span></li>`; });
-    if (PS.detail === "simple" && !pinned) return `<div class="lvl"><span>${esc(LABEL[p.level])}</span></div><h3>${esc(nameOf(code))}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : `<div class="hint2">Put a metric on the map to see it here.</div>`}`;
+    if (PS.detail === "simple" && !pinned) {   // short: Westminster results become one line (winner, share, majority); the rest stays
+      const wmOn = onMap.some(m => m.group === G4), keep = onMap.map((m, i) => m.group === G4 ? null : mapped[i]).filter(Boolean);
+      if (wmOn) { const r = resultFor(code, d); if (r && !(M.ge_winner.get(code, d) || {}).nm) { const w = r.agg ? Object.keys(r.seats).sort((a, b) => r.seats[b] - r.seats[a])[0] : winnerOf(r), mj = r.agg ? null : PSE.majority(r.cl, r.t.total);
+        keep.unshift(`<li><i class="sw" style="background:${partyCol(w)}"></i><span><b>${esc(partyName(w))}</b> ${r.agg ? `${r.seats[w]} of ${r.n} seats` : pct1(100 * r.cl[0][2])}${mj ? ` · majority ${pct1(mj.pct)}` : ""} <small>(${esc(r.e.label)})</small></span></li>`); } }
+      return `<div class="lvl"><span>${esc(LABEL[p.level])}</span></div><h3>${esc(nameOf(code))}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}${keep.length ? `<ul class="extra">${keep.join("")}</ul>` : `<div class="hint2">Put a metric on the map to see it here.</div>`}`;
+    }
     if (curPlan.grid && curPlan.shade) { const k = LAST.k[code] || {}; if (k.sh != null && k.gr != null) mapped.push(`<li class="bivw"><i class="sw" style="background:${LAST.fc[code]}"></i><span>${esc(bivWords(k.sh, k.gr, PS.biv.n, curPlan.shade, curPlan.grid))}</span></li>`); }
     const extra = METRICS.filter(m => m.nature === "text" && PS.card[m.id] && PS.active[m.id] && PER[m.p].ready && !["ruler", "party"].includes(m.id)).map(m => { const r = m.get(code, d); return `<li><i class="sw empty"></i><span><b>${esc(m.label)}:</b> ${esc(r ? r.text : "—")}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}</span></li>`; });
     const par = parentOf(code);
@@ -1672,7 +1684,7 @@
   const mk = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
   const ctx2d = document.createElement("canvas").getContext("2d");
   const textW = (t, bold) => { ctx2d.font = `${bold ? "600 " : ""}12px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`; return ctx2d.measureText(t).width; };
-  const groupsOf = pid => [...new Set(METRICS.filter(m => m.p === pid).map(m => m.group))];
+  const groupsOf = pid => byGroupOrder([...new Set(METRICS.filter(m => m.p === pid).map(m => m.group))]);
   function actionsFor(m) {
     return [m.nature !== "text" && { id: "map", label: isMapped(m.id) ? "✓ On the map (click to remove)" : "Add to the map" },
       m.nature === "text" && { id: "card", label: PS.card[m.id] && PS.active[m.id] ? "✓ In the hover card" : "Add to the hover card" },
