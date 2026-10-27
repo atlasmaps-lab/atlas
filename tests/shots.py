@@ -5,7 +5,7 @@ Screenshots of Atlas at the four test sizes, for pull requests (Atlas 1.8):
 
 saves docs/screenshots/1.8/<name>-<scene>-<width>x<height>.jpg and prints any console errors.
 Scenes: start (default), compare (two places in Compare), analyse (Analyse opened from Compare), chart (the chart panel),
-timebar (GDP on the map), protests (protests on the map, zoomed to London), declutter (the default screen).
+timebar (GDP on the map), availability (a metric greyed before its data starts), protests (protests on the map, zoomed to London), declutter (the default screen).
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -22,6 +22,8 @@ SCENES = {
         const D = AtlasDebug; D.select(['E06000023','E08000025','E06000043']); D.openCmp();
         document.querySelector('#cmp [data-can]') && document.querySelector('#cmp [data-can]').click();""",
     "chart": "document.getElementById('chart-bubble').click();",
+    "availability": """AtlasDebug.mapOnly(['control']); AtlasDebug.setDate('1990-06-01');
+        document.querySelector('#dock [data-open=economic]').click(); document.querySelector('#dock [data-group="Output & growth"]').click();""",
     "timebar": "AtlasDebug.mapOnly && AtlasDebug.mapOnly(['gdp_per_head']);",
     "protests": "AtlasDebug.mapOnly && AtlasDebug.mapOnly(['protest_events']); atlasMap.jumpTo({center:[-0.12,51.5], zoom: 9.5});",
 }

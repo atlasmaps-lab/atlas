@@ -722,6 +722,7 @@
     select: codes => codes.forEach(c => P[c] && addCompare({ code: c, level: P[c].level })),
     focus: c => focus(c), unfocus: () => unfocus(), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); if (!on) setLevelOn("auto", true); },
     closeAll: () => { while (WM.closeTop()); },
+    setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), openExport: o => openExport(o),
     mapOnly: ids => { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); } };
   map.boxZoom.disable(); map.touchZoomRotate.disableRotation();
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
@@ -1235,15 +1236,19 @@
   function renderDock() {
     dock.classList.toggle("collapsed", !!dockFold.folded);
     const n = PERSPECTIVES.reduce((a, p) => a + mappedIn(p.id), 0);
-    dock.innerHTML = `<div class="dt-row"><button class="dt" data-fold aria-expanded="${!dockFold.folded}"><span>Perspectives</span>${n ? `<span class="n">${n}</span>` : ""}<span class="chev">▾</span></button>${n ? `<button class="dclear" data-dclear title="Take everything off the map (Esc)">Clear</button>` : ""}</div>
+    dock.innerHTML = `<div class="dt-row"><button class="dt" data-fold aria-expanded="${!dockFold.folded}"><span>Perspectives</span>${n ? `<span class="n">${n}</span>` : ""}<span class="chev">▾</span></button><button class="dclear" data-dclear ${n ? "" : "disabled"} title="${n ? "Take everything off the map (Esc). Undo in the message that follows" : "Nothing is on the map"}">Clear all</button></div>
       <div class="dbody"><div class="dinner">${PERSPECTIVES.filter(p => !(p.hidden && !p.ready)).map(p => { const on = mappedIn(p.id) > 0, open = dockOpenP === p.id; return `<div class="pr${on ? " on" : ""}${p.ready ? "" : " locked"}" style="--c:${p.hue}">
-        <button class="pname" data-open="${p.id}" aria-expanded="${open}">${esc(p.name)}${p.ready ? "" : `<small>soon</small>`}<span class="caret">▾</span></button>
+        <div class="phead"><button class="pname" data-open="${p.id}" aria-expanded="${open}" ${p.ready ? "" : `title="Not available yet: no data loaded. Click to see what's planned"`}>${esc(p.name)}${p.ready ? "" : `<small>not available yet</small>`}<span class="caret">▾</span></button>${on ? `<button class="pclear" data-pclear="${p.id}" title="Take the ${esc(p.name)} metrics off the map">clear</button>` : ""}</div>
         ${open ? `<div class="pgroups">${groupsOfP(p).map(g => { const k = mappedIn(p.id, g) + cardIn(p.id, g), sel = pmOpen && pmOpen.p === p.id && pmOpen.g === g; return `<button class="pgroup${k ? " on" : ""}${sel ? " sel" : ""}" data-group="${esc(g)}" data-p="${p.id}" aria-expanded="${sel}">${esc(g || p.name)}${k ? `<span class="k">${k}</span>` : ""}</button>`; }).join("")}</div>` : ""}</div>`; }).join("")}</div></div>`;
   }
   function syncOn(pid) { const on = (PS.mapped[pid] || []).some(id => PS.active[id]); PS.on[pid] = on; PS.order = PS.order.filter(x => x !== pid); if (on) PS.order.push(pid); }
   function togglePersp(pid, on) { PS.on[pid] = on; PS.order = PS.order.filter(x => x !== pid); if (on) PS.order.push(pid); if (on) (PS.mapped[pid] || []).forEach(id => { PS.active[id] = true; }); repaint(); }
   // Clear every layer at once (Esc when nothing else is open, or the Clear all buttons); Undo puts them back
   const anyMapped = () => PERSPECTIVES.some(p => mappedIn(p.id) > 0);
+  function clearPersp(pid) { // one perspective's metrics off the map, with Undo
+    const before = JSON.stringify({ mapped: PS.mapped[pid] || [] }); PS.mapped[pid] = []; syncOn(pid); state.iso = null; repaint();
+    undoToast(`${PER[pid].name} cleared.`, () => { PS.mapped[pid] = JSON.parse(before).mapped; syncOn(pid); repaint(); });
+  }
   function clearAllLayers() {
     if (!anyMapped()) { toast("Nothing is on the map."); return; }
     const before = JSON.stringify({ mapped: PS.mapped, on: PS.on, order: PS.order });
@@ -1260,20 +1265,33 @@
   }
   dock.addEventListener("click", e => {
     if (e.target.closest("[data-dclear]")) { clearAllLayers(); return; }
+    const pc = e.target.closest("[data-pclear]"); if (pc) { clearPersp(pc.dataset.pclear); return; }
     const f = e.target.closest("[data-fold]"); if (f) { setFold(!dockFold.folded); return; }
     const b = e.target.closest("[data-open]"); if (b) { dockOpenP = dockOpenP === b.dataset.open ? null : b.dataset.open; if (pmOpen && pmOpen.p !== dockOpenP) pmOpen = null; renderDock(); renderPMenu(); positionLegend(); return; }
     const g = e.target.closest("[data-group]"); if (g) { const o = { p: g.dataset.p, g: g.dataset.group }; pmOpen = pmOpen && pmOpen.p === o.p && pmOpen.g === o.g ? null : o; renderDock(); renderPMenu(); }
   });
   const CARD_ICO = '<svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 10h8M8 14h5"/></svg>';
-  // Does a metric have any values for the boundary set on the map? (checked on a sample, at the time-bar date and today)
+  // Does a metric have any values for the boundary set on the map, at the time-bar date? (1.8: checked on a sample whenever the
+  // boundary set or the date changes.) avail() says why not: not meaningful at this level, no data for this boundary set, or
+  // not on this date ("Starts in 1998").
   const availCache = {};
-  function hasData(m, level) {
-    if (m.nature === "text") return true;
-    const key = m.id + "|" + level + "|" + state.date.slice(0, 4); if (key in availCache) return availCache[key];
-    const codes = allCodesAt(level), step = Math.max(1, Math.floor(codes.length / 300)), sample = codes.filter((c, i) => i % step === 0);
-    const ok = d => sample.some(c => { try { const r = m.get(c, d); return r && r.v != null; } catch (e) { return false; } });
-    return (availCache[key] = ok(state.date) || ok(TODAY));
+  const sampleAt = level => { const codes = allCodesAt(level), step = Math.max(1, Math.floor(codes.length / 300)); return codes.filter((c, i) => i % step === 0); };
+  function avail(m, level, d) {
+    d = d || state.date;
+    if (m.nature === "text") return { ok: true };
+    const key = m.id + "|" + level + "|" + d.slice(0, 4) + "|" + (m.temporal === "event" ? PS.win : "") + (m.pick ? "|" + pickOf(m.id) : ""); if (key in availCache) return availCache[key];
+    const pl = (PLURAL_L[level] || "these areas").toLowerCase();
+    if (m.levels && !m.levels.includes(level)) return (availCache[key] = { ok: false, nm: true, why: (m.nmText && m.nmText[level]) || `Not meaningful for ${pl}` });
+    const sample = sampleAt(level);
+    const got = dd => sample.some(c => { try { const r = m.get(c, dd); return r && r.v != null && !r.nm; } catch (e) { return false; } });
+    if (got(d)) return (availCache[key] = { ok: true });
+    const sp = metricSpan(m);
+    if (sp && d < sp[0]) return (availCache[key] = { ok: false, why: `Starts in ${sp[0].slice(0, 4)}` });
+    if (sp && d > sp[1]) return (availCache[key] = { ok: false, why: `Ends in ${sp[1].slice(0, 4)}` });
+    if (m.temporal !== "static" && got(TODAY)) return (availCache[key] = { ok: false, why: `No data for ${pl} on this date` });
+    return (availCache[key] = { ok: false, why: `No data for ${pl}` });
   }
+  const hasData = (m, level) => avail(m, level).ok;
   function renderPMenu() {
     if (!pmOpen) { pmenu.hidden = true; return; }
     const p = PER[pmOpen.p], ms = METRICS.filter(m => m.p === p.id && m.group === pmOpen.g);
@@ -1281,15 +1299,15 @@
     const rows = p.ready ? ms.map(m => {
       const text = m.nature === "text", mapped = isMapped(m.id), inCard = !!PS.card[m.id] && PS.active[m.id], note = curPlan.notes.find(n => n.id === m.id);
       const tag = m.temporal === "event" ? `<i title="Dated events">events</i>` : m.temporal !== "static" ? `<i title="Changes with the time slider">time</i>` : "";
-      const avail = hasData(m, state.level), noD = !avail && !mapped;
-      const sub = text ? "Card only: text can't be drawn on the map" : !avail ? `No data for ${esc((PLURAL_L[state.level] || "these areas").toLowerCase())}${mapped ? ": untick to take it off" : ". Choose other boundaries in Areas ▾ to use it"}` : mapped && note ? `On the map as <b>${note.ch ? CH_NAME[note.ch] : "— no free channel"}</b>` : esc(m.desc || "");
-      return `<div class="crow${(text ? inCard : mapped) ? " on" : ""}${noD ? " nodata" : ""}"><input type="checkbox" id="cb-${m.id}" ${text ? `data-card="${m.id}"` : `data-map="${m.id}"`} ${(text ? inCard : mapped) ? "checked" : ""} ${noD ? "disabled" : ""}>
+      const av = avail(m, state.level), noD = !av.ok && !mapped;
+      const sub = text ? "Card only: text can't be drawn on the map" : !av.ok ? `${esc(av.why)}${mapped ? ": untick to take it off" : av.nm || /^No data for/.test(av.why) ? ". Choose other boundaries in Areas ▾" : ". Move the time bar"}` : mapped && note ? `On the map as <b>${note.ch ? CH_NAME[note.ch] : "— no free channel"}</b>` : esc(m.desc || "");
+      return `<div class="crow${(text ? inCard : mapped) ? " on" : ""}${noD ? " nodata" : ""}" ${noD ? `title="${esc(av.why)}"` : ""}><input type="checkbox" id="cb-${m.id}" ${text ? `data-card="${m.id}"` : `data-map="${m.id}"`} ${(text ? inCard : mapped) ? "checked" : ""} ${noD ? "disabled" : ""}>
         <label for="cb-${m.id}" class="ml">${esc(m.label)}${tag}<small>${sub}</small></label>
         <span></span></div>`;
-    }).join("") : p.planned.map(n => `<div class="crow off"><input type="checkbox" disabled><span class="ml">${esc(n)}<small>No data loaded yet</small></span><span></span></div>`).join("");
+    }).join("") : p.planned.map(n => `<div class="crow off" title="Not available yet"><input type="checkbox" disabled><span class="ml">${esc(n)}<small>Not available yet: planned</small></span><span></span></div>`).join("");
     const n = ms.filter(m => isMapped(m.id)).length;
     pmenu.innerHTML = `<div class="pm-head"><div><h3>${esc(pmOpen.g || p.name)}</h3><p>${esc(p.name)} · ${esc(p.desc)}</p></div><button class="x" data-pmx aria-label="Close">×</button></div><div class="pm-list">${rows}</div>
-      <div class="pm-foot">${p.ready ? `<span>${n} on the map · tick several to overlay them</span>${n ? `<button class="btn" data-clearg>Clear</button>` : ""}` : `<span>Coming in a later phase. Political comes first.</span>`}</div>`;
+      <div class="pm-foot">${p.ready ? `<span>${n} on the map · tick several to overlay them</span>` : `<span>Not available yet: these are planned, with no data loaded.</span>`}</div>`;
     pmenu.hidden = false;
     const anchor = dock.querySelector(`.pgroup.sel`) || dock, ar = anchor.getBoundingClientRect(), dr = dock.getBoundingClientRect();
     const h = pmenu.offsetHeight, top = clamp(ar.top - 8, 60, window.innerHeight - h - 12);
@@ -1304,7 +1322,6 @@
     const b = e.target.closest("button"); if (!b) return;
     if (b.hasAttribute("data-pmx")) closePMenu();
     else if (b.dataset.card) { const id = b.dataset.card; PS.active[id] = true; PS.card[id] = !PS.card[id]; repaint(); toast(PS.card[id] ? `${M[id].label} will show in the hover card.` : `${M[id].label} removed from the hover card.`); }
-    else if (b.hasAttribute("data-clearg")) { const pid = pmOpen.p; PS.mapped[pid] = (PS.mapped[pid] || []).filter(id => M[id].group !== pmOpen.g); syncOn(pid); repaint(); }
   });
   function closePMenu() { if (!pmOpen) return false; pmOpen = null; renderDock(); renderPMenu(); return true; }
   // folding the panel
@@ -1365,6 +1382,7 @@
     renderTray(); if (!$("cmp").hidden) renderCmp();
     if (!cpanel.hidden && CHART.drawn) renderChartBody();
     renderTray(); if (!$("cmp").hidden) renderCmp(); refreshGroupCards();
+    if (pmOpen) renderPMenu(); if (!$("browse").hidden) renderLevelPicker();
   }
   slider.addEventListener("input", () => { let d = +slider.value >= +slider.max ? viewHi() : +slider.value <= +slider.min ? viewLo() : fromMonthIdx(+slider.value); if (PS.step > 1 && d !== viewHi() && d !== viewLo()) d = Math.round(+d.slice(0, 4) / PS.step) * PS.step + "-07-01"; setDate(d); });
   dateIn.addEventListener("keydown", e => { if (e.key === "Enter") { const d = parseDMY(dateIn.value); if (d) { setDate(d); dateIn.blur(); } else { dateIn.classList.add("bad"); toast("Type the date as dd/mm/yy, e.g. 07/05/15"); } } });
@@ -1986,11 +2004,12 @@
   const CMP = { metrics: new Set(METRICS.filter(m => DEF_PS.active[m.id] && m.nature !== "event").map(m => m.id)), x: null, y: null, q: "" };
   function openCmp() { closeMenu(); closePMenu(); closeTools(); closeHist(); WM.open(cmpEl); renderCmp(); }
   function closeCmp() { return WM.close(cmpEl); }
+  const cmpEmpty = (m, codes) => m.nature !== "text" && codes.every(c => { try { const r = m.get(c, state.date); return !r || r.nm || r.v == null; } catch (e) { return true; } });
   function renderCmp() {
     const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id));
     const side = PERSPECTIVES.map(p => `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + (p.ready
-      ? METRICS.filter(m => m.p === p.id).map(m => `<label style="--c:${p.hue}"><input type="checkbox" data-cm="${m.id}" ${CMP.metrics.has(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("") + `<div class="quick"><button class="btn" data-all="${p.id}">All</button><button class="btn" data-none="${p.id}">None</button></div>`
-      : p.planned.map(n => `<label class="dis"><input type="checkbox" disabled>${esc(n)}</label>`).join(""))).join("");
+      ? METRICS.filter(m => m.p === p.id).map(m => { const on = CMP.metrics.has(m.id), nd = !on && codes.length && cmpEmpty(m, codes); return `<label style="--c:${p.hue}" class="${nd ? "dis" : ""}" ${nd ? `title="No data for these places on this date"` : ""}><input type="checkbox" data-cm="${m.id}" ${on ? "checked" : ""} ${nd ? "disabled" : ""}>${esc(m.label)}</label>`; }).join("") + `<div class="quick"><button class="btn" data-all="${p.id}">All</button><button class="btn" data-none="${p.id}">None</button></div>`
+      : `<p class="small">Not available yet</p>` + p.planned.map(n => `<label class="dis" title="Not available yet"><input type="checkbox" disabled>${esc(n)}</label>`).join(""))).join("");
     const usable = ms.filter(m => m.nature !== "text");
     if (!usable.some(m => m.id === CMP.x)) CMP.x = (usable[0] || {}).id || null;
     if (!usable.some(m => m.id === CMP.y) || CMP.y === CMP.x) CMP.y = (usable.find(m => m.id !== CMP.x) || {}).id || null;
@@ -2058,7 +2077,7 @@
     const b = e.target.closest("button"); if (!b) return;
     if (b.hasAttribute("data-close")) closeCmp(); else if (b.dataset.rmc) toggleCompare({ code: b.dataset.rmc, level: P[b.dataset.rmc].level });
     else if (b.hasAttribute("data-clearall")) { clearCompare(); renderCmp(); }
-    else if (b.dataset.all) { METRICS.filter(m => m.p === b.dataset.all).forEach(m => CMP.metrics.add(m.id)); renderCmp(); }
+    else if (b.dataset.all) { const codes = state.sel.map(x => x.code); METRICS.filter(m => m.p === b.dataset.all && !(codes.length && cmpEmpty(m, codes))).forEach(m => CMP.metrics.add(m.id)); renderCmp(); }
     else if (b.dataset.none) { METRICS.filter(m => m.p === b.dataset.none).forEach(m => CMP.metrics.delete(m.id)); renderCmp(); }
     else if (b.hasAttribute("data-cws")) sendToWS({ type: "table", title: `Table: ${state.sel.length} places`, codes: state.sel.map(x => x.code), metrics: [...CMP.metrics] });
     else if (b.hasAttribute("data-ctile")) sendTile(state.sel.map(x => x.code));
@@ -2077,6 +2096,14 @@
     WM.open(expEl, { parent: o.from }); renderExport();
   }
   function closeExport() { return WM.close(expEl); }
+  // an export option with nothing behind it is greyed, with the reason
+  function expPlaceWhy(k) {
+    if (k === "sel") return state.sel.length ? null : "Nothing selected: Shift-click places on the map";
+    const ms = METRICS.filter(m => EXP.metrics.has(m.id) && m.nature !== "text"), lv = k === "country" ? null : k;
+    if (!ms.length || !lv) return null;
+    return ms.some(m => avail(m, lv).ok) ? null : `None of the chosen metrics has data for ${(PLURAL_L[lv] || lv).toLowerCase()} on this date`;
+  }
+  const expStatic = () => { const ms = METRICS.filter(m => EXP.metrics.has(m.id)); return ms.length > 0 && ms.every(m => m.temporal === "static"); };
   function exportCodes() { if (EXP.places === "sel") return state.sel.map(s => s.code); if (EXP.places === "country") return [UKC]; return allCodesAt(EXP.places); }
   function exportRows() {
     const ms = METRICS.filter(m => EXP.metrics.has(m.id)), codes = exportCodes();
@@ -2094,8 +2121,8 @@
     setTimeout(() => addFctl(expEl), 0);
     expEl.innerHTML = `<div class="cmp-page exp" role="dialog" aria-label="Export"><div class="cmp-top"><div><h2>Export a table</h2><p>Pick two or more metrics, the places and the dates. Opens in Excel, Numbers, Google Sheets or anything that reads CSV.</p></div><span style="display:flex;gap:6px"><button class="btn" data-close>Close</button></span></div>
       <div class="cmp-side exp-side">${groups}<div class="quick"><button class="btn" data-eall>All</button><button class="btn" data-enone>None</button></div></div>
-      <div class="cmp-main"><section><h3>Places</h3><div class="seg wrap">${[["sel", `Selected (${state.sel.length})`], ["country", "United Kingdom"], ["nation", "All nations"], ["region", "All regions"], ["council", "All councils (361)"], ["constituency", "All constituencies (650)"], ["ward", "All wards (8,396)"]].map(([k, l]) => `<button data-ep="${k}" class="${EXP.places === k ? "on" : ""}" ${k === "sel" && !state.sel.length ? "disabled" : ""}>${l}</button>`).join("")}</div></section>
-      <section><h3>Dates</h3><div class="seg wrap"><button data-et="date" class="${EXP.time === "date" ? "on" : ""}">On ${esc(longDate(state.date))}</button><button data-et="years" class="${EXP.time === "years" ? "on" : ""}">Every year</button></div>
+      <div class="cmp-main"><section><h3>Places</h3><div class="seg wrap">${[["sel", `Selected (${state.sel.length})`], ["country", "United Kingdom"], ["nation", "All nations"], ["region", "All regions"], ["council", "All councils (361)"], ["constituency", "All constituencies (650)"], ["ward", "All wards (8,396)"]].map(([k, l]) => { const why = expPlaceWhy(k); return `<button data-ep="${k}" class="${EXP.places === k ? "on" : ""}" ${why ? `disabled title="${esc(why)}"` : ""}>${l}</button>`; }).join("")}</div>${expPlaceWhy(EXP.places) ? `<p class="small warnline">${esc(expPlaceWhy(EXP.places))}.</p>` : ""}</section>
+      <section><h3>Dates</h3><div class="seg wrap"><button data-et="date" class="${EXP.time === "date" ? "on" : ""}">On ${esc(longDate(state.date))}</button><button data-et="years" class="${EXP.time === "years" ? "on" : ""}" ${expStatic() ? `disabled title="The chosen metrics have one date only (e.g. Census 2021)"` : ""}>Every year</button></div>
         ${EXP.time === "years" ? `<div class="yrs">from <input type="number" id="e-from" min="1974" max="${TODAY.slice(0, 4)}" value="${EXP.from}"> to <input type="number" id="e-to" min="1974" max="${TODAY.slice(0, 4)}" value="${EXP.to}"> <small>(one row per place per year, values on 1 July; protests use the window ${esc(winLabel())})</small></div>` : ""}</section>
       <section><h3>Format</h3><div class="seg"><button data-ef="xlsx" class="${EXP.fmt === "xlsx" ? "on" : ""}">Excel (.xlsx)</button><button data-ef="csv" class="${EXP.fmt === "csv" ? "on" : ""}">CSV</button></div><p class="small">Excel files include a second sheet explaining each column: source, units, and how the engine combines areas.</p></section>
       <section><h3>Preview</h3>${n < 2 ? `<div class="empty-big">Tick at least two metrics on the left.</div>` : preview}<p class="small">${fmtInt(rowsN)} rows × ${2 * n + 5} columns (each metric has a status column: measured, estimated, missing or not meaningful).${rowsN > 60000 ? " That's large: it may take a few seconds." : ""}</p>
@@ -2534,14 +2561,35 @@
   const vals = (m, codes, d) => codes.map(c => { const r = m.get(c, d); return r && r.v != null && isFinite(r.v) ? +r.v : null; });
   const fmtOf = m => m.fmt || (v => CH.compact(v));
   const pct = v => Math.round(v * 100) + "%";
-  // which methods suit this choice (the engine's job: explain what each one does)
+  // Every method and what it needs (1.8). The Analyse window greys out a method whose needs aren't met and says why; the Help
+  // centre reads its "needs" text from this same table, so the thresholds it states are the ones used here.
+  //   k: numeric metrics chosen; n: places compared; annual: every chosen metric is a yearly series
+  const nums = (k, w) => `${k === 0 ? "none" : k === 1 ? "one" : k === 2 ? "two" : k}${w ? " " + w : ""}`;
+  const AN_METHODS = [
+    { id: "dist", mode: "across", label: "Distribution", needs: "One numeric metric; at least 3 places with a value", check: c => c.k !== 1 ? `For one metric: you have ${nums(c.k)}. With two, use “Each distribution”` : c.n < 3 ? `Needs at least 3 places: you have ${c.n}` : null },
+    { id: "spatial", mode: "across", label: "Spatial pattern (hot spots)", needs: "One numeric metric; one boundary set compared as whole areas (not a selection); at least 8 places with a value, each paired with its 6 nearest neighbours",
+      check: c => c.k !== 1 ? `For one metric: you have ${nums(c.k)}` : c.sel ? "Needs whole areas (a nation, region or the UK), not a selection: neighbours must be complete" : c.n < 8 ? `Needs at least 8 places: you have ${c.n}` : null },
+    { id: "rel", mode: "across", label: "Relationship", needs: "Exactly two numeric metrics; at least 3 places with both values", check: c => c.k !== 2 ? `Needs exactly two numeric metrics: you have ${nums(c.k)}` : c.n < 3 ? `Needs at least 3 places: you have ${c.n}` : null },
+    { id: "byarea", mode: "across", label: "Within each area", needs: "Exactly two numeric metrics; areas (nations or regions) with at least 5 places each", check: c => c.k !== 2 ? `Needs exactly two numeric metrics: you have ${nums(c.k)}` : c.sel ? "Needs whole areas, not a selection" : null },
+    { id: "dist2", mode: "across", label: "Each distribution", needs: "Exactly two numeric metrics", check: c => c.k !== 2 ? `For two metrics: you have ${nums(c.k)}` : null },
+    { id: "matrix", mode: "across", label: "Correlation matrix", needs: "Three or more numeric metrics", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : null },
+    { id: "partial", mode: "across", label: "Partial correlations", needs: "Three or more numeric metrics; at least metrics + 3 places with every value", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n < c.k + 3 ? `Needs at least ${c.k + 3} places: you have ${c.n}` : null },
+    { id: "reg", mode: "across", label: "Regression", needs: "Three or more numeric metrics (one outcome, two or more predictors); more places than metrics + 10 (Atlas's minimum)",
+      check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n <= c.k + 10 ? `Needs more than ${c.k + 10} places (metrics + 10): you have ${c.n}` : null },
+    { id: "pca", mode: "across", label: "Components (what moves together)", needs: "Three or more numeric metrics, standardised; at least metrics + 3 places with every value", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n < c.k + 3 ? `Needs at least ${c.k + 3} places: you have ${c.n}` : null },
+    { id: "cluster", mode: "across", label: "Clusters (similar places)", needs: "Three or more numeric metrics, standardised; at least twice as many places as groups", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n < 4 ? `Needs at least 4 places: you have ${c.n}` : null },
+    { id: "unusual", mode: "across", label: "Unusual places", needs: "Three or more numeric metrics; at least metrics + 3 places with every value", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n < c.k + 3 ? `Needs at least ${c.k + 3} places: you have ${c.n}` : null },
+    { id: "trend", mode: "time", label: "Trend over time", needs: "One metric that changes over time; at least 3 years with a value in the place", check: c => c.k !== 1 ? `For one metric: you have ${nums(c.k)}` : null },
+    { id: "timeline", mode: "time", label: "Side by side over time", needs: "Two or more metrics that change over time", check: c => c.k < 2 ? `Needs at least two metrics: you have ${nums(c.k)}` : null },
+    { id: "lag", mode: "time", label: "Do they move together? (lagged)", needs: "Two metrics with yearly data (the first two chosen); year-on-year changes are compared at lags of up to 3 years",
+      check: c => c.k < 2 ? `Needs two metrics: you have ${nums(c.k)}` : !c.annual2 ? "Needs yearly data: election and event metrics have points at elections or events only" : null },
+  ];
+  const AN_BY = Object.fromEntries(AN_METHODS.map(x => [x.id, x]));
+  // which methods suit this choice: all of the mode's methods, each with ok and the reason when it isn't
   function anMethods(cfg) {
-    const k = cfg.metrics.length, over = cfg.mode === "time";
-    if (!k) return [];
-    if (over) return k === 1 ? [["trend", "Trend over time"]] : [["timeline", "Side by side over time"], ["lag", "Do they move together? (lagged)"]];
-    if (k === 1) return [["dist", "Distribution"], ["spatial", "Spatial pattern (hot spots)"]];
-    if (k === 2) return [["rel", "Relationship"], ["byarea", "Within each area"], ["dist2", "Each distribution"]];
-    return [["matrix", "Correlation matrix"], ["partial", "Partial correlations"], ["reg", "Regression"], ["pca", "Components (what moves together)"], ["cluster", "Clusters (similar places)"], ["unusual", "Unusual places"]];
+    const over = cfg.mode === "time", ms = cfg.metrics.map(id => M[id]).filter(Boolean);
+    const c = { k: ms.length, n: over ? 0 : anCodes(cfg).length, sel: cfg.within === "sel", annual2: ms.slice(0, 2).every(m => m.temporal === "annual") };
+    return AN_METHODS.filter(x => x.mode === (over ? "time" : "across")).map(x => { const why = x.check(c); return [x.id, x.label, !why, why]; });
   }
   const METHOD_WHY = {
     dist: "How the values are spread across places: the middle, the spread, any lopsidedness (skew) and outliers.",
@@ -2741,8 +2789,8 @@
   }
   function renderAnalyse() {
     if (anEl.hidden) return;
-    const cfg = Object.assign({}, AN, { date: state.date }), methods = anMethods(cfg);
-    if (!methods.some(m => m[0] === AN.method)) AN.method = methods.length ? methods[0][0] : null; cfg.method = AN.method;
+    const cfg = Object.assign({}, AN, { date: state.date }), methods = anMethods(cfg), okM = methods.filter(m => m[2]);
+    if (!okM.some(m => m[0] === AN.method)) AN.method = okM.length && cfg.metrics.length ? okM[0][0] : null; cfg.method = AN.method;
     const pers = PERSPECTIVES.filter(p => p.ready && p.id !== "analysis").map(p => { const ms = anMetricsAll().filter(m => m.p === p.id); return ms.length ? `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + ms.map(m => `<label style="--c:${p.hue}"><input type="checkbox" data-anm="${m.id}" ${AN.metrics.includes(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("") : ""; }).join("");
     const res = cfg.method ? anResult(cfg, Math.max(360, Math.min(900, anEl.offsetWidth - 330))) : null;
     anEl.innerHTML = `<div class="an-head"><b>Analyse</b><span class="cp-sub">How metrics relate across places, within an area, or over time. No need to pick places.</span><button class="x" data-anx aria-label="Close">×</button></div>
@@ -2754,7 +2802,7 @@
         <div class="an-row"><b>Date</b><span class="muted">${esc(longDate(state.date))} (time bar)</span></div>
         <div class="an-metrics"><div class="an-mh">Metrics <small>${AN.metrics.length} chosen</small>${AN.metrics.length ? `<button class="btn" data-anclear>Clear</button>` : ""}</div>${pers}</div>
       </div><div class="an-main">
-        ${methods.length ? `<div class="an-methods">${methods.map(([id, l]) => `<button class="${id === AN.method ? "on" : ""}" data-anmethod="${id}">${esc(l)}</button>`).join("")}</div><p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")}</p>` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
+        ${AN.metrics.length ? `<div class="an-methods">${methods.map(([id, l, ok, why]) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}>${esc(l)}</button>`).join("")}</div>${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")}</p>` : `<p class="anwhy">No method suits this choice yet: hover a greyed method to see what it needs.</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
         ${AN.method === "rel" ? `<label class="anpick">Split by a category <select data-ansplit><option value="">none</option>${anCats().map(m => `<option value="${m.id}" ${AN.split === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : ""}
         <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
         ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Show on map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy data (CSV)</button>` : ""}</div>` : ""}
@@ -2769,6 +2817,7 @@
     const a = e.target.closest("[data-go]"); if (a) { focus(a.dataset.go); return; }
     const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
     if (b.hasAttribute("data-anx")) { closeAnalyse(); return; }
+    if (ds.anmethod && b.getAttribute("aria-disabled") === "true") { toast(`${AN_BY[ds.anmethod].label}: ${b.title}.`); return; }
     if (ds.antrim) AN.trim = ds.antrim === "1"; else if (ds.anmode) AN.mode = ds.anmode; else if (ds.anmethod) AN.method = ds.anmethod; else if (ds.ancorr) AN.corr = ds.ancorr;
     else if (b.hasAttribute("data-anclear")) AN.metrics = [];
     else if (b.hasAttribute("data-anws")) { const cfg = Object.assign({}, AN, { date: state.date }); sendToWS({ type: "analysis", title: anEl._last.title, cfg }); return; }
@@ -3087,7 +3136,8 @@
   function searchNames(q) { return names.filter(c => nameOf(c).toLowerCase().includes(q) || c.toLowerCase() === q).sort((a, b) => (nameOf(a).toLowerCase() === q ? 0 : nameOf(a).toLowerCase().startsWith(q) ? 1 : 2) - (nameOf(b).toLowerCase() === q ? 0 : nameOf(b).toLowerCase().startsWith(q) ? 1 : 2) || rankL[P[a].level] - rankL[P[b].level]).slice(0, 10); }
   let hits = [], cur = 0, picked = [], ddOpen = false;
   const subOf = c => (P[c].level === "ward" || P[c].level === "constituency") && P[c].parent && P[P[c].parent] ? " · " + esc(nameOf(P[c].parent)) : "";
-  const row = (c, i) => `<li data-c="${c}" class="${i === cur ? "on" : ""}${picked.includes(c) ? " ticked" : ""}" role="option" aria-selected="${picked.includes(c)}"><input type="checkbox" tabindex="-1" ${picked.includes(c) ? "checked" : ""} aria-label="Tick ${esc(nameOf(c))}"><span class="nm">${esc(nameOf(c))}</span><small>${LABEL[P[c].level]}${subOf(c)}</small></li>`;
+  const noDataFor = c => { const ms = planMetrics(); return ms.length > 0 && ms.every(m => { try { const r = m.get(c, state.date); return !r || r.v == null || r.nm; } catch (e) { return true; } }); };
+  const row = (c, i) => `<li data-c="${c}" class="${i === cur ? "on" : ""}${picked.includes(c) ? " ticked" : ""}" role="option" aria-selected="${picked.includes(c)}"><input type="checkbox" tabindex="-1" ${picked.includes(c) ? "checked" : ""} aria-label="Tick ${esc(nameOf(c))}"><span class="nm">${esc(nameOf(c))}</span><small>${LABEL[P[c].level]}${subOf(c)}</small>${noDataFor(c) ? `<em class="ndtag" title="None of the metrics on the map has a value for this place on this date">no data</em>` : ""}</li>`;
   function showHits() {
     const extra = picked.filter(c => !hits.includes(c));
     const body = (extra.length ? `<li class="sec">Ticked</li>${extra.map(c => row(c, -1)).join("")}${hits.length ? `<li class="sec">Results</li>` : ""}` : "") + hits.map(row).join("");
@@ -3234,9 +3284,10 @@
   function renderLevelPicker() {
     const el = $("lvpick"); if (!el) return;
     $("browse-lv").textContent = PLURAL[state.level] || "Areas";
+    const ms = planMetrics();
     el.innerHTML = `<div class="lvt">Boundaries on the map <small>${LV.auto ? "following the zoom" : "at every zoom"}</small></div>
       <label class="lvrow lvauto"><input type="checkbox" data-lv="auto" ${LV.auto ? "checked" : ""}><span>Automatic</span><small>switch with zoom</small></label>
-      ${["nation", "region", "council", "constituency", "ward"].map(l => { const on = !LV.auto && LV.on.includes(l), act = state.level === l; return `<div class="lvrow${act ? " act" : ""}${on ? " on" : ""}"><input type="checkbox" id="lv-${l}" data-lv="${l}" ${on ? "checked" : ""} aria-label="Show ${PLURAL[l]} on the map"><button data-mk="${l}" title="${act ? "Colours, hover cards and clicks use this set" : "Use this set for colours, hover cards and clicks"}">${PLURAL[l]}</button>${act ? `<small>colours &amp; hover</small>` : on ? `<small>outline</small>` : ""}</div>${l === "constituency" && window.ATLAS_HEX ? `<label class="lvrow lvhex"><input type="checkbox" data-hex ${PS.hex ? "checked" : ""}><span>Hex map (equal area)</span><small>one hexagon per seat</small></label>` : ""}`; }).join("")}`;
+      ${["nation", "region", "council", "constituency", "ward"].map(l => { const on = !LV.auto && LV.on.includes(l), act = state.level === l, nd = ms.length && !ms.some(m => avail(m, l).ok); return `<div class="lvrow${act ? " act" : ""}${on ? " on" : ""}${nd ? " lvnd" : ""}"><input type="checkbox" id="lv-${l}" data-lv="${l}" ${on ? "checked" : ""} aria-label="Show ${PLURAL[l]} on the map"><button data-mk="${l}" title="${nd ? "None of the metrics on the map has data for " + PLURAL[l].toLowerCase() + " on this date (the boundaries still show)" : act ? "Colours, hover cards and clicks use this set" : "Use this set for colours, hover cards and clicks"}">${PLURAL[l]}</button>${nd ? `<small class="ndtag">no data for what's on the map</small>` : act ? `<small>colours &amp; hover</small>` : on ? `<small>outline</small>` : ""}</div>${l === "constituency" && window.ATLAS_HEX ? `<label class="lvrow lvhex"><input type="checkbox" data-hex ${PS.hex ? "checked" : ""}><span>Hex map (equal area)</span><small>one hexagon per seat</small></label>` : ""}`; }).join("")}`;
   }
   $("lvpick").addEventListener("change", e => {
     if (e.target.hasAttribute("data-hex")) { PS.hex = e.target.checked; savePS(); syncPcon.warned = false; if (PS.hex && state.level !== "constituency") makeActive("constituency"); syncPcon(true); renderLevelPicker(); toast(PS.hex ? "Hex map: every seat the same size, so big rural seats don't dominate. Positions are approximate." : "Back to the real boundaries."); return; }

@@ -788,6 +788,18 @@ sup.est { margin-left: 3px; }
 /* narrow screens: the time bar sits between the Perspectives panel and the chart button; the tabs never run under Tools */
 @media (max-width: 1100px) { #timebar:not(.moved) { left: 300px; right: 76px; transform: none; width: auto !important; } .tabs { max-width: calc(100vw - 830px); } }
 @media (max-width: 1240px) { .tab:not(.on) span { display: none; } }
+/* 1.8: Clear all at the top of the Perspectives panel; per-perspective "clear"; options with no data say so */
+.dclear:disabled { opacity: .45; cursor: default; color: var(--ink-3); border-color: var(--rule); }
+.phead { display: flex; align-items: center; }
+.phead .pname { flex: 1; min-width: 0; }
+.pclear { border: 0; background: none; color: var(--ink-3); font-size: 11px; text-decoration: underline; text-underline-offset: 2px; padding: 2px 6px; cursor: pointer; }
+.pclear:hover { color: #b5562b; }
+.pr.locked .pname { flex-wrap: wrap; row-gap: 0; } .pr.locked .pname small { color: var(--ink-3); white-space: nowrap; order: 3; flex-basis: 100%; }
+.ndtag { font-style: normal; font-size: 10px; color: #8a6d3b; background: rgba(138,109,59,.1); border-radius: 3px; padding: 0 4px; margin-left: 6px; white-space: nowrap; }
+.lvrow.lvnd > button { color: var(--ink-3); }
+.an-methods button.no { opacity: .45; border-style: dashed; cursor: help; }
+.warnline { color: #8a5a00; }
+.cmp-side label.dis { color: var(--ink-3); cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -901,11 +913,11 @@ sup.est { margin-left: 3px; }
 <script src="data/local.js"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="stats.js?v=18272151"></script>
-<script src="psephology.js?v=18272151"></script>
-<script src="charts.js?v=18272151"></script>
-<script src="engine.js?v=18272151"></script>
-<script src="xlsx.js?v=18272151"></script>
+<script src="stats.js?v=18272155"></script>
+<script src="psephology.js?v=18272155"></script>
+<script src="charts.js?v=18272155"></script>
+<script src="engine.js?v=18272155"></script>
+<script src="xlsx.js?v=18272155"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -915,7 +927,7 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="windows.js?v=18272151"></script>
-<script src="app.js?v=18272151"></script>
+<script src="windows.js?v=18272155"></script>
+<script src="app.js?v=18272155"></script>
 </body>
 </html>
