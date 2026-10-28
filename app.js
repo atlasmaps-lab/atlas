@@ -218,6 +218,20 @@
     d.open ? MT_OPEN.add(d.dataset.mt) : MT_OPEN.delete(d.dataset.mt);
     try { localStorage.setItem("atlas-071-mt-open", JSON.stringify([...MT_OPEN].slice(-200))); } catch (er) { /* not remembered */ }
   }, true);
+  // 0.7.1: a place-search box for any tool: <input data-psq="key"> shows matching places; choosing one calls PS_ADD[key](code)
+  const PS_ADD = {};
+  const placeSearch = (key, ph) => `<span class="psrch"><input data-psq="${key}" placeholder="${esc(ph || "Add a place…")}" autocomplete="off" aria-label="${esc(ph || "Add a place")}"><ul class="ps-hits" hidden></ul></span>`;
+  document.addEventListener("input", e => {
+    const i = e.target.closest && e.target.closest("[data-psq]"); if (!i) return;
+    const q = i.value.trim().toLowerCase(), ul = i.parentNode.querySelector(".ps-hits"), hs = q.length < 2 ? [] : searchNames(q);
+    ul.innerHTML = hs.map(c => `<li data-psadd="${c}" data-psfor="${i.dataset.psq}"><span>${esc(nameOf(c))}</span><small>${esc(LABEL[P[c].level] || "")}</small></li>`).join(""); ul.hidden = !hs.length;
+  });
+  document.addEventListener("mousedown", e => {
+    const li = e.target.closest && e.target.closest("[data-psadd]");
+    if (!li) { document.querySelectorAll(".ps-hits:not([hidden])").forEach(u => { if (!u.parentNode.contains(e.target)) u.hidden = true; }); return; }
+    e.preventDefault(); const f = PS_ADD[li.dataset.psfor]; li.parentNode.hidden = true; const inp = li.closest(".psrch").querySelector("input"); if (inp) inp.value = "";
+    if (f) f(li.dataset.psadd);
+  }, true);
   // a "+ add a metric" picker: a button that drops down the same tree; choosing sets the hidden <select> and fires change
   const mtPicker = (attr, ms, label) => `<span class="mt-pick"><button type="button" class="btn mt-pick-btn">${esc(label || "+ add a metric…")} ▾</button><div class="mt-pop" hidden>${mtree("pick", ms, m => `<button type="button" class="mt-item" data-mtv="${m.id}">${esc(m.label)}</button>`)}</div><select ${attr} hidden aria-hidden="true"><option value=""></option>${ms.map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join("")}</select></span>`;
   document.addEventListener("click", e => {
@@ -758,7 +772,7 @@
   const PS = (() => {
     const s = store.get("atlas-15-persp" + (APP_ID ? "-" + APP_ID : ""), APP_ID ? { mapped: {} } : {}), o = JSON.parse(JSON.stringify(DEF_PS));
     if (APP_ID) Object.keys(o.mapped).forEach(p => { o.mapped[p] = []; });   // an app starts from its own layout (init), not Multi's
-    ["on", "active", "card", "prefs", "biv", "pick"].forEach(k => Object.assign(o[k], s[k] || {}));
+    ["on", "active", "card", "prefs", "biv", "pick"].forEach(k => Object.assign(o[k], s[k] || {})); o.mcol = Object.assign({}, s.mcol || {});
     Object.entries(s.mapped || {}).forEach(([p, v]) => { if (PER[p]) o.mapped[p] = (Array.isArray(v) ? v : [v]).filter(id => M[id]); });
     if (Array.isArray(s.order)) o.order = s.order.filter(p => PER[p]);
     ["step", "win", "detail", "hot", "hatch", "hex"].forEach(k => { if (s[k] != null) o[k] = s[k]; });
@@ -846,6 +860,7 @@
     LEVELS.forEach(l => setP(l + "-sel", "line-width", ["case", ["boolean", ["feature-state", "sel"], false], 2.8 * Math.max(1, look.thick * .8), ["boolean", ["feature-state", "hover"], false], 2 * Math.max(1, look.thick * .8), 0]));
     if (!plain) { try { applyType(first); } catch (e) {} }
     syncMenu(); store.set("atlas-uk-look", look);
+    try { applyMapColours(); } catch (e) { /* the style isn't ready yet */ }
   }
   function rememberOpacity(id, prop) { if (!(id + prop in origOpacity)) { const v = map.getPaintProperty(id, prop); origOpacity[id + prop] = v == null ? 1 : v; } return origOpacity[id + prop]; }
   function applyType() {
@@ -919,6 +934,7 @@
     for (let o = -s; o <= s; o += 8) { x.moveTo(o, s); x.lineTo(o + s, 0); } x.stroke();
     return x.getImageData(0, 0, s, s);
   }
+  map.once("idle", () => { try { applyMapColours(); } catch (e) {} });
   map.on("load", () => {
     before = (map.getStyle().layers.find(l => l.type === "symbol") || {}).id;
     ["nation", "region", "council", "constituency"].forEach(l => {
@@ -1146,11 +1162,34 @@
     for (const [id, mk] of CLM) if (!seen.has(id)) { mk.remove(); CLM.delete(id); }
   }
   map.on("render", () => { if (map.getSource("protests-cl") && map.getLayoutProperty("pr-pts", "visibility") === "visible" && !clusterMarkers.t) clusterMarkers.t = requestAnimationFrame(() => { clusterMarkers.t = null; clusterMarkers(); }); });
+  // 0.7.1: where protests overlap (a numbered group, or points too close to tell apart) a small list pops up: every
+  // protest by name, date, cause and crowd, so you can pick the one you want. "Zoom in" still spreads a group out.
+  const prPick = document.createElement("div"); prPick.id = "prpick"; prPick.hidden = true; document.body.appendChild(prPick);
+  const evDate = e => new Date(e.t0 * 864e5).toISOString().slice(0, 10);
+  function showProtestPicker(evs, pt, zoomTo) {
+    const uniq = [...new Set(evs)].map(i => [i, PR.events[i]]).filter(x => x[1]).sort((a, b) => b[1].t0 - a[1].t0);
+    if (uniq.length === 1 && !zoomTo) { openProtestCard(uniq[0][0]); return; }
+    prPick.innerHTML = `<div class="pp-head"><b>${uniq.length} protests here</b><span>${zoomTo ? `<button class="btn sm" data-ppzoom>Zoom in</button>` : ""}<button class="x" data-ppx aria-label="Close">×</button></span></div>
+      <ul>${uniq.slice(0, 80).map(([i, e]) => `<li data-ppe="${i}" title="Open its card"><i class="sw dot" style="background:${CAUSE_COL[CAUSES[e.c]] || "#999"}"></i><span class="pp-n">${esc(e.n)}</span><small>${esc(longDate(evDate(e)))}${e.mid ? " · " + esc(fmtBig(e.mid)) : ""} · ${esc(CAUSES[e.c] || "")}</small></li>`).join("")}</ul>
+      ${uniq.length > 80 ? `<p class="small">and ${uniq.length - 80} more: zoom in, or use the protest list in the key</p>` : ""}`;
+    prPick.hidden = false; prPick._zoom = zoomTo || null;
+    const r = map.getContainer().getBoundingClientRect(), x = r.left + pt.x, y = r.top + pt.y;
+    prPick.style.left = Math.min(window.innerWidth - 340, Math.max(8, x + 14)) + "px"; prPick.style.top = Math.min(window.innerHeight - 320, Math.max(60, y - 30)) + "px";
+  }
+  prPick.addEventListener("click", e => {
+    const li = e.target.closest("[data-ppe]"); if (li) { prPick.hidden = true; openProtestCard(+li.dataset.ppe); return; }
+    if (e.target.closest("[data-ppx]")) prPick.hidden = true;
+    if (e.target.closest("[data-ppzoom]") && prPick._zoom) { prPick.hidden = true; prPick._zoom(); }
+  });
+  map.on("movestart", () => { prPick.hidden = true; });
   function openCluster(id, at) {
-    const src = map.getSource("protests-cl");
-    Promise.resolve(src.getClusterExpansionZoom(id)).then(z => {
-      if (z <= 14 && z <= map.getMaxZoom()) { map.easeTo({ center: at, zoom: z + 0.2, duration: 600 }); return; }
-      return Promise.resolve(src.getClusterLeaves(id, 200, 0)).then(leaves => spiderfy(at, leaves.map(l => l.properties)));
+    const src = map.getSource("protests-cl"), pt = map.project(at);
+    Promise.resolve(src.getClusterLeaves(id, 400, 0)).then(leaves => {
+      const evs = leaves.map(l => l.properties.e);
+      return Promise.resolve(src.getClusterExpansionZoom(id)).then(z => {
+        const canZoom = z <= 14 && z <= map.getMaxZoom();
+        showProtestPicker(evs, pt, canZoom ? () => map.easeTo({ center: at, zoom: z + 0.2, duration: 600 }) : null);
+      });
     }).catch(() => {});
   }
   // places that share exactly one point (many London events geocode to the same centre) fan out into a ring, joined to the centre
@@ -1218,7 +1257,7 @@
       const fills = !!(PL.hue || PL.grid || PL.shade || PL.diverge);
       if (PL.hue) { if (hv != null) { present.add(hv); const b = PL.hue.colour(hv); fc = PL.shade ? (k.sh != null ? shadeOf(b, k.sh, 5) : mix(b, "#ffffff", 0.88)) : b; } }
       else if (PL.grid) { if (k.sh != null && k.gr != null) fc = grid[k.gr][k.sh]; }
-      else if (PL.shade) { if (k.sh != null) fc = PER[PL.shade.p].ramp[k.sh]; }
+      else if (PL.shade) { if (k.sh != null) fc = rampOf(PL.shade)[k.sh]; }
       else if (PL.diverge) { if (k.dv != null) fc = DIV[k.dv]; }
       const nm = fills && fillMs.every(m => { const r = rOf(m, c); return r && r.nm; });   // not meaningful here: leave it unfilled, not "no data"
       if (nm) present.add("__nm");
@@ -1238,7 +1277,7 @@
   function repaint() {
     curPlan = EN.plan(planMetrics(), PS.prefs); syncRange();
     if (state.iso && state.iso.ch !== "nd" && !curPlan[state.iso.ch === "vbl" ? "hue" : state.iso.ch]) state.iso = null;
-    if (map.getSource && map.getSource("councils")) { LEVELS.forEach(paintLevel); syncProtestLayer(); syncCompanyLayer(); }
+    if (map.getSource && map.getSource("councils")) { LEVELS.forEach(paintLevel); syncProtestLayer(); syncCompanyLayer(); syncZones(); }
     renderLegend(); renderDock(); renderSup(); renderTNote(); syncFocusColour();
     if (pmOpen) renderPMenu();
     if (state.focus) { renderMind(); refreshPinned(); }
@@ -1256,7 +1295,10 @@
     if (m.pick === "pair") { const cur = pickOf(m.id); return `<select class="as" data-pick="${m.id}" aria-label="Pair of parties">${PAIRS.map(([k, l]) => `<option value="${k}" ${k === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`; }
     return "";
   }
-  const lhead = (m, extra) => `<h5 style="--c:${PER[m.p].hue}">${svgIcon(m.p)}<span>${esc(m.label)}</span>${infoBtn(m.id)}${picker(m)}${chooser(m)}${extra || ""}<button class="lrm" data-lrm="${m.id}" title="Take ${esc(m.label)} off the map" aria-label="Remove ${esc(m.label)}">×</button></h5>`;
+  // 0.7.1: choose the colour a metric is drawn in, from the key (shades are worked out from it); "reset" goes back
+  const rampOf = m => { const c = PS.mcol && PS.mcol[m.id]; return c ? [mix(c, "#ffffff", 0.86), mix(c, "#ffffff", 0.6), mix(c, "#ffffff", 0.32), c, mix(c, "#000000", 0.32)] : PER[m.p].ramp; };
+  const colPick = m => EN.isNum(m) ? `<label class="mcol" title="Choose the colour ${esc(m.label)} is drawn in"><input type="color" data-mcol="${m.id}" value="${(PS.mcol && PS.mcol[m.id]) || PER[m.p].ramp[3]}"><span class="mcol-sw" style="background:${(PS.mcol && PS.mcol[m.id]) || PER[m.p].ramp[3]}"></span></label>${PS.mcol && PS.mcol[m.id] ? `<button class="lnk" data-mcolreset="${m.id}" title="Back to the perspective's colour">reset</button>` : ""}` : "";
+  const lhead = (m, extra) => `<h5 style="--c:${PER[m.p].hue}">${svgIcon(m.p)}<span>${esc(m.label)}</span>${infoBtn(m.id)}${colPick(m)}${picker(m)}${chooser(m)}${extra || ""}<button class="lrm" data-lrm="${m.id}" title="Take ${esc(m.label)} off the map" aria-label="Remove ${esc(m.label)}">×</button></h5>`;
   const isoAttr = (ch, v) => { const on = state.iso && state.iso.ch === ch && JSON.stringify(state.iso.v) === JSON.stringify(v); return `data-iso='${esc(JSON.stringify({ ch, v }))}' class="iso${on ? " on" : ""}"`; };
   function ticks(m, level, n) {
     const b = breaksFor(m, level, n); const f = m.fmt || String;
@@ -1288,7 +1330,7 @@
         <label>Grid <select data-bivn><option value="3" ${n === 3 ? "selected" : ""}>3 × 3</option><option value="4" ${n === 4 ? "selected" : ""}>4 × 4</option></select></label>
         <button class="btn sm" data-bivswap title="Put ${esc(PL.grid.label)} across and ${esc(PL.shade.label)} up">Swap axes</button>
         <span class="note">Corner colours: both low (light), both high (dark). Hover or click a square.</span></div></div></div>`);
-    } else if (PL.shade && !PL.hue) parts.push(`<div class="lg">${lhead(PL.shade)}<div class="ramp">${PER[PL.shade.p].ramp.map((c, i) => `<i ${isoAttr("shade", i)} style="background:${c}"></i>`).join("")}</div>${ticks(PL.shade, level, 5)}</div>`);
+    } else if (PL.shade && !PL.hue) parts.push(`<div class="lg">${lhead(PL.shade)}<div class="ramp">${rampOf(PL.shade).map((c, i) => `<i ${isoAttr("shade", i)} style="background:${c}"></i>`).join("")}</div>${ticks(PL.shade, level, 5)}</div>`);
     if (PL.diverge) parts.push(`<div class="lg">${lhead(PL.diverge)}<div class="ramp">${DIV.map((c, i) => `<i ${isoAttr("diverge", i)} style="background:${c}"></i>`).join("")}</div>${ticks(PL.diverge, level, 5)}<div class="note">Red below ${esc(PL.diverge.fmt(PL.diverge.mid))}, blue above.</div></div>`);
     if (PL.badge) { const ks = cats(PL.badge, LAST.presentB[level]); parts.push(`<div class="lg">${lhead(PL.badge)}<div class="cats2">${ks.map(k => `<span ${isoAttr("badge", k)}><i class="sw dot" style="background:${PL.badge.colour(k)}"></i>${esc(PL.badge.catName(k))}</span>`).join("")}</div><div class="note">Marker at each area's centre. Where it differs from the fill, the two disagree.</div></div>`); }
     if (PL.dots) parts.push(`<div class="lg">${lhead(PL.dots)}<div class="dotsw">${[0, 1, 2, 3, 4].map(k => `<span ${isoAttr("dots", k)}><canvas data-k="${k}" width="44" height="28"></canvas></span>`).join("")}</div>${ticks(PL.dots, level, 5)}</div>`);
@@ -1389,12 +1431,14 @@
     if (i) { const v = JSON.parse(i.dataset.iso); state.iso = state.iso && JSON.stringify(state.iso) === JSON.stringify(v) ? null : v; LEVELS.forEach(paintLevel); renderLegend(); toast(state.iso ? "Showing only those areas. Click again to show all." : "Showing all areas."); return; }
     const rm = e.target.closest("[data-lrm]"); if (rm) { const m = M[rm.dataset.lrm]; if (m && isMapped(m.id)) { toggleMapped(m.id); toast(`${m.label} taken off the map.`); } return; }
     if (e.target.closest("[data-lclear]")) { clearAllLayers(); return; }
+    const mr = e.target.closest("[data-mcolreset]"); if (mr) { if (PS.mcol) delete PS.mcol[mr.dataset.mcolreset]; savePS(); repaint(); return; }
     if (e.target.closest("[data-prlist]")) { openProtestList(); return; }
     if (e.target.closest("[data-bivswap]")) { const a = curPlan.shade, b = curPlan.grid; if (a && b) { PS.prefs[a.id] = "grid"; PS.prefs[b.id] = "shade"; repaint(); toast("Axes swapped."); } return; }
     const w = e.target.closest("[data-win]"); if (w) { PS.win = +w.dataset.win; for (const k in qCache) if (k.includes("|") && /protest/.test(k)) delete qCache[k]; repaint(); }
   });
   legend.addEventListener("change", e => {
     const t = e.target;
+    if (t.dataset.mcol) { PS.mcol = PS.mcol || {}; PS.mcol[t.dataset.mcol] = t.value; savePS(); repaint(); return; }
     if (t.dataset.as) { PS.prefs[t.dataset.as] = t.value; repaint(); }
     else if (t.dataset.pick) { PS.pick[t.dataset.pick] = t.value; for (const k in qCache) if (k.startsWith(t.dataset.pick + "|")) delete qCache[k]; repaint(); }
     else if (t.hasAttribute("data-bivpal")) { PS.biv.pal = t.value; repaint(); }
@@ -1911,7 +1955,7 @@
   ecard.addEventListener("click", e => { const b = e.target.closest("[data-cochart]"); if (b) openChart({ companies: [+b.dataset.cochart] }); });
 
   // ---------- hover, click, select ----------
-  function pickZone(e) { if (!map.getLayer("zone-fill") || map.getZoom() < ZONE_Z) return null; const f = map.queryRenderedFeatures(e.point, { layers: ["zone-fill"] })[0]; return f ? { code: f.properties.code, level: "zone" } : null; }
+  function pickZone(e) { if (!map.getLayer("zone-fill") || map.getZoom() < ZONE_Z || !marketsInUse()) return null; const f = map.queryRenderedFeatures(e.point, { layers: ["zone-fill"] })[0]; return f ? { code: f.properties.code, level: "zone" } : null; }
   function pickCompany(e) { if (!map.getLayer("co-pts") || map.getLayoutProperty("co-pts", "visibility") === "none") return null; const b = 4, f = map.queryRenderedFeatures([[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]], { layers: ["co-pts"] })[0]; return f ? f.properties.i : null; }
   function pick(e) { const z = pickZone(e); if (z) return z; const l = state.level; const f = map.queryRenderedFeatures(e.point, { layers: [l + "-fill"] })[0]; return f ? { code: f.properties.code, level: l } : null; }
   const pbox = (e, b) => [[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]];
@@ -1949,7 +1993,7 @@
   map.on("click", e => {
     if (lasso.justDone) { lasso.justDone = false; return; }
     if (state.tool === "measure") return measureClick(e);
-    if (map.getLayer("zone-dot") && map.getZoom() < ZONE_Z && map.queryRenderedFeatures([[e.point.x - 5, e.point.y - 5], [e.point.x + 5, e.point.y + 5]], { layers: ["zone-dot"] }).length) { map.flyTo({ center: [-0.1, 51.512], zoom: 11.6, duration: 1200 }); toast("London's financial districts: click a gold tile to explore it."); return; }
+    if (map.getLayer("zone-dot") && marketsInUse() && map.getZoom() < ZONE_Z && map.queryRenderedFeatures([[e.point.x - 5, e.point.y - 5], [e.point.x + 5, e.point.y + 5]], { layers: ["zone-dot"] }).length) { map.flyTo({ center: [-0.1, 51.512], zoom: 11.6, duration: 1200 }); toast("London's financial districts: click a gold tile to explore it."); return; }
     const pc = pickCompany(e);
     if (pc != null) { ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = companyHTML(pc, true); ecard.hidden = false; place(e.point.x + 10, e.point.y - 40, ecard); bubbleNudge(); return; }
     const cl = map.getLayer("pr-cl") && map.getLayoutProperty("pr-cl", "visibility") !== "none" ? map.queryRenderedFeatures(pbox(e, 2), { layers: ["pr-cl"] })[0] : null;
@@ -1957,10 +2001,9 @@
     const onSpider = SPIDER.on && map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-sp-pts"] }).length;
     const pe = pickProtest(e);
     if (pe != null) {
-      if (!onSpider) {   // several protests on exactly this point: fan them out first
-        const fs = map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-pts"] }), at = fs[0].geometry.coordinates;
-        const same = fs.filter(f => Math.abs(f.geometry.coordinates[0] - at[0]) < 1e-6 && Math.abs(f.geometry.coordinates[1] - at[1]) < 1e-6);
-        if (new Set(same.map(f => f.properties.e)).size > 1) { ecard.hidden = true; spiderfy(at, same.map(f => f.properties)); return; }
+      if (!onSpider) {   // several protests here (on one point, or too close to tell apart): list them to pick from
+        const fs = map.queryRenderedFeatures(pbox(e, 7), { layers: ["pr-pts"] });
+        if (new Set(fs.map(f => f.properties.e)).size > 1) { ecard.hidden = true; showProtestPicker(fs.map(f => f.properties.e), e.point, null); return; }
       }
       ecard.hidden = true; ecardPinned = false; openProtestCard(pe); return;
     }
@@ -2593,11 +2636,28 @@
   // ---------- toolbox (top right) ----------
   const tbBtn = $("tools-btn"), tbMenu = $("tools");
   const SLIDERS = [["zoom", "Zoom sensitivity", "How far one scroll zooms"], ["cursor", "Cursor sensitivity", "How quickly the hover card appears, and how far the map glides after a drag"], ["contrast", "Contrast", "Map contrast (0.5 is normal)"], ["overlay", "Overlay strength", "How solid the perspective colours are"], ["soften", "Focus softening", "How much the map around a focused area is blurred and faded"]];
+  // 0.7.1: choose the colours of the map itself: land, sea and water, and the boundary lines (kept in this browser)
+  const MAPCOL = store.get("atlas-071-mapcol", {});
+  const MAPCOL_DEF = { land: "#f2efe9", water: "#aad3df", lines: "#7d6f86" };
+  const mapColNow = k => MAPCOL[k] || MAPCOL_DEF[k];
+  const mcOrig = {};
+  const keepOrig = (id, prop) => { const k = id + "|" + prop; if (!(k in mcOrig)) mcOrig[k] = map.getPaintProperty(id, prop); return mcOrig[k]; };
+  function applyMapColours() {
+    if (!map.getStyle || !map.getStyle()) return;
+    map.getStyle().layers.forEach(l => {
+      const id = l.id.toLowerCase(), noBase = !key;
+      if (l.type === "background") { const want = noBase ? MAPCOL.water : MAPCOL.land, orig = keepOrig(l.id, "background-color"); setP(l.id, "background-color", want || orig); return; }
+      if (l.type === "fill" && (id === "land" || /landcover|landuse|^earth/.test(id))) { const orig = keepOrig(l.id, "fill-color"); setP(l.id, "fill-color", MAPCOL.land || orig); return; }
+      if ((l.type === "fill" || l.type === "line") && /water|sea|ocean|river|lake|reservoir|canal/.test(id)) { const p = l.type + "-color", orig = keepOrig(l.id, p); setP(l.id, p, MAPCOL.water || orig); }
+    });
+    ["ward-line", "council-line", "region-line", "nation-line"].forEach(id => { if (MAPCOL.lines) setP(id, "line-color", MAPCOL.lines); });
+  }
   function renderTools() {
     tbMenu.innerHTML = `<div class="tb-tools">${[["measure", "Measure", "Click points to measure distance; three or more points give an area. Double-click or Esc to finish", '<path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>'], ["lasso", "Lasso", "Draw any shape around areas to select them (areas whose centre falls inside)", '<path d="M12 4c5 0 9 2.4 9 5.5S17 15 12 15s-9-2.4-9-5.5S7 4 12 4z"/><path d="M6.5 13.6c-.9 1-1 2.4-.1 3.3.8.8 2.2.8 3-.1M8.8 16.3 8 21"/>'], ["shot", "To workspace", "Send a picture of the map to the workspace", '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 9v6M9 12h6"/>'], ["copy", "Copy view", "Copy a picture of the map to paste elsewhere", '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>']].map(([id, l, t, ic]) => `<button data-tool="${id}" class="${state.tool === id ? "on" : ""}" title="${esc(t)}"><svg class="ico" viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("")}</div>
       <div class="tb-row"><span>Panels</span><div class="seg sm"><button data-hot="0" class="${PS.hot ? "" : "on"}">Always shown</button><button data-hot="1" class="${PS.hot ? "on" : ""}">Near edges</button></div></div>
       <div class="tb-row"><span>Hover cards</span><div class="seg sm"><button data-detail="simple" class="${PS.detail === "simple" ? "on" : ""}">Simple</button><button data-detail="detailed" class="${PS.detail !== "simple" ? "on" : ""}">Detailed</button></div></div>
       <div class="tb-row"><span>Estimated values</span><div class="seg sm"><button data-hatch="1" class="${PS.hatch !== false ? "on" : ""}" title="Estimated areas (e.g. notional results) get diagonal lines">Hatched</button><button data-hatch="0" class="${PS.hatch === false ? "on" : ""}">Plain</button></div></div>
+      <div class="tb-row"><span>Map colours</span><span class="mapcols">${[["land", "Land"], ["water", "Sea and water"], ["lines", "Boundaries"]].map(([k, l]) => `<label title="${l}"><input type="color" data-mapcol="${k}" value="${mapColNow(k)}"><small>${l}</small></label>`).join("")}${Object.keys(MAPCOL).length ? `<button class="lnk" data-mapcolreset>reset</button>` : ""}</span></div>
       <div class="tb-row"><span>Grid lines</span><div class="seg sm">${[["off", "Off"], ["deg", "Lat/long"], ["km", "km"]].map(([k, l]) => `<button data-grid="${k}" class="${TOOLS.grid === k ? "on" : ""}">${l}</button>`).join("")}</div></div>
       ${SLIDERS.map(([k, l, t]) => `<div class="tb-slider" title="${esc(t)}"><label for="tb-${k}">${l}</label><input type="range" id="tb-${k}" data-sl="${k}" min="0" max="1" step="0.01" value="${TOOLS[k]}"><input type="number" class="tb-num" data-sn="${k}" min="0" max="1" step="0.01" value="${(+TOOLS[k]).toFixed(2)}" aria-label="${esc(l)} value"></div>`).join("")}
       <div class="tb-foot"><button class="btn" data-treset>Reset to defaults</button><span>All sliders run from 0 to 1.</span></div>`;
@@ -2614,6 +2674,8 @@
     else if (b.dataset.hatch) { PS.hatch = b.dataset.hatch === "1"; savePS(); renderTools(); repaint(); }
     else if (b.hasAttribute("data-treset")) { Object.assign(TOOLS, { zoom: 0.5, cursor: 0.5, contrast: 0.5, overlay: 0.5, soften: 0.25, grid: "off" }); applyTools(); renderTools(); }
   });
+  tbMenu.addEventListener("change", e => { const k = e.target.dataset.mapcol; if (!k) return; MAPCOL[k] = e.target.value; store.set("atlas-071-mapcol", MAPCOL); applyMapColours(); renderTools(); });
+  tbMenu.addEventListener("click", e => { if (e.target.closest("[data-mapcolreset]")) { Object.keys(MAPCOL).forEach(k => delete MAPCOL[k]); store.set("atlas-071-mapcol", MAPCOL); applyLook(); renderTools(); } });
   tbMenu.addEventListener("input", e => { const t = e.target, k = t.dataset.sl || t.dataset.sn; if (!k) return; const v = clamp(+t.value || 0, 0, 1); TOOLS[k] = v; const o = tbMenu.querySelector(t.dataset.sl ? `[data-sn="${k}"]` : `[data-sl="${k}"]`); if (o) o.value = t.dataset.sl ? v.toFixed(2) : v; applyTools(); });
   const dragOpts = () => ({ linearity: 0.3, maxSpeed: 1400, deceleration: Math.round(2500 * Math.pow(4, 1 - 2 * TOOLS.cursor)) });
   function applyTools() {
@@ -2840,7 +2902,7 @@
     const cand = METRICS.filter(m => PER[m.p].ready && m.nature !== "text" && m.nature !== "site" && m.nature !== "event" && m.temporal !== "static" && !spec.metrics.includes(m.id));
     return `<div class="cp-row"><b>Metric</b><div class="chips">${spec.metrics.map(id => `<span class="chip" style="--c:${PER[mOf(id).p].hue}">${esc(mOf(id).label)}${spec.metrics.length > 1 ? `<button data-${prefix}rmm="${id}" aria-label="Remove">×</button>` : ""}</span>`).join("")}
         ${spec.companies.length ? "" : mtPicker(`data-${prefix}addm aria-label="Add a metric"`, cand)}</div></div>
-      <div class="cp-row"><b>${spec.companies.length ? "Companies" : "Places"}</b><div class="chips">${spec.companies.length ? spec.companies.map(i => `<span class="chip">${esc(COS[i].n)}${spec.companies.length > 1 ? `<button data-${prefix}rmc="${i}" aria-label="Remove">×</button>` : ""}</span>`).join("") : spec.places.map(c => `<span class="chip">${esc(nameOf(c))}${spec.places.length > 1 ? `<button data-${prefix}rmp="${c}" aria-label="Remove">×</button>` : ""}</span>`).join("") + `<small class="tip">Shift-click areas on the map to add them</small>`}</div></div>
+      <div class="cp-row"><b>${spec.companies.length ? "Companies" : "Places"}</b><div class="chips">${spec.companies.length ? spec.companies.map(i => `<span class="chip">${esc(COS[i].n)}${spec.companies.length > 1 ? `<button data-${prefix}rmc="${i}" aria-label="Remove">×</button>` : ""}</span>`).join("") : spec.places.map(c => `<span class="chip">${esc(nameOf(c))}${spec.places.length > 1 ? `<button data-${prefix}rmp="${c}" aria-label="Remove">×</button>` : ""}</span>`).join("") + placeSearch(prefix === "t" ? "tplace" : "cplace", "Add any place…") + `<small class="tip">or Shift-click areas on the map</small>`}</div></div>
       <div class="cp-row"><b>Years</b><span class="yrs"><input type="number" data-${prefix}from value="${spec.from}" min="1974" max="${TODAY.slice(0, 4)}"> to <input type="number" data-${prefix}to value="${spec.to}" min="1974" max="${TODAY.slice(0, 4)}"></span>
         ${spec.companies.length ? `<label class="ck"><input type="checkbox" data-${prefix}rebase ${spec.rebase ? "checked" : ""}>Rebase to 100</label><label class="ck"><input type="checkbox" data-${prefix}index ${spec.index ? "checked" : ""}>Add FTSE 100 index</label>` : ""}</div>`;
   }
@@ -2893,6 +2955,8 @@
     return true;
   }
   cpanel.addEventListener("change", e => { if (specInput(CHART, e.target)) renderChartPanel(); });
+  PS_ADD.cplace = c => { if (!CHART.places.includes(c)) CHART.places.push(c); renderChartPanel(); };
+  PS_ADD.tplace = c => { const t = TABS.find(x => x.id === activeTab); if (t && t.spec && !t.spec.places.includes(c)) { t.spec.places.push(c); activateTab(t.id); } };
   function closeChart() { const was = WM.close(cpanel); bubble.classList.remove("open"); document.body.classList.remove("charting"); return was; }
   bubble.addEventListener("click", () => { if (!cpanel.hidden) return closeChart(); openChart(); });
   // tabs: the map is always the first tab; any chart can open full screen in its own tab
@@ -2973,10 +3037,14 @@
     else if (b.dataset.ntdel) { E.notes = E.notes.filter(x => x.id !== b.dataset.ntdel); persist(); renderNotes(); }
   });
   // ---------- labels for the district tiles ----------
+  // 0.7.1: London's financial districts belong to Markets: they show in Atlas Markets, and in Multi only while a Markets
+  // metric is on the map, so they don't sit on top of protests, councils and everything else in central London.
+  const marketsInUse = () => APP ? APP.perspective === "markets" : (PS.mapped.markets || []).some(id => isMapped(id));
+  function syncZones() { const v = marketsInUse() ? "visible" : "none"; ["zone-fill", "zone-line", "zone-dot"].forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", v); }); placeZoneLabels(); }
   const zoneLabels = $("zone-labels");
   const ZONE_PT = ZONES.map(f => ({ code: f.properties.code, pt: ptFeature(f).geometry.coordinates }));
   function placeZoneLabels() {
-    if (!MK || map.getZoom() < ZONE_Z - 0.2) { zoneLabels.innerHTML = ""; return; }
+    if (!MK || map.getZoom() < ZONE_Z - 0.2 || !marketsInUse()) { zoneLabels.innerHTML = ""; return; }
     zoneLabels.innerHTML = ZONE_PT.map(z => { const q = map.project(z.pt); const n = cosIn(z.code).length; return `<span style="left:${q.x}px;top:${q.y}px"><b>${esc(nameOf(z.code))}</b>${n} FTSE 100 head office${n === 1 ? "" : "s"}</span>`; }).join("");
   }
   map.on("render", placeZoneLabels);
@@ -3075,11 +3143,13 @@
   const ST = window.AtlasStats, anEl = $("analyse");
   const AN = Object.assign({ metrics: [], level: "council", within: UKC, mode: "across", place: UKC, method: null, outcome: null, k: 0, split: "", corr: "pearson" }, store.get("atlas-16-an", {}));
   AN.metrics = (AN.metrics || []).filter(id => M[id]);
-  const saveAN = () => store.set("atlas-16-an", { metrics: AN.metrics, level: AN.level, within: AN.within, mode: AN.mode, place: AN.place, corr: AN.corr });
+  AN.custom = (AN.custom || []).filter(c => P[c]);
+  const saveAN = () => store.set("atlas-16-an", { metrics: AN.metrics, level: AN.level, within: AN.within, mode: AN.mode, place: AN.place, corr: AN.corr, custom: AN.custom });
+
   const anMetricsAll = () => METRICS.filter(m => PER[m.p] && PER[m.p].ready && EN.isNum(m) && m.p !== "analysis");
   const anCats = () => METRICS.filter(m => PER[m.p] && PER[m.p].ready && EN.isCat(m) && m.p !== "analysis");
   const LEVEL_OPTS = () => [["council", "Councils"], ["constituency", "Westminster constituencies"], ["region", "Regions"], ["nation", "Nations"], ["ward", "Wards (England & Wales)"]].concat(ZONES.length ? [["zone", "Financial districts"]] : []).filter(([l]) => Object.keys(P).some(c => P[c].level === l));
-  const WITHIN_OPTS = () => [[UKC, "the whole UK"]].concat(["E92000001", "S92000003", "W92000004", "N92000002"].map(c => [c, nameOf(c)]), Object.keys(P).filter(c => c.startsWith("E12")).sort().map(c => [c, nameOf(c)]), state.sel.length ? [["sel", `my selection (${state.sel.length})`]] : []);
+  const WITHIN_OPTS = () => [[UKC, "the whole UK"]].concat(["E92000001", "S92000003", "W92000004", "N92000002"].map(c => [c, nameOf(c)]), Object.keys(P).filter(c => c.startsWith("E12")).sort().map(c => [c, nameOf(c)]), state.sel.length ? [["sel", `my selection (${state.sel.length})`]] : [], [["custom", `places I choose (${AN.custom.length})`]]);
   function insideArea(code, area) {
     if (area === UKC) return true; const p = P[code]; if (!p || !P[area]) return false;
     if (P[area].level === "nation") return nationOf(code) === area;
@@ -3090,6 +3160,7 @@
   }
   function anCodes(cfg) {
     if (cfg.within === "sel") return state.sel.map(x => x.code);
+    if (cfg.within === "custom") return AN.custom.filter(c => P[c]);
     return Object.keys(P).filter(c => P[c].level === cfg.level && !P[c].to && insideArea(c, cfg.within));
   }
   const nbrCache = {};
@@ -3337,9 +3408,10 @@
     anEl.innerHTML = `<div class="an-head"><b>Analyse</b><span class="cp-sub">How metrics relate across places, within an area, or over time. No need to pick places.</span>${helpBtn("methods", "Help: analysis methods")}<button class="x" data-anx aria-label="Close">×</button></div>
       <div class="an-body"><div class="an-side">
         <div class="an-row"><b>Look</b><div class="seg sm"><button data-anmode="across" class="${AN.mode !== "time" ? "on" : ""}">Across places</button><button data-anmode="time" class="${AN.mode === "time" ? "on" : ""}">Over time</button></div></div>
-        ${AN.mode === "time" ? `<div class="an-row"><b>Place</b><select data-anplace>${[UKC, "E92000001", "S92000003", "W92000004", "N92000002"].concat(state.focus && !["E92000001", "S92000003", "W92000004", "N92000002", UKC].includes(state.focus) ? [state.focus] : [], state.sel.map(s => s.code)).filter((c, i, a) => a.indexOf(c) === i).map(c => `<option value="${c}" ${AN.place === c ? "selected" : ""}>${esc(nameOf(c))}</option>`).join("")}</select></div>`
+        ${AN.mode === "time" ? `<div class="an-row"><b>Find</b>${placeSearch("anplace", "Any place…")}</div><div class="an-row"><b>Place</b><select data-anplace>${[UKC, "E92000001", "S92000003", "W92000004", "N92000002"].concat(state.focus && !["E92000001", "S92000003", "W92000004", "N92000002", UKC].includes(state.focus) ? [state.focus] : [], state.sel.map(s => s.code), P[AN.place] ? [AN.place] : []).filter((c, i, a) => a.indexOf(c) === i).map(c => `<option value="${c}" ${AN.place === c ? "selected" : ""}>${esc(nameOf(c))}</option>`).join("")}</select></div>`
           : `<div class="an-row"><b>Compare</b><select data-anlevel>${LEVEL_OPTS().map(([l, t]) => `<option value="${l}" ${AN.level === l ? "selected" : ""}>${t}</option>`).join("")}</select></div>
-             <div class="an-row"><b>Within</b><select data-anwithin>${WITHIN_OPTS().map(([c, t]) => `<option value="${c}" ${AN.within === c ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>`}
+             <div class="an-row"><b>Within</b><select data-anwithin>${WITHIN_OPTS().map(([c, t]) => `<option value="${c}" ${AN.within === c ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
+             <div class="an-row"><b>Places</b><span class="an-pl">${placeSearch("an", "Search for places to analyse…")}${AN.within === "custom" ? `<span class="chips">${AN.custom.map(c => `<span class="chip">${esc(nameOf(c))}<button data-anrmp="${c}" aria-label="Remove">×</button></span>`).join("")}${AN.custom.length ? `<button class="lnk" data-anrmall>clear</button>` : ""}</span>` : ""}</span></div>`}
         <div class="an-row"><b>Date</b><span class="muted">${esc(longDate(state.date))} (time bar)</span></div>
         <div class="an-metrics"><div class="an-mh">Metrics <small>${AN.metrics.length} chosen</small>${AN.metrics.length ? `<button class="btn" data-anclear>Clear</button>` : ""}</div>${pers}</div>
       </div><div class="an-main">
@@ -3367,6 +3439,9 @@
     else return;
     saveAN(); renderAnalyse();
   });
+  PS_ADD.an = c => { if (!AN.custom.includes(c)) AN.custom.push(c); AN.within = "custom"; if (P[c].level !== AN.level && LEVEL_OPTS().some(([l]) => l === P[c].level) && AN.custom.length === 1) AN.level = P[c].level; saveAN(); renderAnalyse(); };
+  PS_ADD.anplace = c => { AN.place = c; saveAN(); renderAnalyse(); };
+  anEl.addEventListener("click", e => { const r = e.target.closest("[data-anrmp]"); if (r) { AN.custom = AN.custom.filter(c => c !== r.dataset.anrmp); saveAN(); renderAnalyse(); } if (e.target.closest("[data-anrmall]")) { AN.custom = []; saveAN(); renderAnalyse(); } });
   anEl.addEventListener("change", e => { const t = e.target, ds = t.dataset;
     if (ds.anm) AN.metrics = t.checked ? AN.metrics.concat(ds.anm) : AN.metrics.filter(x => x !== ds.anm);
     else if (ds.anlevel != null) AN.level = t.value; else if (ds.anwithin != null) AN.within = t.value; else if (ds.anplace != null) AN.place = t.value;
@@ -3676,7 +3751,7 @@
   // The dropdown has a tickbox on every result: tick places (across several searches), then press its Search button to show
   // them all together in one frame, with the rest of the map softened and a card for each. Only the dropdown does this.
   const si = $("search"), hl = $("hits"), tickPill = $("schips");
-  const names = Object.keys(P).filter(c => P[c].level !== "country"), rankL = { nation: 0, region: 1, zone: 2, council: 2, constituency: 2.5, ward: 3 };
+  const names = Object.keys(P).filter(c => P[c].level !== "country" && !(P[c].level === "zone" && APP && APP.perspective !== "markets")), rankL = { nation: 0, region: 1, zone: 2, council: 2, constituency: 2.5, ward: 3 };
   function searchNames(q) { return names.filter(c => nameOf(c).toLowerCase().includes(q) || c.toLowerCase() === q).sort((a, b) => (nameOf(a).toLowerCase() === q ? 0 : nameOf(a).toLowerCase().startsWith(q) ? 1 : 2) - (nameOf(b).toLowerCase() === q ? 0 : nameOf(b).toLowerCase().startsWith(q) ? 1 : 2) || rankL[P[a].level] - rankL[P[b].level]).slice(0, 10); }
   let hits = [], cur = 0, picked = [], ddOpen = false, mhits = [];
   // 0.7.1: the search box finds metrics as well as places (grouped Perspective ▸ Category, like the Perspectives panel)
@@ -3811,7 +3886,7 @@
   const CATS = [{ h: "Administrative divisions" }, { id: "country", label: "Country", codes: () => [UKC] }, { id: "nation", label: "Nations", codes: () => G.nations.features.map(f => f.properties.code) },
     { id: "region", label: "Regions", codes: () => G.regions.features.map(f => f.properties.code) }, { id: "council", label: "Councils", codes: () => COUNCIL_CODES }, { id: "ward", label: "Wards", codes: () => COUNCIL_CODES, nested: true },
     { h: "Electoral" }, { id: "constituency", label: "Westminster constituencies", codes: () => Object.keys(P).filter(c => P[c].level === "constituency" && !P[c].to) }, 
-    { h: "Custom zones" }, { id: "zone", label: "Financial districts", codes: () => ZONES.map(f => f.properties.code), off: !ZONES.length },
+    { h: "Custom zones" }, { id: "zone", label: "Financial districts", codes: () => ZONES.map(f => f.properties.code), off: !ZONES.length || (APP && APP.perspective !== "markets") },
     { h: "Coming later" }, { id: "ca", label: "Combined authorities", off: true }, { id: "hb", label: "Health boards", off: true }];
   const wardCount = names.filter(c => P[c].level === "ward").length;
   let bcat = "council", bopen = null;
@@ -3860,7 +3935,7 @@
   const CTX = {
     get app() { return APP; }, M, METRICS, P, PER, PARTY, POL, PR, MK, EL: window.ATLAS_EL || null, LOC: window.ATLAS_LOCAL || null, SPANS, CH, EN, ST, XL, WM,
     esc, fmtInt, fmtBig, fmtPct, longDate, shortDate, dmy, nameOf, partyName, partyCol, LABEL, PLURAL_L, UKC, today: TODAY,
-    get date() { return state.date; }, get level() { return state.level; }, get focus() { return state.focus; }, get sel() { return state.sel.map(x => x.code); },
+    get date() { return state.date; }, get level() { return state.level; }, get focused() { return state.focus; }, get sel() { return state.sel.map(x => x.code); },
     setDate: d => setDate(d), mapOnly, setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); },
     focus: c => focus(c), view: (center, zoom) => map.flyTo({ center, zoom, duration: 1000 }), allCodesAt, popAt, seriesOf, resultFor, resultsOf: code => (RES[code] || []).map(decode), areaOf: c => AREA[c] || null, previousFor, ELX, GE_DAYS, metricSpan: id => metricSpan(M[id]),
     openChart: o => openChart(o), openCmp: () => openCmp(), openProtestList: () => openProtestList(), openProtestCard: i => openProtestCard(i), openInfo: id => openMetricInfo(id),

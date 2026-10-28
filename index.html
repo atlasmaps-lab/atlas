@@ -966,6 +966,17 @@ td.acts3 { white-space: nowrap; text-align: right; }
 .nw-tag { font-size: 10.5px; border-radius: 10px; padding: 1px 7px; border: 1px solid var(--rule); background: var(--solid); display: inline-flex; gap: 4px; align-items: center; }
 .nw-tag.pl { cursor: pointer; border-color: rgba(123,79,166,.4); color: #5b3a8c; } .nw-tag.tp { color: var(--ink-3); }
 .proj .sw { outline: 1px dashed rgba(0,0,0,.35); outline-offset: 1px; }
+#prpick { position: fixed; z-index: 760; width: 330px; max-height: 300px; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); font-size: 12.5px; }
+#prpick .pp-head { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border-bottom: 1px solid var(--rule); } #prpick .pp-head span { display: flex; gap: 6px; align-items: center; }
+#prpick ul { list-style: none; margin: 0; padding: 4px; overflow: auto; } #prpick li { display: grid; grid-template-columns: 14px 1fr; gap: 0 6px; padding: 5px 6px; border-radius: 5px; cursor: pointer; align-items: baseline; }
+#prpick li:hover { background: rgba(0,0,0,.05); } #prpick li small { grid-column: 2; color: var(--ink-3); } #prpick .pp-n { font-weight: 600; } #prpick .small { padding: 4px 10px; margin: 0; color: var(--ink-3); }
+.psrch { position: relative; display: inline-block; } .psrch input { border: 1px solid var(--rule); border-radius: 12px; padding: 3px 10px; font: inherit; font-size: 12px; min-width: 170px; background: var(--solid); }
+.ps-hits { position: absolute; z-index: 60; left: 0; top: calc(100% + 3px); min-width: 240px; max-height: 260px; overflow: auto; list-style: none; margin: 0; padding: 4px; background: var(--solid); border: 1px solid var(--rule); border-radius: 6px; box-shadow: var(--shadow); }
+.ps-hits li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 12.5px; } .ps-hits li:hover { background: rgba(0,0,0,.05); } .ps-hits li small { color: var(--ink-3); }
+.an-pl { display: flex; flex-direction: column; gap: 4px; }
+.mapcols { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; } .mapcols label { display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 10.5px; color: var(--ink-3); cursor: pointer; }
+.mapcols input[type=color], .mcol input[type=color] { width: 26px; height: 20px; padding: 0; border: 1px solid var(--rule); border-radius: 4px; background: none; cursor: pointer; }
+.mcol { position: relative; display: inline-flex; margin-left: 4px; } .mcol input[type=color] { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; } .mcol-sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,.2); display: inline-block; }
 #hits li.sec small { font-weight: 400; color: var(--ink-3); margin-left: 6px; text-transform: none; letter-spacing: 0; }
 </style>
 </head>
@@ -1088,11 +1099,11 @@ td.acts3 { white-space: nowrap; text-align: right; }
 <script src="data/news.js"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="stats.js?v=18272300"></script>
-<script src="psephology.js?v=18272300"></script>
-<script src="charts.js?v=18272300"></script>
-<script src="engine.js?v=18272300"></script>
-<script src="xlsx.js?v=18272300"></script>
+<script src="stats.js?v=0711"></script>
+<script src="psephology.js?v=0711"></script>
+<script src="charts.js?v=0711"></script>
+<script src="engine.js?v=0711"></script>
+<script src="xlsx.js?v=0711"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1102,14 +1113,15 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=18272300"></script>
-<script src="apps.js?v=18272300"></script>
-<script src="apps/markets.js?v=18272300"></script>
-<script src="apps/politics.js?v=18272300"></script>
-<script src="apps/economic.js?v=18272300"></script>
-<script src="apps/social.js?v=18272300"></script>
+<script src="help.js?v=0711"></script>
+<script src="apps.js?v=0711"></script>
+<script src="apps/markets.js?v=0711"></script>
+<script src="apps/politics.js?v=0711"></script>
+<script src="apps/economic.js?v=0711"></script>
+<script src="apps/social.js?v=0711"></script>
+<script src="apps/health.js?v=0711"></script>
 <script src="data/prices.js"></script>
-<script src="windows.js?v=18272300"></script>
-<script src="app.js?v=18272300"></script>
+<script src="windows.js?v=0711"></script>
+<script src="app.js?v=0711"></script>
 </body>
 </html>

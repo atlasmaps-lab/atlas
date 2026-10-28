@@ -4,7 +4,7 @@
 (function () {
   "use strict";
   const pct = v => v == null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "") + v.toFixed(1) + "%";
-  const placeOf = ctx => ctx.focus || ctx.sel[0] || ctx.UKC;
+  const placeOf = ctx => ctx.focused || ctx.sel[0] || ctx.UKC;
   function dashboard(ctx, el) {
     const c = placeOf(ctx), ids = ["gdp", "gdp_per_head", "gdp_growth", "population"].filter(id => ctx.M[id]);
     el.innerHTML = `<h4>${ctx.esc(ctx.nameOf(c))}</h4><p class="ap-note">Click an area on the map to change place. Values on ${ctx.esc(ctx.longDate(ctx.date))}.</p>

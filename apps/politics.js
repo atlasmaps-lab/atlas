@@ -190,7 +190,7 @@
     el.onchange = e => { const k = e.target.dataset.sf; if (k && k !== "q") { SF[k] = e.target.value; if (k === "nation") SF.region = ""; seatList(ctx, el); } };
     el.onclick = e => { const h = e.target.closest("[data-sqc]"); if (h) { seat.code = h.dataset.sqc; ctx.focus(h.dataset.sqc); seat(ctx, el); } };
   }
-  function seatOpen(ctx) { if (ctx.focus && ctx.P[ctx.focus] && ctx.P[ctx.focus].level === "constituency") seat.code = ctx.focus; }
+  function seatOpen(ctx) { if (ctx.focused && ctx.P[ctx.focused] && ctx.P[ctx.focused].level === "constituency") seat.code = ctx.focused; }
 
   // ---------- Councils ----------
   const CF = { region: "", ctl: "" };
@@ -203,7 +203,7 @@
     const ctlOf = c => { const r = ctx.value("control", c); return r ? r.v : null; };
     const regs = [...new Set(allC.map(c => ctx.parentOf(c)).filter(Boolean))].sort((a, b) => ctx.nameOf(a).localeCompare(ctx.nameOf(b)));
     const list = allC.filter(c => (!CF.region || ctx.parentOf(c) === CF.region) && (!CF.ctl || ctlOf(c) === CF.ctl)).sort((a, b) => ctx.nameOf(a).localeCompare(ctx.nameOf(b)));
-    const cur = councils.code && L.comp[councils.code] ? councils.code : ctx.focus && L.comp && L.comp[ctx.focus] ? ctx.focus : list.find(c => /Manchester/.test(ctx.nameOf(c))) || list[0];
+    const cur = councils.code && L.comp[councils.code] ? councils.code : ctx.focused && L.comp && L.comp[ctx.focused] ? ctx.focused : list.find(c => /Manchester/.test(ctx.nameOf(c))) || list[0];
     councils.code = cur; const comp = (L.comp || {})[cur] || [];
     const parties = [...new Set(comp.flatMap(x => Object.keys(x[2])))].sort((a, b) => comp.reduce((s, x) => s + (x[2][b] || 0), 0) - comp.reduce((s, x) => s + (x[2][a] || 0), 0));
     const Wd = 420, H = 150, y0 = comp.length ? comp[0][0] : 0, y1 = comp.length ? comp[comp.length - 1][0] : 1, X = y => 30 + (y - y0) / ((y1 - y0) || 1) * (Wd - 40);
@@ -244,13 +244,13 @@
   function news(ctx, el) {
     const N = ctx.NEWS;
     if (!N) { el.innerHTML = `<p class="ap-note">The news feed isn't loaded (data/news.js).</p>`; return; }
-    const within = ctx.focus && ctx.P[ctx.focus] ? new Set([ctx.focus, ...ctx.kids(ctx.focus)]) : null;
+    const within = ctx.focused && ctx.P[ctx.focused] ? new Set([ctx.focused, ...ctx.kids(ctx.focused)]) : null;
     const q = NF.q.toLowerCase(), items = N.items.filter(it => (!q || (it.t + " " + it.x).toLowerCase().includes(q)) && (!NF.topic || it.tp.includes(NF.topic)) && (!NF.src || it.s.startsWith(NF.src)) && (!NF.near || (within && it.pl.some(c => within.has(c)))));
     el.innerHTML = `<p class="ap-note">Official news only: GOV.UK announcements and UK Parliament statements and bills, refreshed daily (${ctx.esc(ctx.longDate(N.built))}). Atlas tags each item with the places, parties and topics it names, using simple keyword rules.</p>
       <div class="ap-row"><input data-nf="q" placeholder="Search the news…" value="${ctx.esc(NF.q)}" style="flex:1">
         <select data-nf="topic"><option value="">Every topic</option>${N.topics.map(t => `<option ${NF.topic === t ? "selected" : ""}>${ctx.esc(t)}</option>`).join("")}</select>
         <select data-nf="src"><option value="">Every source</option><option value="GOV.UK" ${NF.src === "GOV.UK" ? "selected" : ""}>GOV.UK</option><option value="Parliament" ${NF.src === "Parliament" ? "selected" : ""}>Parliament</option></select>
-        <label class="ck"><input type="checkbox" data-nf="near" ${NF.near ? "checked" : ""} ${within ? "" : "disabled"}>${within ? `Only ${ctx.esc(ctx.nameOf(ctx.focus))}` : "Click a place to filter"}</label></div>
+        <label class="ck"><input type="checkbox" data-nf="near" ${NF.near ? "checked" : ""} ${within ? "" : "disabled"}>${within ? `Only ${ctx.esc(ctx.nameOf(ctx.focused))}` : "Click a place to filter"}</label></div>
       <p class="ap-note">${items.length} items.</p>${newsList(ctx, items.slice(0, 120), "Nothing matches.")}
       <p class="ap-note">${ctx.esc(N.sources)}</p>`;
     el.oninput = e => { if (e.target.dataset.nf === "q") { NF.q = e.target.value; clearTimeout(news.t); news.t = setTimeout(() => { news(ctx, el); const i = el.querySelector('[data-nf="q"]'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 250); } };
