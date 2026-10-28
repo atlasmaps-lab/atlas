@@ -196,6 +196,40 @@
     markets: '<path d="M4 8h16l-1.6 10.5a1.6 1.6 0 0 1-1.6 1.5H7.2a1.6 1.6 0 0 1-1.6-1.5z"/><path d="M8.5 8 10 4M15.5 8 14 4M9 12.5v4M12 12.5v4M15 12.5v4"/>',
   };
   const svgIcon = (id, cls) => `<svg class="ico${cls ? " " + cls : ""}" viewBox="0 0 24 24" aria-hidden="true">${ICON[id] || ""}</svg>`;
+  // 0.7.1: every metric list (Compare, Export, Analyse, chart pickers, search) is Perspective ▸ Category ▸ metrics, as
+  // dropdowns, the same way as the Perspectives panel. Open/closed state is remembered so a re-render doesn't fold them.
+  // mtree(key, metrics, row(m) → html, { isOn(m), extra(p), all }) → html
+  const MT_OPEN = new Set((() => { try { return JSON.parse(localStorage.getItem("atlas-071-mt-open") || "[]"); } catch (e) { return []; } })());
+  function mtree(key, ms, row, o) {
+    o = o || {}; const isOn = o.isOn || (() => false);
+    return PERSPECTIVES.filter(p => !p.hidden || ms.some(m => m.p === p.id)).map(p => {
+      const pm = ms.filter(m => m.p === p.id);
+      if (!pm.length) return o.empty ? o.empty(p) : "";
+      const pk = key + "|" + p.id, pOn = pm.filter(isOn).length, groups = [...new Set(pm.map(m => m.group || ""))];
+      const inner = groups.length > 1 ? groups.map(g => {
+        const gm = pm.filter(m => (m.group || "") === g), gk = pk + "|" + g, n = gm.filter(isOn).length;
+        return `<details class="mt-g" data-mt="${esc(gk)}" ${MT_OPEN.has(gk) || o.all ? "open" : ""}><summary><span>${esc(g || "Other")}</span>${n ? `<i class="mt-n">${n}</i>` : ""}<small>${gm.length}</small></summary><div class="mt-ms">${gm.map(row).join("")}</div></details>`;
+      }).join("") : `<div class="mt-ms">${pm.map(row).join("")}</div>`;
+      return `<details class="mt-p" data-mt="${esc(pk)}" style="--c:${p.hue}" ${MT_OPEN.has(pk) || o.all ? "open" : ""}><summary>${svgIcon(p.id)}<span>${esc(p.name)}</span>${pOn ? `<i class="mt-n">${pOn}</i>` : ""}<small>${pm.length}</small></summary>${o.extra ? o.extra(p) : ""}${inner}</details>`;
+    }).join("");
+  }
+  document.addEventListener("toggle", e => {
+    const d = e.target; if (!d.matches || !d.matches("details[data-mt]")) return;
+    d.open ? MT_OPEN.add(d.dataset.mt) : MT_OPEN.delete(d.dataset.mt);
+    try { localStorage.setItem("atlas-071-mt-open", JSON.stringify([...MT_OPEN].slice(-200))); } catch (er) { /* not remembered */ }
+  }, true);
+  // a "+ add a metric" picker: a button that drops down the same tree; choosing sets the hidden <select> and fires change
+  const mtPicker = (attr, ms, label) => `<span class="mt-pick"><button type="button" class="btn mt-pick-btn">${esc(label || "+ add a metric…")} ▾</button><div class="mt-pop" hidden>${mtree("pick", ms, m => `<button type="button" class="mt-item" data-mtv="${m.id}">${esc(m.label)}</button>`)}</div><select ${attr} hidden aria-hidden="true"><option value=""></option>${ms.map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join("")}</select></span>`;
+  document.addEventListener("click", e => {
+    const t = e.target.closest(".mt-pick-btn, [data-mtv]");
+    document.querySelectorAll(".mt-pop:not([hidden])").forEach(pop => { if (!pop.parentNode.contains(e.target)) pop.hidden = true; });
+    if (!t) return;
+    e.stopPropagation(); e.preventDefault();
+    const wrap = t.closest(".mt-pick");
+    if (t.classList.contains("mt-pick-btn")) { const pop = wrap.querySelector(".mt-pop"); pop.hidden = !pop.hidden; return; }
+    const sel = wrap.querySelector("select"); sel.value = t.dataset.mtv; wrap.querySelector(".mt-pop").hidden = true;
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+  }, true);
   const PERSPECTIVES = [
     { id: "political", name: "Political", hue: "#7b4fa6", ready: true, ramp: ["#efe7f6", "#d2bde6", "#ad8fd0", "#8560b5", "#5b3a8c"], desc: "Who governs each area and how that changed since 1974, plus notable protests (test case)." },
     { id: "economic", name: "Economic", hue: "#13876b", ready: true, ramp: ["#e3f4ee", "#b3e0cf", "#73c2a6", "#33997b", "#0f6b52"], desc: "Output and income, every year since 1998." },
@@ -938,7 +972,7 @@
     map.addLayer({ id: "group-edge", type: "line", source: "group", paint: { "line-color": "#1f2a2e", "line-width": 2.4, "line-opacity": 0.9 } });
     map.addLayer({ id: "tool-fill", type: "fill", source: "tool", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#3b78b5", "fill-opacity": 0.12 } });
     map.addLayer({ id: "tool-line", type: "line", source: "tool", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": "#1f2a2e", "line-width": 2, "line-dasharray": [2, 1.5] } });
-    map.addLayer({ id: "tool-pts", type: "circle", source: "tool", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4, "circle-color": "#ffffff", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2 } });
+    map.addLayer({ id: "tool-pts", type: "circle", source: "tool", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5.5, "circle-color": "#ffffff", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2 } });
     applyLook(true); applyLevels(); applyTools();
     const at = document.querySelector(".maplibregl-ctrl-attrib"); if (at) at.classList.remove("maplibregl-compact-show"); // credits folded into the ⓘ button
     map.on("moveend", loadVisibleWards);
@@ -1233,6 +1267,7 @@
   let legendWhyOpen = false;
   // ---------- moving panels: the key and the time bar can be dragged by their grip; double-click the grip to put them back ----------
   function draggable(el, grip, key, after) {
+    el._posKey = key;
     const apply = p => { el.classList.add("moved"); Object.assign(el.style, { left: p.x + "px", top: p.y + "px", bottom: "auto", right: "auto", transform: "none" }); };
     const fit = p => ({ x: clamp(p.x, 4, window.innerWidth - Math.min(el.offsetWidth || 200, window.innerWidth - 8) - 4), y: clamp(p.y, 52, window.innerHeight - 40) });
     el._moved = store.get(key, null); if (el._moved) apply(fit(el._moved));
@@ -1258,6 +1293,27 @@
       const up = () => { g.removeEventListener("pointermove", mv); document.body.classList.remove("resizing"); if (key) store.set(key, el._size); if (opts.done) opts.done(); };
       g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up, { once: true }); g.addEventListener("pointercancel", up, { once: true });
     });
+    // 0.7.1: every edge resizes too; the left and top edges move the element so the opposite edge stays put
+    if (WM && WM.edges) { let r0 = null;
+      WM.edges(el, {
+        start() { r0 = el.getBoundingClientRect(); },
+        move(dx, dy, d) {
+          const minW = opts.minW || 220, minH = opts.minH || 80; let w = r0.width, h = r0.height, x = r0.left, y = r0.top;
+          if (d.includes("e")) w = r0.width + dx * (opts.centred && !el.classList.contains("moved") ? 2 : 1);
+          if (d.includes("s")) h = r0.height + dy;
+          if (d.includes("w")) { w = Math.max(minW, r0.width - dx); x = r0.right - w; }
+          if (d.includes("n")) { h = Math.max(minH, r0.height - dy); y = r0.bottom - h; }
+          w = clamp(w, minW, window.innerWidth - 16); h = clamp(h, minH, window.innerHeight - 60);
+          if (d.includes("w") || (d.includes("n") && !opts.widthOnly)) {   // pin the moved corner, as the drag grip would
+            el.classList.add("moved"); Object.assign(el.style, { left: Math.round(x) + "px", top: Math.round(d.includes("n") && !opts.widthOnly ? y : r0.top) + "px", bottom: "auto", right: "auto", transform: "none" });
+            el._moved = { x: Math.round(x), y: Math.round(d.includes("n") && !opts.widthOnly ? y : r0.top) };
+          }
+          apply({ w: Math.round(w), h: opts.widthOnly ? 0 : Math.round(h) }); if (opts.after) opts.after();
+        },
+        end() { if (key) store.set(key, el._size); if (el._posKey && el._moved) store.set(el._posKey, el._moved); if (opts.done) opts.done(); },
+      });
+      el.querySelectorAll(":scope > .redge-n, :scope > .redge-s, :scope > .redge-ne, :scope > .redge-nw, :scope > .redge-se, :scope > .redge-sw").forEach(x => { if (opts.widthOnly) x.remove(); });
+    }
     g.addEventListener("dblclick", () => { el._size = null; if (key) store.set(key, null); el.style.width = ""; el.style.height = ""; el.style.maxHeight = ""; if (opts.after) opts.after(); if (opts.done) opts.done(); });
     return g;
   }
@@ -2281,9 +2337,9 @@
     const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id));
     if (!CMP.items.length && codes.length >= 2 && ms.length) { CMP.items.push({ id: "k" + (++CMP.seq), kind: "table", title: "Places × metrics", spec: { layout: "pm", when: "bar", codes: codes.slice(), metrics: [...CMP.metrics].filter(id => M[id]) } }); CMP.at = "k" + CMP.seq; }   // the side-by-side table, as before
     const made = CMP.items.length ? `<div class="cmp-made"><h4>Made here</h4>${CMP.items.map(it => `<div class="cmp-it${it.id === CMP.at || it.id === CMP.ac ? " on" : ""}" data-kshow="${it.id}" title="Show it"><span class="cmp-ik">${it.kind === "table" ? "▦" : sIcon(it.spec.style || "line")}</span><span class="cmp-in">${esc(it.title)}</span><button data-kdel="${it.id}" aria-label="Close ${esc(it.title)}">×</button></div>`).join("")}</div>` : "";
-    const side = made + PERSPECTIVES.map(p => `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + (p.ready
-      ? METRICS.filter(m => m.p === p.id).map(m => { const on = CMP.metrics.has(m.id), nd = !on && codes.length && cmpEmpty(m, codes); return `<label style="--c:${p.hue}" class="${nd ? "dis" : ""}" ${nd ? `title="No data for these places on this date"` : ""}><input type="checkbox" data-cm="${m.id}" ${on ? "checked" : ""} ${nd ? "disabled" : ""}>${esc(m.label)}</label>`; }).join("") + `<div class="quick"><button class="btn" data-all="${p.id}">All</button><button class="btn" data-none="${p.id}">None</button></div>`
-      : `<p class="small">Not available yet</p>` + p.planned.map(n => `<label class="dis" title="Not available yet"><input type="checkbox" disabled>${esc(n)}</label>`).join(""))).join("");
+    const side = made + mtree("cmp", METRICS.filter(m => PER[m.p].ready), m => { const p = PER[m.p], on = CMP.metrics.has(m.id), nd = !on && codes.length && cmpEmpty(m, codes); return `<label style="--c:${p.hue}" class="${nd ? "dis" : ""}" ${nd ? `title="No data for these places on this date"` : ""}><input type="checkbox" data-cm="${m.id}" ${on ? "checked" : ""} ${nd ? "disabled" : ""}>${esc(m.label)}</label>`; },
+      { isOn: m => CMP.metrics.has(m.id), extra: p => `<div class="quick"><button class="btn" data-all="${p.id}">All</button><button class="btn" data-none="${p.id}">None</button></div>`,
+        empty: p => p.ready ? "" : `<details class="mt-p na" style="--c:${p.hue}"><summary>${svgIcon(p.id)}<span>${esc(p.name)}</span><small>not available yet</small></summary></details>` });
     const usable = ms.filter(m => m.nature !== "text");
     if (!usable.some(m => m.id === CMP.x)) CMP.x = (usable[0] || {}).id || null;
     if (!usable.some(m => m.id === CMP.y) || CMP.y === CMP.x) CMP.y = (usable.find(m => m.id !== CMP.x) || {}).id || null;
@@ -2425,7 +2481,7 @@
     return { rows, ms, codes, dates };
   }
   function renderExport() {
-    const groups = PERSPECTIVES.filter(p => p.ready).map(p => `<fieldset><legend style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</legend>${METRICS.filter(m => m.p === p.id).map(m => `<label><input type="checkbox" data-em="${m.id}" ${EXP.metrics.has(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("")}</fieldset>`).join("");
+    const groups = mtree("exp", METRICS.filter(m => PER[m.p].ready), m => `<label><input type="checkbox" data-em="${m.id}" ${EXP.metrics.has(m.id) ? "checked" : ""}>${esc(m.label)}</label>`, { isOn: m => EXP.metrics.has(m.id) });
     const n = EXP.metrics.size, codes = exportCodes(), years = EXP.time === "date" ? 1 : Math.max(0, EXP.to - EXP.from + 1), rowsN = codes.length * years;
     const preview = n >= 2 && codes.length ? (() => { const { rows } = exportRowsLimited(6); return `<div class="tscroll"><table class="cmp"><thead><tr>${rows[0].map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`; })() : "";
     setTimeout(() => addFctl(expEl), 0);
@@ -2538,6 +2594,25 @@
   function destination(a, brg, ang) { const f1 = a[1] * RAD, l1 = a[0] * RAD; const f2 = Math.asin(Math.sin(f1) * Math.cos(ang) + Math.cos(f1) * Math.sin(ang) * Math.cos(brg)); const l2 = l1 + Math.atan2(Math.sin(brg) * Math.sin(ang) * Math.cos(f1), Math.cos(ang) - Math.sin(f1) * Math.sin(f2)); return [l2 / RAD, f2 / RAD]; }
   const centreOf = pts => { let x = 0, y = 0; pts.forEach(p => { x += p[0]; y += p[1]; }); return [x / pts.length, y / pts.length]; };
   function insideShape(pt) { const poly = measure.pts.map(p => { const q = map.project(p); return [q.x, q.y]; }); return inPoly(pt.x, pt.y, poly); }
+  // 0.7.1: drag a single corner (any shape with visible corner dots, finished or still being drawn)
+  map.getCanvasContainer().addEventListener("mousedown", e => {
+    if (e.button !== 0 || state.tool !== "measure" || !measure.pts.length || (measure.done && measure.pts.length > 30)) return;
+    const r = map.getCanvasContainer().getBoundingClientRect(), pt = { x: e.clientX - r.left, y: e.clientY - r.top };
+    let hit = -1, best = 10;
+    measure.pts.forEach((p, i) => { const q = map.project(p), d = Math.hypot(q.x - pt.x, q.y - pt.y); if (d < best) { best = d; hit = i; } });
+    if (hit < 0) return;
+    e.preventDefault(); e.stopImmediatePropagation(); map.dragPan.disable(); document.body.classList.add("dragging");
+    let moved = false;
+    const mv = ev => { moved = true; const q = map.unproject([ev.clientX - r.left, ev.clientY - r.top]); measure.pts[hit] = [q.lng, q.lat]; measure.from = null; drawMeasure(); };
+    const up = () => { window.removeEventListener("mousemove", mv); window.removeEventListener("mouseup", up); map.dragPan.enable(dragOpts()); document.body.classList.remove("dragging"); measure.justDragged = true; setTimeout(() => { measure.justDragged = false; }, 300); };
+    window.addEventListener("mousemove", mv); window.addEventListener("mouseup", up);
+  }, true);
+  map.getCanvasContainer().addEventListener("mousemove", e => {   // a grab cursor over a corner
+    if (state.tool !== "measure" || !measure.pts.length || (measure.done && measure.pts.length > 30) || document.body.classList.contains("dragging")) return;
+    const r = map.getCanvasContainer().getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    const near = measure.pts.some(p => { const q = map.project(p); return Math.hypot(q.x - x, q.y - y) < 10; });
+    map.getCanvas().style.cursor = near ? "grab" : "";
+  });
   map.getCanvasContainer().addEventListener("mousedown", e => {
     if (e.button !== 0 || state.tool !== "measure" || !measure.done || measure.pts.length < 3) return;
     const r = map.getCanvasContainer().getBoundingClientRect(), pt = { x: e.clientX - r.left, y: e.clientY - r.top };
@@ -2572,7 +2647,7 @@
     let d = 0; for (let i = 1; i < pts.length; i++) d += haversine(pts[i - 1], pts[i]);
     const km = v => v >= 100 ? fmtInt(v) + " km" : v >= 1 ? v.toFixed(2) + " km" : Math.round(v * 1000) + " m";
     let t = `Distance: ${km(d)} (${(d * 0.621371).toFixed(d * .62 >= 10 ? 0 : 2)} miles)`;
-    if (pts.length > 2 && measure.done) { const a = sphArea(pts); t = `${measure.from ? `<b>${esc(measure.from)}</b> (true size)<br>` : ""}Area: ${a >= 10 ? fmtInt(a) : a.toFixed(2)} km² · perimeter ${km(d + haversine(pts[pts.length - 1], pts[0]))}<br><small>Drag the shape to lay it over another place</small>`; }
+    if (pts.length > 2 && measure.done) { const a = sphArea(pts); t = `${measure.from ? `<b>${esc(measure.from)}</b> (true size)<br>` : ""}Area: ${a >= 10 ? fmtInt(a) : a.toFixed(2)} km² · perimeter ${km(d + haversine(pts[pts.length - 1], pts[0]))}<br><small>Drag the shape to lay it over another place; drag a corner to reshape it</small>`; }
     return t;
   }
   // grid lines
@@ -2709,7 +2784,7 @@
   function whatHTML(spec, prefix) {
     const cand = METRICS.filter(m => PER[m.p].ready && m.nature !== "text" && m.nature !== "site" && m.nature !== "event" && m.temporal !== "static" && !spec.metrics.includes(m.id));
     return `<div class="cp-row"><b>Metric</b><div class="chips">${spec.metrics.map(id => `<span class="chip" style="--c:${PER[mOf(id).p].hue}">${esc(mOf(id).label)}${spec.metrics.length > 1 ? `<button data-${prefix}rmm="${id}" aria-label="Remove">×</button>` : ""}</span>`).join("")}
-        ${spec.companies.length ? "" : `<select data-${prefix}addm aria-label="Add a metric"><option value="">+ add a metric…</option>${PERSPECTIVES.filter(p => p.ready).map(p => `<optgroup label="${esc(p.name)}">${cand.filter(m => m.p === p.id).map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join("")}</optgroup>`).join("")}</select>`}</div></div>
+        ${spec.companies.length ? "" : mtPicker(`data-${prefix}addm aria-label="Add a metric"`, cand)}</div></div>
       <div class="cp-row"><b>${spec.companies.length ? "Companies" : "Places"}</b><div class="chips">${spec.companies.length ? spec.companies.map(i => `<span class="chip">${esc(COS[i].n)}${spec.companies.length > 1 ? `<button data-${prefix}rmc="${i}" aria-label="Remove">×</button>` : ""}</span>`).join("") : spec.places.map(c => `<span class="chip">${esc(nameOf(c))}${spec.places.length > 1 ? `<button data-${prefix}rmp="${c}" aria-label="Remove">×</button>` : ""}</span>`).join("") + `<small class="tip">Shift-click areas on the map to add them</small>`}</div></div>
       <div class="cp-row"><b>Years</b><span class="yrs"><input type="number" data-${prefix}from value="${spec.from}" min="1974" max="${TODAY.slice(0, 4)}"> to <input type="number" data-${prefix}to value="${spec.to}" min="1974" max="${TODAY.slice(0, 4)}"></span>
         ${spec.companies.length ? `<label class="ck"><input type="checkbox" data-${prefix}rebase ${spec.rebase ? "checked" : ""}>Rebase to 100</label><label class="ck"><input type="checkbox" data-${prefix}index ${spec.index ? "checked" : ""}>Add FTSE 100 index</label>` : ""}</div>`;
@@ -3192,7 +3267,7 @@
     if (anEl.hidden) return;
     const cfg = Object.assign({}, AN, { date: state.date }), methods = anMethods(cfg), okM = methods.filter(m => m[2]);
     if (!okM.some(m => m[0] === AN.method)) AN.method = okM.length && cfg.metrics.length ? okM[0][0] : null; cfg.method = AN.method;
-    const pers = PERSPECTIVES.filter(p => p.ready && p.id !== "analysis").map(p => { const ms = anMetricsAll().filter(m => m.p === p.id); return ms.length ? `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + ms.map(m => `<label style="--c:${p.hue}"><input type="checkbox" data-anm="${m.id}" ${AN.metrics.includes(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("") : ""; }).join("");
+    const pers = mtree("an", anMetricsAll().filter(m => m.p !== "analysis"), m => `<label style="--c:${PER[m.p].hue}"><input type="checkbox" data-anm="${m.id}" ${AN.metrics.includes(m.id) ? "checked" : ""}>${esc(m.label)}</label>`, { isOn: m => AN.metrics.includes(m.id) });
     const res = cfg.method ? anResult(cfg, Math.max(360, Math.min(900, anEl.offsetWidth - 330))) : null;
     anEl.innerHTML = `<div class="an-head"><b>Analyse</b><span class="cp-sub">How metrics relate across places, within an area, or over time. No need to pick places.</span>${helpBtn("methods", "Help: analysis methods")}<button class="x" data-anx aria-label="Close">×</button></div>
       <div class="an-body"><div class="an-side">
@@ -3538,22 +3613,31 @@
   const si = $("search"), hl = $("hits"), tickPill = $("schips");
   const names = Object.keys(P).filter(c => P[c].level !== "country"), rankL = { nation: 0, region: 1, zone: 2, council: 2, constituency: 2.5, ward: 3 };
   function searchNames(q) { return names.filter(c => nameOf(c).toLowerCase().includes(q) || c.toLowerCase() === q).sort((a, b) => (nameOf(a).toLowerCase() === q ? 0 : nameOf(a).toLowerCase().startsWith(q) ? 1 : 2) - (nameOf(b).toLowerCase() === q ? 0 : nameOf(b).toLowerCase().startsWith(q) ? 1 : 2) || rankL[P[a].level] - rankL[P[b].level]).slice(0, 10); }
-  let hits = [], cur = 0, picked = [], ddOpen = false;
+  let hits = [], cur = 0, picked = [], ddOpen = false, mhits = [];
+  // 0.7.1: the search box finds metrics as well as places (grouped Perspective ▸ Category, like the Perspectives panel)
+  function searchMetrics(q) {
+    if (q.length < 2) return [];
+    const ok = m => PER[m.p] && PER[m.p].ready && !PER[m.p].hidden && (!APP || m.p === APP.perspective);
+    return METRICS.filter(m => ok(m) && [m.label, m.group, PER[m.p].name, m.desc].some(t => t && t.toLowerCase().includes(q)))
+      .sort((a, b) => (a.label.toLowerCase().startsWith(q) ? 0 : a.label.toLowerCase().includes(q) ? 1 : 2) - (b.label.toLowerCase().startsWith(q) ? 0 : b.label.toLowerCase().includes(q) ? 1 : 2)).slice(0, 24);
+  }
+  const mrow = m => `<button type="button" class="mt-item${isMapped(m.id) ? " on" : ""}" data-sm="${m.id}" title="${esc(m.desc || "")}">${isMapped(m.id) ? "✓ " : ""}${esc(m.label)}</button>`;
   const subOf = c => (P[c].level === "ward" || P[c].level === "constituency") && P[c].parent && P[P[c].parent] ? " · " + esc(nameOf(P[c].parent)) : "";
   const noDataFor = c => { const ms = planMetrics(); return ms.length > 0 && ms.every(m => { try { const r = m.get(c, state.date); return !r || r.v == null || r.nm; } catch (e) { return true; } }); };
   const row = (c, i) => `<li data-c="${c}" class="${i === cur ? "on" : ""}${picked.includes(c) ? " ticked" : ""}" role="option" aria-selected="${picked.includes(c)}"><input type="checkbox" tabindex="-1" ${picked.includes(c) ? "checked" : ""} aria-label="Tick ${esc(nameOf(c))}"><span class="nm">${esc(nameOf(c))}</span><small>${LABEL[P[c].level]}${subOf(c)}</small>${noDataFor(c) ? `<em class="ndtag" title="None of the metrics on the map has a value for this place on this date">no data</em>` : ""}</li>`;
   function showHits() {
     const extra = picked.filter(c => !hits.includes(c));
     const body = (extra.length ? `<li class="sec">Ticked</li>${extra.map(c => row(c, -1)).join("")}${hits.length ? `<li class="sec">Results</li>` : ""}` : "") + hits.map(row).join("");
-    hl.innerHTML = body + `<li class="sfoot"><span>${picked.length ? `${picked.length} ticked` : "Tick places to show several together"}</span>${picked.length ? `<button type="button" class="btn" data-sclear>Clear</button>` : ""}<button type="button" class="btn primary" data-ssearch ${picked.length ? "" : "disabled"}>Search${picked.length > 1 ? ` (${picked.length})` : ""}</button></li>`;
-    hl.hidden = !ddOpen || (!hits.length && !picked.length);
+    const mbody = mhits.length ? `<li class="sec">Metrics <small>click to put one on the map</small></li><li class="smetrics">${mtree("search", mhits, mrow, { all: true, isOn: m => isMapped(m.id) })}</li>` : "";
+    hl.innerHTML = (hits.length || extra.length ? (mhits.length && !extra.length ? `<li class="sec">Places</li>` : "") + body : "") + mbody + `<li class="sfoot"><span>${picked.length ? `${picked.length} ticked` : "Tick places to show several together"}</span>${picked.length ? `<button type="button" class="btn" data-sclear>Clear</button>` : ""}<button type="button" class="btn primary" data-ssearch ${picked.length ? "" : "disabled"}>Search${picked.length > 1 ? ` (${picked.length})` : ""}</button></li>`;
+    hl.hidden = !ddOpen || (!hits.length && !picked.length && !mhits.length);
     tickPill.hidden = !picked.length || !hl.hidden; tickPill.innerHTML = `<button type="button" data-sopen>${picked.length} ticked</button>`;
   }
-  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); cur = 0; ddOpen = true; showHits(); });
+  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); mhits = searchMetrics(q); cur = 0; ddOpen = true; showHits(); });
   si.addEventListener("focus", () => { closeBrowse(); ddOpen = true; showHits(); });
   si.addEventListener("blur", () => { setTimeout(() => { if (document.activeElement !== si) { ddOpen = false; showHits(); } }, 120); });
   function toggleTick(c) { picked = picked.includes(c) ? picked.filter(x => x !== c) : picked.concat(c); showHits(); if (!browse.hidden) renderPFoot(); }
-  function jumpTo(code) { si.value = ""; hits = []; ddOpen = false; showHits(); si.blur(); closeBrowse(); focus(code); }
+  function jumpTo(code) { si.value = ""; hits = []; mhits = []; ddOpen = false; showHits(); si.blur(); closeBrowse(); focus(code); }
   function searchTicked() {
     const codes = picked.slice(); if (!codes.length) return;
     picked = []; si.value = ""; hits = []; ddOpen = false; showHits(); si.blur(); closeBrowse();
@@ -3571,6 +3655,7 @@
     const b = e.target.closest("button");
     if (b && b.hasAttribute("data-ssearch")) return searchTicked();
     if (b && b.hasAttribute("data-sclear")) { picked = []; showHits(); return; }
+    if (b && b.dataset.sm) { const id = b.dataset.sm; if (!isMapped(id)) toggleMapped(id); else toast(`${M[id].label} is already on the map.`); si.value = ""; hits = []; mhits = []; ddOpen = false; showHits(); si.blur(); return; }
     const li = e.target.closest("li[data-c]"); if (li) toggleTick(li.dataset.c);
   });
   tickPill.addEventListener("mousedown", e => { e.preventDefault(); si.focus(); });

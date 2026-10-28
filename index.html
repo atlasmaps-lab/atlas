@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atlas 0.6.1 · UK</title>
+<title>Atlas 0.7.1 · UK</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
 <style>
 /* Layout: the map is the whole window.
@@ -882,6 +882,40 @@ body.appmode #brand { border-top: 3px solid var(--app); }
 .ap-big { font-size: 20px; font-weight: 700; } .ap-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
 .seatbar { display: flex; height: 22px; border-radius: 4px; overflow: hidden; margin: 6px 0; } .seatbar i { display: block; height: 100%; }
 @media (max-width: 1240px) { .appbar { max-width: calc(100vw - 560px); } }
+/* ---------- 0.7.1 ---------- */
+.toast .btn { color: var(--ink, #1f2a2e); background: #fff; border-color: rgba(255,255,255,.7); font-weight: 600; margin-left: 8px; padding: 3px 10px; }
+.toast .btn:hover { background: #eef2f3; }
+/* resize from every edge (0.7.1): thin invisible strips along each side, squares at the corners */
+.redge { position: absolute; z-index: 4; touch-action: none; }
+.redge-n, .redge-s { left: 12px; right: 12px; height: 6px; cursor: ns-resize; } .redge-n { top: 0; } .redge-s { bottom: 0; }
+.redge-e, .redge-w { top: 12px; bottom: 12px; width: 6px; cursor: ew-resize; } .redge-e { right: 0; } .redge-w { left: 0; }
+.redge-ne, .redge-nw, .redge-se, .redge-sw { width: 10px; height: 10px; } .redge-ne { top: 0; right: 0; cursor: nesw-resize; } .redge-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.redge-nw { top: 0; left: 0; cursor: nwse-resize; } .redge-se { bottom: 0; right: 0; cursor: nwse-resize; }
+.fwin.shrunk > .redge, .wm.shrunk > .redge { display: none; }
+/* nested metric lists: Perspective ▸ Category ▸ metrics (0.7.1) */
+details.mt-p, details.mt-g { margin: 0; }
+details.mt-p > summary, details.mt-g > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 5px; user-select: none; }
+details.mt-p > summary::-webkit-details-marker, details.mt-g > summary::-webkit-details-marker { display: none; }
+details.mt-p > summary { font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--c, var(--ink)); }
+details.mt-p > summary::before, details.mt-g > summary::before { content: "▸"; font-size: 10px; width: 10px; color: var(--ink-3); transition: transform .12s; }
+details.mt-p[open] > summary::before, details.mt-g[open] > summary::before { transform: rotate(90deg); }
+details.mt-p > summary .ico { width: 15px; height: 15px; }
+details.mt-p > summary small, details.mt-g > summary small { margin-left: auto; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-3); font-size: 11px; }
+details.mt-p > summary:hover, details.mt-g > summary:hover { background: rgba(0,0,0,.04); }
+details.mt-g { margin-left: 12px; border-left: 2px solid color-mix(in srgb, var(--c, #888) 35%, transparent); }
+details.mt-g > summary { font-size: 12.5px; font-weight: 500; color: var(--ink-2); }
+details.mt-p.na > summary { opacity: .5; cursor: default; }
+.mt-ms { padding: 2px 0 4px 18px; display: flex; flex-direction: column; }
+.mt-ms > label { display: flex; gap: 6px; align-items: center; padding: 2px 0; font-size: 12.5px; }
+.mt-n { font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: 0; background: var(--c, #555); color: #fff; border-radius: 8px; padding: 0 6px; }
+.mt-pick { position: relative; display: inline-block; }
+.mt-pop { position: absolute; z-index: 50; left: 0; top: calc(100% + 4px); width: 320px; max-height: 360px; overflow: auto; background: var(--solid, #fff); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); padding: 6px; }
+.mt-item { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 4px 6px; border-radius: 4px; font: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer; }
+.mt-item:hover { background: color-mix(in srgb, var(--c, #888) 14%, transparent); }
+.mt-item.on { font-weight: 600; color: var(--c, var(--ink)); }
+#hits li.smetrics { display: block; padding: 2px 6px 6px; cursor: default; }
+#hits li.smetrics:hover { background: none; }
+#hits li.sec small { font-weight: 400; color: var(--ink-3); margin-left: 6px; text-transform: none; letter-spacing: 0; }
 </style>
 </head>
 <body>
@@ -890,10 +924,10 @@ body.appmode #brand { border-top: 3px solid var(--app); }
 <svg id="mind" aria-hidden="false"></svg>
 
 <div id="top">
-  <button class="brand" id="brand" aria-expanded="false" aria-controls="menu" title="Settings, comparison and export"><b>ATLAS<sup id="sup"></sup></b><span>0.6.1 · United Kingdom ▾</span></button>
+  <button class="brand" id="brand" aria-expanded="false" aria-controls="menu" title="Settings, comparison and export"><b>ATLAS<sup id="sup"></sup></b><span>0.7.1 · United Kingdom ▾</span></button>
   <div class="finder">
     <button id="browse-btn" aria-expanded="false" aria-controls="browse" title="Choose which boundaries show, or browse places"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span id="browse-lv">Areas</span> ▾</button>
-    <div class="search"><input id="search" type="search" placeholder="Find a place…" autocomplete="off" aria-label="Find a place"><span class="schips" id="schips" hidden></span><ul id="hits" hidden role="listbox" aria-multiselectable="true"></ul></div>
+    <div class="search"><input id="search" type="search" placeholder="Find a place or a metric…" autocomplete="off" aria-label="Find a place or a metric"><span class="schips" id="schips" hidden></span><ul id="hits" hidden role="listbox" aria-multiselectable="true"></ul></div>
     <div id="browse" hidden>
       <div class="lvpick" id="lvpick"></div>
       <div class="cats" id="cats"></div>
@@ -978,7 +1012,7 @@ body.appmode #brand { border-top: 3px solid var(--app); }
 
 <div id="keybox" hidden>
   <form id="keyform">
-    <h1>ATLAS 0.6.1</h1>
+    <h1>ATLAS 0.7.1</h1>
     <p>Paste your MapTiler API key to load the Ordnance Survey basemap. Get a free key at cloud.maptiler.com/account/keys.</p>
     <input id="key" type="text" placeholder="MapTiler API key" autocomplete="off">
     <p id="err" hidden></p>
