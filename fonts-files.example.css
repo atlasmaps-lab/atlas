@@ -1,0 +1,7 @@
+/* Copy this file to fonts/atlas-fonts.css, put your licensed Surveyor and Archer .woff2 files in fonts/ with these
+ * names, and set fontFiles: true in config.js. fonts/ is git-ignored. */
+@font-face { font-family: "Atlas Text"; font-weight: 300; font-style: normal; font-display: swap; src: url("SurveyorText-Light.woff2") format("woff2"); }
+@font-face { font-family: "Atlas Text"; font-weight: 300; font-style: italic; font-display: swap; src: url("SurveyorText-LightItalic.woff2") format("woff2"); }
+@font-face { font-family: "Atlas Text"; font-weight: 600; font-style: normal; font-display: swap; src: url("SurveyorText-Book.woff2") format("woff2"); }
+@font-face { font-family: "Atlas Head"; font-weight: 400; font-style: normal; font-display: swap; src: url("SurveyorText-Book.woff2") format("woff2"); }
+@font-face { font-family: "Atlas Digits"; font-weight: 100 900; font-style: normal; font-display: swap; src: url("ArcherNumeric-Bold.woff2") format("woff2"); unicode-range: U+0030-0039; }

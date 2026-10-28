@@ -1,8 +1,68 @@
-# Atlas 1.8 — United Kingdom
+# Atlas 0.7.1 — United Kingdom
+
+Atlas 0.7.1 is Ruben's round of fixes and features on top of 0.7 (Mo's numbering; the sections below call 0.7 "1.8"). The next version is 0.7.2.
+
+## What's new in 0.7.1
+
+**Apps open inside Atlas.** Opening Atlas Politics, Health, Markets, Economic or Social (ATLAS menu → Apps, or ↗ on a perspective) adds a tab inside Atlas, next to Map and Workspace, instead of a new browser tab. Ctrl- or Cmd-click still opens a browser tab. Each app keeps running while you switch tabs.
+
+**The app layout is a normal website header.**
+- ATLAS and the app's name sit on the left, one wide search box for places and metrics is in the middle, and ⋯ on the right holds everything else: Compare, Analyse, Tools, Workspace, Notes, Help, Export, map type and colours.
+- The app's own tools sit underneath like bookmarks (for Politics: Election, Seat explorer, Councils, Projection, News, Referendums, Protests, Swingometer). The one you have open is underlined.
+- The panel on the left lists only that app's categories, with no other perspectives.
+- Each tool you open sits a step below the last one, so the titles of the ones underneath stay visible.
+
+**Atlas Politics.**
+- **Election** colours every seat by its winner as soon as you click it. Click a row to open that seat's profile.
+- **Hex map** is now a way of viewing constituencies (Areas ▾ → Constituencies → View as: Real boundaries / Hex map). In hex view the whole map turns into hexagons: the basemap, coast, other boundaries and protest points step aside and come back when you leave. It switches off when you move to another boundary set.
+- **Seat explorer** opens on every seat, listed by region with winner and majority, and filters by nation, region, winner, majority (ultra-marginal to safe) or "projected to change hands". Each seat has:
+  - a written profile: where it is, who won and by how much, how long that party has held it, turnout, the projection, the Leave estimate, and how its Census 2021 profile differs from England or Wales;
+  - its results, MPs and official news, and links to focus it, chart it, compare it with its neighbours or read about it on Wikipedia.
+- **Councils** has:
+  - region and party filters;
+  - a written summary (who runs it and who leads it, how often control has changed, the latest seats);
+  - "the council in numbers": 15 figures beside its region's, each with *map* and *chart*;
+  - actions: focus, show its wards, compare with the region's councils, analyse councils, send to workspace;
+  - its news.
+- **Projection.** Atlas's own projection from the polling average: the last 21 days of polls (`data/polls.js`, from Wikipedia's polling table) applied to every seat by uniform swing. It shows the average against 2024, projected seats, the seats projected to change hands and the polls used. Every seat card also shows its projection, labelled as a simple model.
+- **News.** Official sources only, refreshed daily:
+  - GOV.UK news stories, written ministerial statements and bills.
+  - Keyword rules tag each item with the places, parties and topics it names. Tagged places are clickable, and the news shows in seat and council profiles too.
+  - `pipeline/fetch_news.py`, scheduled by `.github/workflows/news.yml`. Newspapers aren't scraped: their terms don't allow republishing.
+- **Swingometer** starts with a plain explanation of what it is, how Atlas does it and why it's only a rough guide. "Use the polling average" fills in the latest polls.
+
+**Atlas Health** opens on women's life expectancy by council (no more empty map). It has three panels:
+- a place profile: health figures for the place you click, beside England, with its rank and a trend;
+- rankings: best and worst councils and the gap between them;
+- quick buttons for Census health by ward and constituency.
+
+**Everywhere.**
+- Every metric list (Compare, Export, Analyse, the chart's "+ add a metric") is Perspective ▸ Category ▸ metrics, as dropdowns, like the Perspectives panel. Open or closed state is remembered.
+- The search box finds metrics as well as places: click one to put it on the map.
+- The chart tool and Analyse take places by search: "Add any place…" in the chart, and "Search for places to analyse…" in Analyse ("places I choose"), as well as Shift-click.
+- Windows, the key and the time bar resize from every edge and corner, not just the bottom right.
+- Measure: drag any corner of a shape to reshape it; dragging the inside still moves it at true size.
+- The Undo button in messages is readable. It used to be white on white.
+- **Colours:**
+  - Tools → Map colours sets land, sea and water, and boundary lines.
+  - The square next to a metric in the key sets the colour that metric is drawn in ("reset" goes back).
+- **Protests:** clicking a numbered group, or points too close to tell apart, lists the protests there (name, date, crowd, cause) to pick from, with "Zoom in" to spread a group out.
+- London's financial districts and head offices only show in Atlas Markets, or in Multi while a Markets metric is on the map, so they no longer cover central London.
+- The app shows 0.7.1.
+- The phone layout is still to come.
+
+**Type.** Text is set in Surveyor Text Light, and headers and titles in Surveyor Text Book, in capitals and bold. Every digit is Archer Numeric Bold, everywhere. Both are Hoefler&Co fonts (typography.com) and need a licence, so they aren't in this public repository. Atlas uses them wherever it can get them:
+1. installed on the computer;
+2. licensed web font files in `fonts/` (see `fonts-files.example.css`, then set `fontFiles: true` in `config.js`);
+3. a Hoefler&Co Cloud.typography kit (put its CSS address in `fontKitCss` in `config.js`). This is the way to get them on the public website.
+
+Until then the free stand-ins are Newsreader (text and headers) and Zilla Slab Bold (digits). Map labels drawn by the basemap keep the basemap's own fonts. Everything is in `fonts.css`.
+
+**Rebuilding the new data:** `python3 pipeline/build_polls.py` (add new polls to `pipeline/sources/polls_wikipedia.csv` first) and `python3 pipeline/fetch_news.py`.
+
+## What's new in 1.8 (Mo's 0.7)
 
 Atlas 1.8 makes Atlas easier to use and to trust: windows that stay where you can see them, a time bar that follows the data, nothing clickable without data behind it, protests checked to be in the UK, tables and charts made straight from Compare, help behind small ⓘ links, a calmer first screen, and perspectives that open as their own apps. Built in the GitHub repository, one branch per phase (`mo/1.8-windows` … `mo/1.8-perspective-apps`).
-
-## What's new in 1.8
 
 **Windows.** One window manager (`windows.js`) runs every floating window: charts, Compare, Export, Analyse, protest and info cards, lists and app panels.
 - The window you opened or clicked last is on top. A window opened from another (Analyse from Compare) sits above it, offset, with a brief highlight and a "← Back to Compare" link; the parent stays open.

@@ -17,7 +17,7 @@
  */
 (function () {
   "use strict";
-  const MARGIN = 16, TOP = 56, Z0 = 100;
+  const MARGIN = 16, Z0 = 100; let TOP = 56;
   const reg = new Map();   // element → its record
   let stack = [];          // open windows, bottom to top
   let seq = 0;
@@ -48,6 +48,23 @@
   const save = rec => { if (rec.key) store.set(rec.key, rec.st); };
   function changed(rec) { clearTimeout(rec.t); rec.t = setTimeout(() => { if (!rec.el.hidden && rec.onResize) rec.onResize(); }, 150); }
 
+  // 0.7.1: resize from every edge and corner, not only the bottom-right grip. edges(el, { start, move(dx, dy, dir), end })
+  // adds eight thin invisible handles; dir is one of n s e w ne nw se sw.
+  const DIRS = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
+  function edges(el, h) {
+    return DIRS.map(d => {
+      const g = document.createElement("div"); g.className = "redge redge-" + d; g.dataset.dir = d; el.appendChild(g);
+      g.addEventListener("pointerdown", e => {
+        if (e.button) return; e.preventDefault(); e.stopPropagation(); g.setPointerCapture(e.pointerId); document.body.classList.add("resizing");
+        const x0 = e.clientX, y0 = e.clientY; if (h.start) h.start(d);
+        const mv = ev => h.move(ev.clientX - x0, ev.clientY - y0, d);
+        const up = () => { g.removeEventListener("pointermove", mv); document.body.classList.remove("resizing"); if (h.end) h.end(d); };
+        g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up, { once: true }); g.addEventListener("pointercancel", up, { once: true });
+      });
+      return g;
+    });
+  }
+
   function register(el, o) {
     o = o || {};
     const rec = { el, type: o.type || "win" + (++seq), title: o.title || "", handle: o.handle || ".wm-head", min: Object.assign({ w: 320, h: 200 }, o.min || {}),
@@ -74,6 +91,19 @@
       const mv = ev => { rec.st = fit(rec, { x: rec.st.x, y: rec.st.y, w: w0 + ev.clientX - x0, h: h0 + ev.clientY - y0 }); apply(rec); };
       const up = () => { g.removeEventListener("pointermove", mv); document.body.classList.remove("resizing"); save(rec); changed(rec); };
       g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up, { once: true }); g.addEventListener("pointercancel", up, { once: true });
+    });
+    let s0 = null;
+    rec.edges = edges(el, {
+      start() { if (rec.maxed) { rec.maxed = false; el.classList.remove("maxed"); rec.st = fit(rec, fillRect()); } s0 = Object.assign({}, rec.st); },
+      move(dx, dy, d) {
+        const mw = Math.min(rec.min.w, maxW()), mh = Math.min(rec.min.h, maxH()); let { x, y, w, h } = s0;
+        if (d.includes("e")) w = s0.w + dx;
+        if (d.includes("s")) h = s0.h + dy;
+        if (d.includes("w")) { w = Math.max(mw, s0.w - dx); x = s0.x + s0.w - w; }
+        if (d.includes("n")) { h = Math.max(mh, s0.h - dy); y = Math.max(TOP, s0.y + s0.h - h); h = s0.y + s0.h - y; }
+        rec.st = fit(rec, { x, y, w, h }); apply(rec);
+      },
+      end() { save(rec); changed(rec); },
     });
     g.addEventListener("dblclick", () => { rec.maxed = false; el.classList.remove("maxed"); rec.st = fit(rec, rec.def ? rec.def() : defaultRect(rec)); apply(rec); save(rec); changed(rec); });
     // shrink, fill screen, back to the parent
@@ -113,7 +143,7 @@
     const old = h.querySelector(".wm-back"), want = rec.parent && isOpen(rec.parent);
     if (old && !want) old.remove();
     if (want && !old) h.insertAdjacentHTML("afterbegin", `<button type="button" class="wm-back" data-wmback title="Bring ${esc(reg.get(rec.parent).title)} back to the front">← Back to ${esc(reg.get(rec.parent).title)}</button>`);
-    if (el.lastElementChild !== rec.grip) el.appendChild(rec.grip);
+    if (el.lastElementChild !== rec.grip || (rec.edges && !rec.edges[0].isConnected)) { (rec.edges || []).forEach(g => el.appendChild(g)); el.appendChild(rec.grip); }
   }
 
   function isOpen(el) { return !!el && !el.hidden && stack.includes(el); }
@@ -152,5 +182,5 @@
   function closeTop() { const el = top(); if (!el) return false; reg.get(el).close(); return true; }
   window.addEventListener("resize", () => reg.forEach(rec => { rec.st = fit(rec, rec.st); apply(rec); if (!rec.el.hidden) changed(rec); }));
 
-  window.AtlasWM = { register, make, open, close, front, top, closeTop, isOpen, decorate, pulse, rectOf: el => reg.has(el) ? Object.assign({}, reg.get(el).st) : null, stack: () => stack.slice(), MARGIN, TOP };
+  window.AtlasWM = { TOPNOW: () => TOP, place: (el, r) => { const rec = reg.get(el); if (!rec) return; rec.maxed = false; el.classList.remove("maxed"); rec.st = fit(rec, Object.assign({}, rec.st, r)); apply(rec); save(rec); changed(rec); }, setTop: t => { TOP = t; reg.forEach(rec => { rec.st = fit(rec, rec.st); apply(rec); }); }, edges, register, make, open, close, front, top, closeTop, isOpen, decorate, pulse, rectOf: el => reg.has(el) ? Object.assign({}, reg.get(el).st) : null, stack: () => stack.slice(), MARGIN, TOP };
 })();

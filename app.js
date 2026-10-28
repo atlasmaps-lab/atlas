@@ -196,6 +196,54 @@
     markets: '<path d="M4 8h16l-1.6 10.5a1.6 1.6 0 0 1-1.6 1.5H7.2a1.6 1.6 0 0 1-1.6-1.5z"/><path d="M8.5 8 10 4M15.5 8 14 4M9 12.5v4M12 12.5v4M15 12.5v4"/>',
   };
   const svgIcon = (id, cls) => `<svg class="ico${cls ? " " + cls : ""}" viewBox="0 0 24 24" aria-hidden="true">${ICON[id] || ""}</svg>`;
+  // 0.7.1: every metric list (Compare, Export, Analyse, chart pickers, search) is Perspective ▸ Category ▸ metrics, as
+  // dropdowns, the same way as the Perspectives panel. Open/closed state is remembered so a re-render doesn't fold them.
+  // mtree(key, metrics, row(m) → html, { isOn(m), extra(p), all }) → html
+  const MT_OPEN = new Set((() => { try { return JSON.parse(localStorage.getItem("atlas-071-mt-open") || "[]"); } catch (e) { return []; } })());
+  function mtree(key, ms, row, o) {
+    o = o || {}; const isOn = o.isOn || (() => false);
+    return PERSPECTIVES.filter(p => !p.hidden || ms.some(m => m.p === p.id)).map(p => {
+      const pm = ms.filter(m => m.p === p.id);
+      if (!pm.length) return o.empty ? o.empty(p) : "";
+      const pk = key + "|" + p.id, pOn = pm.filter(isOn).length, groups = [...new Set(pm.map(m => m.group || ""))];
+      const inner = groups.length > 1 ? groups.map(g => {
+        const gm = pm.filter(m => (m.group || "") === g), gk = pk + "|" + g, n = gm.filter(isOn).length;
+        return `<details class="mt-g" data-mt="${esc(gk)}" ${MT_OPEN.has(gk) || o.all ? "open" : ""}><summary><span>${esc(g || "Other")}</span>${n ? `<i class="mt-n">${n}</i>` : ""}<small>${gm.length}</small></summary><div class="mt-ms">${gm.map(row).join("")}</div></details>`;
+      }).join("") : `<div class="mt-ms">${pm.map(row).join("")}</div>`;
+      return `<details class="mt-p" data-mt="${esc(pk)}" style="--c:${p.hue}" ${MT_OPEN.has(pk) || o.all ? "open" : ""}><summary>${svgIcon(p.id)}<span>${esc(p.name)}</span>${pOn ? `<i class="mt-n">${pOn}</i>` : ""}<small>${pm.length}</small></summary>${o.extra ? o.extra(p) : ""}${inner}</details>`;
+    }).join("");
+  }
+  document.addEventListener("toggle", e => {
+    const d = e.target; if (!d.matches || !d.matches("details[data-mt]")) return;
+    d.open ? MT_OPEN.add(d.dataset.mt) : MT_OPEN.delete(d.dataset.mt);
+    try { localStorage.setItem("atlas-071-mt-open", JSON.stringify([...MT_OPEN].slice(-200))); } catch (er) { /* not remembered */ }
+  }, true);
+  // 0.7.1: a place-search box for any tool: <input data-psq="key"> shows matching places; choosing one calls PS_ADD[key](code)
+  const PS_ADD = {};
+  const placeSearch = (key, ph) => `<span class="psrch"><input data-psq="${key}" placeholder="${esc(ph || "Add a place…")}" autocomplete="off" aria-label="${esc(ph || "Add a place")}"><ul class="ps-hits" hidden></ul></span>`;
+  document.addEventListener("input", e => {
+    const i = e.target.closest && e.target.closest("[data-psq]"); if (!i) return;
+    const q = i.value.trim().toLowerCase(), ul = i.parentNode.querySelector(".ps-hits"), hs = q.length < 2 ? [] : searchNames(q);
+    ul.innerHTML = hs.map(c => `<li data-psadd="${c}" data-psfor="${i.dataset.psq}"><span>${esc(nameOf(c))}</span><small>${esc(LABEL[P[c].level] || "")}</small></li>`).join(""); ul.hidden = !hs.length;
+  });
+  document.addEventListener("mousedown", e => {
+    const li = e.target.closest && e.target.closest("[data-psadd]");
+    if (!li) { document.querySelectorAll(".ps-hits:not([hidden])").forEach(u => { if (!u.parentNode.contains(e.target)) u.hidden = true; }); return; }
+    e.preventDefault(); const f = PS_ADD[li.dataset.psfor]; li.parentNode.hidden = true; const inp = li.closest(".psrch").querySelector("input"); if (inp) inp.value = "";
+    if (f) f(li.dataset.psadd);
+  }, true);
+  // a "+ add a metric" picker: a button that drops down the same tree; choosing sets the hidden <select> and fires change
+  const mtPicker = (attr, ms, label) => `<span class="mt-pick"><button type="button" class="btn mt-pick-btn">${esc(label || "+ add a metric…")} ▾</button><div class="mt-pop" hidden>${mtree("pick", ms, m => `<button type="button" class="mt-item" data-mtv="${m.id}">${esc(m.label)}</button>`)}</div><select ${attr} hidden aria-hidden="true"><option value=""></option>${ms.map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join("")}</select></span>`;
+  document.addEventListener("click", e => {
+    const t = e.target.closest(".mt-pick-btn, [data-mtv]");
+    document.querySelectorAll(".mt-pop:not([hidden])").forEach(pop => { if (!pop.parentNode.contains(e.target)) pop.hidden = true; });
+    if (!t) return;
+    e.stopPropagation(); e.preventDefault();
+    const wrap = t.closest(".mt-pick");
+    if (t.classList.contains("mt-pick-btn")) { const pop = wrap.querySelector(".mt-pop"); pop.hidden = !pop.hidden; return; }
+    const sel = wrap.querySelector("select"); sel.value = t.dataset.mtv; wrap.querySelector(".mt-pop").hidden = true;
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+  }, true);
   const PERSPECTIVES = [
     { id: "political", name: "Political", hue: "#7b4fa6", ready: true, ramp: ["#efe7f6", "#d2bde6", "#ad8fd0", "#8560b5", "#5b3a8c"], desc: "Who governs each area and how that changed since 1974, plus notable protests (test case)." },
     { id: "economic", name: "Economic", hue: "#13876b", ready: true, ramp: ["#e3f4ee", "#b3e0cf", "#73c2a6", "#33997b", "#0f6b52"], desc: "Output and income, every year since 1998." },
@@ -493,6 +541,37 @@
     get(code, d) { const r = resultFor(code, d); if (!r || !r.electorate) return r ? { v: null, text: "Electorate not recorded" } : null; const per = r.agg ? r.electorate / r.n : r.electorate;
       const quota = r.e.day >= "2024-07-04" ? QUOTA_2023 : meanElectorate(r.agg ? r.day : (geAt(r.e.day) || r.e.day)); if (!quota) return null; const v = 100 * (per / quota - 1);
       return { v, text: `${fmtInt(per)} electors${r.agg ? " per seat" : ""} (${this.fmt(v)} against ${r.e.day >= "2024-07-04" ? "the 2023 quota of 73,393" : "the UK mean of " + fmtInt(quota)})`, yr: elWhen(r) }; } });
+  // ---------- 0.7.1: seat projection from the polling average (uniform national swing) ----------
+  // Every seat's 2024 shares move by the change between the 2024 Great Britain result and the latest polling average
+  // (data/polls.js); the largest share wins. Northern Ireland isn't polled with GB, so it stays as it was. A simple model.
+  const POLLS = window.ATLAS_POLLS || null;
+  let PROJ = null;
+  function projection() {
+    if (PROJ || !POLLS || !GE_DAYS.length) return PROJ;
+    const day = GE_DAYS[GE_DAYS.length - 1], gb = ["E92000001", "S92000003", "W92000004"].map(c => resultFor(c, day)).filter(Boolean);
+    const tot = gb.reduce((a, r) => a + r.t.total, 0), base = {}; gb.forEach(r => Object.entries(r.t.by).forEach(([p, v]) => { base[p] = (base[p] || 0) + v / tot; }));
+    const delta = {}; Object.entries(POLLS.avg).forEach(([p, v]) => { delta[p] = v / 100 - (base[p] || 0); });
+    const seat = new Map();
+    for (const c in RES) {
+      const L = RES[c]; const r = L && L.length ? decode(L[L.length - 1]) : null; if (!r || r.e.kind !== "general" || r.e.day !== day) continue;
+      const sh = sharesOf(r), was = winnerOf(r), a = AREA[c] || [];
+      if (a[0] !== "N92000002" && !r.spk) Object.keys(delta).forEach(p => { if (sh[p] != null || delta[p] > 0) sh[p] = Math.max(0, (sh[p] || 0) + delta[p]); });
+      const order = Object.keys(sh).sort((x, y) => sh[y] - sh[x]), w = r.spk ? "spk" : order[0];
+      seat.set(c, { w, was, sh, order, margin: order[1] ? sh[order[0]] - sh[order[1]] : null, ni: a[0] === "N92000002" });
+    }
+    return (PROJ = { day, base, delta, seat });
+  }
+  const projText = (x, short) => `${partyName(x.w)}${x.w === x.was ? " hold" : ` gain from ${partyName(x.was)}`}${short ? "" : ` · ${x.order.slice(0, 3).map(p => `${partyName(p)} ${pct1(100 * x.sh[p])}`).join(", ")}`}${x.ni ? " (Northern Ireland: as in 2024)" : ""}`;
+  if (EL && POLLS) {
+    wm({ id: "proj_winner", label: "Projected winner (polling average)", scale: "nominal", nature: "category", temporal: "static", est: true,
+      desc: `Atlas's projection from the polling average up to ${POLLS.latest} (${POLLS.n} polls), by uniform national swing from 2024`,
+      how: "Each seat's 2024 share for a party + (polling average − the party's 2024 Great Britain share), floored at zero; the largest share wins. Northern Ireland unchanged. Region, nation, UK: projected seats", ...partyCat,
+      get(code) { const P0 = projection(); if (!P0) return null; const lv = P[code] && P[code].level;
+        if (lv === "constituency") { const x = P0.seat.get(code); return x ? { v: x.w, text: projText(x), yr: "polls to " + POLLS.latest, est: true, estWhy: "A projection, not a result" } : null; }
+        const n = {}; let tot = 0; P0.seat.forEach((x, c) => { const a = AREA[c] || []; if (lv === "nation" && a[0] !== code) return; if (lv === "region" && a[1] !== code) return; if (lv !== "country" && lv !== "nation" && lv !== "region") return; n[x.w] = (n[x.w] || 0) + 1; tot++; });
+        if (!tot) return null; const top = Object.keys(n).sort((a, b) => n[b] - n[a])[0];
+        return { v: top, text: `${partyName(top)}: ${n[top]} of ${tot} seats (projected)`, counts: n, tot, yr: "polls to " + POLLS.latest, est: true }; } });
+  }
   // political: referendums (1.7)
   const G5 = "Referendums", REF = EL ? EL.ref || {} : {}, EU_DAY = "2016-06-23";
   function euAt(code) { // a council's row, or votes summed over the councils in a region, nation or the UK (never averaged)
@@ -693,7 +772,7 @@
   const PS = (() => {
     const s = store.get("atlas-15-persp" + (APP_ID ? "-" + APP_ID : ""), APP_ID ? { mapped: {} } : {}), o = JSON.parse(JSON.stringify(DEF_PS));
     if (APP_ID) Object.keys(o.mapped).forEach(p => { o.mapped[p] = []; });   // an app starts from its own layout (init), not Multi's
-    ["on", "active", "card", "prefs", "biv", "pick"].forEach(k => Object.assign(o[k], s[k] || {}));
+    ["on", "active", "card", "prefs", "biv", "pick"].forEach(k => Object.assign(o[k], s[k] || {})); o.mcol = Object.assign({}, s.mcol || {});
     Object.entries(s.mapped || {}).forEach(([p, v]) => { if (PER[p]) o.mapped[p] = (Array.isArray(v) ? v : [v]).filter(id => M[id]); });
     if (Array.isArray(s.order)) o.order = s.order.filter(p => PER[p]);
     ["step", "win", "detail", "hot", "hatch", "hex"].forEach(k => { if (s[k] != null) o[k] = s[k]; });
@@ -781,6 +860,7 @@
     LEVELS.forEach(l => setP(l + "-sel", "line-width", ["case", ["boolean", ["feature-state", "sel"], false], 2.8 * Math.max(1, look.thick * .8), ["boolean", ["feature-state", "hover"], false], 2 * Math.max(1, look.thick * .8), 0]));
     if (!plain) { try { applyType(first); } catch (e) {} }
     syncMenu(); store.set("atlas-uk-look", look);
+    try { applyMapColours(); } catch (e) { /* the style isn't ready yet */ }
   }
   function rememberOpacity(id, prop) { if (!(id + prop in origOpacity)) { const v = map.getPaintProperty(id, prop); origOpacity[id + prop] = v == null ? 1 : v; } return origOpacity[id + prop]; }
   function applyType() {
@@ -854,6 +934,7 @@
     for (let o = -s; o <= s; o += 8) { x.moveTo(o, s); x.lineTo(o + s, 0); } x.stroke();
     return x.getImageData(0, 0, s, s);
   }
+  map.once("idle", () => { try { applyMapColours(); } catch (e) {} });
   map.on("load", () => {
     before = (map.getStyle().layers.find(l => l.type === "symbol") || {}).id;
     ["nation", "region", "council", "constituency"].forEach(l => {
@@ -938,7 +1019,7 @@
     map.addLayer({ id: "group-edge", type: "line", source: "group", paint: { "line-color": "#1f2a2e", "line-width": 2.4, "line-opacity": 0.9 } });
     map.addLayer({ id: "tool-fill", type: "fill", source: "tool", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#3b78b5", "fill-opacity": 0.12 } });
     map.addLayer({ id: "tool-line", type: "line", source: "tool", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": "#1f2a2e", "line-width": 2, "line-dasharray": [2, 1.5] } });
-    map.addLayer({ id: "tool-pts", type: "circle", source: "tool", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4, "circle-color": "#ffffff", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2 } });
+    map.addLayer({ id: "tool-pts", type: "circle", source: "tool", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5.5, "circle-color": "#ffffff", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2 } });
     applyLook(true); applyLevels(); applyTools();
     const at = document.querySelector(".maplibregl-ctrl-attrib"); if (at) at.classList.remove("maplibregl-compact-show"); // credits folded into the ⓘ button
     map.on("moveend", loadVisibleWards);
@@ -952,6 +1033,29 @@
     map.getSource("pt-ward").setData({ type: "FeatureCollection", features: wardPoints });
     map.once("idle", () => { state.sel.forEach(t => t.level === "ward" && setFS(t, { sel: true })); paintLevel("ward"); });
   };
+  // ---------- 0.7.1: the hex map is a whole-map view, not an overlay ----------
+  // In hex mode only the hexagons (and the tools) are drawn: the basemap, coastline, other boundaries and anything placed
+  // by real coordinates (protests, head offices) step aside, and come back exactly as they were when you leave.
+  const HEX_KEEP = /constituency|^focus|^group|^tool|^grid|^lasso|^selbox|^sel-box/;
+  let hexOnNow = false; const hexWant = {};
+  const _setLayout = map.setLayoutProperty.bind(map);
+  map.setLayoutProperty = (id, prop, v, o) => {
+    if (prop === "visibility" && hexOnNow && !HEX_KEEP.test(id)) { hexWant[id] = v; return _setLayout(id, prop, "none", o); }
+    return _setLayout(id, prop, v, o);
+  };
+  function hexScene(on) {
+    if (on === hexOnNow || !map.getStyle()) return;
+    const layers = map.getStyle().layers;
+    if (on) {
+      layers.forEach(l => { if (HEX_KEEP.test(l.id) || l.type === "background") return; hexWant[l.id] = map.getLayoutProperty(l.id, "visibility") || "visible"; _setLayout(l.id, "visibility", "none"); });
+      const bg = layers.find(l => l.type === "background"); if (bg) { hexWant.__bg = [bg.id, map.getPaintProperty(bg.id, "background-color")]; map.setPaintProperty(bg.id, "background-color", "#eef1f2"); }
+      hexOnNow = true;
+    } else {
+      hexOnNow = false;
+      Object.entries(hexWant).forEach(([id, v]) => { if (id === "__bg") { if (map.getLayer(v[0])) map.setPaintProperty(v[0], "background-color", v[1]); } else if (map.getLayer(id)) _setLayout(id, "visibility", v); });
+      Object.keys(hexWant).forEach(k => delete hexWant[k]);
+    }
+  }
   // ---------- constituencies over time ----------
   // The constituency layer shows the boundaries in force on the date: 2024 seats from 4 July 2024; the 2010 set from 2010
   // (Scotland's from 2005); the 1997 set before that. Older sets load the first time they're needed. Before 1997: none.
@@ -975,11 +1079,11 @@
     if (missing.length) { missing.forEach(k => { if (pconLoading.has(k)) return; pconLoading.add(k); const sc = document.createElement("script"); sc.src = `data/constituencies_${k}.js`; sc.onerror = () => { pconLoading.delete(k); toast("Couldn't load the older constituency boundaries."); }; document.body.appendChild(sc); }); toast("Loading the constituency boundaries for that date…"); return; }
     const real = sig === "2024" ? PSETS["2024"].features : need.flatMap(k => PSETS[k].features).filter(f => activeAt(f.properties.code, state.date));
     // 1.7: hex map (equal area): the same seats and codes as hexagons, from data/hex_constituencies.js (2024 and 2010 sets only)
-    const HX = window.ATLAS_HEX, hexOn = !!PS.hex && HX && HX[sig === "2010" ? "2010" : sig];
+    const HX = window.ATLAS_HEX, hexOn = !!PS.hex && pconInUse() && HX && HX[sig === "2010" ? "2010" : sig];
     if (PS.hex && !hexOn && !syncPcon.warned) { syncPcon.warned = true; toast("There's no hex map for the 1997 boundaries: showing the real ones."); }
     const feats = hexOn ? HX[sig === "2010" ? "2010" : sig].features.filter(f => activeAt(f.properties.code, state.date)) : real;
     G.pconReal = { type: "FeatureCollection", features: real }; G.constituencies = { type: "FeatureCollection", features: feats }; pconSig = sig;
-    document.body.classList.toggle("hexmode", !!hexOn);
+    document.body.classList.toggle("hexmode", !!hexOn); hexScene(!!hexOn);
     map.getSource("constituencies").setData(G.constituencies);
     map.getSource("pt-constituency").setData({ type: "FeatureCollection", features: feats.map(f => ({ type: "Feature", properties: { code: f.properties.code }, geometry: { type: "Point", coordinates: hexOn ? f.properties.pt : PT[f.properties.code] || repPoint(f.geometry) } })) });
     for (const k in paCache) delete paCache[k]; for (const k in qCache) delete qCache[k];
@@ -1058,11 +1162,34 @@
     for (const [id, mk] of CLM) if (!seen.has(id)) { mk.remove(); CLM.delete(id); }
   }
   map.on("render", () => { if (map.getSource("protests-cl") && map.getLayoutProperty("pr-pts", "visibility") === "visible" && !clusterMarkers.t) clusterMarkers.t = requestAnimationFrame(() => { clusterMarkers.t = null; clusterMarkers(); }); });
+  // 0.7.1: where protests overlap (a numbered group, or points too close to tell apart) a small list pops up: every
+  // protest by name, date, cause and crowd, so you can pick the one you want. "Zoom in" still spreads a group out.
+  const prPick = document.createElement("div"); prPick.id = "prpick"; prPick.hidden = true; document.body.appendChild(prPick);
+  const evDate = e => new Date(e.t0 * 864e5).toISOString().slice(0, 10);
+  function showProtestPicker(evs, pt, zoomTo) {
+    const uniq = [...new Set(evs)].map(i => [i, PR.events[i]]).filter(x => x[1]).sort((a, b) => b[1].t0 - a[1].t0);
+    if (uniq.length === 1 && !zoomTo) { openProtestCard(uniq[0][0]); return; }
+    prPick.innerHTML = `<div class="pp-head"><b>${uniq.length} protests here</b><span>${zoomTo ? `<button class="btn sm" data-ppzoom>Zoom in</button>` : ""}<button class="x" data-ppx aria-label="Close">×</button></span></div>
+      <ul>${uniq.slice(0, 80).map(([i, e]) => `<li data-ppe="${i}" title="Open its card"><i class="sw dot" style="background:${CAUSE_COL[CAUSES[e.c]] || "#999"}"></i><span class="pp-n">${esc(e.n)}</span><small>${esc(longDate(evDate(e)))}${e.mid ? " · " + esc(fmtBig(e.mid)) : ""} · ${esc(CAUSES[e.c] || "")}</small></li>`).join("")}</ul>
+      ${uniq.length > 80 ? `<p class="small">and ${uniq.length - 80} more: zoom in, or use the protest list in the key</p>` : ""}`;
+    prPick.hidden = false; prPick._zoom = zoomTo || null;
+    const r = map.getContainer().getBoundingClientRect(), x = r.left + pt.x, y = r.top + pt.y;
+    prPick.style.left = Math.min(window.innerWidth - 340, Math.max(8, x + 14)) + "px"; prPick.style.top = Math.min(window.innerHeight - 320, Math.max(60, y - 30)) + "px";
+  }
+  prPick.addEventListener("click", e => {
+    const li = e.target.closest("[data-ppe]"); if (li) { prPick.hidden = true; openProtestCard(+li.dataset.ppe); return; }
+    if (e.target.closest("[data-ppx]")) prPick.hidden = true;
+    if (e.target.closest("[data-ppzoom]") && prPick._zoom) { prPick.hidden = true; prPick._zoom(); }
+  });
+  map.on("movestart", () => { prPick.hidden = true; });
   function openCluster(id, at) {
-    const src = map.getSource("protests-cl");
-    Promise.resolve(src.getClusterExpansionZoom(id)).then(z => {
-      if (z <= 14 && z <= map.getMaxZoom()) { map.easeTo({ center: at, zoom: z + 0.2, duration: 600 }); return; }
-      return Promise.resolve(src.getClusterLeaves(id, 200, 0)).then(leaves => spiderfy(at, leaves.map(l => l.properties)));
+    const src = map.getSource("protests-cl"), pt = map.project(at);
+    Promise.resolve(src.getClusterLeaves(id, 400, 0)).then(leaves => {
+      const evs = leaves.map(l => l.properties.e);
+      return Promise.resolve(src.getClusterExpansionZoom(id)).then(z => {
+        const canZoom = z <= 14 && z <= map.getMaxZoom();
+        showProtestPicker(evs, pt, canZoom ? () => map.easeTo({ center: at, zoom: Math.min(map.getMaxZoom(), Math.max(z + 0.2, map.getZoom() + 1)), duration: 600 }) : null);
+      });
     }).catch(() => {});
   }
   // places that share exactly one point (many London events geocode to the same centre) fan out into a ring, joined to the centre
@@ -1130,7 +1257,7 @@
       const fills = !!(PL.hue || PL.grid || PL.shade || PL.diverge);
       if (PL.hue) { if (hv != null) { present.add(hv); const b = PL.hue.colour(hv); fc = PL.shade ? (k.sh != null ? shadeOf(b, k.sh, 5) : mix(b, "#ffffff", 0.88)) : b; } }
       else if (PL.grid) { if (k.sh != null && k.gr != null) fc = grid[k.gr][k.sh]; }
-      else if (PL.shade) { if (k.sh != null) fc = PER[PL.shade.p].ramp[k.sh]; }
+      else if (PL.shade) { if (k.sh != null) fc = rampOf(PL.shade)[k.sh]; }
       else if (PL.diverge) { if (k.dv != null) fc = DIV[k.dv]; }
       const nm = fills && fillMs.every(m => { const r = rOf(m, c); return r && r.nm; });   // not meaningful here: leave it unfilled, not "no data"
       if (nm) present.add("__nm");
@@ -1150,7 +1277,7 @@
   function repaint() {
     curPlan = EN.plan(planMetrics(), PS.prefs); syncRange();
     if (state.iso && state.iso.ch !== "nd" && !curPlan[state.iso.ch === "vbl" ? "hue" : state.iso.ch]) state.iso = null;
-    if (map.getSource && map.getSource("councils")) { LEVELS.forEach(paintLevel); syncProtestLayer(); syncCompanyLayer(); }
+    if (map.getSource && map.getSource("councils")) { LEVELS.forEach(paintLevel); syncProtestLayer(); syncCompanyLayer(); syncZones(); }
     renderLegend(); renderDock(); renderSup(); renderTNote(); syncFocusColour();
     if (pmOpen) renderPMenu();
     if (state.focus) { renderMind(); refreshPinned(); }
@@ -1168,7 +1295,10 @@
     if (m.pick === "pair") { const cur = pickOf(m.id); return `<select class="as" data-pick="${m.id}" aria-label="Pair of parties">${PAIRS.map(([k, l]) => `<option value="${k}" ${k === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`; }
     return "";
   }
-  const lhead = (m, extra) => `<h5 style="--c:${PER[m.p].hue}">${svgIcon(m.p)}<span>${esc(m.label)}</span>${infoBtn(m.id)}${picker(m)}${chooser(m)}${extra || ""}<button class="lrm" data-lrm="${m.id}" title="Take ${esc(m.label)} off the map" aria-label="Remove ${esc(m.label)}">×</button></h5>`;
+  // 0.7.1: choose the colour a metric is drawn in, from the key (shades are worked out from it); "reset" goes back
+  const rampOf = m => { const c = PS.mcol && PS.mcol[m.id]; return c ? [mix(c, "#ffffff", 0.86), mix(c, "#ffffff", 0.6), mix(c, "#ffffff", 0.32), c, mix(c, "#000000", 0.32)] : PER[m.p].ramp; };
+  const colPick = m => EN.isNum(m) ? `<label class="mcol" title="Choose the colour ${esc(m.label)} is drawn in"><input type="color" data-mcol="${m.id}" value="${(PS.mcol && PS.mcol[m.id]) || PER[m.p].ramp[3]}"><span class="mcol-sw" style="background:${(PS.mcol && PS.mcol[m.id]) || PER[m.p].ramp[3]}"></span></label>${PS.mcol && PS.mcol[m.id] ? `<button class="lnk" data-mcolreset="${m.id}" title="Back to the perspective's colour">reset</button>` : ""}` : "";
+  const lhead = (m, extra) => `<h5 style="--c:${PER[m.p].hue}">${svgIcon(m.p)}<span>${esc(m.label)}</span>${infoBtn(m.id)}${colPick(m)}${picker(m)}${chooser(m)}${extra || ""}<button class="lrm" data-lrm="${m.id}" title="Take ${esc(m.label)} off the map" aria-label="Remove ${esc(m.label)}">×</button></h5>`;
   const isoAttr = (ch, v) => { const on = state.iso && state.iso.ch === ch && JSON.stringify(state.iso.v) === JSON.stringify(v); return `data-iso='${esc(JSON.stringify({ ch, v }))}' class="iso${on ? " on" : ""}"`; };
   function ticks(m, level, n) {
     const b = breaksFor(m, level, n); const f = m.fmt || String;
@@ -1200,7 +1330,7 @@
         <label>Grid <select data-bivn><option value="3" ${n === 3 ? "selected" : ""}>3 × 3</option><option value="4" ${n === 4 ? "selected" : ""}>4 × 4</option></select></label>
         <button class="btn sm" data-bivswap title="Put ${esc(PL.grid.label)} across and ${esc(PL.shade.label)} up">Swap axes</button>
         <span class="note">Corner colours: both low (light), both high (dark). Hover or click a square.</span></div></div></div>`);
-    } else if (PL.shade && !PL.hue) parts.push(`<div class="lg">${lhead(PL.shade)}<div class="ramp">${PER[PL.shade.p].ramp.map((c, i) => `<i ${isoAttr("shade", i)} style="background:${c}"></i>`).join("")}</div>${ticks(PL.shade, level, 5)}</div>`);
+    } else if (PL.shade && !PL.hue) parts.push(`<div class="lg">${lhead(PL.shade)}<div class="ramp">${rampOf(PL.shade).map((c, i) => `<i ${isoAttr("shade", i)} style="background:${c}"></i>`).join("")}</div>${ticks(PL.shade, level, 5)}</div>`);
     if (PL.diverge) parts.push(`<div class="lg">${lhead(PL.diverge)}<div class="ramp">${DIV.map((c, i) => `<i ${isoAttr("diverge", i)} style="background:${c}"></i>`).join("")}</div>${ticks(PL.diverge, level, 5)}<div class="note">Red below ${esc(PL.diverge.fmt(PL.diverge.mid))}, blue above.</div></div>`);
     if (PL.badge) { const ks = cats(PL.badge, LAST.presentB[level]); parts.push(`<div class="lg">${lhead(PL.badge)}<div class="cats2">${ks.map(k => `<span ${isoAttr("badge", k)}><i class="sw dot" style="background:${PL.badge.colour(k)}"></i>${esc(PL.badge.catName(k))}</span>`).join("")}</div><div class="note">Marker at each area's centre. Where it differs from the fill, the two disagree.</div></div>`); }
     if (PL.dots) parts.push(`<div class="lg">${lhead(PL.dots)}<div class="dotsw">${[0, 1, 2, 3, 4].map(k => `<span ${isoAttr("dots", k)}><canvas data-k="${k}" width="44" height="28"></canvas></span>`).join("")}</div>${ticks(PL.dots, level, 5)}</div>`);
@@ -1233,6 +1363,7 @@
   let legendWhyOpen = false;
   // ---------- moving panels: the key and the time bar can be dragged by their grip; double-click the grip to put them back ----------
   function draggable(el, grip, key, after) {
+    el._posKey = key;
     const apply = p => { el.classList.add("moved"); Object.assign(el.style, { left: p.x + "px", top: p.y + "px", bottom: "auto", right: "auto", transform: "none" }); };
     const fit = p => ({ x: clamp(p.x, 4, window.innerWidth - Math.min(el.offsetWidth || 200, window.innerWidth - 8) - 4), y: clamp(p.y, 52, window.innerHeight - 40) });
     el._moved = store.get(key, null); if (el._moved) apply(fit(el._moved));
@@ -1258,6 +1389,27 @@
       const up = () => { g.removeEventListener("pointermove", mv); document.body.classList.remove("resizing"); if (key) store.set(key, el._size); if (opts.done) opts.done(); };
       g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up, { once: true }); g.addEventListener("pointercancel", up, { once: true });
     });
+    // 0.7.1: every edge resizes too; the left and top edges move the element so the opposite edge stays put
+    if (WM && WM.edges) { let r0 = null;
+      WM.edges(el, {
+        start() { r0 = el.getBoundingClientRect(); },
+        move(dx, dy, d) {
+          const minW = opts.minW || 220, minH = opts.minH || 80; let w = r0.width, h = r0.height, x = r0.left, y = r0.top;
+          if (d.includes("e")) w = r0.width + dx * (opts.centred && !el.classList.contains("moved") ? 2 : 1);
+          if (d.includes("s")) h = r0.height + dy;
+          if (d.includes("w")) { w = Math.max(minW, r0.width - dx); x = r0.right - w; }
+          if (d.includes("n")) { h = Math.max(minH, r0.height - dy); y = r0.bottom - h; }
+          w = clamp(w, minW, window.innerWidth - 16); h = clamp(h, minH, window.innerHeight - 60);
+          if (d.includes("w") || (d.includes("n") && !opts.widthOnly)) {   // pin the moved corner, as the drag grip would
+            el.classList.add("moved"); Object.assign(el.style, { left: Math.round(x) + "px", top: Math.round(d.includes("n") && !opts.widthOnly ? y : r0.top) + "px", bottom: "auto", right: "auto", transform: "none" });
+            el._moved = { x: Math.round(x), y: Math.round(d.includes("n") && !opts.widthOnly ? y : r0.top) };
+          }
+          apply({ w: Math.round(w), h: opts.widthOnly ? 0 : Math.round(h) }); if (opts.after) opts.after();
+        },
+        end() { if (key) store.set(key, el._size); if (el._posKey && el._moved) store.set(el._posKey, el._moved); if (opts.done) opts.done(); },
+      });
+      el.querySelectorAll(":scope > .redge-n, :scope > .redge-s, :scope > .redge-ne, :scope > .redge-nw, :scope > .redge-se, :scope > .redge-sw").forEach(x => { if (opts.widthOnly) x.remove(); });
+    }
     g.addEventListener("dblclick", () => { el._size = null; if (key) store.set(key, null); el.style.width = ""; el.style.height = ""; el.style.maxHeight = ""; if (opts.after) opts.after(); if (opts.done) opts.done(); });
     return g;
   }
@@ -1279,12 +1431,14 @@
     if (i) { const v = JSON.parse(i.dataset.iso); state.iso = state.iso && JSON.stringify(state.iso) === JSON.stringify(v) ? null : v; LEVELS.forEach(paintLevel); renderLegend(); toast(state.iso ? "Showing only those areas. Click again to show all." : "Showing all areas."); return; }
     const rm = e.target.closest("[data-lrm]"); if (rm) { const m = M[rm.dataset.lrm]; if (m && isMapped(m.id)) { toggleMapped(m.id); toast(`${m.label} taken off the map.`); } return; }
     if (e.target.closest("[data-lclear]")) { clearAllLayers(); return; }
+    const mr = e.target.closest("[data-mcolreset]"); if (mr) { if (PS.mcol) delete PS.mcol[mr.dataset.mcolreset]; savePS(); repaint(); return; }
     if (e.target.closest("[data-prlist]")) { openProtestList(); return; }
     if (e.target.closest("[data-bivswap]")) { const a = curPlan.shade, b = curPlan.grid; if (a && b) { PS.prefs[a.id] = "grid"; PS.prefs[b.id] = "shade"; repaint(); toast("Axes swapped."); } return; }
     const w = e.target.closest("[data-win]"); if (w) { PS.win = +w.dataset.win; for (const k in qCache) if (k.includes("|") && /protest/.test(k)) delete qCache[k]; repaint(); }
   });
   legend.addEventListener("change", e => {
     const t = e.target;
+    if (t.dataset.mcol) { PS.mcol = PS.mcol || {}; PS.mcol[t.dataset.mcol] = t.value; savePS(); repaint(); return; }
     if (t.dataset.as) { PS.prefs[t.dataset.as] = t.value; repaint(); }
     else if (t.dataset.pick) { PS.pick[t.dataset.pick] = t.value; for (const k in qCache) if (k.startsWith(t.dataset.pick + "|")) delete qCache[k]; repaint(); }
     else if (t.hasAttribute("data-bivpal")) { PS.biv.pal = t.value; repaint(); }
@@ -1311,10 +1465,10 @@
   function renderDock() {
     dock.classList.toggle("collapsed", !!dockFold.folded);
     const n = PERSPECTIVES.reduce((a, p) => a + mappedIn(p.id), 0);
-    dock.innerHTML = `<div class="dt-row"><button class="dt" data-fold aria-expanded="${!dockFold.folded}"><span>Perspectives</span>${n ? `<span class="n">${n}</span>` : ""}<span class="chev">▾</span></button><button class="dclear" data-dclear ${n ? "" : "disabled"} title="${n ? "Take everything off the map (Esc). Undo in the message that follows" : "Nothing is on the map"}">Clear all</button></div>
-      <div class="dbody"><div class="dinner">${APP ? `<a class="appswitch" href="${location.pathname}" target="_blank" rel="noopener" title="All perspectives together, in a new tab">Atlas Multi ↗</a>` : ""}${PERSPECTIVES.filter(p => !(p.hidden && !p.ready) && (!APP || p.id === APP.perspective || (p.id === "analysis" && p.ready))).map(p => { const on = mappedIn(p.id) > 0, open = dockOpenP === p.id; return `<div class="pr${on ? " on" : ""}${p.ready ? "" : " locked"}" style="--c:${p.hue}">
-        <div class="phead"><button class="pname" data-open="${p.id}" aria-expanded="${open}" ${p.ready ? "" : `title="Not available yet: no data loaded. Click to see what's planned"`}>${esc(p.name)}${p.ready ? "" : `<small>not available yet</small>`}<span class="caret">▾</span></button>${on ? `<button class="pclear" data-pclear="${p.id}" title="Take the ${esc(p.name)} metrics off the map">clear</button>` : ""}${!APP && p.ready && p.id !== "analysis" ? `<a class="papp" href="${appHref(p.id)}" target="_blank" rel="noopener" title="Open as ${esc(appName(p.id))}, in its own tab">↗</a>` : ""}</div>
-        ${open ? `<div class="pgroups">${groupsOfP(p).map(g => { const k = mappedIn(p.id, g) + cardIn(p.id, g), sel = pmOpen && pmOpen.p === p.id && pmOpen.g === g; return `<button class="pgroup${k ? " on" : ""}${sel ? " sel" : ""}" data-group="${esc(g)}" data-p="${p.id}" aria-expanded="${sel}">${esc(g || p.name)}${k ? `<span class="k">${k}</span>` : ""}</button>`; }).join("")}</div>` : ""}</div>`; }).join("")}</div></div>`;
+    dock.innerHTML = `<div class="dt-row"><button class="dt" data-fold aria-expanded="${!dockFold.folded}"><span>${APP ? esc(APP.short) : "Perspectives"}</span>${n ? `<span class="n">${n}</span>` : ""}<span class="chev">▾</span></button><button class="dclear" data-dclear ${n ? "" : "disabled"} title="${n ? "Take everything off the map (Esc). Undo in the message that follows" : "Nothing is on the map"}">Clear all</button></div>
+      <div class="dbody"><div class="dinner">${PERSPECTIVES.filter(p => !(p.hidden && !p.ready) && (!APP || p.id === APP.perspective || (p.id === "analysis" && p.ready))).map(p => { const on = mappedIn(p.id) > 0, open = dockOpenP === p.id; return `<div class="pr${on ? " on" : ""}${p.ready ? "" : " locked"}" style="--c:${p.hue}">
+        ${APP && p.id === APP.perspective ? "" : `<div class="phead"><button class="pname" data-open="${p.id}" aria-expanded="${open}" ${p.ready ? "" : `title="Not available yet: no data loaded. Click to see what's planned"`}>${esc(p.name)}${p.ready ? "" : `<small>not available yet</small>`}<span class="caret">▾</span></button>${on ? `<button class="pclear" data-pclear="${p.id}" title="Take the ${esc(p.name)} metrics off the map">clear</button>` : ""}${!APP && p.ready && p.id !== "analysis" ? `<a class="papp" href="${appHref(p.id)}" title="Open ${esc(appName(p.id))} as a tab inside Atlas">↗</a>` : ""}</div>`}
+        ${open || (APP && p.id === APP.perspective) ? `<div class="pgroups">${groupsOfP(p).map(g => { const k = mappedIn(p.id, g) + cardIn(p.id, g), sel = pmOpen && pmOpen.p === p.id && pmOpen.g === g; return `<button class="pgroup${k ? " on" : ""}${sel ? " sel" : ""}" data-group="${esc(g)}" data-p="${p.id}" aria-expanded="${sel}">${esc(g || p.name)}${k ? `<span class="k">${k}</span>` : ""}</button>`; }).join("")}</div>` : ""}</div>`; }).join("")}</div></div>`;
   }
   function mapOnly(ids) { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.filter(id => M[id]).forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); }
   // ---------- 1.8: perspective apps ----------
@@ -1633,6 +1787,7 @@
       return `<div class="lvl"><span>${esc(LABEL[p.level])}</span></div><h3>${esc(nameOf(code))}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}${keep.length ? `<ul class="extra">${keep.join("")}</ul>` : `<div class="hint2">Put a metric on the map to see it here.</div>`}`;
     }
     if (curPlan.grid && curPlan.shade) { const k = LAST.k[code] || {}; if (k.sh != null && k.gr != null) mapped.push(`<li class="bivw"><i class="sw" style="background:${LAST.fc[code]}"></i><span>${esc(bivWords(k.sh, k.gr, PS.biv.n, curPlan.shade, curPlan.grid))}</span></li>`); }
+    if (p.level === "constituency" && POLLS && M.proj_winner && !onMap.includes(M.proj_winner)) { const pr = projection(), x = pr && pr.seat.get(code); if (x && isNow()) mapped.push(`<li class="proj"><i class="sw" style="background:${partyCol(x.w)}"></i><span><b>Projection:</b> ${esc(projText(x))} <small>(Atlas, polls to ${esc(POLLS.latest)}; uniform swing, a simple model)</small></span></li>`); }
     const extra = METRICS.filter(m => m.nature === "text" && PS.card[m.id] && PS.active[m.id] && PER[m.p].ready && !["ruler", "party"].includes(m.id)).map(m => { const r = m.get(code, d); return `<li><i class="sw empty"></i><span><b>${esc(m.label)}:</b> ${esc(r ? r.text : "—")}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}</span></li>`; });
     const par = parentOf(code);
     const dj = par && P[par] ? `<div class="dejure">De jure part of: ${pinned ? `<button data-go="${par}">${esc(nameOf(par))}</button>` : `<b>${esc(nameOf(par))}</b>`} <small style="color:var(--ink-3)">(${esc(LABEL[P[par].level])})</small></div>` : "";
@@ -1800,7 +1955,7 @@
   ecard.addEventListener("click", e => { const b = e.target.closest("[data-cochart]"); if (b) openChart({ companies: [+b.dataset.cochart] }); });
 
   // ---------- hover, click, select ----------
-  function pickZone(e) { if (!map.getLayer("zone-fill") || map.getZoom() < ZONE_Z) return null; const f = map.queryRenderedFeatures(e.point, { layers: ["zone-fill"] })[0]; return f ? { code: f.properties.code, level: "zone" } : null; }
+  function pickZone(e) { if (!map.getLayer("zone-fill") || map.getZoom() < ZONE_Z || !marketsInUse()) return null; const f = map.queryRenderedFeatures(e.point, { layers: ["zone-fill"] })[0]; return f ? { code: f.properties.code, level: "zone" } : null; }
   function pickCompany(e) { if (!map.getLayer("co-pts") || map.getLayoutProperty("co-pts", "visibility") === "none") return null; const b = 4, f = map.queryRenderedFeatures([[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]], { layers: ["co-pts"] })[0]; return f ? f.properties.i : null; }
   function pick(e) { const z = pickZone(e); if (z) return z; const l = state.level; const f = map.queryRenderedFeatures(e.point, { layers: [l + "-fill"] })[0]; return f ? { code: f.properties.code, level: l } : null; }
   const pbox = (e, b) => [[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]];
@@ -1838,7 +1993,7 @@
   map.on("click", e => {
     if (lasso.justDone) { lasso.justDone = false; return; }
     if (state.tool === "measure") return measureClick(e);
-    if (map.getLayer("zone-dot") && map.getZoom() < ZONE_Z && map.queryRenderedFeatures([[e.point.x - 5, e.point.y - 5], [e.point.x + 5, e.point.y + 5]], { layers: ["zone-dot"] }).length) { map.flyTo({ center: [-0.1, 51.512], zoom: 11.6, duration: 1200 }); toast("London's financial districts: click a gold tile to explore it."); return; }
+    if (map.getLayer("zone-dot") && marketsInUse() && map.getZoom() < ZONE_Z && map.queryRenderedFeatures([[e.point.x - 5, e.point.y - 5], [e.point.x + 5, e.point.y + 5]], { layers: ["zone-dot"] }).length) { map.flyTo({ center: [-0.1, 51.512], zoom: 11.6, duration: 1200 }); toast("London's financial districts: click a gold tile to explore it."); return; }
     const pc = pickCompany(e);
     if (pc != null) { ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = companyHTML(pc, true); ecard.hidden = false; place(e.point.x + 10, e.point.y - 40, ecard); bubbleNudge(); return; }
     const cl = map.getLayer("pr-cl") && map.getLayoutProperty("pr-cl", "visibility") !== "none" ? map.queryRenderedFeatures(pbox(e, 2), { layers: ["pr-cl"] })[0] : null;
@@ -1846,10 +2001,9 @@
     const onSpider = SPIDER.on && map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-sp-pts"] }).length;
     const pe = pickProtest(e);
     if (pe != null) {
-      if (!onSpider) {   // several protests on exactly this point: fan them out first
-        const fs = map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-pts"] }), at = fs[0].geometry.coordinates;
-        const same = fs.filter(f => Math.abs(f.geometry.coordinates[0] - at[0]) < 1e-6 && Math.abs(f.geometry.coordinates[1] - at[1]) < 1e-6);
-        if (new Set(same.map(f => f.properties.e)).size > 1) { ecard.hidden = true; spiderfy(at, same.map(f => f.properties)); return; }
+      if (!onSpider) {   // several protests here (on one point, or too close to tell apart): list them to pick from
+        const fs = map.queryRenderedFeatures(pbox(e, 7), { layers: ["pr-pts"] });
+        if (new Set(fs.map(f => f.properties.e)).size > 1) { ecard.hidden = true; showProtestPicker(fs.map(f => f.properties.e), e.point, null); return; }
       }
       ecard.hidden = true; ecardPinned = false; openProtestCard(pe); return;
     }
@@ -2281,9 +2435,9 @@
     const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id));
     if (!CMP.items.length && codes.length >= 2 && ms.length) { CMP.items.push({ id: "k" + (++CMP.seq), kind: "table", title: "Places × metrics", spec: { layout: "pm", when: "bar", codes: codes.slice(), metrics: [...CMP.metrics].filter(id => M[id]) } }); CMP.at = "k" + CMP.seq; }   // the side-by-side table, as before
     const made = CMP.items.length ? `<div class="cmp-made"><h4>Made here</h4>${CMP.items.map(it => `<div class="cmp-it${it.id === CMP.at || it.id === CMP.ac ? " on" : ""}" data-kshow="${it.id}" title="Show it"><span class="cmp-ik">${it.kind === "table" ? "▦" : sIcon(it.spec.style || "line")}</span><span class="cmp-in">${esc(it.title)}</span><button data-kdel="${it.id}" aria-label="Close ${esc(it.title)}">×</button></div>`).join("")}</div>` : "";
-    const side = made + PERSPECTIVES.map(p => `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + (p.ready
-      ? METRICS.filter(m => m.p === p.id).map(m => { const on = CMP.metrics.has(m.id), nd = !on && codes.length && cmpEmpty(m, codes); return `<label style="--c:${p.hue}" class="${nd ? "dis" : ""}" ${nd ? `title="No data for these places on this date"` : ""}><input type="checkbox" data-cm="${m.id}" ${on ? "checked" : ""} ${nd ? "disabled" : ""}>${esc(m.label)}</label>`; }).join("") + `<div class="quick"><button class="btn" data-all="${p.id}">All</button><button class="btn" data-none="${p.id}">None</button></div>`
-      : `<p class="small">Not available yet</p>` + p.planned.map(n => `<label class="dis" title="Not available yet"><input type="checkbox" disabled>${esc(n)}</label>`).join(""))).join("");
+    const side = made + mtree("cmp", METRICS.filter(m => PER[m.p].ready), m => { const p = PER[m.p], on = CMP.metrics.has(m.id), nd = !on && codes.length && cmpEmpty(m, codes); return `<label style="--c:${p.hue}" class="${nd ? "dis" : ""}" ${nd ? `title="No data for these places on this date"` : ""}><input type="checkbox" data-cm="${m.id}" ${on ? "checked" : ""} ${nd ? "disabled" : ""}>${esc(m.label)}</label>`; },
+      { isOn: m => CMP.metrics.has(m.id), extra: p => `<div class="quick"><button class="btn" data-all="${p.id}">All</button><button class="btn" data-none="${p.id}">None</button></div>`,
+        empty: p => p.ready ? "" : `<details class="mt-p na" style="--c:${p.hue}"><summary>${svgIcon(p.id)}<span>${esc(p.name)}</span><small>not available yet</small></summary></details>` });
     const usable = ms.filter(m => m.nature !== "text");
     if (!usable.some(m => m.id === CMP.x)) CMP.x = (usable[0] || {}).id || null;
     if (!usable.some(m => m.id === CMP.y) || CMP.y === CMP.x) CMP.y = (usable.find(m => m.id !== CMP.x) || {}).id || null;
@@ -2425,7 +2579,7 @@
     return { rows, ms, codes, dates };
   }
   function renderExport() {
-    const groups = PERSPECTIVES.filter(p => p.ready).map(p => `<fieldset><legend style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</legend>${METRICS.filter(m => m.p === p.id).map(m => `<label><input type="checkbox" data-em="${m.id}" ${EXP.metrics.has(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("")}</fieldset>`).join("");
+    const groups = mtree("exp", METRICS.filter(m => PER[m.p].ready), m => `<label><input type="checkbox" data-em="${m.id}" ${EXP.metrics.has(m.id) ? "checked" : ""}>${esc(m.label)}</label>`, { isOn: m => EXP.metrics.has(m.id) });
     const n = EXP.metrics.size, codes = exportCodes(), years = EXP.time === "date" ? 1 : Math.max(0, EXP.to - EXP.from + 1), rowsN = codes.length * years;
     const preview = n >= 2 && codes.length ? (() => { const { rows } = exportRowsLimited(6); return `<div class="tscroll"><table class="cmp"><thead><tr>${rows[0].map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`; })() : "";
     setTimeout(() => addFctl(expEl), 0);
@@ -2482,11 +2636,28 @@
   // ---------- toolbox (top right) ----------
   const tbBtn = $("tools-btn"), tbMenu = $("tools");
   const SLIDERS = [["zoom", "Zoom sensitivity", "How far one scroll zooms"], ["cursor", "Cursor sensitivity", "How quickly the hover card appears, and how far the map glides after a drag"], ["contrast", "Contrast", "Map contrast (0.5 is normal)"], ["overlay", "Overlay strength", "How solid the perspective colours are"], ["soften", "Focus softening", "How much the map around a focused area is blurred and faded"]];
+  // 0.7.1: choose the colours of the map itself: land, sea and water, and the boundary lines (kept in this browser)
+  const MAPCOL = store.get("atlas-071-mapcol", {});
+  const MAPCOL_DEF = { land: "#f2efe9", water: "#aad3df", lines: "#7d6f86" };
+  const mapColNow = k => MAPCOL[k] || MAPCOL_DEF[k];
+  const mcOrig = {};
+  const keepOrig = (id, prop) => { const k = id + "|" + prop; if (!(k in mcOrig)) mcOrig[k] = map.getPaintProperty(id, prop); return mcOrig[k]; };
+  function applyMapColours() {
+    if (!map.getStyle || !map.getStyle()) return;
+    map.getStyle().layers.forEach(l => {
+      const id = l.id.toLowerCase(), noBase = !key;
+      if (l.type === "background") { const want = noBase ? MAPCOL.water : MAPCOL.land, orig = keepOrig(l.id, "background-color"); setP(l.id, "background-color", want || orig); return; }
+      if (l.type === "fill" && (id === "land" || /landcover|landuse|^earth/.test(id))) { const orig = keepOrig(l.id, "fill-color"); setP(l.id, "fill-color", MAPCOL.land || orig); return; }
+      if ((l.type === "fill" || l.type === "line") && /water|sea|ocean|river|lake|reservoir|canal/.test(id)) { const p = l.type + "-color", orig = keepOrig(l.id, p); setP(l.id, p, MAPCOL.water || orig); }
+    });
+    ["ward-line", "council-line", "region-line", "nation-line"].forEach(id => { if (MAPCOL.lines) setP(id, "line-color", MAPCOL.lines); });
+  }
   function renderTools() {
     tbMenu.innerHTML = `<div class="tb-tools">${[["measure", "Measure", "Click points to measure distance; three or more points give an area. Double-click or Esc to finish", '<path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>'], ["lasso", "Lasso", "Draw any shape around areas to select them (areas whose centre falls inside)", '<path d="M12 4c5 0 9 2.4 9 5.5S17 15 12 15s-9-2.4-9-5.5S7 4 12 4z"/><path d="M6.5 13.6c-.9 1-1 2.4-.1 3.3.8.8 2.2.8 3-.1M8.8 16.3 8 21"/>'], ["shot", "To workspace", "Send a picture of the map to the workspace", '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 9v6M9 12h6"/>'], ["copy", "Copy view", "Copy a picture of the map to paste elsewhere", '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>']].map(([id, l, t, ic]) => `<button data-tool="${id}" class="${state.tool === id ? "on" : ""}" title="${esc(t)}"><svg class="ico" viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("")}</div>
       <div class="tb-row"><span>Panels</span><div class="seg sm"><button data-hot="0" class="${PS.hot ? "" : "on"}">Always shown</button><button data-hot="1" class="${PS.hot ? "on" : ""}">Near edges</button></div></div>
       <div class="tb-row"><span>Hover cards</span><div class="seg sm"><button data-detail="simple" class="${PS.detail === "simple" ? "on" : ""}">Simple</button><button data-detail="detailed" class="${PS.detail !== "simple" ? "on" : ""}">Detailed</button></div></div>
       <div class="tb-row"><span>Estimated values</span><div class="seg sm"><button data-hatch="1" class="${PS.hatch !== false ? "on" : ""}" title="Estimated areas (e.g. notional results) get diagonal lines">Hatched</button><button data-hatch="0" class="${PS.hatch === false ? "on" : ""}">Plain</button></div></div>
+      <div class="tb-row"><span>Map colours</span><span class="mapcols">${[["land", "Land"], ["water", "Sea and water"], ["lines", "Boundaries"]].map(([k, l]) => `<label title="${l}"><input type="color" data-mapcol="${k}" value="${mapColNow(k)}"><small>${l}</small></label>`).join("")}${Object.keys(MAPCOL).length ? `<button class="lnk" data-mapcolreset>reset</button>` : ""}</span></div>
       <div class="tb-row"><span>Grid lines</span><div class="seg sm">${[["off", "Off"], ["deg", "Lat/long"], ["km", "km"]].map(([k, l]) => `<button data-grid="${k}" class="${TOOLS.grid === k ? "on" : ""}">${l}</button>`).join("")}</div></div>
       ${SLIDERS.map(([k, l, t]) => `<div class="tb-slider" title="${esc(t)}"><label for="tb-${k}">${l}</label><input type="range" id="tb-${k}" data-sl="${k}" min="0" max="1" step="0.01" value="${TOOLS[k]}"><input type="number" class="tb-num" data-sn="${k}" min="0" max="1" step="0.01" value="${(+TOOLS[k]).toFixed(2)}" aria-label="${esc(l)} value"></div>`).join("")}
       <div class="tb-foot"><button class="btn" data-treset>Reset to defaults</button><span>All sliders run from 0 to 1.</span></div>`;
@@ -2503,6 +2674,8 @@
     else if (b.dataset.hatch) { PS.hatch = b.dataset.hatch === "1"; savePS(); renderTools(); repaint(); }
     else if (b.hasAttribute("data-treset")) { Object.assign(TOOLS, { zoom: 0.5, cursor: 0.5, contrast: 0.5, overlay: 0.5, soften: 0.25, grid: "off" }); applyTools(); renderTools(); }
   });
+  tbMenu.addEventListener("change", e => { const k = e.target.dataset.mapcol; if (!k) return; MAPCOL[k] = e.target.value; store.set("atlas-071-mapcol", MAPCOL); applyMapColours(); renderTools(); });
+  tbMenu.addEventListener("click", e => { if (e.target.closest("[data-mapcolreset]")) { Object.keys(MAPCOL).forEach(k => delete MAPCOL[k]); store.set("atlas-071-mapcol", MAPCOL); applyLook(); renderTools(); } });
   tbMenu.addEventListener("input", e => { const t = e.target, k = t.dataset.sl || t.dataset.sn; if (!k) return; const v = clamp(+t.value || 0, 0, 1); TOOLS[k] = v; const o = tbMenu.querySelector(t.dataset.sl ? `[data-sn="${k}"]` : `[data-sl="${k}"]`); if (o) o.value = t.dataset.sl ? v.toFixed(2) : v; applyTools(); });
   const dragOpts = () => ({ linearity: 0.3, maxSpeed: 1400, deceleration: Math.round(2500 * Math.pow(4, 1 - 2 * TOOLS.cursor)) });
   function applyTools() {
@@ -2538,6 +2711,25 @@
   function destination(a, brg, ang) { const f1 = a[1] * RAD, l1 = a[0] * RAD; const f2 = Math.asin(Math.sin(f1) * Math.cos(ang) + Math.cos(f1) * Math.sin(ang) * Math.cos(brg)); const l2 = l1 + Math.atan2(Math.sin(brg) * Math.sin(ang) * Math.cos(f1), Math.cos(ang) - Math.sin(f1) * Math.sin(f2)); return [l2 / RAD, f2 / RAD]; }
   const centreOf = pts => { let x = 0, y = 0; pts.forEach(p => { x += p[0]; y += p[1]; }); return [x / pts.length, y / pts.length]; };
   function insideShape(pt) { const poly = measure.pts.map(p => { const q = map.project(p); return [q.x, q.y]; }); return inPoly(pt.x, pt.y, poly); }
+  // 0.7.1: drag a single corner (any shape with visible corner dots, finished or still being drawn)
+  map.getCanvasContainer().addEventListener("mousedown", e => {
+    if (e.button !== 0 || state.tool !== "measure" || !measure.pts.length || (measure.done && measure.pts.length > 30)) return;
+    const r = map.getCanvasContainer().getBoundingClientRect(), pt = { x: e.clientX - r.left, y: e.clientY - r.top };
+    let hit = -1, best = 10;
+    measure.pts.forEach((p, i) => { const q = map.project(p), d = Math.hypot(q.x - pt.x, q.y - pt.y); if (d < best) { best = d; hit = i; } });
+    if (hit < 0) return;
+    e.preventDefault(); e.stopImmediatePropagation(); map.dragPan.disable(); document.body.classList.add("dragging");
+    let moved = false;
+    const mv = ev => { moved = true; const q = map.unproject([ev.clientX - r.left, ev.clientY - r.top]); measure.pts[hit] = [q.lng, q.lat]; measure.from = null; drawMeasure(); };
+    const up = () => { window.removeEventListener("mousemove", mv); window.removeEventListener("mouseup", up); map.dragPan.enable(dragOpts()); document.body.classList.remove("dragging"); measure.justDragged = true; setTimeout(() => { measure.justDragged = false; }, 300); };
+    window.addEventListener("mousemove", mv); window.addEventListener("mouseup", up);
+  }, true);
+  map.getCanvasContainer().addEventListener("mousemove", e => {   // a grab cursor over a corner
+    if (state.tool !== "measure" || !measure.pts.length || (measure.done && measure.pts.length > 30) || document.body.classList.contains("dragging")) return;
+    const r = map.getCanvasContainer().getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    const near = measure.pts.some(p => { const q = map.project(p); return Math.hypot(q.x - x, q.y - y) < 10; });
+    map.getCanvas().style.cursor = near ? "grab" : "";
+  });
   map.getCanvasContainer().addEventListener("mousedown", e => {
     if (e.button !== 0 || state.tool !== "measure" || !measure.done || measure.pts.length < 3) return;
     const r = map.getCanvasContainer().getBoundingClientRect(), pt = { x: e.clientX - r.left, y: e.clientY - r.top };
@@ -2572,7 +2764,7 @@
     let d = 0; for (let i = 1; i < pts.length; i++) d += haversine(pts[i - 1], pts[i]);
     const km = v => v >= 100 ? fmtInt(v) + " km" : v >= 1 ? v.toFixed(2) + " km" : Math.round(v * 1000) + " m";
     let t = `Distance: ${km(d)} (${(d * 0.621371).toFixed(d * .62 >= 10 ? 0 : 2)} miles)`;
-    if (pts.length > 2 && measure.done) { const a = sphArea(pts); t = `${measure.from ? `<b>${esc(measure.from)}</b> (true size)<br>` : ""}Area: ${a >= 10 ? fmtInt(a) : a.toFixed(2)} km² · perimeter ${km(d + haversine(pts[pts.length - 1], pts[0]))}<br><small>Drag the shape to lay it over another place</small>`; }
+    if (pts.length > 2 && measure.done) { const a = sphArea(pts); t = `${measure.from ? `<b>${esc(measure.from)}</b> (true size)<br>` : ""}Area: ${a >= 10 ? fmtInt(a) : a.toFixed(2)} km² · perimeter ${km(d + haversine(pts[pts.length - 1], pts[0]))}<br><small>Drag the shape to lay it over another place; drag a corner to reshape it</small>`; }
     return t;
   }
   // grid lines
@@ -2709,8 +2901,8 @@
   function whatHTML(spec, prefix) {
     const cand = METRICS.filter(m => PER[m.p].ready && m.nature !== "text" && m.nature !== "site" && m.nature !== "event" && m.temporal !== "static" && !spec.metrics.includes(m.id));
     return `<div class="cp-row"><b>Metric</b><div class="chips">${spec.metrics.map(id => `<span class="chip" style="--c:${PER[mOf(id).p].hue}">${esc(mOf(id).label)}${spec.metrics.length > 1 ? `<button data-${prefix}rmm="${id}" aria-label="Remove">×</button>` : ""}</span>`).join("")}
-        ${spec.companies.length ? "" : `<select data-${prefix}addm aria-label="Add a metric"><option value="">+ add a metric…</option>${PERSPECTIVES.filter(p => p.ready).map(p => `<optgroup label="${esc(p.name)}">${cand.filter(m => m.p === p.id).map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join("")}</optgroup>`).join("")}</select>`}</div></div>
-      <div class="cp-row"><b>${spec.companies.length ? "Companies" : "Places"}</b><div class="chips">${spec.companies.length ? spec.companies.map(i => `<span class="chip">${esc(COS[i].n)}${spec.companies.length > 1 ? `<button data-${prefix}rmc="${i}" aria-label="Remove">×</button>` : ""}</span>`).join("") : spec.places.map(c => `<span class="chip">${esc(nameOf(c))}${spec.places.length > 1 ? `<button data-${prefix}rmp="${c}" aria-label="Remove">×</button>` : ""}</span>`).join("") + `<small class="tip">Shift-click areas on the map to add them</small>`}</div></div>
+        ${spec.companies.length ? "" : mtPicker(`data-${prefix}addm aria-label="Add a metric"`, cand)}</div></div>
+      <div class="cp-row"><b>${spec.companies.length ? "Companies" : "Places"}</b><div class="chips">${spec.companies.length ? spec.companies.map(i => `<span class="chip">${esc(COS[i].n)}${spec.companies.length > 1 ? `<button data-${prefix}rmc="${i}" aria-label="Remove">×</button>` : ""}</span>`).join("") : spec.places.map(c => `<span class="chip">${esc(nameOf(c))}${spec.places.length > 1 ? `<button data-${prefix}rmp="${c}" aria-label="Remove">×</button>` : ""}</span>`).join("") + placeSearch(prefix === "t" ? "tplace" : "cplace", "Add any place…") + `<small class="tip">or Shift-click areas on the map</small>`}</div></div>
       <div class="cp-row"><b>Years</b><span class="yrs"><input type="number" data-${prefix}from value="${spec.from}" min="1974" max="${TODAY.slice(0, 4)}"> to <input type="number" data-${prefix}to value="${spec.to}" min="1974" max="${TODAY.slice(0, 4)}"></span>
         ${spec.companies.length ? `<label class="ck"><input type="checkbox" data-${prefix}rebase ${spec.rebase ? "checked" : ""}>Rebase to 100</label><label class="ck"><input type="checkbox" data-${prefix}index ${spec.index ? "checked" : ""}>Add FTSE 100 index</label>` : ""}</div>`;
   }
@@ -2763,10 +2955,13 @@
     return true;
   }
   cpanel.addEventListener("change", e => { if (specInput(CHART, e.target)) renderChartPanel(); });
+  PS_ADD.cplace = c => { if (!CHART.places.includes(c)) CHART.places.push(c); renderChartPanel(); };
+  PS_ADD.tplace = c => { const t = TABS.find(x => x.id === activeTab); if (t && t.spec && !t.spec.places.includes(c)) { t.spec.places.push(c); activateTab(t.id); } };
   function closeChart() { const was = WM.close(cpanel); bubble.classList.remove("open"); document.body.classList.remove("charting"); return was; }
   bubble.addEventListener("click", () => { if (!cpanel.hidden) return closeChart(); openChart(); });
   // tabs: the map is always the first tab; any chart can open full screen in its own tab
   const TABS = [{ id: "map", label: "Map" }, { id: "ws", label: "Workspace" }]; let activeTab = "map", tabSeq = 0;
+  const appFrames = {};
   function openTab(spec) {
     const m = mOf(spec.metrics[0]), label = (spec.companies.length ? (spec.companies.length === 1 ? COS[spec.companies[0]].n : spec.companies.length + " companies") : (spec.metrics.length > 1 ? spec.metrics.length + " metrics" : m.label)) + (spec.places.length === 1 ? " · " + nameOf(spec.places[0]) : "");
     const t = { id: "t" + (++tabSeq), label, spec: JSON.parse(JSON.stringify(spec)) }; TABS.push(t); activateTab(t.id);
@@ -2774,7 +2969,7 @@
   function openTableTab(spec, label) { const t = { id: "t" + (++tabSeq), label: label || "Table", table: spec }; TABS.push(t); activateTab(t.id); }
   function renderTabs() {
     const on = t => t.id === "map" ? VIEW.mode !== "ws" && (activeTab === "map" || activeTab === "split" || VIEW.mode === "split") : t.id === "ws" ? VIEW.mode !== "map" : t.id === activeTab;
-    const icon = t => t.help ? `<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/></svg>` : t.table ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>` : t.id === "map" ? `<svg class="ico" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/></svg>` : t.id === "ws" ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/></svg>` : sIcon(t.spec.style);
+    const icon = t => t.app ? svgIcon(t.pid) : t.help ? `<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/></svg>` : t.table ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>` : t.id === "map" ? `<svg class="ico" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/></svg>` : t.id === "ws" ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/></svg>` : sIcon(t.spec.style);
     const label = t => t.id === "ws" ? `Workspace${proj().items.length ? ` (${proj().items.length})` : ""}` : t.label;
     tabsEl.innerHTML = TABS.map(t => `<button class="tab${on(t) ? " on" : ""}" data-tab="${t.id}">${icon(t)}<span>${esc(label(t).length > 28 ? label(t).slice(0, 27) + "…" : label(t))}</span>${t.id === "map" || t.id === "ws" ? "" : `<i data-tabx="${t.id}" aria-label="Close tab">×</i>`}</button>`).join("") +
       `<button class="tab tool${VIEW.mode === "split" ? " on" : ""}" data-split title="Map and workspace side by side (drag the divider to change the share)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></button><button class="tab tool" data-overview title="All tabs (or swipe up over the top bar)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>`;
@@ -2783,6 +2978,15 @@
   }
   function activateTab(id) {
     activeTab = id; renderTabs(); const t = TABS.find(x => x.id === id);
+    Object.entries(appFrames).forEach(([k, f]) => { f.hidden = "app-" + k !== id; });
+    document.body.classList.toggle("apptab-on", !!t && !!t.app);
+    if (t && t.app) {   // 0.7.1: an app is a tab inside Atlas: the app page in a frame, kept alive while you switch tabs
+      tabview.hidden = true; document.body.classList.remove("tab-on");
+      let f = appFrames[t.app];
+      document.documentElement.style.setProperty("--tabh", $("top").offsetHeight + "px");
+      if (!f) { f = appFrames[t.app] = document.createElement("iframe"); f.className = "appframe"; f.title = t.label; f.src = location.pathname + "#app=" + t.app + "&embed=1"; document.body.appendChild(f); }
+      f.hidden = false; return;
+    }
     document.body.classList.toggle("tab-on", !!t && !!(t.spec || t.table || t.help));   // floating windows step aside while a chart or table has the screen
     if (!t || id === "map" || id === "ws" || id === "split") { tabview.hidden = true; return; }
     if (t.help) { tabview.innerHTML = helpHTML(); tabview.hidden = false; document.body.classList.add("tab-on"); return; }
@@ -2795,7 +2999,7 @@
       <div class="cp-what">${whatHTML(spec, "t")}</div><div class="cp-styles">${stylesHTML(spec, true, "t")}</div><div class="tv-body">${drawChart(spec, Math.min(1100, window.innerWidth - 80))}</div></div>`;
     tabview.hidden = false;
   }
-  tabsEl.addEventListener("click", e => { const x = e.target.closest("[data-tabx]"); if (x) { const i = TABS.findIndex(t => t.id === x.dataset.tabx); TABS.splice(i, 1); activateTab(activeTab === x.dataset.tabx ? "map" : activeTab); e.stopPropagation(); return; } if (e.target.closest("[data-split]")) { setView(VIEW.mode === "split" ? "map" : "split"); return; } if (e.target.closest("[data-overview]")) { openOverview(); return; } const b = e.target.closest("[data-tab]"); if (b) goTab(b.dataset.tab); });
+  tabsEl.addEventListener("click", e => { const x = e.target.closest("[data-tabx]"); if (x) { const i = TABS.findIndex(t => t.id === x.dataset.tabx); const tt = TABS[i]; if (tt && tt.app && appFrames[tt.app]) { appFrames[tt.app].remove(); delete appFrames[tt.app]; } TABS.splice(i, 1); activateTab(activeTab === x.dataset.tabx ? "map" : activeTab); e.stopPropagation(); return; } if (e.target.closest("[data-split]")) { setView(VIEW.mode === "split" ? "map" : "split"); return; } if (e.target.closest("[data-overview]")) { openOverview(); return; } const b = e.target.closest("[data-tab]"); if (b) goTab(b.dataset.tab); });
   tabview.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return; const t = TABS.find(x => x.id === activeTab); if (!t) return;
     if (b.hasAttribute("data-tback")) return activateTab("map");
@@ -2833,10 +3037,14 @@
     else if (b.dataset.ntdel) { E.notes = E.notes.filter(x => x.id !== b.dataset.ntdel); persist(); renderNotes(); }
   });
   // ---------- labels for the district tiles ----------
+  // 0.7.1: London's financial districts belong to Markets: they show in Atlas Markets, and in Multi only while a Markets
+  // metric is on the map, so they don't sit on top of protests, councils and everything else in central London.
+  const marketsInUse = () => APP ? APP.perspective === "markets" : (PS.mapped.markets || []).some(id => isMapped(id));
+  function syncZones() { const v = marketsInUse() ? "visible" : "none"; ["zone-fill", "zone-line", "zone-dot"].forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", v); }); placeZoneLabels(); }
   const zoneLabels = $("zone-labels");
   const ZONE_PT = ZONES.map(f => ({ code: f.properties.code, pt: ptFeature(f).geometry.coordinates }));
   function placeZoneLabels() {
-    if (!MK || map.getZoom() < ZONE_Z - 0.2) { zoneLabels.innerHTML = ""; return; }
+    if (!MK || map.getZoom() < ZONE_Z - 0.2 || !marketsInUse()) { zoneLabels.innerHTML = ""; return; }
     zoneLabels.innerHTML = ZONE_PT.map(z => { const q = map.project(z.pt); const n = cosIn(z.code).length; return `<span style="left:${q.x}px;top:${q.y}px"><b>${esc(nameOf(z.code))}</b>${n} FTSE 100 head office${n === 1 ? "" : "s"}</span>`; }).join("");
   }
   map.on("render", placeZoneLabels);
@@ -2935,11 +3143,13 @@
   const ST = window.AtlasStats, anEl = $("analyse");
   const AN = Object.assign({ metrics: [], level: "council", within: UKC, mode: "across", place: UKC, method: null, outcome: null, k: 0, split: "", corr: "pearson" }, store.get("atlas-16-an", {}));
   AN.metrics = (AN.metrics || []).filter(id => M[id]);
-  const saveAN = () => store.set("atlas-16-an", { metrics: AN.metrics, level: AN.level, within: AN.within, mode: AN.mode, place: AN.place, corr: AN.corr });
+  AN.custom = (AN.custom || []).filter(c => P[c]);
+  const saveAN = () => store.set("atlas-16-an", { metrics: AN.metrics, level: AN.level, within: AN.within, mode: AN.mode, place: AN.place, corr: AN.corr, custom: AN.custom });
+
   const anMetricsAll = () => METRICS.filter(m => PER[m.p] && PER[m.p].ready && EN.isNum(m) && m.p !== "analysis");
   const anCats = () => METRICS.filter(m => PER[m.p] && PER[m.p].ready && EN.isCat(m) && m.p !== "analysis");
   const LEVEL_OPTS = () => [["council", "Councils"], ["constituency", "Westminster constituencies"], ["region", "Regions"], ["nation", "Nations"], ["ward", "Wards (England & Wales)"]].concat(ZONES.length ? [["zone", "Financial districts"]] : []).filter(([l]) => Object.keys(P).some(c => P[c].level === l));
-  const WITHIN_OPTS = () => [[UKC, "the whole UK"]].concat(["E92000001", "S92000003", "W92000004", "N92000002"].map(c => [c, nameOf(c)]), Object.keys(P).filter(c => c.startsWith("E12")).sort().map(c => [c, nameOf(c)]), state.sel.length ? [["sel", `my selection (${state.sel.length})`]] : []);
+  const WITHIN_OPTS = () => [[UKC, "the whole UK"]].concat(["E92000001", "S92000003", "W92000004", "N92000002"].map(c => [c, nameOf(c)]), Object.keys(P).filter(c => c.startsWith("E12")).sort().map(c => [c, nameOf(c)]), state.sel.length ? [["sel", `my selection (${state.sel.length})`]] : [], [["custom", `places I choose (${AN.custom.length})`]]);
   function insideArea(code, area) {
     if (area === UKC) return true; const p = P[code]; if (!p || !P[area]) return false;
     if (P[area].level === "nation") return nationOf(code) === area;
@@ -2950,6 +3160,7 @@
   }
   function anCodes(cfg) {
     if (cfg.within === "sel") return state.sel.map(x => x.code);
+    if (cfg.within === "custom") return AN.custom.filter(c => P[c]);
     return Object.keys(P).filter(c => P[c].level === cfg.level && !P[c].to && insideArea(c, cfg.within));
   }
   const nbrCache = {};
@@ -3192,14 +3403,15 @@
     if (anEl.hidden) return;
     const cfg = Object.assign({}, AN, { date: state.date }), methods = anMethods(cfg), okM = methods.filter(m => m[2]);
     if (!okM.some(m => m[0] === AN.method)) AN.method = okM.length && cfg.metrics.length ? okM[0][0] : null; cfg.method = AN.method;
-    const pers = PERSPECTIVES.filter(p => p.ready && p.id !== "analysis").map(p => { const ms = anMetricsAll().filter(m => m.p === p.id); return ms.length ? `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + ms.map(m => `<label style="--c:${p.hue}"><input type="checkbox" data-anm="${m.id}" ${AN.metrics.includes(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("") : ""; }).join("");
+    const pers = mtree("an", anMetricsAll().filter(m => m.p !== "analysis"), m => `<label style="--c:${PER[m.p].hue}"><input type="checkbox" data-anm="${m.id}" ${AN.metrics.includes(m.id) ? "checked" : ""}>${esc(m.label)}</label>`, { isOn: m => AN.metrics.includes(m.id) });
     const res = cfg.method ? anResult(cfg, Math.max(360, Math.min(900, anEl.offsetWidth - 330))) : null;
     anEl.innerHTML = `<div class="an-head"><b>Analyse</b><span class="cp-sub">How metrics relate across places, within an area, or over time. No need to pick places.</span>${helpBtn("methods", "Help: analysis methods")}<button class="x" data-anx aria-label="Close">×</button></div>
       <div class="an-body"><div class="an-side">
         <div class="an-row"><b>Look</b><div class="seg sm"><button data-anmode="across" class="${AN.mode !== "time" ? "on" : ""}">Across places</button><button data-anmode="time" class="${AN.mode === "time" ? "on" : ""}">Over time</button></div></div>
-        ${AN.mode === "time" ? `<div class="an-row"><b>Place</b><select data-anplace>${[UKC, "E92000001", "S92000003", "W92000004", "N92000002"].concat(state.focus && !["E92000001", "S92000003", "W92000004", "N92000002", UKC].includes(state.focus) ? [state.focus] : [], state.sel.map(s => s.code)).filter((c, i, a) => a.indexOf(c) === i).map(c => `<option value="${c}" ${AN.place === c ? "selected" : ""}>${esc(nameOf(c))}</option>`).join("")}</select></div>`
+        ${AN.mode === "time" ? `<div class="an-row"><b>Find</b>${placeSearch("anplace", "Any place…")}</div><div class="an-row"><b>Place</b><select data-anplace>${[UKC, "E92000001", "S92000003", "W92000004", "N92000002"].concat(state.focus && !["E92000001", "S92000003", "W92000004", "N92000002", UKC].includes(state.focus) ? [state.focus] : [], state.sel.map(s => s.code), P[AN.place] ? [AN.place] : []).filter((c, i, a) => a.indexOf(c) === i).map(c => `<option value="${c}" ${AN.place === c ? "selected" : ""}>${esc(nameOf(c))}</option>`).join("")}</select></div>`
           : `<div class="an-row"><b>Compare</b><select data-anlevel>${LEVEL_OPTS().map(([l, t]) => `<option value="${l}" ${AN.level === l ? "selected" : ""}>${t}</option>`).join("")}</select></div>
-             <div class="an-row"><b>Within</b><select data-anwithin>${WITHIN_OPTS().map(([c, t]) => `<option value="${c}" ${AN.within === c ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>`}
+             <div class="an-row"><b>Within</b><select data-anwithin>${WITHIN_OPTS().map(([c, t]) => `<option value="${c}" ${AN.within === c ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
+             <div class="an-row"><b>Places</b><span class="an-pl">${placeSearch("an", "Search for places to analyse…")}${AN.within === "custom" ? `<span class="chips">${AN.custom.map(c => `<span class="chip">${esc(nameOf(c))}<button data-anrmp="${c}" aria-label="Remove">×</button></span>`).join("")}${AN.custom.length ? `<button class="lnk" data-anrmall>clear</button>` : ""}</span>` : ""}</span></div>`}
         <div class="an-row"><b>Date</b><span class="muted">${esc(longDate(state.date))} (time bar)</span></div>
         <div class="an-metrics"><div class="an-mh">Metrics <small>${AN.metrics.length} chosen</small>${AN.metrics.length ? `<button class="btn" data-anclear>Clear</button>` : ""}</div>${pers}</div>
       </div><div class="an-main">
@@ -3227,6 +3439,9 @@
     else return;
     saveAN(); renderAnalyse();
   });
+  PS_ADD.an = c => { if (!AN.custom.includes(c)) AN.custom.push(c); AN.within = "custom"; if (P[c].level !== AN.level && LEVEL_OPTS().some(([l]) => l === P[c].level) && AN.custom.length === 1) AN.level = P[c].level; saveAN(); renderAnalyse(); };
+  PS_ADD.anplace = c => { AN.place = c; saveAN(); renderAnalyse(); };
+  anEl.addEventListener("click", e => { const r = e.target.closest("[data-anrmp]"); if (r) { AN.custom = AN.custom.filter(c => c !== r.dataset.anrmp); saveAN(); renderAnalyse(); } if (e.target.closest("[data-anrmall]")) { AN.custom = []; saveAN(); renderAnalyse(); } });
   anEl.addEventListener("change", e => { const t = e.target, ds = t.dataset;
     if (ds.anm) AN.metrics = t.checked ? AN.metrics.concat(ds.anm) : AN.metrics.filter(x => x !== ds.anm);
     else if (ds.anlevel != null) AN.level = t.value; else if (ds.anwithin != null) AN.within = t.value; else if (ds.anplace != null) AN.place = t.value;
@@ -3492,7 +3707,7 @@
   document.addEventListener("mousedown", e => {
     if (pmOpen && !pmenu.contains(e.target) && !dock.contains(e.target)) closePMenu();
     if (!$("browse").hidden && !e.target.closest(".finder")) closeBrowse();
-    if (!menu.hidden && !menu.contains(e.target) && !brand.contains(e.target)) closeMenu();
+    if (!menu.hidden && !menu.contains(e.target) && !brand.contains(e.target) && !e.target.closest(".ah-more")) closeMenu();
     if (!tbMenu.hidden && !tbMenu.contains(e.target) && !tbBtn.contains(e.target)) closeTools();
     if (ecardPinned && !ecard.contains(e.target) && !e.target.closest("#map")) { ecard.hidden = true; ecardPinned = false; }
   });
@@ -3536,24 +3751,33 @@
   // The dropdown has a tickbox on every result: tick places (across several searches), then press its Search button to show
   // them all together in one frame, with the rest of the map softened and a card for each. Only the dropdown does this.
   const si = $("search"), hl = $("hits"), tickPill = $("schips");
-  const names = Object.keys(P).filter(c => P[c].level !== "country"), rankL = { nation: 0, region: 1, zone: 2, council: 2, constituency: 2.5, ward: 3 };
+  const names = Object.keys(P).filter(c => P[c].level !== "country" && !(P[c].level === "zone" && APP && APP.perspective !== "markets")), rankL = { nation: 0, region: 1, zone: 2, council: 2, constituency: 2.5, ward: 3 };
   function searchNames(q) { return names.filter(c => nameOf(c).toLowerCase().includes(q) || c.toLowerCase() === q).sort((a, b) => (nameOf(a).toLowerCase() === q ? 0 : nameOf(a).toLowerCase().startsWith(q) ? 1 : 2) - (nameOf(b).toLowerCase() === q ? 0 : nameOf(b).toLowerCase().startsWith(q) ? 1 : 2) || rankL[P[a].level] - rankL[P[b].level]).slice(0, 10); }
-  let hits = [], cur = 0, picked = [], ddOpen = false;
+  let hits = [], cur = 0, picked = [], ddOpen = false, mhits = [];
+  // 0.7.1: the search box finds metrics as well as places (grouped Perspective ▸ Category, like the Perspectives panel)
+  function searchMetrics(q) {
+    if (q.length < 2) return [];
+    const ok = m => PER[m.p] && PER[m.p].ready && !PER[m.p].hidden && (!APP || m.p === APP.perspective);
+    return METRICS.filter(m => ok(m) && [m.label, m.group, PER[m.p].name, m.desc].some(t => t && t.toLowerCase().includes(q)))
+      .sort((a, b) => (a.label.toLowerCase().startsWith(q) ? 0 : a.label.toLowerCase().includes(q) ? 1 : 2) - (b.label.toLowerCase().startsWith(q) ? 0 : b.label.toLowerCase().includes(q) ? 1 : 2)).slice(0, 24);
+  }
+  const mrow = m => `<button type="button" class="mt-item${isMapped(m.id) ? " on" : ""}" data-sm="${m.id}" title="${esc(m.desc || "")}">${isMapped(m.id) ? "✓ " : ""}${esc(m.label)}</button>`;
   const subOf = c => (P[c].level === "ward" || P[c].level === "constituency") && P[c].parent && P[P[c].parent] ? " · " + esc(nameOf(P[c].parent)) : "";
   const noDataFor = c => { const ms = planMetrics(); return ms.length > 0 && ms.every(m => { try { const r = m.get(c, state.date); return !r || r.v == null || r.nm; } catch (e) { return true; } }); };
   const row = (c, i) => `<li data-c="${c}" class="${i === cur ? "on" : ""}${picked.includes(c) ? " ticked" : ""}" role="option" aria-selected="${picked.includes(c)}"><input type="checkbox" tabindex="-1" ${picked.includes(c) ? "checked" : ""} aria-label="Tick ${esc(nameOf(c))}"><span class="nm">${esc(nameOf(c))}</span><small>${LABEL[P[c].level]}${subOf(c)}</small>${noDataFor(c) ? `<em class="ndtag" title="None of the metrics on the map has a value for this place on this date">no data</em>` : ""}</li>`;
   function showHits() {
     const extra = picked.filter(c => !hits.includes(c));
     const body = (extra.length ? `<li class="sec">Ticked</li>${extra.map(c => row(c, -1)).join("")}${hits.length ? `<li class="sec">Results</li>` : ""}` : "") + hits.map(row).join("");
-    hl.innerHTML = body + `<li class="sfoot"><span>${picked.length ? `${picked.length} ticked` : "Tick places to show several together"}</span>${picked.length ? `<button type="button" class="btn" data-sclear>Clear</button>` : ""}<button type="button" class="btn primary" data-ssearch ${picked.length ? "" : "disabled"}>Search${picked.length > 1 ? ` (${picked.length})` : ""}</button></li>`;
-    hl.hidden = !ddOpen || (!hits.length && !picked.length);
+    const mbody = mhits.length ? `<li class="sec">Metrics <small>click to put one on the map</small></li><li class="smetrics">${mtree("search", mhits, mrow, { all: true, isOn: m => isMapped(m.id) })}</li>` : "";
+    hl.innerHTML = (hits.length || extra.length ? (mhits.length && !extra.length ? `<li class="sec">Places</li>` : "") + body : "") + mbody + `<li class="sfoot"><span>${picked.length ? `${picked.length} ticked` : "Tick places to show several together"}</span>${picked.length ? `<button type="button" class="btn" data-sclear>Clear</button>` : ""}<button type="button" class="btn primary" data-ssearch ${picked.length ? "" : "disabled"}>Search${picked.length > 1 ? ` (${picked.length})` : ""}</button></li>`;
+    hl.hidden = !ddOpen || (!hits.length && !picked.length && !mhits.length);
     tickPill.hidden = !picked.length || !hl.hidden; tickPill.innerHTML = `<button type="button" data-sopen>${picked.length} ticked</button>`;
   }
-  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); cur = 0; ddOpen = true; showHits(); });
+  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); mhits = searchMetrics(q); cur = 0; ddOpen = true; showHits(); });
   si.addEventListener("focus", () => { closeBrowse(); ddOpen = true; showHits(); });
   si.addEventListener("blur", () => { setTimeout(() => { if (document.activeElement !== si) { ddOpen = false; showHits(); } }, 120); });
   function toggleTick(c) { picked = picked.includes(c) ? picked.filter(x => x !== c) : picked.concat(c); showHits(); if (!browse.hidden) renderPFoot(); }
-  function jumpTo(code) { si.value = ""; hits = []; ddOpen = false; showHits(); si.blur(); closeBrowse(); focus(code); }
+  function jumpTo(code) { si.value = ""; hits = []; mhits = []; ddOpen = false; showHits(); si.blur(); closeBrowse(); focus(code); }
   function searchTicked() {
     const codes = picked.slice(); if (!codes.length) return;
     picked = []; si.value = ""; hits = []; ddOpen = false; showHits(); si.blur(); closeBrowse();
@@ -3571,6 +3795,7 @@
     const b = e.target.closest("button");
     if (b && b.hasAttribute("data-ssearch")) return searchTicked();
     if (b && b.hasAttribute("data-sclear")) { picked = []; showHits(); return; }
+    if (b && b.dataset.sm) { const id = b.dataset.sm; if (!isMapped(id)) toggleMapped(id); else toast(`${M[id].label} is already on the map.`); si.value = ""; hits = []; mhits = []; ddOpen = false; showHits(); si.blur(); return; }
     const li = e.target.closest("li[data-c]"); if (li) toggleTick(li.dataset.c);
   });
   tickPill.addEventListener("mousedown", e => { e.preventDefault(); si.focus(); });
@@ -3661,7 +3886,7 @@
   const CATS = [{ h: "Administrative divisions" }, { id: "country", label: "Country", codes: () => [UKC] }, { id: "nation", label: "Nations", codes: () => G.nations.features.map(f => f.properties.code) },
     { id: "region", label: "Regions", codes: () => G.regions.features.map(f => f.properties.code) }, { id: "council", label: "Councils", codes: () => COUNCIL_CODES }, { id: "ward", label: "Wards", codes: () => COUNCIL_CODES, nested: true },
     { h: "Electoral" }, { id: "constituency", label: "Westminster constituencies", codes: () => Object.keys(P).filter(c => P[c].level === "constituency" && !P[c].to) }, 
-    { h: "Custom zones" }, { id: "zone", label: "Financial districts", codes: () => ZONES.map(f => f.properties.code), off: !ZONES.length },
+    { h: "Custom zones" }, { id: "zone", label: "Financial districts", codes: () => ZONES.map(f => f.properties.code), off: !ZONES.length || (APP && APP.perspective !== "markets") },
     { h: "Coming later" }, { id: "ca", label: "Combined authorities", off: true }, { id: "hb", label: "Health boards", off: true }];
   const wardCount = names.filter(c => P[c].level === "ward").length;
   let bcat = "council", bopen = null;
@@ -3691,9 +3916,10 @@
     const ms = planMetrics();
     el.innerHTML = `<div class="lvt">Boundaries on the map <small>${LV.auto ? "following the zoom" : "at every zoom"}</small></div>
       <label class="lvrow lvauto"><input type="checkbox" data-lv="auto" ${LV.auto ? "checked" : ""}><span>Automatic</span><small>switch with zoom</small></label>
-      ${["nation", "region", "council", "constituency", "ward"].map(l => { const on = !LV.auto && LV.on.includes(l), act = state.level === l, nd = ms.length && !ms.some(m => avail(m, l).ok); return `<div class="lvrow${act ? " act" : ""}${on ? " on" : ""}${nd ? " lvnd" : ""}"><input type="checkbox" id="lv-${l}" data-lv="${l}" ${on ? "checked" : ""} aria-label="Show ${PLURAL[l]} on the map"><button data-mk="${l}" title="${nd ? "None of the metrics on the map has data for " + PLURAL[l].toLowerCase() + " on this date (the boundaries still show)" : act ? "Colours, hover cards and clicks use this set" : "Use this set for colours, hover cards and clicks"}">${PLURAL[l]}</button>${nd ? `<small class="ndtag">no data for what's on the map</small>` : act ? `<small>colours &amp; hover</small>` : on ? `<small>outline</small>` : ""}</div>${l === "constituency" && window.ATLAS_HEX ? `<label class="lvrow lvhex"><input type="checkbox" data-hex ${PS.hex ? "checked" : ""}><span>Hex map (equal area)</span><small>one hexagon per seat</small></label>` : ""}`; }).join("")}`;
+      ${["nation", "region", "council", "constituency", "ward"].map(l => { const on = !LV.auto && LV.on.includes(l), act = state.level === l, nd = ms.length && !ms.some(m => avail(m, l).ok); return `<div class="lvrow${act ? " act" : ""}${on ? " on" : ""}${nd ? " lvnd" : ""}"><input type="checkbox" id="lv-${l}" data-lv="${l}" ${on ? "checked" : ""} aria-label="Show ${PLURAL[l]} on the map"><button data-mk="${l}" title="${nd ? "None of the metrics on the map has data for " + PLURAL[l].toLowerCase() + " on this date (the boundaries still show)" : act ? "Colours, hover cards and clicks use this set" : "Use this set for colours, hover cards and clicks"}">${PLURAL[l]}</button>${nd ? `<small class="ndtag">no data for what's on the map</small>` : act ? `<small>colours &amp; hover</small>` : on ? `<small>outline</small>` : ""}</div>${l === "constituency" && window.ATLAS_HEX && (state.level === "constituency" || (!LV.auto && LV.on.includes("constituency"))) ? `<div class="lvrow lvhex"><span class="lvv">View as</span><label><input type="radio" name="pconview" data-hexv="0" ${PS.hex ? "" : "checked"}>Real boundaries</label><label title="Every seat the same size: the whole map turns into hexagons"><input type="radio" name="pconview" data-hexv="1" ${PS.hex ? "checked" : ""}>Hex map</label></div>` : ""}`; }).join("")}`;
   }
   $("lvpick").addEventListener("change", e => {
+    if (e.target.dataset.hexv != null) { PS.hex = e.target.dataset.hexv === "1"; savePS(); syncPcon.warned = false; syncPcon(true); renderLevelPicker(); toast(PS.hex ? "Hex map: every seat is the same size, so big rural seats don't dominate. The whole map is drawn as hexagons; positions are approximate." : "Back to the real boundaries."); return; }
     if (e.target.hasAttribute("data-hex")) { PS.hex = e.target.checked; savePS(); syncPcon.warned = false; if (PS.hex && state.level !== "constituency") makeActive("constituency"); syncPcon(true); renderLevelPicker(); toast(PS.hex ? "Hex map: every seat the same size, so big rural seats don't dominate. Positions are approximate." : "Back to the real boundaries."); return; }
     const t = e.target.closest("[data-lv]"); if (t) setLevelOn(t.dataset.lv, t.checked); renderBrowse(); });
   $("lvpick").addEventListener("click", e => { const b = e.target.closest("[data-mk]"); if (b) { makeActive(b.dataset.mk); renderBrowse(); } });
@@ -3709,41 +3935,91 @@
   const CTX = {
     get app() { return APP; }, M, METRICS, P, PER, PARTY, POL, PR, MK, EL: window.ATLAS_EL || null, LOC: window.ATLAS_LOCAL || null, SPANS, CH, EN, ST, XL, WM,
     esc, fmtInt, fmtBig, fmtPct, longDate, shortDate, dmy, nameOf, partyName, partyCol, LABEL, PLURAL_L, UKC, today: TODAY,
-    get date() { return state.date; }, get level() { return state.level; }, get focus() { return state.focus; }, get sel() { return state.sel.map(x => x.code); },
+    get date() { return state.date; }, get level() { return state.level; }, get focused() { return state.focus; }, get sel() { return state.sel.map(x => x.code); },
     setDate: d => setDate(d), mapOnly, setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); },
     focus: c => focus(c), view: (center, zoom) => map.flyTo({ center, zoom, duration: 1000 }), allCodesAt, popAt, seriesOf, resultFor, resultsOf: code => (RES[code] || []).map(decode), areaOf: c => AREA[c] || null, previousFor, ELX, GE_DAYS, metricSpan: id => metricSpan(M[id]),
     openChart: o => openChart(o), openCmp: () => openCmp(), openProtestList: () => openProtestList(), openProtestCard: i => openProtestCard(i), openInfo: id => openMetricInfo(id),
     sendToWS: it => sendToWS(it), toast, copy, download, searchNames, onDate: f => appListeners.push(f), openPanel: id => openAppPanel(id), store,
     defineMetric: m => { if (!M[m.id]) def(m); PS.active[m.id] = true; }, repaint: () => repaint(),
+    // 0.7.1
+    projection: () => projection(), POLLS, get NEWS() { return window.ATLAS_NEWS || null; }, parentOf: c => parentOf(c), value: (id, c, d) => { const m = M[id]; if (!m) return null; try { return m.get(c, d || state.date); } catch (e) { return null; } },
+    select: codes => { clearCompare(); codes.filter(c => P[c]).slice(0, MAX_SEL).forEach(c => { const t = { code: c, level: P[c].level }; state.sel.push(t); setFS(t, { sel: true }); }); renderTray(); },
+    openCmpWith: codes => { CTX.select(codes); openCmp(); }, openAnalyse: o => openAnalyse(o || {}), mapAdd: id => { if (M[id] && !isMapped(id)) toggleMapped(id); },
+    isMapped: id => isMapped(id), kids: c => (UNDER[c] || []).slice(),
   };
   window.AtlasCtx = CTX;
   const appWins = {};
   function openAppPanel(id) {
     const x = [...APP.panels, ...APP.tools].find(p => p.id === id); if (!x) return;
+    if (x.onOpen) { try { x.onOpen(CTX); } catch (e) { console.error(e); } }
     const have = appWins[id]; if (have && WM.isOpen(have.el)) { WM.front(have.el); WM.pulse(have.el); return; }
-    const w = appWins[id] = have || WM.make({ type: "app-" + APP.id + "-" + id, title: x.title, dispose: false, min: x.min || { w: 340, h: 240 }, def: x.def });
-    w.el.classList.add("apppanel"); WM.open(w.el);
+    const w = appWins[id] = have || WM.make({ type: "app-" + APP.id + "-" + id, title: x.title, dispose: false, min: x.min || { w: 340, h: 240 }, def: x.def, onClose: () => markLinks() });
+    w.el.classList.add("apppanel");
+    // 0.7.1: each new panel opens a step below the last one, so the ones underneath still show their titles
+    const open = Object.values(appWins).filter(o => o !== w && WM.isOpen(o.el)).map(o => WM.rectOf(o.el)).filter(Boolean);
+    WM.open(w.el);
+    const pw = Math.max((x.min || {}).w || 340, Math.min(520, Math.round(innerWidth * 0.36))), ph = Math.max((x.min || {}).h || 240, Math.round(innerHeight * 0.62));
+    const last = open.sort((a, b) => b.y - a.y)[0], top = WM.TOPNOW ? WM.TOPNOW() : 100;
+    WM.place(w.el, last ? { x: last.x, y: last.y + 44, w: last.w, h: ph } : { x: innerWidth - pw - 16, y: top, w: pw, h: ph });
+    markLinks();
     const draw = () => { if (!w.el.hidden) { try { x.render(CTX, w.body); } catch (e) { console.error(e); w.body.innerHTML = `<p class="aempty">Couldn't draw this: ${esc(e.message)}</p>`; } } };
     draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
   }
+  function markLinks() { document.querySelectorAll("#appbar [data-apanel]").forEach(b => { const o = appWins[b.dataset.apanel]; b.classList.toggle("on", !!o && WM.isOpen(o.el)); }); }
   function renderAppsMenu() {
     const el = $("apps-list"); if (!el) return;
-    el.innerHTML = (APP ? `<a class="btn" href="${location.pathname}" target="_blank" rel="noopener">Atlas Multi (all perspectives) ↗</a>` : "") + PERSPECTIVES.filter(p => !p.hidden).map(p => p.ready
-      ? `<a class="btn" href="${appHref(p.id)}" target="_blank" rel="noopener" style="--c:${p.hue}">Open as ${esc(appName(p.id))} ↗</a>`
+    el.innerHTML = (APP ? `<a class="btn to-multi" href="${location.pathname}">Atlas Multi (all perspectives)</a>` : "") + PERSPECTIVES.filter(p => !p.hidden).map(p => p.ready
+      ? `<a class="btn" href="${appHref(p.id)}" style="--c:${p.hue}" title="Opens as a tab inside Atlas (Ctrl/Cmd-click for a browser tab)">Open ${esc(appName(p.id))}</a>`
       : `<span class="btn dis" title="Not available yet: no ${esc(p.name.toLowerCase())} data is loaded">${esc(appName(p.id))}: not available yet</span>`).join("");
+  }
+  // ---------- 0.7.1: apps open as tabs inside Atlas (not new browser tabs) ----------
+  const EMBED = !!APP_ID && /embed=1/.test(location.hash) && window.parent !== window;
+  function openAppTab(appId) {
+    if (APP) { if (EMBED) parent.postMessage({ atlas: "openApp", app: appId }, "*"); else location.href = location.pathname + "#app=" + appId, location.reload(); return; }
+    const def = window.AtlasApps && AtlasApps.get(appId), pid = def ? def.perspective : Object.keys(APP_FOR).find(k => APP_FOR[k] === appId) || appId;
+    if (!PER[pid]) return;
+    const id = "app-" + appId; if (!TABS.find(x => x.id === id)) TABS.push({ id, label: def ? def.name : "Atlas " + PER[pid].name, app: appId, pid });
+    closeMenu(); setView("map"); activateTab(id);
+  }
+  document.addEventListener("click", e => {
+    const a = e.target.closest("a[href]"); if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;   // Ctrl/Cmd-click still opens a browser tab
+    const h = a.getAttribute("href") || "", m = h.match(/#app=([a-z]+)/);
+    if (m) { e.preventDefault(); openAppTab(m[1]); return; }
+    if (APP && (h === location.pathname || a.classList.contains("to-multi"))) { e.preventDefault(); if (EMBED) parent.postMessage({ atlas: "multi" }, "*"); else location.href = location.pathname; }
+  }, true);
+  window.addEventListener("message", e => {
+    const d = e.data || {}; if (!d.atlas || APP) return;
+    if (d.atlas === "multi") goTab("map");
+    if (d.atlas === "openApp") openAppTab(d.app);
+  });
+  // the app header: a normal website menu bar (brand, one search for places and metrics, ⋯ for everything else),
+  // with the app's own tools underneath like bookmarks
+  function buildAppHead() {
+    const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
+    head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
+      <div class="ah-search"></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.7.1</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
+    document.body.appendChild(head);
+    head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));
+    head.querySelector(".ah-nav").appendChild($("appbar"));
+    head.querySelector(".ah-more").addEventListener("click", () => brand.click());
+    const fitTop = () => { const h = head.offsetHeight; document.documentElement.style.setProperty("--ahh", h + "px"); if (WM.setTop) WM.setTop(h + 8); map.resize(); };
+    requestAnimationFrame(fitTop); window.addEventListener("resize", fitTop); setTimeout(fitTop, 600);
   }
   function bootApp() {
     if (!APP_ID) return;
     if (!APP) { toast("There's no such app: showing Atlas Multi."); return; }
-    document.title = APP.name; document.body.classList.add("appmode"); document.documentElement.style.setProperty("--app", APP.accent);
-    const bar = $("appbar");
+    document.title = APP.name; document.body.classList.add("appmode"); if (EMBED) document.body.classList.add("embedded"); document.documentElement.style.setProperty("--app", APP.accent);
+    const bar = $("appbar"); buildAppHead();
     if (!APP.ok) {
       bar.innerHTML = `<b style="color:${APP.accent}">${esc(APP.name)}</b><span class="appna">Not available yet</span>`; bar.hidden = false;
       const w = WM.make({ type: "app-na", title: APP.name + ": not available yet", html: `<p>No ${esc(PER[APP.perspective].name.toLowerCase())} data is loaded yet, so this app has nothing to show.</p>${(PER[APP.perspective].planned || []).length ? `<p>Planned:</p><ul>${PER[APP.perspective].planned.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}<p><a href="${location.pathname}">Back to Atlas Multi</a></p>` });
       WM.open(w.el); return;
     }
-    bar.innerHTML = `<b style="color:${APP.accent}">${esc(APP.name)}</b>${[...APP.panels, ...APP.tools].map(x => `<button class="btn sm${APP.tools.includes(x) ? " tool" : ""}" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("")}`;
+    bar.innerHTML = [...APP.panels, ...APP.tools].map(x => `<button class="ah-link${APP.tools.includes(x) ? " tool" : ""}" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("");
     bar.hidden = false; bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) openAppPanel(b.dataset.apanel); });
+    requestAnimationFrame(() => { const h = $("apphead").offsetHeight; document.documentElement.style.setProperty("--ahh", h + "px"); WM.setTop(h + 8); map.resize(); });
     dockOpenP = APP.perspective; setFold(false);
     if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) map.loaded() ? APP.init(CTX) : map.once("load", () => APP.init(CTX)); }
   }

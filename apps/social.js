@@ -3,7 +3,7 @@
  */
 (function () {
   "use strict";
-  const placeOf = ctx => ctx.focus || ctx.sel[0] || ctx.UKC;
+  const placeOf = ctx => ctx.focused || ctx.sel[0] || ctx.UKC;
   function people(ctx, el) {
     const c = placeOf(ctx), ids = ["population", "pop_change", "density", "average_age"].filter(id => ctx.M[id]);
     el.innerHTML = `<h4>${ctx.esc(ctx.nameOf(c))}</h4><p class="ap-note">Click an area on the map to change place.</p>
