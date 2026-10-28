@@ -1,10 +1,61 @@
-# Atlas 1.7 — United Kingdom
+# Atlas 1.8 — United Kingdom
 
-Atlas 0.7 combines Mo's political work and perspective apps with Ruben's health, housing and government debt data. The next version in progress is 0.7.1.
 
-Atlas 1.7 fills in the Political perspective: Westminster results since 1997, the EU referendum, council tax, council make-up, party positions, and the measures political scientists use to read them. It also makes Atlas say how sure it is about each number. Built on 1.6 in the GitHub repository (branch `mo/1.7-political`).
+## What's new in 1.8
 
-## What's new in 1.7
+**Windows.** One window manager (`windows.js`) runs every floating window: charts, Compare, Export, Analyse, protest and info cards, lists and app panels.
+- The window you opened or clicked last is on top. A window opened from another (Analyse from Compare) sits above it, offset, with a brief highlight and a "← Back to Compare" link; the parent stays open.
+- Esc closes the top window only.
+- New windows dock on the right, at most 40% wide and 70% high, so the map stays usable. ⤢ fills the screen; nothing else covers the map.
+- Sizes and positions are remembered per kind of window and pulled back on screen when the browser shrinks. Charts redraw when a window is resized; tables scroll inside it with a fixed header and first column.
+
+**Time bar.**
+- Labels fit the bar's width (years, every 5th or 10th year, or just the ends) and never overlap. The current date sits above the handle; click it to type a date.
+- The bar runs over the dates with data for what's on the map: GDP only, 1998–2024; MPs only, 1997 on; controlling party, 1974 on. A date outside a new range moves to its nearest end, with a message. **⋯ → Full range** shows 1974 to today, with the years without data hatched.
+- With protests on, the bar has a tick at each protest and Play steps from one to the next.
+
+**Clear all, and "not available".** Clear all is at the top of the Perspectives panel, greyed when nothing is on the map, with Undo; each perspective has its own small "clear" link when it has something on. Nothing with no data behind it can be ticked or chosen without a reason:
+- metrics say "No data for wards", "Starts in 1998" or "Not meaningful for councils";
+- Areas marks boundary sets with no data for what's on the map;
+- search tags places with no data;
+- Analyse, Export and Compare grey out what can't work and say why;
+- Transportation says "Not available yet".
+
+**Protests.**
+- The data was rebuilt (`pipeline/fetch_protests.py`). An event is kept only if Wikidata says it was in the UK, or a place it names resolves to a UK item inside the UK's boundaries. Every place name goes through its Wikidata item, so London (Ontario) or Perth (Australia) can't land here.
+- International protests keep only their UK sites, labelled "UK part of an international protest", and never carry a global crowd figure.
+- Places that are only a region or county get no point.
+- `pipeline/reports/validation_protests.md` lists every event dropped, every site removed, every ambiguous name and a 15-event spot check. The build stops if any point falls outside the UK.
+- Each protest now has a short Wikipedia summary (CC BY-SA, linked), dates, all its places, crowd estimates with who made them, organisers, the result and its Wikidata ID.
+- On the map, nearby protests group into numbered rings coloured by cause (click to zoom). Protests on exactly the same point fan out. Every protest opens its own card (several can be open).
+- A protest list (from the key or an area's card) shows the protests in the window for the area in focus or the visible map, sortable and filterable.
+
+**Compare makes tables and charts.**
+- **Make table:** places × metrics at one date, places × years for one metric, or metrics × years for one place. Columns sort. The bottom row sums counts and amounts and gives population-weighted averages for rates; it never averages rates plainly or adds up categories. Estimated values are flagged. Copy as CSV, .xlsx / .csv, → Workspace, Open in tab.
+- **Make chart:** the chart style picker, drawn inside Compare beside the table, in a pane you can resize.
+- Everything made stays in a list on the left. **Analyse these…** opens Analyse on top.
+
+**Help.**
+- ⓘ next to every metric opens a small card: definition, how it's worked out, unit, where it applies, years, source, what's estimated, caveats (e.g. GDP per head and commuting) and related metrics.
+- There's an ⓘ for chart styles and for the labels measured / estimated / missing / not meaningful.
+- **ATLAS menu → Help** explains every analysis method: what it answers, what it needs, its assumptions, when it misleads, and a worked example you can load. It also covers every chart and table. The "what it needs" text comes from the same table Analyse uses to grey methods out, so the two can't disagree.
+
+**A calmer screen.**
+- Always visible: the ATLAS menu, Areas, search, the Perspectives panel (folded), the time bar, and the key and chart button when relevant.
+- Tools, Workspace and Notes are in the ATLAS menu. Zoom buttons and the Notes tab appear near the right edge. The time bar's step and range options are behind ⋯. The tab bar appears once there's more than the map.
+- Full list: `docs/declutter-1.8.md`.
+
+**Perspective apps.** Any perspective opens as its own app in a new tab (↗ on its row, or ATLAS menu → Apps), with a shareable address such as `index.html#app=markets`. Apps run on the same core as Atlas Multi, which stays the default.
+- **Atlas Markets:** market overview, companies and screener with a watchlist, company cards, head offices by place, and calculators (DCF with a WACC × growth table, trading comparables with a football field, dividend discount, returns: CAGR, volatility, drawdown, beta). Formulas sit behind ⓘ and every calculator says it's illustrative, not investment advice. Share prices are **not available** in the public site: no lawful free source allows public display (`pipeline/sources/prices_licence.md`). A scheduled price job is built but switched off.
+- **Atlas Politics:** election view on the hex map with a seat bar and results table, a uniform-swing calculator (it says it's a simple model), a seat explorer, councils over time, referendums and protests.
+- **Atlas Economic** and **Atlas Social:** light versions (dashboards, rankings, growth decomposition, population change); the rest is marked "Not available yet" (`docs/perspective-apps.md`).
+
+**Tests.** `tests/` has browser tests for each phase (`python tests/run_all.py`; see `tests/README.md`), including the Compare → Analyse visibility test, the time-bar label and range tests, and the "no protest point outside the UK" check. Screenshots at 1024×700, 1280×800, 1440×900 and 1920×1080 are in `docs/screenshots/1.8/`.
+
+**Fixed along the way:** "Copy data (CSV)" buttons called a function that didn't exist; the time bar slid under the Perspectives panel at 1024 px; the tab bar ran under Tools on narrow screens; tables opened in their own tab were hidden behind floating windows.
+
+
+## What's new in 1.7 (previous version)
 
 **Honest numbers.** Every new metric carries:
 - **How this is worked out:** a one-line formula on the pinned card and in the export's About sheet.

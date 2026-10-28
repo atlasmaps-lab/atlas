@@ -1,0 +1,27 @@
+# Atlas 1.8: end-of-day share prices into data/prices.js. Switched off: there is no schedule until a provider whose
+# licence allows public display is chosen (pipeline/sources/prices_licence.md). Run by hand from the Actions tab to test.
+name: prices
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: "30 18 * * 1-5"   # after the London close, weekdays
+permissions:
+  contents: write
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python pipeline/fetch_prices.py
+        env:
+          PRICES_PROVIDER: ${{ vars.PRICES_PROVIDER }}
+          PRICES_API_KEY: ${{ secrets.PRICES_API_KEY }}
+      - name: Commit if prices changed
+        run: |
+          git config user.name "atlas-prices"
+          git config user.email "atlas-prices@users.noreply.github.com"
+          git add data/prices.js
+          git diff --cached --quiet || git commit -m "End-of-day prices" && git push

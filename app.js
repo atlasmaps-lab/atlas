@@ -16,7 +16,7 @@
   "use strict";
   const C = window.ATLAS_CONFIG || {};
   const OS = window.ATLAS_OS, U = window.ATLAS_UK, G = window.ATLAS_UK_GEO, P = U.places, INFO = U.info, SRCS = U.sources;
-  const MK = window.ATLAS_MARKETS || null, CH = window.AtlasCharts;
+  const MK = window.ATLAS_MARKETS || null, CH = window.AtlasCharts, WM = window.AtlasWM;
   const POL = window.ATLAS_POL, SER = window.ATLAS_SERIES, PR = window.ATLAS_PROTESTS || { events: [], sites: [], causes: [] }, EN = window.AtlasEngine, XL = window.AtlasXLSX;
   // Westminster constituencies (0.3.1): their own boundary set, merged into the same places / info tables
   const PCON = window.ATLAS_PCON;
@@ -27,6 +27,8 @@
     G.constituencies = PCON.geo;
     Object.entries(PCON.parties || {}).forEach(([k, v]) => { if (!POL.parties[k]) POL.parties[k] = v; });
   }
+  // 1.8: one perspective as its own app (index.html#app=markets); Atlas Multi when there's no #app
+  const APP_ID = (location.hash.match(/app=([a-z]+)/) || [])[1] || null;
   const LEVELS = ["nation", "region", "council", "constituency", "ward"];
   const LABEL = { nation: "Nation", region: "Region", council: "Council", constituency: "Constituency", ward: "Ward", country: "Country", zone: "Financial district" };
   const SRC = { nation: "nations", region: "regions", council: "councils", constituency: "constituencies", ward: "wards", zone: "zones" };
@@ -46,6 +48,7 @@
   let tt; function toast(m) { const el = $("toast"); el.textContent = m; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 3000); }
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } } };
   const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+  const appListeners = [], notifyApps = () => appListeners.forEach(f => { try { f(); } catch (e) { console.error(e); } });   // live app panels (1.8)
   const TOOLS = Object.assign({ zoom: 0.5, cursor: 0.5, contrast: 0.5, overlay: 0.5, soften: 0.25, grid: "off" }, store.get("atlas-13-tools", {}));
   const fillOp = () => +(0.15 + 0.9 * TOOLS.overlay).toFixed(2);
 
@@ -327,17 +330,18 @@
       const same = gp.parties.includes(ctl);
       return { v: same ? "same" : "differ", text: `${partyName(ctl)}: ${same ? "in" : "not in"} the ${govCode === UKC ? "UK Government" : gp.g.title.replace(/^First Minister/, "devolved government")}${gp.parties.length > 1 ? ` (${gp.label})` : ""}`, note: ukNote };
     } });
-  def({ id: "mp_tenure", p: "political", group: G31, label: "MP's years in the seat", scale: "ratio", nature: "duration", temporal: "state", levels: ["constituency"], breaks: [2, 5, 10, 20],
+  const MP_SPAN = () => [Object.values(SPANS).reduce((a, L) => L.length && L[0][0] < a ? L[0][0] : a, TODAY), TODAY];   // MPs: from the first recorded seat (1997)
+  def({ id: "mp_tenure", p: "political", group: G31, span: () => MP_SPAN(), label: "MP's years in the seat", scale: "ratio", nature: "duration", temporal: "state", levels: ["constituency"], breaks: [2, 5, 10, 20],
     how: "Years since the current MP first won this seat, counting continuous service in this seat only", desc: "How long the sitting MP has held the seat", fmt: v => v.toFixed(1) + " years", source: "UK Parliament Members API (spans in constituencies.js)",
     get(code, d) { const L = (SPANS[code] || []).filter(x => x[0] <= d); const cur = spanAt(code, d); if (!cur) return null; let s = cur[0];
       for (let i = L.length - 1; i >= 0; i--) { const x = L[i]; if (x[3] === cur[3] && (x[1] === s || x[0] === s)) s = x[0]; }
       const v = yearsBetween(s, d); return { v, text: `${this.fmt(v)} (${cur[3]}, since ${s.slice(0, 4)})` }; } });
-  def({ id: "mp_count", p: "political", group: G31, label: "MPs since 1997", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [2, 3, 4, 5],
+  def({ id: "mp_count", p: "political", group: G31, span: () => MP_SPAN(), label: "MPs since 1997", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [2, 3, 4, 5],
     how: "Distinct MPs for this seat from its first result (1997 at the earliest) to the date, within this boundary set only", desc: "How many different MPs the seat has had", fmt: v => fmtInt(v) + (v === 1 ? " MP" : " MPs"),
     get(code, d) { const L = (SPANS[code] || []).filter(x => x[0] <= d); if (!L.length) return null; const mps = new Set(L.map(x => x[3]));
       const by = (RES[code] || []).filter(x => ELX[x[0]].kind === "by" && ELX[x[0]].day <= d).length, defect = L.filter((x, i) => i && x[3] === L[i - 1][3] && x[2] !== L[i - 1][2]).length;
       return { v: mps.size, text: this.fmt(mps.size), note: `${by} by-election${by === 1 ? "" : "s"}, ${defect} defection${defect === 1 ? "" : "s"} · counted within this boundary set` }; } });
-  def({ id: "seat_flips", p: "political", group: G31, label: "Seat changed hands", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [1, 2, 3, 4],
+  def({ id: "seat_flips", p: "political", group: G31, span: () => MP_SPAN(), label: "Seat changed hands", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [1, 2, 3, 4],
     how: "Number of times the seat's party changed, at elections, by-elections or by defection, from its first result to the date", desc: "How often the seat has changed party", fmt: v => fmtInt(v) + (v === 1 ? " change" : " changes"),
     get(code, d) { const L = ownSpans(code).filter(x => x[0] <= d); if (!L.length) return null; let n = 0, def_ = 0; const raw = (SPANS[code] || []).filter(x => x[0] <= d);
       for (let i = 1; i < L.length; i++) if (L[i][2] !== L[i - 1][2]) n++;
@@ -510,7 +514,7 @@
     how: "Valid votes ÷ electorate (the Electoral Commission's own turnout also counts rejected ballots)", desc: "Share of the electorate who cast a valid vote in 2016",
     get(code, d) { const w = refWhen(d); if (w) return w; const r = euAt(code); if (!r || !r.electorate) return null; const v = 100 * r.valid / r.electorate;
       return { v, text: `${pct1(v)} (${fmtInt(r.valid)} of ${fmtInt(r.electorate)})`, yr: "2016 EU referendum", note: r.note || "" }; } });
-  def({ id: "eu_leave_est_pcon", p: "political", group: G5, label: "EU referendum: Leave (constituency estimate)", scale: "interval", nature: "share", temporal: "election", mid: 50, fmt: pct1, levels: ["constituency"],
+  def({ id: "eu_leave_est_pcon", p: "political", group: G5, span: () => [EU_DAY, TODAY], label: "EU referendum: Leave (constituency estimate)", scale: "interval", nature: "share", temporal: "election", mid: 50, fmt: pct1, levels: ["constituency"],
     nmText: { council: "Councils have counted results: see EU referendum: Leave", ward: NM_TEXT, region: NM_TEXT, nation: NM_TEXT, country: NM_TEXT }, source: EL && EL.sources.eu_pcon,
     how: "Chris Hanretty's estimates (2016): a model of council results by demographics, projected onto constituencies; where the BBC obtained ward counts, the known result. Great Britain, 2010 boundaries only",
     desc: "Estimated Leave share in each Westminster seat (results were counted by council, not by constituency)",
@@ -628,7 +632,7 @@
   def({ id: "gdp_growth", p: "economic", label: "Real GDP growth", scale: "interval", nature: "change", temporal: "annual", mid: 0, fmt: fmtPct, desc: "Change in GDP after inflation, on the year before",
     get(code, d) { const a = serAt("gdp_real", code, d); if (!a) return null; const b = serAt("gdp_real", code, (a.yr - 1) + "-07-01"); if (!b || b.yr !== a.yr - 1) return null; const v = (a.v / b.v - 1) * 100; return { v, text: this.fmt(v), yr: a.yr + (a.latest ? ", latest" : "") }; } });
   serMetric("population", "population", { p: "social", label: "Population", scale: "ratio", nature: "count", fmt: fmtInt, desc: "Mid-year estimate" });
-  def({ id: "density", p: "social", label: "Population density", scale: "ratio", nature: "rate", temporal: "annual", fmt: v => fmtInt(v) + " per km²", desc: "People per square kilometre",
+  def({ id: "density", span: () => metricSpan(M.population), p: "social", label: "Population density", scale: "ratio", nature: "rate", temporal: "annual", fmt: v => fmtInt(v) + " per km²", desc: "People per square kilometre",
     get(code, d) { const a = (INFO[code] || {}).area; const p = popAt(code, d); if (!a || !a[0] || !p) return null; const v = p / a[0]; return { v, text: this.fmt(v) }; } });
   def({ id: "pop_change", p: "social", label: "Population change (10 years)", scale: "interval", nature: "change", temporal: "annual", mid: 0, fmt: fmtPct, desc: "Growth over the 10 years to the date",
     get(code, d) { const a = serAt("population", code, d); if (!a) return null; const b = serAt("population", code, (a.yr - 10) + "-07-01"); if (!b || b.yr !== a.yr - 10) return null; const v = (a.v / b.v - 1) * 100; return { v, text: this.fmt(v), yr: `${b.yr}–${a.yr}` }; } });
@@ -687,7 +691,8 @@
     card: { control: true, protest_events: true }, prefs: {}, pick: {}, biv: { pal: "pt", n: 3 }, step: 1, win: 1826, detail: "detailed", hot: false,
   };
   const PS = (() => {
-    const s = store.get("atlas-15-persp", {}), o = JSON.parse(JSON.stringify(DEF_PS));
+    const s = store.get("atlas-15-persp" + (APP_ID ? "-" + APP_ID : ""), APP_ID ? { mapped: {} } : {}), o = JSON.parse(JSON.stringify(DEF_PS));
+    if (APP_ID) Object.keys(o.mapped).forEach(p => { o.mapped[p] = []; });   // an app starts from its own layout (init), not Multi's
     ["on", "active", "card", "prefs", "biv", "pick"].forEach(k => Object.assign(o[k], s[k] || {}));
     Object.entries(s.mapped || {}).forEach(([p, v]) => { if (PER[p]) o.mapped[p] = (Array.isArray(v) ? v : [v]).filter(id => M[id]); });
     if (Array.isArray(s.order)) o.order = s.order.filter(p => PER[p]);
@@ -696,7 +701,7 @@
   })();
   // 0.3.1: a perspective is "on" exactly when something in it is ticked (there is no separate perspective switch any more)
   Object.keys(PS.mapped).forEach(pid => { if (!PS.on[pid]) PS.mapped[pid] = []; PS.on[pid] = PS.mapped[pid].length > 0; });
-  const savePS = () => store.set("atlas-15-persp", PS);
+  const savePS = () => store.set("atlas-15-persp" + (APP_ID ? "-" + APP_ID : ""), PS);
   const onPersps = () => PS.order.filter(p => PS.on[p] && PER[p] && PER[p].ready);
   const isMapped = id => { const m = M[id]; return !!(m && PS.on[m.p] && PS.active[id] && (PS.mapped[m.p] || []).includes(id)); };
 
@@ -716,7 +721,15 @@
   const map = new maplibregl.Map({ container: "map", style: key ? osStyle(key) : plainStyle(), center: HOME, zoom: HOME_Z, minZoom: C.minZoom || 4.6, maxZoom: 17,
     dragRotate: false, pitchWithRotate: false, attributionControl: false, preserveDrawingBuffer: true });
   window.atlasMap = map;
-  if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { M, P, METRICS, resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint() };   // for checks only (index.html?debug)
+  if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { M, P, METRICS, resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint(),   // for checks only (index.html?debug)
+    get TB() { return TB; }, setDate: d => setDate(d), metricSpan: id => metricSpan(M[id]), openCmp: () => openCmp(), openAnalyse: o => openAnalyse(o), openChart: o => openChart(o),
+    select: codes => codes.forEach(c => P[c] && addCompare({ code: c, level: P[c].level })),
+    focus: c => focus(c), unfocus: () => unfocus(), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); if (!on) setLevelOn("auto", true); },
+    closeAll: () => { while (WM.closeTop()); },
+    setCmpMetrics: ids => { CMP.metrics = new Set(ids); CMP.items = []; }, cmpTable: sp => cmpTable(sp), get CMP() { return CMP; }, get AN() { return AN; },
+    openProtestCard: i => openProtestCard(i), setHeat: () => { PS.prefs.protest_events = "heat"; repaint(); },
+    setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), openExport: o => openExport(o),
+    get APP() { return APP; }, mapOnly: ids => mapOnly(ids) };
   map.boxZoom.disable(); map.touchZoomRotate.disableRotation();
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
   map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
@@ -854,6 +867,10 @@
     map.addSource("focus", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addSource("group", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addSource("protests", { type: "geojson", data: protestFeatures() });
+    map.addSource("protests-cl", { type: "geojson", data: { type: "FeatureCollection", features: [] }, cluster: true, clusterRadius: 38, clusterMaxZoom: 14,
+      clusterProperties: Object.fromEntries(CAUSES.map((_, k) => ["c" + k, ["+", ["case", ["==", ["get", "c"], k], 1, 0]]])) });
+    map.addSource("pr-spider", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addSource("pr-hl", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addSource("tool", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addSource("grid", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     for (let k = 0; k < 5; k++) map.addImage("dot-" + k, dotImage(k), { pixelRatio: 2 });
@@ -886,10 +903,17 @@
     map.addLayer({ id: "pr-heat", type: "heatmap", source: "protests", layout: { visibility: "none" }, paint: {
       "heatmap-weight": ["interpolate", ["linear"], ["get", "lw"], 0, 0.15, 6, 1], "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 4, 0.8, 10, 2.2], "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 4, 14, 10, 40],
       "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(91,58,140,0)", 0.2, "#d2bde6", 0.45, "#ad8fd0", 0.7, "#8560b5", 1, "#3b1f63"], "heatmap-opacity": 0.85 } });
-    map.addLayer({ id: "pr-pts", type: "circle", source: "protests", layout: { visibility: "none", "circle-sort-key": ["-", 0, ["get", "r"]] }, paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, ["*", ["get", "r"], 0.85], 10, ["*", ["get", "r"], 1.5]], "circle-color": ["get", "fill"], "circle-stroke-color": ["get", "stroke"], "circle-stroke-width": 1.6, "circle-opacity": 0.9, "circle-stroke-opacity": 0.95 } });
-    map.addLayer({ id: "pr-new", type: "circle", source: "protests", layout: { visibility: "none" }, paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, ["+", 5, ["*", ["get", "r"], 0.85]], 10, ["+", 5, ["*", ["get", "r"], 1.5]]], "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": ["get", "col"], "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
+    const PR_R = ["interpolate", ["linear"], ["zoom"], 5, ["*", ["get", "r"], 0.85], 10, ["*", ["get", "r"], 1.5]];
+    map.addLayer({ id: "pr-cl", type: "circle", source: "protests-cl", filter: ["has", "point_count"], layout: { visibility: "none" }, paint: {   // hit area under each group's donut marker
+      "circle-radius": ["step", ["get", "point_count"], 14, 5, 17, 15, 21, 40, 25], "circle-color": "rgba(0,0,0,0.01)" } });
+    map.addLayer({ id: "pr-pts", type: "circle", source: "protests-cl", filter: ["!", ["has", "point_count"]], layout: { visibility: "none", "circle-sort-key": ["-", 0, ["get", "r"]] }, paint: {
+      "circle-radius": PR_R, "circle-color": ["get", "fill"], "circle-stroke-color": ["get", "stroke"], "circle-stroke-width": 1.6, "circle-opacity": ["get", "op"], "circle-stroke-opacity": ["get", "op"] } });
+    map.addLayer({ id: "pr-new", type: "circle", source: "protests-cl", filter: ["all", ["!", ["has", "point_count"]], ["==", ["get", "nw"], 1]], layout: { visibility: "none" }, paint: {
+      "circle-radius": ["+", 5, PR_R], "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": ["get", "col"], "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
+    map.addLayer({ id: "pr-sp-line", type: "line", source: "pr-spider", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#1f2a2e", "line-width": 1, "line-opacity": 0.6 } });
+    map.addLayer({ id: "pr-sp-pts", type: "circle", source: "pr-spider", filter: ["==", ["geometry-type"], "Point"], paint: {
+      "circle-radius": ["max", 6, ["*", ["get", "r"], 1.2]], "circle-color": ["get", "fill"], "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.8 } });
+    map.addLayer({ id: "pr-hl", type: "circle", source: "pr-hl", paint: { "circle-radius": 13, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2.6, "circle-stroke-opacity": 0.9 } });
     if (MK) {
       map.addSource("zones", { type: "geojson", data: MK.zones, promoteId: "code" });
       map.addSource("zone-pts", { type: "geojson", data: { type: "FeatureCollection", features: ZONES.map(ptFeature) } });
@@ -978,6 +1002,14 @@
   function featureOf(code) { const p = P[code]; if (!p) return null; if (p.level === "zone") return ZONES.find(f => f.properties.code === code); if (p.level === "ward") return wardFeatures.find(x => x.properties.code === code); const src = p.level === "country" ? null : G[SRC[p.level]]; return src ? src.features.find(x => x.properties.code === code) : null; }
 
   // ---------- protests on the map ----------
+  // the protests in the time window, for the clustered source: older ones fade (op), the newest get a ring (nw)
+  function protestWindowFeatures() {
+    const D = dayNum(state.date), W = PS.win, lo = D - W, fresh = D - Math.max(60, W * 0.12);
+    return { type: "FeatureCollection", features: PR.sites.map((s, i) => [s, i]).filter(([s]) => { const e = PR.events[s[0]]; return e.t0 <= D && e.end > lo; }).map(([s, i]) => {
+      const e = PR.events[s[0]], col = CAUSE_COL[CAUSES[e.c]] || "#999", r = e.mid ? clamp(3 + 3.1 * Math.log10(e.mid / e.ns / 100 + 1), 3, 15) : 3.4;
+      return { type: "Feature", geometry: { type: "Point", coordinates: [s[2], s[1]] }, properties: { i, e: s[0], c: e.c, col, fill: col, stroke: e.mid ? "#ffffff" : "#1a2226", r,
+        op: +clamp(0.95 - 0.65 * (D - e.t0) / Math.max(1, W), 0.3, 0.95).toFixed(2), nw: e.t0 > fresh ? 1 : 0 } }; }) };
+  }
   function protestFeatures() {
     return { type: "FeatureCollection", features: PR.sites.map((s, i) => {
       const e = PR.events[s[0]], col = CAUSE_COL[CAUSES[e.c]] || "#999", r = e.mid ? clamp(3 + 3.1 * Math.log10(e.mid / e.ns / 100 + 1), 3, 15) : 3.4;
@@ -989,14 +1021,63 @@
     if (!map.getLayer("pr-pts")) return;
     const on = curPlan.points || curPlan.heat, mode = curPlan.heat ? "heat" : "points";
     const D = dayNum(state.date), W = PS.win, lo = D - W;
-    const filter = ["all", ["<=", ["get", "t"], D], [">", ["get", "t1"], lo]];
-    ["pr-pts", "pr-new", "pr-heat"].forEach(id => map.setFilter(id, filter));
-    map.setFilter("pr-new", ["all", ["<=", ["get", "t"], D], [">", ["get", "t"], D - Math.max(60, W * 0.12)]]);
-    const age = ["interpolate", ["linear"], ["-", D, ["get", "t"]], 0, 0.95, W, 0.3];
-    setP("pr-pts", "circle-opacity", age); setP("pr-pts", "circle-stroke-opacity", age);
-    map.setLayoutProperty("pr-pts", "visibility", on && mode === "points" ? "visible" : "none");
-    map.setLayoutProperty("pr-new", "visibility", on && mode === "points" ? "visible" : "none");
+    map.setFilter("pr-heat", ["all", ["<=", ["get", "t"], D], [">", ["get", "t1"], lo]]);
+    const pts = on && mode === "points", key = pts ? state.date + "|" + W : "";
+    if (pts && key !== syncProtestLayer.key) { map.getSource("protests-cl").setData(protestWindowFeatures()); unspider(); }
+    syncProtestLayer.key = key;
+    ["pr-pts", "pr-new", "pr-cl"].forEach(id => map.setLayoutProperty(id, "visibility", pts ? "visible" : "none"));
     map.setLayoutProperty("pr-heat", "visibility", on && mode === "heat" ? "visible" : "none");
+    if (!pts) { unspider(); clusterMarkers(true); } else requestAnimationFrame(() => clusterMarkers());
+    if (!$("prlist") || !prList || prList.el.hidden) return; renderProtestList();
+  }
+  // groups: a donut of causes with the number of protests; click to zoom in (or fan out places that share one point)
+  const CLM = new Map();
+  function donutSVG(counts, n) {
+    const R = n >= 40 ? 25 : n >= 15 ? 21 : n >= 5 ? 17 : 14, r0 = R * 0.58, tot = counts.reduce((a, b) => a + b, 0) || 1; let a0 = -Math.PI / 2, segs = "";
+    counts.forEach((v, k) => { if (!v) return; const a1 = a0 + 2 * Math.PI * v / tot, big = a1 - a0 > Math.PI ? 1 : 0, P = (a, r) => [R + r * Math.cos(a), R + r * Math.sin(a)];
+      if (v === tot) { segs += `<circle cx="${R}" cy="${R}" r="${(R + r0) / 2}" fill="none" stroke="${CAUSE_COL[CAUSES[k]]}" stroke-width="${R - r0}"/>`; }
+      else { const [x0, y0] = P(a0, R), [x1, y1] = P(a1, R), [x2, y2] = P(a1, r0), [x3, y3] = P(a0, r0); segs += `<path d="M${x0} ${y0}A${R} ${R} 0 ${big} 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 ${big} 0 ${x3} ${y3}Z" fill="${CAUSE_COL[CAUSES[k]]}"/>`; }
+      a0 = a1; });
+    return `<svg width="${2 * R}" height="${2 * R}" viewBox="0 0 ${2 * R} ${2 * R}">${segs}<circle cx="${R}" cy="${R}" r="${r0}" fill="var(--solid,#fff)"/><text x="${R}" y="${R + 4}" text-anchor="middle">${n}</text></svg>`;
+  }
+  function clusterMarkers(clear) {
+    const seen = new Set();
+    if (!clear && map.getSource("protests-cl") && map.getLayoutProperty("pr-pts", "visibility") === "visible") {
+      map.querySourceFeatures("protests-cl").forEach(f => {
+        const pr = f.properties; if (!pr.cluster) return; const id = pr.cluster_id; if (seen.has(id)) return; seen.add(id);
+        let mk = CLM.get(id);
+        if (!mk) {
+          const counts = CAUSES.map((_, k) => pr["c" + k] || 0), top = counts.map((v, k) => [v, k]).sort((a, b) => b[0] - a[0]).filter(x => x[0]).slice(0, 3);
+          const el = document.createElement("div"); el.className = "prcl"; el.innerHTML = donutSVG(counts, pr.point_count);
+          el.title = `${pr.point_count} protests here: ${top.map(([v, k]) => `${v} ${CAUSES[k].toLowerCase()}`).join(", ")}${top.length < counts.filter(Boolean).length ? ", …" : ""}. Click to zoom in`;
+          el.addEventListener("click", ev => { ev.stopPropagation(); openCluster(id, f.geometry.coordinates); });
+          mk = new maplibregl.Marker({ element: el }).setLngLat(f.geometry.coordinates).addTo(map); CLM.set(id, mk);
+        }
+      });
+    }
+    for (const [id, mk] of CLM) if (!seen.has(id)) { mk.remove(); CLM.delete(id); }
+  }
+  map.on("render", () => { if (map.getSource("protests-cl") && map.getLayoutProperty("pr-pts", "visibility") === "visible" && !clusterMarkers.t) clusterMarkers.t = requestAnimationFrame(() => { clusterMarkers.t = null; clusterMarkers(); }); });
+  function openCluster(id, at) {
+    const src = map.getSource("protests-cl");
+    Promise.resolve(src.getClusterExpansionZoom(id)).then(z => {
+      if (z <= 14 && z <= map.getMaxZoom()) { map.easeTo({ center: at, zoom: z + 0.2, duration: 600 }); return; }
+      return Promise.resolve(src.getClusterLeaves(id, 200, 0)).then(leaves => spiderfy(at, leaves.map(l => l.properties)));
+    }).catch(() => {});
+  }
+  // places that share exactly one point (many London events geocode to the same centre) fan out into a ring, joined to the centre
+  const SPIDER = { on: false };
+  function spiderfy(at, props) {
+    const c = map.project(at), n = props.length, R = clamp(18 + n * 4.5, 30, 110), feats = [];
+    props.forEach((pr, k) => { const a = 2 * Math.PI * k / n - Math.PI / 2, q = map.unproject([c.x + R * Math.cos(a), c.y + R * Math.sin(a)]), xy = [q.lng, q.lat];
+      feats.push({ type: "Feature", geometry: { type: "LineString", coordinates: [at, xy] }, properties: {} }, { type: "Feature", geometry: { type: "Point", coordinates: xy }, properties: pr }); });
+    map.getSource("pr-spider").setData({ type: "FeatureCollection", features: feats }); SPIDER.on = true; SPIDER.at = at;
+  }
+  function unspider() { if (!SPIDER.on || !map.getSource("pr-spider")) return; map.getSource("pr-spider").setData({ type: "FeatureCollection", features: [] }); SPIDER.on = false; }
+  map.on("zoomstart", unspider);
+  function highlightSites(ei) { // rings round every site of one event (Show all sites, list hover)
+    if (!map.getSource("pr-hl")) return;
+    map.getSource("pr-hl").setData({ type: "FeatureCollection", features: ei == null ? [] : PR.sites.filter(s => s[0] === ei).map(s => ({ type: "Feature", geometry: { type: "Point", coordinates: [s[2], s[1]] }, properties: {} })) });
   }
 
   // ---------- painting the plan ----------
@@ -1019,7 +1100,7 @@
   }
   const LAST = { fc: {}, k: {}, present: {}, presentB: {} };
   const NODATA = "#b9bcbd";
-  const noDataKey = level => (LAST.present[level] && LAST.present[level].has("__nd") ? `<div class="ndkey"><span ${isoAttr("nd", 1)}><i class="sw" style="background:${NODATA}"></i>No data</span></div>` : "") +
+  const noDataKey = level => (["__nd", "__nm", "__est"].some(k => LAST.present[level] && LAST.present[level].has(k)) ? `<div class="ndkey"><button class="linkish" data-info="__honesty">ⓘ What these labels mean</button></div>` : "") + (LAST.present[level] && LAST.present[level].has("__nd") ? `<div class="ndkey"><span ${isoAttr("nd", 1)}><i class="sw" style="background:${NODATA}"></i>No data</span></div>` : "") +
     (LAST.present[level] && LAST.present[level].has("__nm") ? `<div class="ndkey"><span><i class="sw" style="background:transparent;border:1px dashed var(--ink-3)"></i>Unfilled: not meaningful at this level</span></div>` : "") +
     (LAST.present[level] && LAST.present[level].has("__est") ? `<div class="ndkey"><span><i class="sw hatchsw"></i>Hatched: estimated (e.g. notional results on new boundaries)</span></div>` : "");
   let curPlan = { notes: [] };
@@ -1067,13 +1148,13 @@
     LAST.present[level] = present; LAST.presentB[level] = presentB;
   }
   function repaint() {
-    curPlan = EN.plan(planMetrics(), PS.prefs);
+    curPlan = EN.plan(planMetrics(), PS.prefs); syncRange();
     if (state.iso && state.iso.ch !== "nd" && !curPlan[state.iso.ch === "vbl" ? "hue" : state.iso.ch]) state.iso = null;
     if (map.getSource && map.getSource("councils")) { LEVELS.forEach(paintLevel); syncProtestLayer(); syncCompanyLayer(); }
     renderLegend(); renderDock(); renderSup(); renderTNote(); syncFocusColour();
     if (pmOpen) renderPMenu();
     if (state.focus) { renderMind(); refreshPinned(); }
-    renderTray(); if (!$("cmp").hidden) renderCmp();
+    renderTray(); if (!$("cmp").hidden) renderCmp(); if (!cpanel.hidden && CHART.drawn) renderChartBody();
     refreshGroupCards(); savePS();
   }
 
@@ -1087,7 +1168,7 @@
     if (m.pick === "pair") { const cur = pickOf(m.id); return `<select class="as" data-pick="${m.id}" aria-label="Pair of parties">${PAIRS.map(([k, l]) => `<option value="${k}" ${k === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`; }
     return "";
   }
-  const lhead = (m, extra) => `<h5 style="--c:${PER[m.p].hue}">${svgIcon(m.p)}<span>${esc(m.label)}</span>${picker(m)}${chooser(m)}${extra || ""}<button class="lrm" data-lrm="${m.id}" title="Take ${esc(m.label)} off the map" aria-label="Remove ${esc(m.label)}">×</button></h5>`;
+  const lhead = (m, extra) => `<h5 style="--c:${PER[m.p].hue}">${svgIcon(m.p)}<span>${esc(m.label)}</span>${infoBtn(m.id)}${picker(m)}${chooser(m)}${extra || ""}<button class="lrm" data-lrm="${m.id}" title="Take ${esc(m.label)} off the map" aria-label="Remove ${esc(m.label)}">×</button></h5>`;
   const isoAttr = (ch, v) => { const on = state.iso && state.iso.ch === ch && JSON.stringify(state.iso.v) === JSON.stringify(v); return `data-iso='${esc(JSON.stringify({ ch, v }))}' class="iso${on ? " on" : ""}"`; };
   function ticks(m, level, n) {
     const b = breaksFor(m, level, n); const f = m.fmt || String;
@@ -1133,10 +1214,10 @@
     const ev = PL.points || PL.heat;
     if (ev) {
       const present = new Set(); PR.sites.forEach(s => { const e = PR.events[s[0]], D = dayNum(state.date); if (e.t0 <= D && e.end > D - PS.win) present.add(e.c); });
-      parts.push(`<div class="lg">${lhead(ev)}<div class="seg sm" role="group" aria-label="Time window">${[[365, "1y"], [1826, "5y"], [3652, "10y"], [99999, "All"]].map(([w, l]) => `<button data-win="${w}" class="${PS.win === w ? "on" : ""}">${l}</button>`).join("")}</div>
+      parts.push(`<div class="lg">${lhead(ev)}<div class="seg sm" role="group" aria-label="Time window">${[[365, "1y"], [1826, "5y"], [3652, "10y"], [99999, "All"]].map(([w, l]) => `<button data-win="${w}" class="${PS.win === w ? "on" : ""}">${l}</button>`).join("")}</div><button class="btn sm prl-open" data-prlist title="List the protests in this window, for the area in focus or the visible map">List</button>
         ${PL.points ? `<div class="cats2">${[...present].sort((a, b) => a - b).map(c => `<span><i class="sw dot" style="background:${CAUSE_COL[CAUSES[c]]}"></i>${esc(CAUSES[c])}</span>`).join("") || `<span style="color:var(--ink-3)">No protests ${esc(winLabel())}</span>`}</div>
         <div class="dots" style="--c:#8560b5">${[1000, 20000, 500000].map(v => { const r = clamp(3 + 3.1 * Math.log10(v / 100 + 1), 3, 15) * 1.3; return `<span><i style="width:${r * 2}px;height:${r * 2}px;background:#888"></i>${fmtBig(v)}</span>`; }).join("")}<span><i style="width:8px;height:8px;background:#888;border:1.6px solid #1a2226"></i>size unknown</span></div>
-        <div class="note">Colour = cause. Size = crowd. Newer protests are solid and ringed; older ones fade. Window: protests ${esc(winLabel())}. Click a point for its story.</div>` : `<div class="note">Darker = more people protesting nearby, ${esc(winLabel())}.</div>`}</div>`);
+        <div class="note">Colour = cause, size = crowd; numbered rings are groups (click to zoom). Click a point for its card.</div>` : `<div class="note">Darker = more people protesting nearby, ${esc(winLabel())}.</div>`}</div>`);
     }
     const nd = noDataKey(level); if (nd && parts.length) parts[0] = parts[0].replace(/<\/div>$/, nd + "</div>");
     const unplaced = curPlan.notes.filter(n => !n.ch);
@@ -1198,6 +1279,7 @@
     if (i) { const v = JSON.parse(i.dataset.iso); state.iso = state.iso && JSON.stringify(state.iso) === JSON.stringify(v) ? null : v; LEVELS.forEach(paintLevel); renderLegend(); toast(state.iso ? "Showing only those areas. Click again to show all." : "Showing all areas."); return; }
     const rm = e.target.closest("[data-lrm]"); if (rm) { const m = M[rm.dataset.lrm]; if (m && isMapped(m.id)) { toggleMapped(m.id); toast(`${m.label} taken off the map.`); } return; }
     if (e.target.closest("[data-lclear]")) { clearAllLayers(); return; }
+    if (e.target.closest("[data-prlist]")) { openProtestList(); return; }
     if (e.target.closest("[data-bivswap]")) { const a = curPlan.shade, b = curPlan.grid; if (a && b) { PS.prefs[a.id] = "grid"; PS.prefs[b.id] = "shade"; repaint(); toast("Axes swapped."); } return; }
     const w = e.target.closest("[data-win]"); if (w) { PS.win = +w.dataset.win; for (const k in qCache) if (k.includes("|") && /protest/.test(k)) delete qCache[k]; repaint(); }
   });
@@ -1212,7 +1294,7 @@
   const LEVEL_WORDS = { 3: ["low", "middling", "high"], 4: ["low", "lower-middle", "upper-middle", "high"] };
   const bivWords = (cx, ry, n, mx, my) => `${LEVEL_WORDS[n][cx]} ${mx.label.toLowerCase()} · ${LEVEL_WORDS[n][ry]} ${my.label.toLowerCase()}`;
 
-  function renderSup() { const on = onPersps(), sup = $("sup"); sup.textContent = on.length === 0 ? "" : on.length === 1 ? PER[on[0]].name.toLowerCase() : "multi"; $("brand").style.setProperty("--sup", on.length === 1 ? PER[on[0]].hue : "var(--ink-2)"); }
+  function renderSup() { const on = onPersps(), sup = $("sup"); if (APP) { sup.textContent = APP.short; return; } sup.textContent = on.length === 0 ? "" : on.length === 1 ? PER[on[0]].name.toLowerCase() : "multi"; $("brand").style.setProperty("--sup", on.length === 1 ? PER[on[0]].hue : "var(--ink-2)"); }
 
   // ---------- perspectives dock + menus ----------
   // Each perspective is a name; clicking it drops down its categories (e.g. "Government & control"). A category opens a
@@ -1229,15 +1311,30 @@
   function renderDock() {
     dock.classList.toggle("collapsed", !!dockFold.folded);
     const n = PERSPECTIVES.reduce((a, p) => a + mappedIn(p.id), 0);
-    dock.innerHTML = `<div class="dt-row"><button class="dt" data-fold aria-expanded="${!dockFold.folded}"><span>Perspectives</span>${n ? `<span class="n">${n}</span>` : ""}<span class="chev">▾</span></button>${n ? `<button class="dclear" data-dclear title="Take everything off the map (Esc)">Clear</button>` : ""}</div>
-      <div class="dbody"><div class="dinner">${PERSPECTIVES.filter(p => !(p.hidden && !p.ready)).map(p => { const on = mappedIn(p.id) > 0, open = dockOpenP === p.id; return `<div class="pr${on ? " on" : ""}${p.ready ? "" : " locked"}" style="--c:${p.hue}">
-        <button class="pname" data-open="${p.id}" aria-expanded="${open}">${esc(p.name)}${p.ready ? "" : `<small>soon</small>`}<span class="caret">▾</span></button>
+    dock.innerHTML = `<div class="dt-row"><button class="dt" data-fold aria-expanded="${!dockFold.folded}"><span>Perspectives</span>${n ? `<span class="n">${n}</span>` : ""}<span class="chev">▾</span></button><button class="dclear" data-dclear ${n ? "" : "disabled"} title="${n ? "Take everything off the map (Esc). Undo in the message that follows" : "Nothing is on the map"}">Clear all</button></div>
+      <div class="dbody"><div class="dinner">${APP ? `<a class="appswitch" href="${location.pathname}" target="_blank" rel="noopener" title="All perspectives together, in a new tab">Atlas Multi ↗</a>` : ""}${PERSPECTIVES.filter(p => !(p.hidden && !p.ready) && (!APP || p.id === APP.perspective || (p.id === "analysis" && p.ready))).map(p => { const on = mappedIn(p.id) > 0, open = dockOpenP === p.id; return `<div class="pr${on ? " on" : ""}${p.ready ? "" : " locked"}" style="--c:${p.hue}">
+        <div class="phead"><button class="pname" data-open="${p.id}" aria-expanded="${open}" ${p.ready ? "" : `title="Not available yet: no data loaded. Click to see what's planned"`}>${esc(p.name)}${p.ready ? "" : `<small>not available yet</small>`}<span class="caret">▾</span></button>${on ? `<button class="pclear" data-pclear="${p.id}" title="Take the ${esc(p.name)} metrics off the map">clear</button>` : ""}${!APP && p.ready && p.id !== "analysis" ? `<a class="papp" href="${appHref(p.id)}" target="_blank" rel="noopener" title="Open as ${esc(appName(p.id))}, in its own tab">↗</a>` : ""}</div>
         ${open ? `<div class="pgroups">${groupsOfP(p).map(g => { const k = mappedIn(p.id, g) + cardIn(p.id, g), sel = pmOpen && pmOpen.p === p.id && pmOpen.g === g; return `<button class="pgroup${k ? " on" : ""}${sel ? " sel" : ""}" data-group="${esc(g)}" data-p="${p.id}" aria-expanded="${sel}">${esc(g || p.name)}${k ? `<span class="k">${k}</span>` : ""}</button>`; }).join("")}</div>` : ""}</div>`; }).join("")}</div></div>`;
   }
+  function mapOnly(ids) { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.filter(id => M[id]).forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); }
+  // ---------- 1.8: perspective apps ----------
+  const APP_FOR = { political: "politics", economic: "economic", social: "social", markets: "markets", health: "health", transport: "transport" };
+  const appHref = pid => location.pathname + "#app=" + (APP_FOR[pid] || pid);
+  const appName = pid => { const d = window.AtlasApps && AtlasApps.get(APP_FOR[pid]); return d ? d.name : "Atlas " + PER[pid].name; };
+  const APP = (() => { // the open app: its module if there is one, otherwise just the perspective on its own
+    if (!APP_ID) return null;
+    const def = window.AtlasApps && AtlasApps.get(APP_ID), pid = def ? def.perspective : Object.keys(APP_FOR).find(k => APP_FOR[k] === APP_ID) || APP_ID;
+    if (!PER[pid]) return null;
+    return Object.assign({ id: APP_ID, name: "Atlas " + PER[pid].name, perspective: pid, accent: PER[pid].hue, panels: [], tools: [], dataNeeds: [] }, def || {}, { short: (def ? def.name : PER[pid].name).replace(/^Atlas /, "").toLowerCase(), ok: PER[pid].ready && (!def || AtlasApps.ready(def)) });
+  })();
   function syncOn(pid) { const on = (PS.mapped[pid] || []).some(id => PS.active[id]); PS.on[pid] = on; PS.order = PS.order.filter(x => x !== pid); if (on) PS.order.push(pid); }
   function togglePersp(pid, on) { PS.on[pid] = on; PS.order = PS.order.filter(x => x !== pid); if (on) PS.order.push(pid); if (on) (PS.mapped[pid] || []).forEach(id => { PS.active[id] = true; }); repaint(); }
   // Clear every layer at once (Esc when nothing else is open, or the Clear all buttons); Undo puts them back
   const anyMapped = () => PERSPECTIVES.some(p => mappedIn(p.id) > 0);
+  function clearPersp(pid) { // one perspective's metrics off the map, with Undo
+    const before = JSON.stringify({ mapped: PS.mapped[pid] || [] }); PS.mapped[pid] = []; syncOn(pid); state.iso = null; repaint();
+    undoToast(`${PER[pid].name} cleared.`, () => { PS.mapped[pid] = JSON.parse(before).mapped; syncOn(pid); repaint(); });
+  }
   function clearAllLayers() {
     if (!anyMapped()) { toast("Nothing is on the map."); return; }
     const before = JSON.stringify({ mapped: PS.mapped, on: PS.on, order: PS.order });
@@ -1254,20 +1351,33 @@
   }
   dock.addEventListener("click", e => {
     if (e.target.closest("[data-dclear]")) { clearAllLayers(); return; }
+    const pc = e.target.closest("[data-pclear]"); if (pc) { clearPersp(pc.dataset.pclear); return; }
     const f = e.target.closest("[data-fold]"); if (f) { setFold(!dockFold.folded); return; }
     const b = e.target.closest("[data-open]"); if (b) { dockOpenP = dockOpenP === b.dataset.open ? null : b.dataset.open; if (pmOpen && pmOpen.p !== dockOpenP) pmOpen = null; renderDock(); renderPMenu(); positionLegend(); return; }
     const g = e.target.closest("[data-group]"); if (g) { const o = { p: g.dataset.p, g: g.dataset.group }; pmOpen = pmOpen && pmOpen.p === o.p && pmOpen.g === o.g ? null : o; renderDock(); renderPMenu(); }
   });
   const CARD_ICO = '<svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 10h8M8 14h5"/></svg>';
-  // Does a metric have any values for the boundary set on the map? (checked on a sample, at the time-bar date and today)
+  // Does a metric have any values for the boundary set on the map, at the time-bar date? (1.8: checked on a sample whenever the
+  // boundary set or the date changes.) avail() says why not: not meaningful at this level, no data for this boundary set, or
+  // not on this date ("Starts in 1998").
   const availCache = {};
-  function hasData(m, level) {
-    if (m.nature === "text") return true;
-    const key = m.id + "|" + level + "|" + state.date.slice(0, 4); if (key in availCache) return availCache[key];
-    const codes = allCodesAt(level), step = Math.max(1, Math.floor(codes.length / 300)), sample = codes.filter((c, i) => i % step === 0);
-    const ok = d => sample.some(c => { try { const r = m.get(c, d); return r && r.v != null; } catch (e) { return false; } });
-    return (availCache[key] = ok(state.date) || ok(TODAY));
+  const sampleAt = level => { const codes = allCodesAt(level), step = Math.max(1, Math.floor(codes.length / 300)); return codes.filter((c, i) => i % step === 0); };
+  function avail(m, level, d) {
+    d = d || state.date;
+    if (m.nature === "text") return { ok: true };
+    const key = m.id + "|" + level + "|" + d.slice(0, 4) + "|" + (m.temporal === "event" ? PS.win : "") + (m.pick ? "|" + pickOf(m.id) : ""); if (key in availCache) return availCache[key];
+    const pl = (PLURAL_L[level] || "these areas").toLowerCase();
+    if (m.levels && !m.levels.includes(level)) return (availCache[key] = { ok: false, nm: true, why: (m.nmText && m.nmText[level]) || `Not meaningful for ${pl}` });
+    const sample = sampleAt(level);
+    const got = dd => sample.some(c => { try { const r = m.get(c, dd); return r && r.v != null && !r.nm; } catch (e) { return false; } });
+    if (got(d)) return (availCache[key] = { ok: true });
+    const sp = metricSpan(m);
+    if (sp && d < sp[0]) return (availCache[key] = { ok: false, why: `Starts in ${sp[0].slice(0, 4)}` });
+    if (sp && d > sp[1]) return (availCache[key] = { ok: false, why: `Ends in ${sp[1].slice(0, 4)}` });
+    if (m.temporal !== "static" && got(TODAY)) return (availCache[key] = { ok: false, why: `No data for ${pl} on this date` });
+    return (availCache[key] = { ok: false, why: `No data for ${pl}` });
   }
+  const hasData = (m, level) => avail(m, level).ok;
   function renderPMenu() {
     if (!pmOpen) { pmenu.hidden = true; return; }
     const p = PER[pmOpen.p], ms = METRICS.filter(m => m.p === p.id && m.group === pmOpen.g);
@@ -1275,15 +1385,15 @@
     const rows = p.ready ? ms.map(m => {
       const text = m.nature === "text", mapped = isMapped(m.id), inCard = !!PS.card[m.id] && PS.active[m.id], note = curPlan.notes.find(n => n.id === m.id);
       const tag = m.temporal === "event" ? `<i title="Dated events">events</i>` : m.temporal !== "static" ? `<i title="Changes with the time slider">time</i>` : "";
-      const avail = hasData(m, state.level), noD = !avail && !mapped;
-      const sub = text ? "Card only: text can't be drawn on the map" : !avail ? `No data for ${esc((PLURAL_L[state.level] || "these areas").toLowerCase())}${mapped ? ": untick to take it off" : ". Choose other boundaries in Areas ▾ to use it"}` : mapped && note ? `On the map as <b>${note.ch ? CH_NAME[note.ch] : "— no free channel"}</b>` : esc(m.desc || "");
-      return `<div class="crow${(text ? inCard : mapped) ? " on" : ""}${noD ? " nodata" : ""}"><input type="checkbox" id="cb-${m.id}" ${text ? `data-card="${m.id}"` : `data-map="${m.id}"`} ${(text ? inCard : mapped) ? "checked" : ""} ${noD ? "disabled" : ""}>
+      const av = avail(m, state.level), noD = !av.ok && !mapped;
+      const sub = text ? "Card only: text can't be drawn on the map" : !av.ok ? `${esc(av.why)}${mapped ? ": untick to take it off" : av.nm || /^No data for/.test(av.why) ? ". Choose other boundaries in Areas ▾" : ". Move the time bar"}` : mapped && note ? `On the map as <b>${note.ch ? CH_NAME[note.ch] : "— no free channel"}</b>` : esc(m.desc || "");
+      return `<div class="crow${(text ? inCard : mapped) ? " on" : ""}${noD ? " nodata" : ""}" ${noD ? `title="${esc(av.why)}"` : ""}><input type="checkbox" id="cb-${m.id}" ${text ? `data-card="${m.id}"` : `data-map="${m.id}"`} ${(text ? inCard : mapped) ? "checked" : ""} ${noD ? "disabled" : ""}>
         <label for="cb-${m.id}" class="ml">${esc(m.label)}${tag}<small>${sub}</small></label>
-        <span></span></div>`;
-    }).join("") : p.planned.map(n => `<div class="crow off"><input type="checkbox" disabled><span class="ml">${esc(n)}<small>No data loaded yet</small></span><span></span></div>`).join("");
+        ${infoBtn(m.id)}</div>`;
+    }).join("") : p.planned.map(n => `<div class="crow off" title="Not available yet"><input type="checkbox" disabled><span class="ml">${esc(n)}<small>Not available yet: planned</small></span><span></span></div>`).join("");
     const n = ms.filter(m => isMapped(m.id)).length;
     pmenu.innerHTML = `<div class="pm-head"><div><h3>${esc(pmOpen.g || p.name)}</h3><p>${esc(p.name)} · ${esc(p.desc)}</p></div><button class="x" data-pmx aria-label="Close">×</button></div><div class="pm-list">${rows}</div>
-      <div class="pm-foot">${p.ready ? `<span>${n} on the map · tick several to overlay them</span>${n ? `<button class="btn" data-clearg>Clear</button>` : ""}` : `<span>Coming in a later phase. Political comes first.</span>`}</div>`;
+      <div class="pm-foot">${p.ready ? `<span>${n} on the map · tick several to overlay them</span>` : `<span>Not available yet: these are planned, with no data loaded.</span>`}</div>`;
     pmenu.hidden = false;
     const anchor = dock.querySelector(`.pgroup.sel`) || dock, ar = anchor.getBoundingClientRect(), dr = dock.getBoundingClientRect();
     const h = pmenu.offsetHeight, top = clamp(ar.top - 8, 60, window.innerHeight - h - 12);
@@ -1298,11 +1408,10 @@
     const b = e.target.closest("button"); if (!b) return;
     if (b.hasAttribute("data-pmx")) closePMenu();
     else if (b.dataset.card) { const id = b.dataset.card; PS.active[id] = true; PS.card[id] = !PS.card[id]; repaint(); toast(PS.card[id] ? `${M[id].label} will show in the hover card.` : `${M[id].label} removed from the hover card.`); }
-    else if (b.hasAttribute("data-clearg")) { const pid = pmOpen.p; PS.mapped[pid] = (PS.mapped[pid] || []).filter(id => M[id].group !== pmOpen.g); syncOn(pid); repaint(); }
   });
   function closePMenu() { if (!pmOpen) return false; pmOpen = null; renderDock(); renderPMenu(); return true; }
   // folding the panel
-  const dockFold = { folded: false, timer: null, hover: false };
+  const dockFold = { folded: true, timer: null, hover: false };   // 1.8: starts folded (a calmer first screen)
   function setFold(f) { dockFold.folded = f; if (f) { pmOpen = null; renderPMenu(); } renderDock(); armFold(); }
   function armFold() { clearTimeout(dockFold.timer); if (dockFold.folded) return; dockFold.timer = setTimeout(() => { if (dockFold.hover || document.activeElement && (dock.contains(document.activeElement) || pmenu.contains(document.activeElement)) && document.activeElement !== document.body) return armFold(); setFold(true); }, 15000); }
   [dock, pmenu].forEach(el => { el.addEventListener("pointerenter", () => { dockFold.hover = true; armFold(); }); el.addEventListener("pointerleave", () => { dockFold.hover = false; armFold(); }); ["pointerdown", "keydown", "wheel"].forEach(ev => el.addEventListener(ev, armFold)); });
@@ -1311,38 +1420,115 @@
   const state = { sel: [], level: "nation", pinned: null, focus: null, editing: false, date: TODAY, playing: null, iso: null, tool: null };
   const slider = $("slider"), dateIn = $("date");
   slider.min = monthIdx(START); slider.max = monthIdx(TODAY); slider.step = 1;
+  // 1.8: the bar runs from the earliest to the latest date with data for what's on the map (the union across the metrics).
+  // "Full range" shows 1974 to today anyway, with the years outside the data hatched.
+  const TB = { lo: START, hi: TODAY, has: false, full: !!store.get("atlas-18-tb-full", false) };
+  const viewLo = () => TB.full ? START : TB.lo, viewHi = () => TB.full ? TODAY : TB.hi;
+  const EVENT_SPAN = PR.events.length ? [fromDay(Math.min(...PR.events.map(e => e.t0))), fromDay(Math.min(dayNum(TODAY), Math.max(...PR.events.map(e => e.end))))] : null;
+  const spanCache = {};
+  function metricSpan(m) { // [first, last] date with any value, over every boundary set where the metric means something; null = no dates (static)
+    if (m.temporal === "static" || m.nature === "text") return null;
+    if (m.temporal === "event") return EVENT_SPAN;
+    if (m.span) return typeof m.span === "function" ? m.span() : m.span;   // metrics on older constituencies, whose boundaries load only when needed
+    const key = m.id + "|" + (m.pick ? pickOf(m.id) : ""); if (key in spanCache) return spanCache[key];
+    const codes = [UKC]; (m.levels || LEVELS).forEach(l => { const cs = allLevelCodes(l), step = Math.max(1, Math.floor(cs.length / 40)); cs.forEach((c, i) => { if (i % step === 0) codes.push(c); }); });
+    const annual = m.temporal === "annual", y0 = +START.slice(0, 4), y1 = +TODAY.slice(0, 4);
+    const ok = (c, d, y) => { try { const r = m.get(c, d); return !!(r && r.v != null && !r.nm && (!annual || !r.yr || (String(r.yr).match(/\d{4}/g) || []).includes(String(y)))); } catch (e) { return false; } };
+    const has = (d, y) => codes.some(c => ok(c, d, y));
+    let lo = null, hi = null;
+    for (let y = y0; y <= y1 && !lo; y++) if (has(annual ? y + "-07-01" : (y === y1 ? TODAY : y + "-12-31"), y)) {
+      if (annual) lo = y + "-01-01";
+      else { for (let mo = 1; mo <= 12 && !lo; mo++) { const d = y + "-" + pad(mo) + "-28"; if (d > TODAY || has(d, y)) lo = y + "-" + pad(mo) + "-01"; } }
+    }
+    if (lo && annual) { for (let y = y1; y >= +lo.slice(0, 4) && !hi; y--) if (has(y === y1 ? TODAY : y + "-07-01", y)) hi = y === y1 ? TODAY : y + "-12-31"; }
+    else if (lo) hi = TODAY;
+    return (spanCache[key] = lo ? [lo < START ? START : lo, hi || TODAY] : null);
+  }
+  const allLevelCodes = l => Object.keys(P).filter(c => P[c].level === l);
+  function syncRange(quiet) { // the bar follows the metrics on the map; a date outside the new range moves to its nearest end
+    const spans = planMetrics().map(metricSpan).filter(Boolean);
+    TB.has = spans.length > 0;
+    TB.lo = TB.has ? spans.reduce((a, s) => s[0] < a ? s[0] : a, TODAY) : START;
+    TB.hi = TB.has ? spans.reduce((a, s) => s[1] > a ? s[1] : a, START) : TODAY;
+    slider.min = monthIdx(viewLo()); slider.max = monthIdx(viewHi());
+    const d = state.date, nd = d < viewLo() ? viewLo() : d > viewHi() ? viewHi() : d;
+    if (nd !== d) {
+      state.date = nd; dateIn.value = dmy(nd); syncPcon();
+      if (!quiet) toast(`The date moved to ${longDate(nd)}: what's on the map has data from ${shortDate(TB.lo)} to ${TB.hi >= TODAY ? "today" : shortDate(TB.hi)}.`);
+    }
+    slider.value = monthIdx(state.date); renderMarks();
+  }
   function setDate(d, opts) {
-    d = d < START ? START : d > TODAY ? TODAY : d;
+    d = d < viewLo() ? viewLo() : d > viewHi() ? viewHi() : d;
     if (d === state.date && !(opts && opts.force)) return;
-    state.date = d; slider.value = monthIdx(d); dateIn.value = dmy(d); dateIn.classList.remove("bad"); syncPcon();
+    state.date = d; slider.value = monthIdx(d); dateIn.value = dmy(d); dateIn.classList.remove("bad"); syncPcon(); placeCur();
     LEVELS.forEach(paintLevel); syncProtestLayer(); renderLegend(); renderTNote(); syncFocusColour();
     if (state.focus) { renderMind(); refreshPinned(); if (!hist.hidden) renderHist(); }
     else if (hovCode && !card.hidden) showHover(hovCode, lastPt || { x: 0, y: 0 });
     renderTray(); if (!$("cmp").hidden) renderCmp();
     if (!cpanel.hidden && CHART.drawn) renderChartBody();
     renderTray(); if (!$("cmp").hidden) renderCmp(); refreshGroupCards();
+    if (pmOpen) renderPMenu(); if (!$("browse").hidden) renderLevelPicker();
+    notifyApps();
   }
-  slider.addEventListener("input", () => { let d = +slider.value >= +slider.max ? TODAY : fromMonthIdx(+slider.value); if (PS.step > 1 && d !== TODAY) d = Math.round(+d.slice(0, 4) / PS.step) * PS.step + "-07-01"; setDate(d); });
-  dateIn.addEventListener("keydown", e => { if (e.key === "Enter") { const d = parseDMY(dateIn.value); if (d) { setDate(d); dateIn.blur(); } else { dateIn.classList.add("bad"); toast("Type the date as dd/mm/yy, e.g. 07/05/15"); } } });
+  slider.addEventListener("input", () => { let d = +slider.value >= +slider.max ? viewHi() : +slider.value <= +slider.min ? viewLo() : fromMonthIdx(+slider.value); if (PS.step > 1 && d !== viewHi() && d !== viewLo()) d = Math.round(+d.slice(0, 4) / PS.step) * PS.step + "-07-01"; setDate(d); });
+  dateIn.addEventListener("keydown", e => { if (e.key === "Escape") { dateIn.blur(); return; } if (e.key === "Enter") { const d = parseDMY(dateIn.value); if (d) { setDate(d); dateIn.blur(); } else { dateIn.classList.add("bad"); toast("Type the date as dd/mm/yy, e.g. 07/05/15"); } } });
   dateIn.addEventListener("blur", () => { if (!parseDMY(dateIn.value)) dateIn.value = dmy(state.date); });
-  $("now").addEventListener("click", () => { stopPlay(); setDate(TODAY); });
+  $("now").addEventListener("click", () => { stopPlay(); setDate(viewHi()); });
   const PLAY_ICON = '<svg class="ico" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>', PAUSE_ICON = '<svg class="ico" viewBox="0 0 24 24"><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z"/></svg>';
   const playBtn = $("play"); playBtn.innerHTML = PLAY_ICON;
   function stopPlay() { if (state.playing) { clearInterval(state.playing); state.playing = null; playBtn.innerHTML = PLAY_ICON; playBtn.setAttribute("aria-label", "Play through time"); } }
   playBtn.addEventListener("click", () => {
     if (state.playing) return stopPlay();
     if (!curPlan.notes.some(n => n.ch)) toast("Put a metric on the map to see changes play out.");
-    if (state.date >= TODAY) setDate(PS.step > 1 ? (Math.ceil(+START.slice(0, 4) / PS.step) * PS.step) + "-07-01" : START);
+    if (state.date >= viewHi()) setDate(PS.step > 1 ? (Math.ceil(+viewLo().slice(0, 4) / PS.step) * PS.step) + "-07-01" : viewLo());
     playBtn.innerHTML = PAUSE_ICON; playBtn.setAttribute("aria-label", "Pause");
-    state.playing = setInterval(() => { const n = addYears(state.date, PS.step); if (n >= TODAY) { setDate(TODAY); stopPlay(); } else setDate(n); }, PS.step === 1 ? 850 : 1300);
+    if (planMetrics().some(m => m.temporal === "event")) {   // protests on the map: play steps from one protest to the next
+      const days = [...new Set(PR.events.map(e => fromDay(e.t0)))].filter(d => d >= viewLo() && d <= viewHi()).sort();
+      if (!days.some(d => d > state.date)) setDate(days[0] || viewLo());
+      state.playing = setInterval(() => { const n = days.find(d => d > state.date); if (!n) stopPlay(); else setDate(n); }, 900);
+      return;
+    }
+    state.playing = setInterval(() => { const n = addYears(state.date, PS.step); if (n >= viewHi()) { setDate(viewHi()); stopPlay(); } else setDate(n); }, PS.step === 1 ? 850 : 1300);
   });
   $("steps").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; PS.step = +b.dataset.step; renderSteps(); savePS(); });
-  function renderSteps() {
-    document.querySelectorAll("#steps button").forEach(b => b.classList.toggle("on", +b.dataset.step === PS.step));
-    const lo = +slider.min, hi = +slider.max, y0 = +START.slice(0, 4), y1 = +TODAY.slice(0, 4), out = [];
-    for (let y = y0 + 1; y <= y1; y++) { const major = y % 10 === 0, minor = y % PS.step === 0; if (!major && !minor) continue; out.push(`<span class="${major ? "" : "minor"}" style="left:${((y * 12 - lo) / (hi - lo) * 100).toFixed(2)}%">${y}</span>`); }
-    $("marks").innerHTML = out.join("");
+  function renderSteps() { document.querySelectorAll("#steps button").forEach(b => b.classList.toggle("on", +b.dataset.step === PS.step)); renderMarks(); }
+  // Labels fit the bar's width: full dates → years → every 2nd, 5th or 10th year → only the start and end. The current date
+  // always shows in a label above the handle, and no label overlaps another or runs off the bar.
+  const tbCtx = document.createElement("canvas").getContext("2d");
+  const tbW = t => { tbCtx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace"; return Math.ceil(tbCtx.measureText(t).width) + 4; };
+  const monYr = s => new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  function renderMarks() {
+    const marks = $("marks"), W = marks.clientWidth; if (!W) return;
+    const a = monthIdx(viewLo()), b = monthIdx(viewHi()), span = Math.max(1, b - a), X = m => (m - a) / span * W, ppy = 12 * W / span;
+    const y0 = +viewLo().slice(0, 4), y1 = +viewHi().slice(0, 4), full = ppy >= 84;
+    const lab = d => full ? monYr(d) : d.slice(0, 4);
+    const placed = [], out = [], GAP = 8;
+    const put = (x, text, cls, anchor) => { const w = tbW(text), l = anchor === "l" ? 0 : anchor === "r" ? W - w : x - w / 2; if (l < 0 || l + w > W + 0.5) return false; if (placed.some(p => l < p[1] + GAP && l + w + GAP > p[0])) return false; placed.push([l, l + w]); out.push(`<span class="${cls}" style="left:${l.toFixed(1)}px;width:${w}px">${esc(text)}</span>`); return true; };
+    put(0, lab(viewLo()), "edge l", "l"); put(W, lab(viewHi()), "edge r", "r");
+    const step = full ? 1 : [1, 2, 5, 10, 20, 25, 50].find(s => s * ppy >= 40) || 0;
+    if (step) for (let y = Math.ceil((y0 + 1) / step) * step; y <= y1; y += step) { const m = y * 12; if (m <= a || m >= b) continue; put(X(m), full ? "Jan " + y : String(y), y % 10 === 0 || step >= 10 ? "" : "minor"); }
+    // years with no data for what's on the map (Full range only)
+    const nd = TB.full && TB.has ? [[START, TB.lo], [TB.hi, TODAY]].filter(([p, q]) => q > p && monthIdx(q) - monthIdx(p) >= 1).map(([p, q]) => { const l = X(monthIdx(p)), r = X(monthIdx(q)); return `<i class="tb-nd" style="left:${l.toFixed(1)}px;width:${Math.max(2, r - l).toFixed(1)}px" title="No data for what's on the map, ${p.slice(0, 4)}–${q.slice(0, 4)}">${r - l > 52 ? "no data" : ""}</i>`; }).join("") : "";
+    // small ticks where protests happen (when protests are on the map)
+    const evTicks = planMetrics().some(m => m.temporal === "event") ? (() => { const px = new Set(); return PR.events.map(e => e.t0).filter(t => { const d = fromDay(t); return d >= viewLo() && d <= viewHi(); }).map(t => Math.round(X(monthIdx(fromDay(t))))).filter(x => !px.has(x) && px.add(x)).map(x => `<i class="tb-ev" style="left:${x}px"></i>`).join(""); })() : "";
+    marks.innerHTML = nd + evTicks + out.join("");
+    marks.dataset.tier = full ? "dates" : step === 1 ? "years" : step ? "every-" + step : "ends";
+    $("tb-full").classList.toggle("on", TB.full); $("tb-full").title = TB.full ? "Showing 1974 to today. Click to fit the bar to the data on the map" : `Show 1974 to today (the data on the map runs ${TB.lo.slice(0, 4)}–${TB.hi >= TODAY ? "today" : TB.hi.slice(0, 4)})`;
+    placeCur();
   }
+  function placeCur() { // the date above the handle (the thumb is 14 px wide)
+    const c = $("tcur"), tr = slider.getBoundingClientRect(); if (!c || !tr.width) return;
+    const lo = +slider.min, hi = +slider.max, f = hi > lo ? (monthIdx(state.date) - lo) / (hi - lo) : 1, x = 7 + clamp(f, 0, 1) * (tr.width - 14);
+    c.textContent = longDate(state.date); if (c.offsetWidth > tr.width * 0.55) c.textContent = monYr(state.date);
+    const w = c.offsetWidth; c.style.left = clamp(x - w / 2, 0, Math.max(0, tr.width - w)).toFixed(1) + "px";
+  }
+  $("tb-more").addEventListener("click", e => { e.stopPropagation(); const p = $("tb-pop"); p.hidden = !p.hidden; $("tb-more").setAttribute("aria-expanded", String(!p.hidden)); });
+  document.addEventListener("mousedown", e => { if (!$("tb-pop").hidden && !e.target.closest("#tb-pop,#tb-more")) $("tb-pop").hidden = true; });
+  $("tcur").addEventListener("click", () => { timebar.classList.add("typing"); dateIn.focus(); dateIn.select(); });
+  dateIn.addEventListener("blur", () => timebar.classList.remove("typing"));
+  $("tb-full").addEventListener("click", () => { TB.full = !TB.full; store.set("atlas-18-tb-full", TB.full); syncRange(); if (TB.full) toast("Full range: 1974 to today. Hatched years have no data for what's on the map."); });
+  if (window.ResizeObserver) new ResizeObserver(() => renderMarks()).observe($("marks"));
   function renderTNote() {
     const ms = curPlan.notes.filter(n => n.ch).map(n => M[n.id]), note = $("tnote"), bits = [];
     if (!isNow()) bits.push(`Showing ${longDate(state.date)}`);
@@ -1439,7 +1625,7 @@
     const items = CORE.map(f => { let v = value(code, f.id); if (past && (f.id === "ruler" || f.id === "party")) v = { text: M[f.id].get(code, d).text, yr: "" }; return `<li><b>${esc(f.label)}:</b> ${esc(v.text)}${v.yr ? ` <small>(${esc(v.yr)})</small>` : ""}${v.edited ? ` <span class="tag">edited</span>` : ""}</li>`; });
     ((rec && rec.fields) || []).forEach(f => { if (f.label) items.push(`<li><b>${esc(f.label)}:</b> ${esc(f.value || "—")}</li>`); });
     const onMap = planMetrics(); // everything ticked shows in the card, drawn or not
-    const mapped = onMap.map(m => { const r = m.get(code, d); return `<li${r && r.nm ? ' class="nm"' : ""}>${swatchOf(m, code)}<span><b>${esc(m.label)}:</b> ${esc(r && (r.v != null || !EN.isNum(m) || r.nm) ? r.text : "No data")}${estTag(r)}${r && r.note ? ` <small>· ${esc(r.note)}</small>` : ""}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}${r && r.nm ? "" : sparkFor(m, code)}${pinned && m.how && !(r && r.nm) ? `<small class="how">How this is worked out: ${esc(m.how)}</small>` : ""}${pinned && r && r.detail ? `<div class="mdet">${r.detail}</div>` : ""}</span></li>`; });
+    const mapped = onMap.map(m => { const r = m.get(code, d); return `<li${r && r.nm ? ' class="nm"' : ""}>${swatchOf(m, code)}<span><b>${esc(m.label)}:</b> ${esc(r && (r.v != null || !EN.isNum(m) || r.nm) ? r.text : "No data")}${estTag(r)}${r && r.note ? ` <small>· ${esc(r.note)}</small>` : ""}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}${r && r.nm ? "" : sparkFor(m, code)}${pinned && m.how && !(r && r.nm) && PS.detail !== "simple" ? `<small class="how">How this is worked out: ${esc(m.how)}</small>` : ""}${pinned ? infoBtn(m.id) : ""}${pinned && r && r.detail ? `<div class="mdet">${r.detail}</div>` : ""}</span></li>`; });
     if (PS.detail === "simple" && !pinned) {   // short: Westminster results become one line (winner, share, majority); the rest stays
       const wmOn = onMap.some(m => m.group === G4), keep = onMap.map((m, i) => m.group === G4 ? null : mapped[i]).filter(Boolean);
       if (wmOn) { const r = resultFor(code, d); if (r && !(M.ge_winner.get(code, d) || {}).nm) { const w = r.agg ? Object.keys(r.seats).sort((a, b) => r.seats[b] - r.seats[a])[0] : winnerOf(r), mj = r.agg ? null : PSE.majority(r.cl, r.t.total);
@@ -1455,7 +1641,7 @@
       <h3>${esc(nameOf(code))}${rec ? ` <span class="tag">edited</span>` : ""}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}<ul>${items.join("")}</ul>
       ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
       ${rec && rec.notes ? `<div class="notes">${esc(rec.notes)}</div>` : ""}
-      ${pinned ? `<div class="acts"><button class="btn primary" data-edit>Edit</button><button class="btn" data-chartme>Chart</button><button class="btn" data-wscard title="Send this card to the workspace">Card → workspace</button><button class="btn" data-wstile title="Send this place as a tile (a small map) to the workspace">Tile → workspace</button><button class="btn" data-addcmp>${state.sel.some(s => s.code === code) ? "✓ Selected" : "+ Compare"}</button><button class="btn" data-zoom>Zoom to</button><button class="btn" data-outline title="Turn this place's outline into a shape you can drag over other places, at its real size">Drag outline</button></div>` : ""}`;
+      ${pinned ? `<div class="acts"><button class="btn primary" data-edit>Edit</button><button class="btn" data-chartme>Chart</button><button class="btn" data-wscard title="Send this card to the workspace">Card → workspace</button><button class="btn" data-wstile title="Send this place as a tile (a small map) to the workspace">Tile → workspace</button><button class="btn" data-addcmp>${state.sel.some(s => s.code === code) ? "✓ Selected" : "+ Compare"}</button><button class="btn" data-zoom>Zoom to</button><button class="btn" data-outline title="Turn this place's outline into a shape you can drag over other places, at its real size">Drag outline</button>${PR.events.length ? `<button class="btn" data-prhere title="The protests here ${esc(winLabel())}">Protests here</button>` : ""}</div>` : ""}`;
   }
   function editHTML(code) {
     const p = P[code], rec = E.areas[code] || {}, vals = rec.values || {};
@@ -1491,6 +1677,7 @@
     else if (b.hasAttribute("data-wscard")) sendToWS({ type: "card", title: nameOf(code), html: cardHTML(code, false), w: 340, h: 380 });
     else if (b.hasAttribute("data-wstile")) sendTile([code]);
     else if (b.hasAttribute("data-chartzone")) openChart({ companies: cosIn(code).map(c => c.i) });
+    else if (b.hasAttribute("data-prhere")) openProtestList();
   });
   card.addEventListener("click", e => { const li = e.target.closest("[data-co]"); if (!li) return; const c = COS[+li.dataset.co]; ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = companyHTML(c.i, true); ecard.hidden = false; const r = card.getBoundingClientRect(); place(r.left - 350, r.top, ecard); });
   card.addEventListener("submit", e => {
@@ -1519,6 +1706,71 @@
       <div class="sect">Local politics at the time</div><ul><li><b>${esc(s0 ? nameOf(s0[3]) : "")} council:</b> ${esc(ctl ? partyName(ctl[2]) : "No record")}</li><li><b>Government:</b> ${esc(gov && gov.party ? partyName(gov.party) + (gov.leader ? ` (${gov.leader})` : "") : "—")}</li></ul>
       <div class="note2">No dataset records how protesters vote. Shown instead: parties named as organisers or participants, and the politics of the place.</div>
       <div class="acts">${sites.length > 1 ? `<button class="btn" data-fit="${ei}">Show all ${sites.length} places</button>` : ""}${e.u ? `<a class="btn" href="${esc(e.u)}" target="_blank" rel="noopener">Source</a>` : ""}<button class="btn" data-goto="${e.t0}">Set date to this</button></div>`;
+  }
+  // 1.8: a protest's own card, a floating window (several can be open; they cascade). Fields from the build: dates, every
+  // site, cause and category, organisers and parties, crowd estimates with who made them, the result, the Wikipedia lead
+  // (CC BY-SA, with the link) and the Wikidata ID. Missing fields are left out.
+  const protestCards = new Map(), CROWD_SRC = { police: "police", organisers: "organisers", media: "media", Wikidata: "Wikidata" };
+  function protestCardHTML(ei) {
+    const e = PR.events[ei], sites = PR.sites.filter(s => s[0] === ei), d0 = fromDay(e.t0), d1 = e.t1 ? fromDay(e.t1) : null;
+    const places = sites.map(s => s[5]).filter((x, i, a) => a.indexOf(x) === i), councils = [...new Set(sites.map(s => nameOf(s[3])))];
+    const cr = (e.cr || []).length ? e.cr.map(([lo, hi, t]) => `${lo === hi ? fmtBig(lo) : `${fmtBig(lo)} – ${fmtBig(hi)}`}${CROWD_SRC[t] ? ` <small>(${CROWD_SRC[t]})</small>` : ""}`).join(" · ") : e.lo ? (e.lo === e.hi ? fmtBig(e.lo) : `${fmtBig(e.lo)} – ${fmtBig(e.hi)}`) : "";
+    const s0 = sites[0], ctl = s0 ? seg(POL.control[s0[3]], d0) : null, gov = s0 ? govAt(P[s0[3]].nation, d0) : (e.scope || []).length ? govAt(e.scope.find(c => c !== UKC) || UKC, d0) : null;
+    const row = (k, v) => v ? `<li><b>${k}:</b> ${v}</li>` : "";
+    return `<div class="pcard">${e.intl ? `<div class="pintl">UK part of an international protest</div>` : ""}<div class="lvl"><span>Protest${e.src === "ACLED" ? " · ACLED" : ""}</span><span>${esc(longDate(d0))}${d1 && d1 !== d0 ? " – " + esc(longDate(d1)) : ""}</span></div>
+      ${e.sum ? `<p class="psum">${esc(e.sum)} <small class="pattr">From <a href="${esc(e.u)}" target="_blank" rel="noopener">Wikipedia</a> (CC BY-SA 4.0)</small></p>` : ""}
+      <ul>${row("Cause", `<i class="sw dot" style="background:${CAUSE_COL[CAUSES[e.c]]}"></i> ${esc(CAUSES[e.c])}${e.ct ? `<br><small>${esc(e.ct.slice(0, 220))}</small>` : ""}`)}
+      ${row(`Where (${places.length || "no single place"})`, places.length ? esc(places.slice(0, 14).join(", ")) + (places.length > 14 ? ` and ${places.length - 14} more` : "") + (councils.length ? `<br><small>${esc(councils.slice(0, 8).join(", "))}${councils.length > 8 ? "…" : ""}</small>` : "") : (e.scope || []).length ? esc(e.scope.map(nameOf).join(", ")) + " <small>(no town named: counted for the nation)</small>" : "")}
+      ${row("Crowd estimates", cr + (e.sn ? `<br><small>${esc(e.sn)}</small>` : ""))}${!cr && e.sn ? row("Crowd", `<small>${esc(e.sn)}</small>`) : ""}
+      ${row("Organisers / sides", e.org ? esc(e.org.slice(0, 240)) : "")}
+      ${row("Parties named", e.pa.length ? e.pa.map(p => `<span class="pchip" style="--pc:${partyCol(p)}">${esc(partyName(p))}</span>`).join(" ") : "")}
+      ${row("Organisers' alignment", e.al.length ? e.al.map(a => `<span class="pchip" style="--pc:${ALIGN_COL[a] || "#999"}">${esc(a)}</span>`).join(" ") + ` <small>(Atlas lookup, editable)</small>` : "")}
+      ${row("Result", e.out ? esc(e.out) : "")}${row("Wikidata", e.q ? `<a href="https://www.wikidata.org/wiki/${esc(e.q)}" target="_blank" rel="noopener">${esc(e.q)}</a>` : "")}</ul>
+      ${s0 || gov ? `<div class="sect">Politics at the time</div><ul>${s0 ? `<li><b>${esc(nameOf(s0[3]))} council:</b> ${esc(ctl ? partyName(ctl[2]) : "No record")}</li>` : ""}<li><b>Government:</b> ${esc(gov && gov.party ? partyName(gov.party) + (gov.leader ? ` (${gov.leader})` : "") : "—")}</li></ul>` : ""}
+      <div class="acts">${e.u ? `<a class="btn primary" href="${esc(e.u)}" target="_blank" rel="noopener">Read more on Wikipedia ↗</a>` : ""}${sites.length ? `<button class="btn" data-pfit="${ei}">Show all sites${sites.length > 1 ? ` (${sites.length})` : ""}</button>` : ""}<button class="btn" data-pgoto="${e.t0}">Set date to this</button></div></div>`;
+  }
+  function openProtestCard(ei) {
+    const have = protestCards.get(ei); if (have && WM.isOpen(have.el)) { WM.front(have.el); WM.pulse(have.el); return have; }
+    const w = WM.make({ type: "protest", title: PR.events[ei].n, html: protestCardHTML(ei), cascade: true, min: { w: 300, h: 220 },
+      def: () => ({ x: innerWidth - 400 - 16, y: 80, w: 400, h: Math.min(600, innerHeight - 110) }), onClose: () => { protestCards.delete(ei); if (protestCards.hlFor === ei) { highlightSites(null); protestCards.hlFor = null; } } });
+    w.el.addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return;
+      if (b.dataset.pfit) { const i = +b.dataset.pfit, ss = PR.sites.filter(x => x[0] === i); highlightSites(i); protestCards.hlFor = i; let bb = [180, 90, -180, -90]; ss.forEach(x => { bb = [Math.min(bb[0], x[2]), Math.min(bb[1], x[1]), Math.max(bb[2], x[2]), Math.max(bb[3], x[1])]; }); map.fitBounds([[bb[0], bb[1]], [bb[2], bb[3]]], { padding: { top: 100, bottom: 140, left: 340, right: 440 }, maxZoom: 11, duration: 900 }); toast(`${ss.length} ${ss.length === 1 ? "site" : "sites"} ringed on the map.`); }
+      else if (b.dataset.pgoto) setDate(fromDay(+b.dataset.pgoto)); });
+    protestCards.set(ei, w); WM.open(w.el); return w;
+  }
+  // the protest list: protests active or within the window at the date, for the area in focus or the visible map
+  let prList = null; const PRL = { sort: "date", cause: "", align: "" };
+  function prListEvents() {
+    const D = dayNum(state.date), lo = D - PS.win, code = state.focus;
+    let evs;
+    if (code) evs = eventsIn(code, state.date).map(e => PR.events.indexOf(e));
+    else { const b = map.getBounds(), ids = new Set(); PR.sites.forEach(s => { const e = PR.events[s[0]]; if (e.t0 <= D && e.end > lo && b.contains([s[2], s[1]])) ids.add(s[0]); }); evs = [...ids]; }
+    evs = evs.filter(i => (PRL.cause === "" || PR.events[i].c === +PRL.cause) && (PRL.align === "" || PR.events[i].al.includes(PRL.align)));
+    const key = { date: i => -PR.events[i].t0, size: i => -(PR.events[i].mid || 0), cause: i => PR.events[i].c * 1e6 - PR.events[i].t0 / 1e3 }[PRL.sort];
+    return evs.sort((a, b) => key(a) - key(b));
+  }
+  function renderProtestList() {
+    if (!prList || prList.el.hidden) return;
+    const evs = prListEvents(), where = state.focus ? nameOf(state.focus) : "the visible map";
+    const aligns = [...new Set(PR.events.flatMap(e => e.al))].sort();
+    prList.setTitle(`Protests · ${where}`);
+    prList.setBody(`<div class="prl-bar"><label>Sort <select data-prl="sort">${[["date", "Newest"], ["size", "Largest crowd"], ["cause", "Cause"]].map(([k, l]) => `<option value="${k}" ${PRL.sort === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+        <label>Cause <select data-prl="cause"><option value="">All</option>${CAUSES.map((c, k) => `<option value="${k}" ${PRL.cause === String(k) ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
+        <label>Alignment <select data-prl="align"><option value="">All</option>${aligns.map(a => `<option ${PRL.align === a ? "selected" : ""}>${esc(a)}</option>`).join("")}</select></label></div>
+      <p class="prl-sub">${evs.length} ${evs.length === 1 ? "protest" : "protests"} ${esc(winLabel())} (to ${esc(longDate(state.date))}), ${state.focus ? "in " + esc(where) : "on the visible map"}. Hover to find one; click for its card.</p>
+      <ul class="prl">${evs.map(i => { const e = PR.events[i]; return `<li data-pev="${i}"><i class="sw dot" style="background:${CAUSE_COL[CAUSES[e.c]]}"></i><span class="prl-n">${esc(e.n)}${e.intl ? ` <small>(UK part)</small>` : ""}</span><small>${esc(shortDate(fromDay(e.t0)))}${e.mid ? " · " + esc(fmtBig(e.mid)) : ""}</small></li>`; }).join("") || `<li class="empty">None ${esc(winLabel())}. Try a longer window (key: 1y · 5y · 10y · All) or zoom out.</li>`}</ul>`);
+  }
+  function openProtestList() {
+    if (!prList) {
+      prList = WM.make({ type: "protest-list", title: "Protests", min: { w: 300, h: 240 }, dispose: false, def: () => ({ x: innerWidth - 380 - 16, y: 56, w: 380, h: Math.round(innerHeight * 0.62) }), onClose: () => highlightSites(protestCards.hlFor != null ? protestCards.hlFor : null) });
+      prList.el.id = "prlist";
+      prList.el.addEventListener("change", e => { const k = e.target.dataset.prl; if (k) { PRL[k] = e.target.value; renderProtestList(); } });
+      prList.el.addEventListener("mouseover", e => { const li = e.target.closest("[data-pev]"); if (li) highlightSites(+li.dataset.pev); });
+      prList.el.addEventListener("mouseleave", () => highlightSites(protestCards.hlFor != null ? protestCards.hlFor : null));
+      prList.el.addEventListener("click", e => { const li = e.target.closest("[data-pev]"); if (li) openProtestCard(+li.dataset.pev); });
+      map.on("moveend", () => { if (!state.focus) renderProtestList(); });
+    }
+    WM.open(prList.el); renderProtestList();
   }
   ecard.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
@@ -1551,7 +1803,11 @@
   function pickZone(e) { if (!map.getLayer("zone-fill") || map.getZoom() < ZONE_Z) return null; const f = map.queryRenderedFeatures(e.point, { layers: ["zone-fill"] })[0]; return f ? { code: f.properties.code, level: "zone" } : null; }
   function pickCompany(e) { if (!map.getLayer("co-pts") || map.getLayoutProperty("co-pts", "visibility") === "none") return null; const b = 4, f = map.queryRenderedFeatures([[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]], { layers: ["co-pts"] })[0]; return f ? f.properties.i : null; }
   function pick(e) { const z = pickZone(e); if (z) return z; const l = state.level; const f = map.queryRenderedFeatures(e.point, { layers: [l + "-fill"] })[0]; return f ? { code: f.properties.code, level: l } : null; }
-  function pickProtest(e) { if (!map.getLayer("pr-pts") || map.getLayoutProperty("pr-pts", "visibility") === "none") return null; const b = 4, f = map.queryRenderedFeatures([[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]], { layers: ["pr-pts"] })[0]; return f ? f.properties.e : null; }
+  const pbox = (e, b) => [[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]];
+  function pickProtest(e) {
+    if (SPIDER.on) { const f = map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-sp-pts"] })[0]; if (f) return f.properties.e; }
+    if (!map.getLayer("pr-pts") || map.getLayoutProperty("pr-pts", "visibility") === "none") return null; const f = map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-pts"] })[0]; return f ? f.properties.e : null;
+  }
   function setFS(t, s) { try { map.setFeatureState({ source: SRC[t.level], id: t.code }, s); } catch (e) {} }
   const hoverMs = () => Math.round(1200 * Math.pow(1 - TOOLS.cursor, 1.5) + 60);
   let cand = null, hov = null, timer = null, lastPt = null;
@@ -1585,8 +1841,19 @@
     if (map.getLayer("zone-dot") && map.getZoom() < ZONE_Z && map.queryRenderedFeatures([[e.point.x - 5, e.point.y - 5], [e.point.x + 5, e.point.y + 5]], { layers: ["zone-dot"] }).length) { map.flyTo({ center: [-0.1, 51.512], zoom: 11.6, duration: 1200 }); toast("London's financial districts: click a gold tile to explore it."); return; }
     const pc = pickCompany(e);
     if (pc != null) { ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = companyHTML(pc, true); ecard.hidden = false; place(e.point.x + 10, e.point.y - 40, ecard); bubbleNudge(); return; }
+    const cl = map.getLayer("pr-cl") && map.getLayoutProperty("pr-cl", "visibility") !== "none" ? map.queryRenderedFeatures(pbox(e, 2), { layers: ["pr-cl"] })[0] : null;
+    if (cl) { openCluster(cl.properties.cluster_id, cl.geometry.coordinates); return; }
+    const onSpider = SPIDER.on && map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-sp-pts"] }).length;
     const pe = pickProtest(e);
-    if (pe != null) { ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = eventHTML(pe, true); ecard.hidden = false; place(e.point.x + 10, e.point.y - 40, ecard); return; }
+    if (pe != null) {
+      if (!onSpider) {   // several protests on exactly this point: fan them out first
+        const fs = map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-pts"] }), at = fs[0].geometry.coordinates;
+        const same = fs.filter(f => Math.abs(f.geometry.coordinates[0] - at[0]) < 1e-6 && Math.abs(f.geometry.coordinates[1] - at[1]) < 1e-6);
+        if (new Set(same.map(f => f.properties.e)).size > 1) { ecard.hidden = true; spiderfy(at, same.map(f => f.properties)); return; }
+      }
+      ecard.hidden = true; ecardPinned = false; openProtestCard(pe); return;
+    }
+    if (SPIDER.on) unspider();
     const t = pick(e);
     if (!t) { unfocus(); clearGroup(); cancelAutoGroup(); return; }
     if (e.originalEvent.shiftKey || state.tool === "select" || state.tool === "lasso") { toggleCompare(t); if (e.originalEvent.shiftKey) armAutoGroup(); return; }
@@ -1693,7 +1960,7 @@
     syncFocusColour(); veil.classList.add("on"); document.body.classList.add("focused");
     card.className = "card pinned"; card.innerHTML = cardHTML(code, true); card.hidden = false; hist.hidden = true;
     if (!(opts && opts.noFly)) flyTo(code, 0, true);
-    renderMind(); updateOverlay(); bubbleNudge();
+    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList(); notifyApps();
   }
   function unfocus() {
     if (!state.focus && !state.pinned) return;
@@ -1701,7 +1968,7 @@
     veil.classList.remove("on"); document.body.classList.remove("focused"); veil.style.clipPath = ""; veil.style.webkitClipPath = ""; mind.innerHTML = ""; card.hidden = true; hist.hidden = true;
     setP("focus-lift", "fill-opacity", 0); setP("focus-edge", "line-opacity", 0); setP("focus-shadow", "line-opacity", 0);
     setTimeout(() => { if (!state.focus && map.getSource("focus")) map.getSource("focus").setData({ type: "FeatureCollection", features: [] }); }, 320);
-    renderTray();
+    renderTray(); renderProtestList(); notifyApps();
   }
   function syncFocusColour() { if (!FX) return; const c = LAST.fc[FX.code]; setP("focus-lift", "fill-color", c || (look.mode === "dark" ? "#2a3237" : "#ffffff")); }
   function updateOverlay() {
@@ -1915,13 +2182,108 @@
   // ---------- comparison page ----------
   const cmpEl = $("cmp");
   const CMP = { metrics: new Set(METRICS.filter(m => DEF_PS.active[m.id] && m.nature !== "event").map(m => m.id)), x: null, y: null, q: "" };
-  function openCmp() { closeMenu(); closePMenu(); closeTools(); closeExport(); closeHist(); cmpEl.hidden = false; renderCmp(); }
-  function closeCmp() { if (cmpEl.hidden) return false; cmpEl.hidden = true; return true; }
+  function openCmp() { closeMenu(); closePMenu(); closeTools(); closeHist(); WM.open(cmpEl); renderCmp(); }
+  function closeCmp() { return WM.close(cmpEl); }
+  // ---------- 1.8: Compare makes tables and charts from what's chosen ----------
+  // A table has a layout (places × metrics at one date; places × years for one metric; metrics × years for one place) and
+  // dates. Totals only where they mean something: sums for counts and amounts, population-weighted averages for rates
+  // (never a plain average of rates), nothing for categories, lengths of time or results recalculated from votes.
+  // Everything made here stays in the list on the left until closed; the current table and chart sit side by side.
+  Object.assign(CMP, { items: [], at: null, ac: null, mk: null, tw: 0.5, form: { layout: "pm", when: "bar", year: +TODAY.slice(0, 4), from: 2010, to: +TODAY.slice(0, 4), metric: null, place: null }, seq: 0 });
+  const LAYOUTS = { pm: "Places × metrics, at one date", py: "Places × years, for one metric", my: "Metrics × years, for one place" };
+  const yearDate = y => y >= +TODAY.slice(0, 4) ? TODAY : y + "-07-01";
+  function colTotal(m, codes, rs, d) { // the total or weighted average of one column, or why there's none
+    if (!EN.isNum(m)) return { text: "", title: "Categories and text aren't added up" };
+    if (m.levels) return { text: "—", title: "Recalculated from the underlying votes or counts, not added up: see the region or nation itself" };
+    if (new Set(codes.map(c => P[c] && P[c].level)).size > 1) return { text: "—", title: "Places at different levels (e.g. a region and its councils): no total, so nothing is counted twice" };
+    const ok = codes.map((c, i) => [c, rs[i]]).filter(([, r]) => r && r.v != null && !r.nm), miss = codes.length - ok.length, agg = EN.aggregate(m), f = m.fmt || (v => CH.compact(v));
+    if (!ok.length) return { text: "—", title: "No values" };
+    const est = ok.some(([, r]) => r.est);
+    if (agg.fn === "sum") { const t = ok.reduce((a, [, r]) => a + r.v, 0); return { v: t, est, text: f(t) + (miss ? "*" : ""), title: `Total of ${ok.length} places${miss ? `; ${miss} with no value left out (*)` : ""}` }; }
+    if (agg.fn === "ratio" || agg.fn === "wmean") {
+      const w = ok.map(([c]) => popAt(c, d)), lack = ok.filter((_, i) => !w[i]).map(([c]) => nameOf(c));
+      if (lack.length) return { text: "—", title: `Population not known for ${lack.slice(0, 3).join(", ")}${lack.length > 3 ? "…" : ""}: no weighted average (a plain average of rates would mislead)` };
+      const v = ok.reduce((a, [, r], i) => a + r.v * w[i], 0) / w.reduce((a, b) => a + b, 0);
+      return { v, est, text: f(v) + (miss ? "*" : ""), title: `Average weighted by population (for a rate per head this is the rate of the places combined)${miss ? `; ${miss} with no value left out (*)` : ""}` };
+    }
+    return { text: "—", title: agg.fn === "mean" ? "Lengths of time aren't added up or averaged across places" : "Changes are recalculated for each area, not added up" };
+  }
+  function cmpTable(spec) { // -> { title, head, rows, foot, csv }
+    const ms = (spec.layout === "py" ? [spec.metric] : spec.metrics).map(id => M[id]).filter(Boolean), codes = spec.codes.filter(c => P[c]);
+    const cell = (m, r) => !r ? { text: "—" } : r.nm ? { text: "n/a", nm: true, title: r.text } : EN.isNum(m) ? (r.v == null ? { text: "—", title: r.text } : { v: r.v, text: (m.fmt || String)(r.v), est: r.est, title: r.estWhy || "" })
+      : EN.isCat(m) ? { text: r.text || "—", sw: r.v ? m.colour(r.v) : null, est: r.est } : { text: r.text || "—" };
+    let title, head, rows, foot = null, raw = [];
+    if (spec.layout === "pm") {
+      const d = spec.when === "bar" ? state.date : yearDate(spec.year);
+      title = `${codes.length} places × ${ms.length} metrics · ${longDate(d)}`;
+      head = ms.map(m => ({ text: m.label, m }));
+      rows = codes.map(c => { const rs = ms.map(m => m.get(c, d)); raw.push(rs); return { code: c, label: nameOf(c), sub: LABEL[P[c].level], cells: ms.map((m, j) => cell(m, rs[j])) }; });
+      foot = ms.map((m, j) => colTotal(m, codes, raw.map(r => r[j]), d));
+    } else if (spec.layout === "py") {
+      const m = ms[0], ys = []; for (let y = spec.from; y <= spec.to; y++) ys.push(y);
+      title = `${m ? m.label : "?"} · ${codes.length} places · ${spec.from}–${spec.to}`;
+      head = ys.map(y => ({ text: String(y), m }));
+      rows = codes.map(c => ({ code: c, label: nameOf(c), sub: LABEL[P[c].level], cells: ys.map(y => { const r = m.get(c, yearDate(y)), ok = r && r.v != null && (m.temporal !== "annual" || !r.yr || (String(r.yr).match(/\d{4}/g) || []).includes(String(y))); return cell(m, ok ? r : r && r.nm ? r : null); }) }));
+      foot = m ? ys.map((y, k) => colTotal(m, codes, codes.map(c => { const v = rows[codes.indexOf(c)].cells[k]; return v.v != null ? { v: v.v, est: v.est } : null; }), yearDate(y))) : null;
+    } else {
+      const c = spec.place, ys = []; for (let y = spec.from; y <= spec.to; y++) ys.push(y);
+      title = `${nameOf(c)} · ${ms.length} metrics · ${spec.from}–${spec.to}`;
+      head = ys.map(y => ({ text: String(y) }));
+      rows = ms.map(m => ({ label: m.label, sub: PER[m.p].name, m, cells: ys.map(y => { const r = m.get(c, yearDate(y)), ok = r && r.v != null && (m.temporal !== "annual" || !r.yr || (String(r.yr).match(/\d{4}/g) || []).includes(String(y))); return cell(m, ok ? r : null); }) }));
+    }
+    const first = spec.layout === "my" ? "Metric" : "Place";
+    const csv = [[first, ...head.map(h => h.text)], ...rows.map(r => [r.label, ...r.cells.map(x => x.v != null ? +(+x.v).toFixed(6) : x.text === "—" ? "" : x.text)])];
+    if (foot && foot.some(f => f.text)) csv.push([spec.layout === "py" ? "Total / weighted average" : "Total / weighted average", ...foot.map(f => f.v != null ? +(+f.v).toFixed(6) : "")]);
+    return { title, head, rows, foot, csv, first };
+  }
+  function cmpTableHTML(spec) {
+    const T = cmpTable(spec), shade = (vals, m) => { const ok = vals.filter(v => v != null); const lo = Math.min(...ok), hi = Math.max(...ok); return v => { if (v == null || !(hi > lo)) return ""; const k = Math.min(4, Math.floor((v - lo) / (hi - lo) * 5)), bg = m && m.mid != null ? DIV[k] : PER[(m || {}).p || "economic"].ramp[k]; return `background:${bg};color:${textOn(bg)}`; }; };
+    const colShade = spec.layout === "pm" ? T.head.map((h, j) => EN.isNum(h.m) ? shade(T.rows.map(r => r.cells[j].v), h.m) : () => "") : null;
+    const allShade = spec.layout === "py" && T.head[0] && EN.isNum(T.head[0].m) ? shade(T.rows.flatMap(r => r.cells.map(c => c.v)), T.head[0].m) : null;
+    const td = (x, j, r) => { const st = x.v != null ? (colShade ? colShade[j](x.v) : allShade ? allShade(x.v) : r.m && EN.isNum(r.m) ? shade(r.cells.map(c => c.v), r.m)(x.v) : "") : "";
+      return `<td class="${x.v != null ? "num" : x.nm ? "nm" : ""}" ${x.v != null ? `data-v="${x.v}"` : ""} style="${st}" ${x.title ? `title="${esc(x.title)}"` : ""}>${x.sw ? `<i class="sw" style="background:${x.sw}"></i>` : ""}${esc(x.text)}${x.est ? '<sup class="est" title="Estimated">est.</sup>' : ""}</td>`; };
+    const est = T.rows.some(r => r.cells.some(c => c.est));
+    return `<div class="tscroll"><table class="cmp sortable ctab"><thead><tr><th title="Click to sort">${T.first}</th>${T.head.map(h => `<th title="Click to sort" ${h.m && spec.layout === "pm" ? `style="--c:${PER[h.m.p].hue}"` : ""}>${h.m && spec.layout === "pm" ? svgIcon(h.m.p) : ""}${esc(h.text)}</th>`).join("")}</tr></thead>
+      <tbody>${T.rows.map(r => `<tr ${r.code ? `data-code="${r.code}" title="Hover to find it on the map; double-click to focus it"` : ""}><th>${esc(r.label)}<small>${esc(r.sub || "")}</small></th>${r.cells.map((x, j) => td(x, j, r)).join("")}</tr>`).join("")}</tbody>
+      ${T.foot && T.foot.some(f => f.text) ? `<tfoot><tr><th title="Sums for counts and amounts; population-weighted averages for rates; nothing where adding up would mislead">Total / weighted avg.</th>${T.foot.map(f => `<td class="num" ${f.title ? `title="${esc(f.title)}"` : ""}>${esc(f.text)}${f.est ? '<sup class="est">est.</sup>' : ""}</td>`).join("")}</tr></tfoot>` : ""}</table></div>
+      <p class="tnote2">${T.foot && T.foot.some(f => f.text) ? "Bottom row: sums for counts and amounts, population-weighted averages for rates; hover a figure for how it was worked out. " : ""}${est ? "est. = estimated, not measured. " : ""}Click a heading to sort.</p>`;
+  }
+  function cmpChartSpec(codes, ms) {
+    const usable = ms.filter(m => m.nature !== "text" && m.nature !== "event" && m.nature !== "site");
+    const timed = usable.filter(m => m.temporal !== "static"), pick = (timed.length ? timed : usable).slice(0, 4);
+    return { metrics: pick.map(m => m.id), places: codes.slice(0, 10), companies: [], style: null, from: spanFor(pick), to: +TODAY.slice(0, 4), rebase: false, index: false };
+  }
+  function cmpAdd(item) { item.id = "k" + (++CMP.seq); CMP.items.push(item); if (item.kind === "table") CMP.at = item.id; else CMP.ac = item.id; CMP.mk = null; renderCmp(); }
+  function cmpWorkHTML() {
+    const T = CMP.items.find(i => i.id === CMP.at), C = CMP.items.find(i => i.id === CMP.ac);
+    if (!T && !C) return "";
+    const tPane = T ? `<div class="cmp-tpane"><div class="cmp-ph"><b>${esc(cmpTable(T.spec).title)}</b><span class="cmp-pacts"><button class="btn sm" data-kcsv="${T.id}">Copy as CSV</button><button class="btn sm" data-kxlsx="${T.id}" title="Download as an Excel file">.xlsx</button><button class="btn sm" data-kcsvf="${T.id}" title="Download as a CSV file">.csv</button><button class="btn sm" data-kws="${T.id}">→ Workspace</button><button class="btn sm" data-ktab="${T.id}">Open in tab</button></span></div>${cmpTableHTML(T.spec)}</div>` : "";
+    const cPane = C ? `<div class="cmp-cpane"><div class="cmp-ph"><b>${esc(C.title)}</b><span class="cmp-pacts">${C.spec.style ? `<button class="btn sm" data-kccsv="${C.id}">Copy data (CSV)</button><button class="btn sm" data-kws="${C.id}">→ Workspace</button><button class="btn sm" data-ktab="${C.id}">Open in tab</button>` : ""}</span></div>
+      <div class="cp-styles">${stylesHTML(C.spec, !!C.spec.style, "k")}</div><div class="cmp-chart" data-kchart="${C.id}"></div></div>` : "";
+    return `<div class="cmp-work${T && C ? " two" : ""}" style="--tw:${(CMP.tw * 100).toFixed(1)}%">${tPane}${T && C ? `<div class="cmp-div" title="Drag to share the space between the table and the chart"></div>` : ""}${cPane}</div>`;
+  }
+  function cmpBuilderHTML(codes, ms) {
+    const F = CMP.form, num = ms.filter(m => m.nature !== "text"), yr = TODAY.slice(0, 4);
+    if (!F.metric || !num.some(m => m.id === F.metric)) F.metric = (num.find(m => m.temporal !== "static") || num[0] || {}).id || null;
+    if (!F.place || !codes.includes(F.place)) F.place = codes[0] || null;
+    return `<section class="cmp-mk"><div class="cmp-mkh"><b>Make a table</b><button class="x" data-kmkx aria-label="Close">×</button></div>
+      <div class="seg wrap">${Object.entries(LAYOUTS).map(([k, l]) => `<button data-klay="${k}" class="${F.layout === k ? "on" : ""}" ${k === "my" && !codes.length ? "disabled" : ""}>${l}</button>`).join("")}</div>
+      <div class="cmp-mkf">${F.layout === "pm" ? `<label>Date <select data-kf="when"><option value="bar" ${F.when === "bar" ? "selected" : ""}>The time bar's (${esc(longDate(state.date))})</option><option value="year" ${F.when === "year" ? "selected" : ""}>A year…</option></select></label>${F.when === "year" ? `<label>Year <input type="number" data-kf="year" min="1974" max="${yr}" value="${F.year}"></label>` : ""}`
+        : `${F.layout === "py" ? `<label>Metric <select data-kf="metric">${num.map(m => `<option value="${m.id}" ${m.id === F.metric ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : `<label>Place <select data-kf="place">${codes.map(c => `<option value="${c}" ${c === F.place ? "selected" : ""}>${esc(nameOf(c))}</option>`).join("")}</select></label>`}
+           <label>Years <input type="number" data-kf="from" min="1974" max="${yr}" value="${F.from}"> to <input type="number" data-kf="to" min="1974" max="${yr}" value="${F.to}"></label>`}
+        <button class="btn primary" data-kmake ${(F.layout === "py" && !F.metric) || !codes.length || !num.length ? "disabled" : ""}>Make table</button></div></section>`;
+  }
+  function drawCmpCharts() {
+    cmpEl.querySelectorAll("[data-kchart]").forEach(el => { const it = CMP.items.find(i => i.id === el.dataset.kchart); if (!it || !it.spec.style) { el.innerHTML = ""; return; } el.innerHTML = drawChart(it.spec, Math.max(260, el.clientWidth - 8)); });
+  }
+  const cmpEmpty = (m, codes) => m.nature !== "text" && codes.every(c => { try { const r = m.get(c, state.date); return !r || r.nm || r.v == null; } catch (e) { return true; } });
   function renderCmp() {
     const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id));
-    const side = PERSPECTIVES.map(p => `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + (p.ready
-      ? METRICS.filter(m => m.p === p.id).map(m => `<label style="--c:${p.hue}"><input type="checkbox" data-cm="${m.id}" ${CMP.metrics.has(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("") + `<div class="quick"><button class="btn" data-all="${p.id}">All</button><button class="btn" data-none="${p.id}">None</button></div>`
-      : p.planned.map(n => `<label class="dis"><input type="checkbox" disabled>${esc(n)}</label>`).join(""))).join("");
+    if (!CMP.items.length && codes.length >= 2 && ms.length) { CMP.items.push({ id: "k" + (++CMP.seq), kind: "table", title: "Places × metrics", spec: { layout: "pm", when: "bar", codes: codes.slice(), metrics: [...CMP.metrics].filter(id => M[id]) } }); CMP.at = "k" + CMP.seq; }   // the side-by-side table, as before
+    const made = CMP.items.length ? `<div class="cmp-made"><h4>Made here</h4>${CMP.items.map(it => `<div class="cmp-it${it.id === CMP.at || it.id === CMP.ac ? " on" : ""}" data-kshow="${it.id}" title="Show it"><span class="cmp-ik">${it.kind === "table" ? "▦" : sIcon(it.spec.style || "line")}</span><span class="cmp-in">${esc(it.title)}</span><button data-kdel="${it.id}" aria-label="Close ${esc(it.title)}">×</button></div>`).join("")}</div>` : "";
+    const side = made + PERSPECTIVES.map(p => `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + (p.ready
+      ? METRICS.filter(m => m.p === p.id).map(m => { const on = CMP.metrics.has(m.id), nd = !on && codes.length && cmpEmpty(m, codes); return `<label style="--c:${p.hue}" class="${nd ? "dis" : ""}" ${nd ? `title="No data for these places on this date"` : ""}><input type="checkbox" data-cm="${m.id}" ${on ? "checked" : ""} ${nd ? "disabled" : ""}>${esc(m.label)}</label>`; }).join("") + `<div class="quick"><button class="btn" data-all="${p.id}">All</button><button class="btn" data-none="${p.id}">None</button></div>`
+      : `<p class="small">Not available yet</p>` + p.planned.map(n => `<label class="dis" title="Not available yet"><input type="checkbox" disabled>${esc(n)}</label>`).join(""))).join("");
     const usable = ms.filter(m => m.nature !== "text");
     if (!usable.some(m => m.id === CMP.x)) CMP.x = (usable[0] || {}).id || null;
     if (!usable.some(m => m.id === CMP.y) || CMP.y === CMP.x) CMP.y = (usable.find(m => m.id !== CMP.x) || {}).id || null;
@@ -1930,11 +2292,14 @@
     if (codes.length < 2) main += `<div class="empty-big">Pick at least two places to compare. Add them here, Shift-click them on the map, or hold the mouse still and drag a box over them.</div>`;
     else if (!ms.length) main += `<div class="empty-big">Tick the metrics you want to compare on the left. They can come from the same perspective or different ones.</div>`;
     else {
-      main += `<section><h3>Side by side${!isNow() ? " · as of " + esc(longDate(state.date)) : ""}</h3><div style="overflow:auto">${tableHTML(codes, ms, false)}</div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn" data-cexp>Export to Excel / CSV…</button><button class="btn" data-cws>Send table to workspace</button><button class="btn" data-ctile>Send places as a tile</button><button class="btn" data-can>Analyse these metrics…</button></div></section>`;
-      main += `<section><h3>Patterns between two metrics</h3>` + (usable.length < 2 ? `<div class="empty-big">Tick two or more metrics to look for a pattern between them.</div>` : patternHTML(codes, M[CMP.x], M[CMP.y], usable)) + `</section>`;
+      const anyNum = ms.some(m => EN.isNum(m));
+      main += `<section class="cmp-acts"><button class="btn primary" data-kmk="table" title="Choose a layout and dates">Make table ▾</button><button class="btn primary" data-kmk="chart" title="Choose a chart style for these places and metrics">Make chart</button><button class="btn" data-can ${anyNum ? "" : `disabled title="Analyse needs at least one numeric metric"`}>Analyse these…</button><button class="btn" data-ctile title="The places as a small map in the workspace">Places as a tile → workspace</button><button class="btn" data-cexp>Export…</button>${helpBtn("tables", "Help: tables and totals")}</section>`;
+      if (CMP.mk === "table") main += cmpBuilderHTML(codes, ms);
+      main += cmpWorkHTML();
+      main += `<details class="cmp-pat"${CMP.patOpen ? " open" : ""}><summary>Patterns between two metrics</summary>` + (usable.length < 2 ? `<div class="empty-big">Tick two or more metrics to look for a pattern between them.</div>` : patternHTML(codes, M[CMP.x], M[CMP.y], usable)) + `</details>`;
     }
     cmpEl.innerHTML = `<div class="cmp-page" role="dialog" aria-label="Compare"><div class="cmp-top"><div><h2>Compare</h2><p>Choose places and any metrics, from one perspective or several. Uses the date on the time bar.</p></div><button class="btn" data-close>Close</button></div><div class="cmp-side">${side}</div><div class="cmp-main">${main}</div></div>`;
-    addFctl(cmpEl, ".cmp-top");
+    addFctl(cmpEl); requestAnimationFrame(drawCmpCharts);
     const q = $("cmp-q"); if (q && CMP.q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); showCmpHits(); }
   }
   const shortFmt = t => String(t).replace(/ years?$/, "").replace(/ changes?$/, "").replace(/ per km²$/, "").replace(/ protests?$/, "").replace(/ per 100k$/, "");
@@ -1974,7 +2339,7 @@
       pts.forEach(p => { t[p.x + "|" + p.y] = (t[p.x + "|" + p.y] || 0) + 1; });
       const mxn = Math.max(...Object.values(t)), v = EN.cramersV(pts.map(p => [p.x, p.y]));
       const A = ka.sort((a, b) => pts.filter(p => p.x === b).length - pts.filter(p => p.x === a).length).slice(0, 10), B = kb.sort((a, b) => pts.filter(p => p.y === b).length - pts.filter(p => p.y === a).length).slice(0, 8);
-      return `<div class="scatter-wrap"><div style="overflow:auto"><table class="cmp xt"><thead><tr><th>${esc(mx.label)} ↓ · ${esc(my.label)} →</th>${B.map(b => `<th><i class="sw" style="background:${my.colour(b)}"></i>${esc(my.catName(b))}</th>`).join("")}</tr></thead><tbody>
+      return `<div class="scatter-wrap"><div class="tscroll"><table class="cmp xt"><thead><tr><th>${esc(mx.label)} ↓ · ${esc(my.label)} →</th>${B.map(b => `<th><i class="sw" style="background:${my.colour(b)}"></i>${esc(my.catName(b))}</th>`).join("")}</tr></thead><tbody>
         ${A.map(a => `<tr><th><i class="sw" style="background:${mx.colour(a)}"></i>${esc(mx.catName(a))}</th>${B.map(b => { const n = t[a + "|" + b] || 0, bg = n ? mix("#ffffff", "#5b3a8c", 0.15 + 0.75 * n / mxn) : "transparent"; return `<td class="num" style="background:${bg};color:${n ? textOn(bg) : "var(--ink-3)"}">${n || "·"}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>
         <div class="scatter-ctrl">${ctrl}<div class="r">Cramér's V = ${v == null ? "—" : v.toFixed(2)}<br><span style="font-family:var(--f);color:var(--ink-2)">${esc(EN.strength(v))} across ${pts.length} areas</span></div><div style="font-size:11.5px;color:var(--ink-2)">Each cell counts areas with that pair. Dark cells away from the usual pattern are where to look.</div></div></div>`;
     }
@@ -1982,19 +2347,52 @@
   }
   function showCmpHits() { const ul = $("cmp-hits"), q = CMP.q.trim().toLowerCase(); if (!ul) return; const hs = q.length < 2 ? [] : searchNames(q); ul.innerHTML = hs.map(c => `<li data-add="${c}">${esc(nameOf(c))}<small>${LABEL[P[c].level]}</small></li>`).join(""); ul.hidden = !hs.length; }
   cmpEl.addEventListener("input", e => { if (e.target.id === "cmp-q") { CMP.q = e.target.value; showCmpHits(); } });
-  cmpEl.addEventListener("change", e => { const t = e.target; if (t.dataset.cm) { t.checked ? CMP.metrics.add(t.dataset.cm) : CMP.metrics.delete(t.dataset.cm); renderCmp(); } else if (t.dataset.ax) { CMP[t.dataset.ax] = t.value; renderCmp(); } });
+  cmpEl.addEventListener("change", e => { const t = e.target;
+    if (t.dataset.cm) { t.checked ? CMP.metrics.add(t.dataset.cm) : CMP.metrics.delete(t.dataset.cm); renderCmp(); }
+    else if (t.dataset.ax) { CMP[t.dataset.ax] = t.value; renderCmp(); }
+    else if (t.dataset.kf) { const k = t.dataset.kf, F = CMP.form; F[k] = ["year", "from", "to"].includes(k) ? clamp(+t.value || 1974, 1974, +TODAY.slice(0, 4)) : t.value; if (F.from > F.to) [F.from, F.to] = [F.to, F.from]; renderCmp(); } });
+  cmpEl.addEventListener("toggle", e => { if (e.target.classList && e.target.classList.contains("cmp-pat")) CMP.patOpen = e.target.open; }, true);
+  cmpEl.addEventListener("pointerdown", e => { // the divider between the table and the chart
+    const dv = e.target.closest(".cmp-div"); if (!dv) return; e.preventDefault(); const work = dv.parentNode, r = work.getBoundingClientRect(); dv.setPointerCapture(e.pointerId); document.body.classList.add("resizing");
+    const mv = ev => { CMP.tw = clamp((ev.clientX - r.left) / r.width, 0.2, 0.8); work.style.setProperty("--tw", (CMP.tw * 100).toFixed(1) + "%"); };
+    const up = () => { dv.removeEventListener("pointermove", mv); document.body.classList.remove("resizing"); drawCmpCharts(); };
+    dv.addEventListener("pointermove", mv); dv.addEventListener("pointerup", up, { once: true });
+  });
+  if (window.ResizeObserver) { let t; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (!cmpEl.hidden) drawCmpCharts(); }, 150); }).observe(cmpEl); }
+  function cmpItemAction(b) { // buttons in the workbench; true if handled
+    const ds = b.dataset, it = id => CMP.items.find(i => i.id === id);
+    if (ds.kmk) { if (ds.kmk === "table") { CMP.mk = CMP.mk === "table" ? null : "table"; renderCmp(); } else { const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id)); const spec = cmpChartSpec(codes, ms); cmpAdd({ kind: "chart", title: "Chart: " + spec.metrics.map(id => M[id].label).join(" & "), spec }); } return true; }
+    if (b.hasAttribute("data-kmkx")) { CMP.mk = null; renderCmp(); return true; }
+    if (ds.klay) { CMP.form.layout = ds.klay; renderCmp(); return true; }
+    if (b.hasAttribute("data-kmake")) { const F = CMP.form, codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id) && m.nature !== "text");
+      const spec = { layout: F.layout, when: F.when, year: F.year, from: F.from, to: F.to, codes: codes.slice(), metrics: F.layout === "pm" ? [...CMP.metrics].filter(id => M[id]) : [...CMP.metrics].filter(id => M[id] && M[id].nature !== "text"), metric: F.metric, place: F.place };
+      cmpAdd({ kind: "table", title: F.layout === "pm" ? `Places × metrics${F.when === "year" ? ", " + F.year : ""}` : F.layout === "py" ? `${M[F.metric].label}, ${F.from}–${F.to}` : `${nameOf(F.place)}, ${F.from}–${F.to}`, spec }); return true; }
+    if (ds.kshow) { const x = it(ds.kshow); if (x.kind === "table") CMP.at = x.id; else CMP.ac = x.id; renderCmp(); return true; }
+    if (ds.kdel) { CMP.items = CMP.items.filter(i => i.id !== ds.kdel); if (CMP.at === ds.kdel) CMP.at = (CMP.items.filter(i => i.kind === "table").pop() || {}).id || null; if (CMP.ac === ds.kdel) CMP.ac = (CMP.items.filter(i => i.kind === "chart").pop() || {}).id || null; renderCmp(); return true; }
+    if (ds.kcsv) { copy(XL.csv(cmpTable(it(ds.kcsv).spec).csv), "the table (CSV)"); return true; }
+    if (ds.kxlsx || ds.kcsvf) { const x = it(ds.kxlsx || ds.kcsvf), T = cmpTable(x.spec), stamp = state.date.replace(/-/g, ""); const fmt = ds.kxlsx ? "xlsx" : "csv";
+      if (fmt === "csv") download(new Blob(["\ufeff" + XL.csv(T.csv)], { type: "text/csv;charset=utf-8" }), `atlas-table-${stamp}.csv`); else download(XL.build([{ name: "Table", rows: T.csv }, { name: "About", rows: [["Atlas table", T.title], ["Bottom row", "Sums for counts and amounts; population-weighted averages for rates; blank where adding up would mislead"], ["Exported", longDate(TODAY)]] }]), `atlas-table-${stamp}.xlsx`); return true; }
+    if (ds.kccsv) { copy(chartCSV(it(ds.kccsv).spec)); return true; }
+    if (ds.kws) { const x = it(ds.kws); if (x.kind === "table") sendToWS({ type: "ctable", title: cmpTable(x.spec).title, spec: JSON.parse(JSON.stringify(x.spec)) }); else { if (!x.spec.style) x.spec.style = chartStylesFor(x.spec).best; sendToWS({ type: "chart", title: x.title, spec: JSON.parse(JSON.stringify(x.spec)) }); } return true; }
+    if (ds.ktab) { const x = it(ds.ktab); if (x.kind === "table") openTableTab(JSON.parse(JSON.stringify(x.spec)), cmpTable(x.spec).title); else { if (!x.spec.style) x.spec.style = chartStylesFor(x.spec).best; openTab(JSON.parse(JSON.stringify(x.spec))); } return true; }
+    if (b.hasAttribute("data-kdraw")) { const x = CMP.items.find(i => i.id === CMP.ac); if (x) { x.spec.style = x.spec.style || chartStylesFor(x.spec).best; renderCmp(); } return true; }
+    if (ds.kstyle) { const x = CMP.items.find(i => i.id === CMP.ac); if (x) { x.spec.style = ds.kstyle; x.title = "Chart: " + x.spec.metrics.map(id => M[id].label).join(" & "); renderCmp(); } return true; }
+    return false;
+  }
   cmpEl.addEventListener("click", e => {
     if (e.target === cmpEl) return closeCmp();
     const li = e.target.closest("[data-add]"); if (li) { CMP.q = ""; addCompare({ code: li.dataset.add, level: P[li.dataset.add].level }); renderCmp(); return; }
+    const it0 = e.target.closest("[data-kshow]"); if (it0 && !e.target.closest("button")) { cmpItemAction(it0); return; }
     const b = e.target.closest("button"); if (!b) return;
+    if (cmpItemAction(b)) return;
     if (b.hasAttribute("data-close")) closeCmp(); else if (b.dataset.rmc) toggleCompare({ code: b.dataset.rmc, level: P[b.dataset.rmc].level });
     else if (b.hasAttribute("data-clearall")) { clearCompare(); renderCmp(); }
-    else if (b.dataset.all) { METRICS.filter(m => m.p === b.dataset.all).forEach(m => CMP.metrics.add(m.id)); renderCmp(); }
+    else if (b.dataset.all) { const codes = state.sel.map(x => x.code); METRICS.filter(m => m.p === b.dataset.all && !(codes.length && cmpEmpty(m, codes))).forEach(m => CMP.metrics.add(m.id)); renderCmp(); }
     else if (b.dataset.none) { METRICS.filter(m => m.p === b.dataset.none).forEach(m => CMP.metrics.delete(m.id)); renderCmp(); }
     else if (b.hasAttribute("data-cws")) sendToWS({ type: "table", title: `Table: ${state.sel.length} places`, codes: state.sel.map(x => x.code), metrics: [...CMP.metrics] });
     else if (b.hasAttribute("data-ctile")) sendTile(state.sel.map(x => x.code));
-    else if (b.hasAttribute("data-can")) openAnalyse({ metrics: [...CMP.metrics] });
-    else if (b.hasAttribute("data-cexp")) openExport({ places: "sel", metrics: [...CMP.metrics] });
+    else if (b.hasAttribute("data-can")) openAnalyse({ metrics: [...CMP.metrics], from: cmpEl });
+    else if (b.hasAttribute("data-cexp")) openExport({ places: "sel", metrics: [...CMP.metrics], from: cmpEl });
   });
   $("open-cmp").addEventListener("click", openCmp);
 
@@ -2003,12 +2401,19 @@
   const EXP = { metrics: new Set(), places: "council", time: "date", from: 2010, to: +TODAY.slice(0, 4), fmt: "xlsx" };
   function openExport(o) {
     o = o || {}; closeMenu(); closePMenu(); closeTools(); closeHist();
-    EXP.back = closeCmp() ? "cmp" : null; // only one full page at a time: the comparison closes, with a way back
     EXP.metrics = new Set(o.metrics && o.metrics.length ? o.metrics : (curPlan.notes.filter(n => n.ch).map(n => n.id).concat(comparable().slice(0, 4).map(m => m.id))).slice(0, 8));
     if (o.places) EXP.places = o.places; else EXP.places = state.sel.length >= 2 ? "sel" : state.level;
-    expEl.hidden = false; renderExport();
+    WM.open(expEl, { parent: o.from }); renderExport();
   }
-  function closeExport() { if (expEl.hidden) return false; expEl.hidden = true; return true; }
+  function closeExport() { return WM.close(expEl); }
+  // an export option with nothing behind it is greyed, with the reason
+  function expPlaceWhy(k) {
+    if (k === "sel") return state.sel.length ? null : "Nothing selected: Shift-click places on the map";
+    const ms = METRICS.filter(m => EXP.metrics.has(m.id) && m.nature !== "text"), lv = k === "country" ? null : k;
+    if (!ms.length || !lv) return null;
+    return ms.some(m => avail(m, lv).ok) ? null : `None of the chosen metrics has data for ${(PLURAL_L[lv] || lv).toLowerCase()} on this date`;
+  }
+  const expStatic = () => { const ms = METRICS.filter(m => EXP.metrics.has(m.id)); return ms.length > 0 && ms.every(m => m.temporal === "static"); };
   function exportCodes() { if (EXP.places === "sel") return state.sel.map(s => s.code); if (EXP.places === "country") return [UKC]; return allCodesAt(EXP.places); }
   function exportRows() {
     const ms = METRICS.filter(m => EXP.metrics.has(m.id)), codes = exportCodes();
@@ -2022,19 +2427,26 @@
   function renderExport() {
     const groups = PERSPECTIVES.filter(p => p.ready).map(p => `<fieldset><legend style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</legend>${METRICS.filter(m => m.p === p.id).map(m => `<label><input type="checkbox" data-em="${m.id}" ${EXP.metrics.has(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("")}</fieldset>`).join("");
     const n = EXP.metrics.size, codes = exportCodes(), years = EXP.time === "date" ? 1 : Math.max(0, EXP.to - EXP.from + 1), rowsN = codes.length * years;
-    const preview = n >= 2 && codes.length ? (() => { const { rows } = exportRowsLimited(6); return `<div style="overflow:auto"><table class="cmp"><thead><tr>${rows[0].map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`; })() : "";
-    setTimeout(() => addFctl(expEl, ".cmp-top"), 0);
-    expEl.innerHTML = `<div class="cmp-page exp" role="dialog" aria-label="Export"><div class="cmp-top"><div><h2>Export a table</h2><p>Pick two or more metrics, the places and the dates. Opens in Excel, Numbers, Google Sheets or anything that reads CSV.</p></div><span style="display:flex;gap:6px">${EXP.back ? `<button class="btn" data-eback>← Back to comparison</button>` : ""}<button class="btn" data-close>Close</button></span></div>
+    const preview = n >= 2 && codes.length ? (() => { const { rows } = exportRowsLimited(6); return `<div class="tscroll"><table class="cmp"><thead><tr>${rows[0].map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`; })() : "";
+    setTimeout(() => addFctl(expEl), 0);
+    expEl.innerHTML = `<div class="cmp-page exp" role="dialog" aria-label="Export"><div class="cmp-top"><div><h2>Export a table</h2><p>Pick two or more metrics, the places and the dates. Opens in Excel, Numbers, Google Sheets or anything that reads CSV.</p></div><span style="display:flex;gap:6px"><button class="btn" data-close>Close</button></span></div>
       <div class="cmp-side exp-side">${groups}<div class="quick"><button class="btn" data-eall>All</button><button class="btn" data-enone>None</button></div></div>
-      <div class="cmp-main"><section><h3>Places</h3><div class="seg wrap">${[["sel", `Selected (${state.sel.length})`], ["country", "United Kingdom"], ["nation", "All nations"], ["region", "All regions"], ["council", "All councils (361)"], ["constituency", "All constituencies (650)"], ["ward", "All wards (8,396)"]].map(([k, l]) => `<button data-ep="${k}" class="${EXP.places === k ? "on" : ""}" ${k === "sel" && !state.sel.length ? "disabled" : ""}>${l}</button>`).join("")}</div></section>
-      <section><h3>Dates</h3><div class="seg wrap"><button data-et="date" class="${EXP.time === "date" ? "on" : ""}">On ${esc(longDate(state.date))}</button><button data-et="years" class="${EXP.time === "years" ? "on" : ""}">Every year</button></div>
+      <div class="cmp-main"><section><h3>Places</h3><div class="seg wrap">${[["sel", `Selected (${state.sel.length})`], ["country", "United Kingdom"], ["nation", "All nations"], ["region", "All regions"], ["council", "All councils (361)"], ["constituency", "All constituencies (650)"], ["ward", "All wards (8,396)"]].map(([k, l]) => { const why = expPlaceWhy(k); return `<button data-ep="${k}" class="${EXP.places === k ? "on" : ""}" ${why ? `disabled title="${esc(why)}"` : ""}>${l}</button>`; }).join("")}</div>${expPlaceWhy(EXP.places) ? `<p class="small warnline">${esc(expPlaceWhy(EXP.places))}.</p>` : ""}</section>
+      <section><h3>Dates</h3><div class="seg wrap"><button data-et="date" class="${EXP.time === "date" ? "on" : ""}">On ${esc(longDate(state.date))}</button><button data-et="years" class="${EXP.time === "years" ? "on" : ""}" ${expStatic() ? `disabled title="The chosen metrics have one date only (e.g. Census 2021)"` : ""}>Every year</button></div>
         ${EXP.time === "years" ? `<div class="yrs">from <input type="number" id="e-from" min="1974" max="${TODAY.slice(0, 4)}" value="${EXP.from}"> to <input type="number" id="e-to" min="1974" max="${TODAY.slice(0, 4)}" value="${EXP.to}"> <small>(one row per place per year, values on 1 July; protests use the window ${esc(winLabel())})</small></div>` : ""}</section>
       <section><h3>Format</h3><div class="seg"><button data-ef="xlsx" class="${EXP.fmt === "xlsx" ? "on" : ""}">Excel (.xlsx)</button><button data-ef="csv" class="${EXP.fmt === "csv" ? "on" : ""}">CSV</button></div><p class="small">Excel files include a second sheet explaining each column: source, units, and how the engine combines areas.</p></section>
       <section><h3>Preview</h3>${n < 2 ? `<div class="empty-big">Tick at least two metrics on the left.</div>` : preview}<p class="small">${fmtInt(rowsN)} rows × ${2 * n + 5} columns (each metric has a status column: measured, estimated, missing or not meaningful).${rowsN > 60000 ? " That's large: it may take a few seconds." : ""}</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-edl ${n < 2 || !codes.length ? "disabled" : ""}>Download</button><button class="btn" data-eprot>Download the protest list</button></div></section></div></div>`;
   }
   function exportRowsLimited(k) { const codes = exportCodes().slice(0, k); const ms = METRICS.filter(m => EXP.metrics.has(m.id)); const d = EXP.time === "date" ? state.date : (EXP.to === +TODAY.slice(0, 4) ? TODAY : EXP.to + "-07-01"); const rows = [["code", "name", "date", ...ms.map(m => m.id)]]; codes.forEach(c => rows.push([c, nameOf(c), d, ...ms.map(m => { const r = m.get(c, d); return r && !r.nm ? (EN.isNum(m) ? (r.v == null ? "" : m.fmt(r.v) + (r.est ? " (est.)" : "")) : EN.isCat(m) ? (r.v == null ? "" : m.catName(r.v) + (r.est ? " (est.)" : "")) : r.text) : r && r.nm ? "n/a" : ""; })])); return { rows }; }
+  function copy(text, what) { // to the clipboard, with a fallback for browsers that block it
+    const ok = () => toast(`Copied ${what || "the data (CSV)"}. Paste it into a spreadsheet.`);
+    const old = () => { const t = document.createElement("textarea"); t.value = text; t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select(); let done = false; try { done = document.execCommand("copy"); } catch (e) {} t.remove(); if (done) ok(); else { download(new Blob([text], { type: "text/csv" }), "atlas-data.csv"); toast("This browser blocked copying, so the data was saved as a file instead."); } };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, old); else old();
+  }
   function download(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+  const sourceOf = m => m.source || m.src || (m.group === G2 ? "Protests: Wikipedia articles and Wikidata (notable protests since 1974); crowd = Wikipedia's estimate; alignment = Atlas lookup (organiser_alignment.csv)"
+    : { political: "Wikipedia (council control and leaders, from each council's article); government history compiled by hand", economic: SER ? SER.sources.gdp : "", social: SER ? SER.sources.population : "", markets: MK ? MK.sources : "" }[m.p] || "");
   function aboutRows(ms) {
     const rows = [["column", "label", "perspective", "kind of data", "over time", "how areas are combined", "how this is worked out", "valid at", "source / notes"], ["code", "ONS area code", "", "", "", "", "", "", "ONS Open Geography Portal"], ["date", "date the values refer to", "", "", "", "", "", "", "Atlas time bar"],
       ["<metric>_status", "measured / estimated / missing / not meaningful", "", "", "", "", "Estimated = modelled or notional (e.g. results recalculated on new boundaries); missing is never shown as zero", "", ""]];
@@ -2060,7 +2472,6 @@
     if (e.target === expEl) return closeExport();
     const b = e.target.closest("button"); if (!b) return;
     if (b.hasAttribute("data-close")) closeExport();
-    else if (b.hasAttribute("data-eback")) openCmp();
     else if (b.dataset.ep) { EXP.places = b.dataset.ep; renderExport(); } else if (b.dataset.et) { EXP.time = b.dataset.et; renderExport(); } else if (b.dataset.ef) { EXP.fmt = b.dataset.ef; renderExport(); }
     else if (b.hasAttribute("data-eall")) { METRICS.filter(m => PER[m.p].ready).forEach(m => EXP.metrics.add(m.id)); renderExport(); } else if (b.hasAttribute("data-enone")) { EXP.metrics.clear(); renderExport(); }
     else if (b.hasAttribute("data-edl")) doExport(); else if (b.hasAttribute("data-eprot")) exportProtests();
@@ -2080,7 +2491,9 @@
       ${SLIDERS.map(([k, l, t]) => `<div class="tb-slider" title="${esc(t)}"><label for="tb-${k}">${l}</label><input type="range" id="tb-${k}" data-sl="${k}" min="0" max="1" step="0.01" value="${TOOLS[k]}"><input type="number" class="tb-num" data-sn="${k}" min="0" max="1" step="0.01" value="${(+TOOLS[k]).toFixed(2)}" aria-label="${esc(l)} value"></div>`).join("")}
       <div class="tb-foot"><button class="btn" data-treset>Reset to defaults</button><span>All sliders run from 0 to 1.</span></div>`;
   }
-  tbBtn.addEventListener("click", () => { const open = tbMenu.hidden; tbMenu.hidden = !open; tbBtn.setAttribute("aria-expanded", String(open)); if (open) renderTools(); });
+  function toggleTools(force) { const open = force != null ? force : tbMenu.hidden; tbMenu.hidden = !open; tbBtn.setAttribute("aria-expanded", String(open)); if (open) { closeMenu(); renderTools(); } }
+  tbBtn.addEventListener("click", () => toggleTools());
+  $("open-tools").addEventListener("click", () => toggleTools(true));
   tbMenu.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     if (b.dataset.tool) { const t = b.dataset.tool; if (t === "copy") copyView(); else if (t === "shot") captureMap(); else setTool(state.tool === t ? null : t); renderTools(); }
@@ -2232,7 +2645,7 @@
     CHART.rebase = CHART.companies.length > 1; CHART.index = false;
     CHART.from = spanFor(CHART.metrics.map(mOf)); CHART.to = +TODAY.slice(0, 4);
     CHART.style = o.style || null; CHART.drawn = !!o.style;
-    cpanel.hidden = false; bubble.classList.remove("nudge"); bubble.classList.add("open"); document.body.classList.add("charting"); renderChartPanel();
+    WM.open(cpanel, { parent: o.from }); bubble.classList.remove("nudge"); bubble.classList.add("open"); document.body.classList.add("charting"); renderChartPanel();
   }
   const mOf = id => id === "__price" ? PRICE : M[id];
   function chartStylesFor(spec) { const ms = spec.metrics.map(mOf); return EN.chartStyles(ms, spec.companies.length || spec.places.length); }
@@ -2306,7 +2719,7 @@
     const card = st => `<button class="sty${st.id === cur ? " on" : ""}${st.ok ? "" : " no"}" data-${prefix}style="${st.id}" ${st.ok ? "" : "disabled"} title="${esc(st.why)}">${sIcon(st.id)}<span>${esc(st.label)}</span>${st.id === best && !compact ? "<em>simple</em>" : ""}</button>`;
     const plain = styles.filter(x => !x.story), story = styles.filter(x => x.story);
     if (compact) return `<div class="sty-row">${plain.filter(x => x.ok).map(card).join("")}<span class="sty-sep">Story</span>${story.filter(x => x.ok).map(card).join("")}</div>`;
-    return `<div class="sty-pick"><p>How should Atlas draw this? <small>Simple charts first; greyed styles don't suit this choice (hover for why).</small></p><div class="sty-grid">${plain.map(card).join("")}</div>
+    return `<div class="sty-pick"><p>How should Atlas draw this? <small>Simple charts first; greyed styles don't suit this choice (hover for why).</small> ${infoBtn("__charts", "the chart styles")}${helpBtn("charts", "Help: charts")}</p><div class="sty-grid">${plain.map(card).join("")}</div>
       <p class="sty-h">Story views <small>(experimental: the same numbers, drawn as things in the world)</small></p><div class="sty-grid story">${story.map(card).join("")}</div>
       <button class="btn primary" data-${prefix}draw ${best ? "" : "disabled"}>Draw ${esc(((styles.find(x => x.id === cur) || {}).label || "chart").toLowerCase())}</button></div>`;
   }
@@ -2316,9 +2729,9 @@
       <div class="cp-what">${whatHTML(spec, "c")}</div><div class="cp-styles">${stylesHTML(spec, CHART.drawn, "c")}</div><div class="cp-body" id="cp-body"></div>
       ${CHART.drawn ? `<div class="cp-foot"><button class="btn" data-ccsv>Copy data (CSV)</button><span class="tip">Pie, ranked and story views use the date on the time bar.</span></div>` : ""}`;
     if (CHART.drawn) renderChartBody();
-    addFctl(cpanel, ".cp-head");
+    addFctl(cpanel);
   }
-  function renderChartBody() { const b = $("cp-body"); if (!b) return; if (!CHART.style) CHART.style = chartStylesFor(specNow()).best; b.innerHTML = drawChart(specNow(), Math.max(360, cpanel.offsetWidth - 30)); }
+  function renderChartBody() { const b = $("cp-body"); if (!b) return; if (!CHART.style) CHART.style = chartStylesFor(specNow()).best; b.innerHTML = drawChart(specNow(), Math.max(280, cpanel.offsetWidth - 30)); }
   function editSpec(target, ds, el) { // shared by the panel (target = CHART) and tabs
     if (ds.rmm) { target.metrics = target.metrics.filter(x => x !== ds.rmm); target.from = Math.max(target.from, spanFor(target.metrics.map(mOf))); }
     else if (ds.rmp) target.places = target.places.filter(x => x !== ds.rmp);
@@ -2350,7 +2763,7 @@
     return true;
   }
   cpanel.addEventListener("change", e => { if (specInput(CHART, e.target)) renderChartPanel(); });
-  function closeChart() { cpanel.hidden = true; bubble.classList.remove("open"); document.body.classList.remove("charting"); }
+  function closeChart() { const was = WM.close(cpanel); bubble.classList.remove("open"); document.body.classList.remove("charting"); return was; }
   bubble.addEventListener("click", () => { if (!cpanel.hidden) return closeChart(); openChart(); });
   // tabs: the map is always the first tab; any chart can open full screen in its own tab
   const TABS = [{ id: "map", label: "Map" }, { id: "ws", label: "Workspace" }]; let activeTab = "map", tabSeq = 0;
@@ -2358,17 +2771,25 @@
     const m = mOf(spec.metrics[0]), label = (spec.companies.length ? (spec.companies.length === 1 ? COS[spec.companies[0]].n : spec.companies.length + " companies") : (spec.metrics.length > 1 ? spec.metrics.length + " metrics" : m.label)) + (spec.places.length === 1 ? " · " + nameOf(spec.places[0]) : "");
     const t = { id: "t" + (++tabSeq), label, spec: JSON.parse(JSON.stringify(spec)) }; TABS.push(t); activateTab(t.id);
   }
+  function openTableTab(spec, label) { const t = { id: "t" + (++tabSeq), label: label || "Table", table: spec }; TABS.push(t); activateTab(t.id); }
   function renderTabs() {
     const on = t => t.id === "map" ? VIEW.mode !== "ws" && (activeTab === "map" || activeTab === "split" || VIEW.mode === "split") : t.id === "ws" ? VIEW.mode !== "map" : t.id === activeTab;
-    const icon = t => t.id === "map" ? `<svg class="ico" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/></svg>` : t.id === "ws" ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/></svg>` : sIcon(t.spec.style);
+    const icon = t => t.help ? `<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/></svg>` : t.table ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>` : t.id === "map" ? `<svg class="ico" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/></svg>` : t.id === "ws" ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/></svg>` : sIcon(t.spec.style);
     const label = t => t.id === "ws" ? `Workspace${proj().items.length ? ` (${proj().items.length})` : ""}` : t.label;
     tabsEl.innerHTML = TABS.map(t => `<button class="tab${on(t) ? " on" : ""}" data-tab="${t.id}">${icon(t)}<span>${esc(label(t).length > 28 ? label(t).slice(0, 27) + "…" : label(t))}</span>${t.id === "map" || t.id === "ws" ? "" : `<i data-tabx="${t.id}" aria-label="Close tab">×</i>`}</button>`).join("") +
       `<button class="tab tool${VIEW.mode === "split" ? " on" : ""}" data-split title="Map and workspace side by side (drag the divider to change the share)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></button><button class="tab tool" data-overview title="All tabs (or swipe up over the top bar)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>`;
-    tabsEl.hidden = false; document.body.classList.add("has-tabs");
+    const more = TABS.length > 2 || proj().items.length > 0 || VIEW.mode !== "map";   // 1.8: just the map? no tab bar (the workspace is in the ATLAS menu)
+    tabsEl.hidden = !more; document.body.classList.toggle("has-tabs", more);
   }
   function activateTab(id) {
     activeTab = id; renderTabs(); const t = TABS.find(x => x.id === id);
+    document.body.classList.toggle("tab-on", !!t && !!(t.spec || t.table || t.help));   // floating windows step aside while a chart or table has the screen
     if (!t || id === "map" || id === "ws" || id === "split") { tabview.hidden = true; return; }
+    if (t.help) { tabview.innerHTML = helpHTML(); tabview.hidden = false; document.body.classList.add("tab-on"); return; }
+    if (t.table) {
+      tabview.innerHTML = `<div class="tv-wrap"><div class="tv-head"><h2>${esc(t.label)}</h2><span class="cp-sub">${t.table.layout === "pm" && t.table.when === "bar" ? "Values on the time bar's date · " : ""}${esc(LAYOUTS[t.table.layout])}</span><button class="btn" data-tcsv>Copy as CSV</button><button class="btn" data-tback>Back to the map</button></div><div class="tv-body">${cmpTableHTML(t.table)}</div></div>`;
+      tabview.hidden = false; return;
+    }
     const spec = t.spec, D = mOf(spec.metrics[0]);
     tabview.innerHTML = `<div class="tv-wrap"><div class="tv-head"><h2>${esc(t.label)}</h2><span class="cp-sub">${!isNow() ? "As of " + esc(longDate(state.date)) + " · " : ""}${spec.companies.length ? esc(MK ? MK.sources : "") : esc(D.desc || "")}</span><button class="btn" data-tcsv>Copy data (CSV)</button><button class="btn" data-tback>Back to the map</button></div>
       <div class="cp-what">${whatHTML(spec, "t")}</div><div class="cp-styles">${stylesHTML(spec, true, "t")}</div><div class="tv-body">${drawChart(spec, Math.min(1100, window.innerWidth - 80))}</div></div>`;
@@ -2378,7 +2799,7 @@
   tabview.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return; const t = TABS.find(x => x.id === activeTab); if (!t) return;
     if (b.hasAttribute("data-tback")) return activateTab("map");
-    if (b.hasAttribute("data-tcsv")) return copy(chartCSV(t.spec));
+    if (b.hasAttribute("data-tcsv")) return t.table ? copy(XL.csv(cmpTable(t.table).csv), "the table (CSV)") : copy(chartCSV(t.spec));
     const ds = Object.fromEntries(Object.entries(b.dataset).map(([k, v]) => [k.replace(/^t/, "").replace(/^./, x => x.toLowerCase()), v]));
     if (editSpec(t.spec, ds)) activateTab(t.id);
   });
@@ -2387,6 +2808,7 @@
   // ---------- hot zones: panels hide until the pointer nears an edge ----------
   let hotT = null;
   document.addEventListener("mousemove", e => {
+    document.body.classList.toggle("near-right", e.clientX > innerWidth - 72 || !!e.target.closest(".maplibregl-ctrl-top-right,#notes-handle"));
     if (!PS.hot) return;
     const L = e.clientX < 36 || !!e.target.closest("#dock,#legend,#pmenu"), B = e.clientY > window.innerHeight - 44 || !!e.target.closest("#timebar,#tray");
     document.body.classList.toggle("show-left", L); document.body.classList.toggle("show-bottom", B);
@@ -2399,7 +2821,10 @@
       <textarea id="nt-text" placeholder="A thought, a pattern to check, a question for Ruben…"></textarea><label class="ck"><input type="checkbox" id="nt-view" checked>Remember this map view and date</label><button class="btn primary" data-ntadd>Add note</button>
       <div class="nt-list">${E.notes.slice().reverse().map(n => `<div class="nt"><p>${esc(n.text)}</p><small>${new Date(n.t).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}${n.view ? ` · view of ${esc(dmy(n.view.date))}` : ""}</small><span>${n.view ? `<button class="btn" data-ntgo="${n.id}">Go there</button>` : ""}<button class="btn" data-ntdel="${n.id}" aria-label="Delete note">×</button></span></div>`).join("") || `<div class="tip">No notes yet. Notes are saved in this browser and included when you export your edits.</div>`}</div>`;
   }
-  notesH.addEventListener("click", () => { notesEl.hidden = !notesEl.hidden; notesH.classList.toggle("open", !notesEl.hidden); if (!notesEl.hidden) { renderNotes(); $("nt-text").focus(); } });
+  function toggleNotes(force) { notesEl.hidden = force != null ? !force : !notesEl.hidden; notesH.classList.toggle("open", !notesEl.hidden); document.body.classList.toggle("notes-open", !notesEl.hidden); if (!notesEl.hidden) { closeMenu(); renderNotes(); $("nt-text").focus(); } }
+  notesH.addEventListener("click", () => toggleNotes());
+  $("open-notes").addEventListener("click", () => toggleNotes(true));
+  $("open-ws").addEventListener("click", () => { closeMenu(); goTab("ws"); });
   notesEl.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     if (b.hasAttribute("data-ntx")) { notesEl.hidden = true; notesH.classList.remove("open"); }
@@ -2417,33 +2842,78 @@
   map.on("render", placeZoneLabels);
 
 
-  // ---------- floating windows: drag by the header, resize from the corner, expand or shrink ----------
-  // Used by the chart panel, the comparison page, the export page and the Analyse window, so the map stays usable behind them.
-  function floating(el, handleSel, key, def) {
-    el.classList.add("fwin");
-    const fit = p => ({ x: clamp(p.x, 4, innerWidth - 120), y: clamp(p.y, 50, innerHeight - 40), w: clamp(p.w, 300, innerWidth - 8), h: clamp(p.h, 120, innerHeight - 56) });
-    const st = fit(Object.assign({}, def(), store.get(key, {})));
-    const apply = () => { Object.assign(el.style, { left: st.x + "px", top: st.y + "px", width: st.w + "px", height: el.classList.contains("shrunk") ? "" : st.h + "px", right: "auto", bottom: "auto" }); };
-    apply();
-    el.addEventListener("pointerdown", e => {
-      const h = e.target.closest(handleSel); if (!h || e.button || e.target.closest("button,input,select,textarea,a,label,[contenteditable]")) return;
-      e.preventDefault(); const ox = e.clientX - st.x, oy = e.clientY - st.y; el.classList.add("dragging"); h.setPointerCapture(e.pointerId);
-      const mv = ev => { Object.assign(st, fit({ x: ev.clientX - ox, y: ev.clientY - oy, w: st.w, h: st.h })); apply(); };
-      const up = () => { h.removeEventListener("pointermove", mv); el.classList.remove("dragging"); store.set(key, st); };
-      h.addEventListener("pointermove", mv); h.addEventListener("pointerup", up, { once: true });
-    });
-    resizable(el, null, { minW: 300, minH: 140, done: () => { st.w = el.offsetWidth; st.h = el.offsetHeight; store.set(key, st); el.dispatchEvent(new Event("fwin-resized")); } });
-    if (window.ResizeObserver) new ResizeObserver(() => { if (el.hidden || el.classList.contains("shrunk") || el.classList.contains("maxed")) return; const w = el.offsetWidth, h = el.offsetHeight; if (Math.abs(w - st.w) > 2 || Math.abs(h - st.h) > 2) { st.w = w; st.h = h; store.set(key, st); clearTimeout(el._rt); el._rt = setTimeout(() => el.dispatchEvent(new Event("fwin-resized")), 250); } }).observe(el);
-    el.addEventListener("click", e => {
-      const b = e.target.closest("[data-fmax],[data-fshrink]"); if (!b) return;
-      if (b.hasAttribute("data-fmax")) { el.classList.remove("shrunk"); if (el.classList.toggle("maxed")) { el._prev = Object.assign({}, st); Object.assign(st, { x: 8, y: 54, w: innerWidth - 16, h: innerHeight - 62 }); } else if (el._prev) Object.assign(st, el._prev); apply(); el.dispatchEvent(new Event("fwin-resized")); }
-      else { el.classList.toggle("shrunk"); apply(); }
-    });
-    el.addEventListener("dblclick", e => { if (e.target.closest(handleSel) && !e.target.closest("button,input,select")) el.querySelector("[data-fmax]") && el.querySelector("[data-fmax]").click(); });
-    return st;
+  // ---------- 1.8: information behind ⓘ links, and the help centre ----------
+  // Cards, keys and menus show one line; the detail (definition, formula, unit, levels, years, source, what's estimated,
+  // caveats, related metrics) opens in a small info card. The help centre (ATLAS menu → Help) explains every method,
+  // chart and label; what each method needs comes from AN_METHODS, the table Analyse itself uses.
+  const HELP = window.ATLAS_HELP || { methods: {}, charts: {}, honesty: [], tables: [] };
+  const CAVEAT = {
+    gdp: "Output is counted where it is produced, so places where many people commute in to work (the City of London, Westminster) look far bigger than their residents' incomes.",
+    gdp_per_head: "Commuting: GDP is counted where people work but divided by the people who live there, so city centres look very rich and commuter towns poorer than their residents are. GDHI (household income) is the better measure of living standards; it isn't loaded yet.",
+    registration_ratio: "Not a measure of registration completeness: the electorate includes some people who aren't adults resident in the seat (e.g. overseas electors), and some residents can't register (non-qualifying nationals).",
+    protest_events: "Only notable protests with a Wikipedia article, checked to be in the UK: most protests never get one, so absence on the map isn't absence of protest.",
+    density: "Area includes land that nobody lives on (moors, lakes), so rural councils look emptier than their towns are.",
+    control: "Means different things at each level: the government for nations, the mayor or the UK Government for regions, council control for councils and wards, the MP's party for constituencies.",
+  };
+  ["protest_count", "protest_rate", "protest_largest", "protest_people", "protest_cause", "protest_align", "protest_trend", "protest_diversity", "protest_opposition"].forEach(k => { CAVEAT[k] = CAVEAT.protest_events; });
+  const infoBtn = (id, what) => `<button type="button" class="ib-i" data-info="${id}" title="About ${esc(what || (M[id] ? M[id].label : id))}" aria-label="About ${esc(what || (M[id] ? M[id].label : id))}">ⓘ</button>`;
+  const helpBtn = (sec, what) => `<button type="button" class="ib-i hq" data-help="${sec}" title="${esc(what || "Help")}" aria-label="${esc(what || "Help")}">?</button>`;
+  function sampleValue(m) { for (const c of [UKC, "E92000001", "E12000007", "E06000023", "E08000025"]) { try { const r = m.get(c, state.date) || m.get(c, TODAY); if (r && r.v != null && !r.nm) return r; } catch (e) {} } return null; }
+  function metricInfoHTML(m) {
+    const sp = metricSpan(m), ex = sampleValue(m), pl = l => (PLURAL_L[l] || (l === "country" ? "the UK" : l)).toLowerCase();
+    const est = m.group === G4 ? "Results across the 2010 and 2024 boundary changes use the House of Commons Library's notional results (what the old votes would have been on the new boundaries): marked est. and hatched." : m.id === "eu_leave_est_pcon" ? "Every value is an estimate (Chris Hanretty's model), except where the BBC obtained ward counts; all are marked est." : m.group === "Ideology" ? "Party positions are expert-survey scores (CHES), not measurements; values are missing when parties with a score have under 75% of the vote." : "";
+    const rel = METRICS.filter(x => x.p === m.p && x.group === m.group && x.id !== m.id && PER[x.p].ready).slice(0, 6);
+    const row = (k, v) => v ? `<tr><th>${k}</th><td>${v}</td></tr>` : "";
+    const src = sourceOf(m);
+    return `<p class="ilead">${esc(m.desc || "")}</p><table class="itab">${row("How it's worked out", esc(m.how || EN.aggregate(m).why))}
+      ${row("Unit", ex ? `e.g. ${esc((m.fmt || String)(ex.v))}${m.unit ? ` (${esc(m.unit)})` : ""}` : m.unit ? esc(m.unit) : "")}
+      ${row("Kind of data", `${esc(m.scale)}, ${esc(m.nature)} · ${esc({ state: "holds until it changes", annual: "one value a year", event: "dated events", static: "one date only", election: "holds from one election to the next" }[m.temporal] || m.temporal)}`)}
+      ${row("Where it applies", m.levels ? esc(m.levels.map(pl).join(", ")) + ` <small>(elsewhere: ${esc(NM_TEXT.toLowerCase())})</small>` : "every boundary set with data")}
+      ${row("Years", m.temporal === "static" ? "one date" + (ex && ex.yr ? ` (${esc(ex.yr)})` : "") : sp ? `${sp[0].slice(0, 4)}–${sp[1] >= TODAY ? "today" : sp[1].slice(0, 4)}` : "—")}
+      ${row("Source", esc(src).replace(/(https?:\/\/[^\s;),]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>') || "—")}
+      ${row("Estimated values", esc(est))}${row("Caveats", esc(CAVEAT[m.id] || ""))}
+      ${row("Related", rel.map(x => `<button class="linkish" data-info="${x.id}">${esc(x.label)}</button>`).join(" · "))}</table>
+      <p class="imore">${helpBtn("honesty", "What measured, estimated, missing and not meaningful mean")} <button class="linkish" data-help="honesty">What “estimated” and “not meaningful” mean</button></p>`;
   }
-  const FCTL = `<span class="fctl"><button type="button" data-fshrink title="Shrink to the title bar (click again to open)">–</button><button type="button" data-fmax title="Expand to fill the screen (click again to restore)">⤢</button></span>`;
-  function addFctl(el, handleSel) { const h = el.querySelector(handleSel); if (h && !h.querySelector(".fctl")) { const close = h.querySelector("[data-close],[data-cpx],[data-anx]"); if (close) close.insertAdjacentHTML("beforebegin", FCTL); else h.insertAdjacentHTML("beforeend", FCTL); } }
+  const infoWins = new Map();
+  function openInfo(key, title, html) { // a compact, resizable info card (several can be open; they cascade)
+    const have = infoWins.get(key); if (have && WM.isOpen(have.el)) { have.setBody(html); WM.front(have.el); WM.pulse(have.el); return; }
+    const w = WM.make({ type: "info", title, html, cascade: true, min: { w: 300, h: 180 }, def: () => ({ x: Math.round(innerWidth / 2 - 190), y: 90, w: 380, h: Math.min(460, innerHeight - 140) }), onClose: () => infoWins.delete(key) });
+    infoWins.set(key, w); WM.open(w.el);
+  }
+  function openMetricInfo(id) { const m = M[id]; if (m) openInfo("m:" + id, m.label, metricInfoHTML(m)); }
+  function chartInfoHTML() { return `<p class="ilead">Simple charts come first; a greyed style doesn't suit what's chosen (hover it for why).</p><table class="itab">${Object.entries(HELP.charts).map(([k, [use, not]]) => `<tr><th>${sIcon(k)} ${esc((EN.chartStyles([], 0).styles.find(x => x.id === k) || {}).label || k)}</th><td><b>For:</b> ${esc(use)}<br><b>Not for:</b> ${esc(not)}</td></tr>`).join("")}</table><p class="imore"><button class="linkish" data-help="charts">More in Help</button></p>`; }
+  function honestyHTML() { return `<table class="itab">${HELP.honesty.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</table>`; }
+  // the help centre: a full-screen tab
+  function helpHTML() {
+    const meth = AN_METHODS.map(x => { const h = HELP.methods[x.id] || {}; return `<section class="hsec" id="help-m-${x.id}"><h3>${esc(x.label)} <small>${x.mode === "time" ? "over time" : "across places"}</small></h3>
+      <dl><dt>What it answers</dt><dd>${esc(h.answers || METHOD_WHY[x.id] || "")}</dd><dt>What it needs</dt><dd>${esc(x.needs)}</dd><dt>Assumptions</dt><dd>${esc(h.assumes || "")}</dd><dt>When it misleads</dt><dd>${esc(h.misleads || "")}</dd></dl>
+      ${h.example ? `<p class="hex">Example: ${esc(h.example.label)} <button class="btn sm" data-hexample="${x.id}">Load this example</button></p>` : ""}</section>`; }).join("");
+    const charts = Object.entries(HELP.charts).map(([k, [use, not]]) => `<tr><th>${sIcon(k)} ${esc((EN.chartStyles([], 0).styles.find(x => x.id === k) || {}).label || k)}</th><td>${esc(use)}</td><td>${esc(not)}</td></tr>`).join("");
+    const levelled = METRICS.filter(m => m.levels && PER[m.p].ready).map(m => `<li><b>${esc(m.label)}</b>: ${esc(m.levels.map(l => (PLURAL_L[l] || "the UK").toLowerCase()).join(", "))} only</li>`).join("");
+    return `<div class="tv-wrap help"><div class="tv-head"><h2>Help</h2><span class="cp-sub">What each test, chart, table and label needs and means. The thresholds here are the ones Atlas uses.</span><button class="btn" data-tback>Back to the map</button></div>
+      <nav class="hnav"><a data-hgo="help-methods">Analysis methods</a><a data-hgo="help-charts">Charts</a><a data-hgo="help-tables">Tables</a><a data-hgo="help-honesty">Labels: measured, estimated…</a><a data-hgo="help-levels">Where metrics apply</a></nav>
+      <section id="help-methods"><h2>Analysis methods (Analyse window)</h2><p>Numeric metrics are numbers (counts, rates, amounts); categories (e.g. controlling party) and events (protests) are not used in these tests. “Places” are the areas compared, on one boundary set.</p>${meth}</section>
+      <section id="help-charts"><h2>Charts</h2><table class="itab wide"><thead><tr><th>Style</th><th>For</th><th>Not for</th></tr></thead><tbody>${charts}</tbody></table><p>Two axes, Small charts and the Line chart need metrics that change over time; Ranked, Shares and the story views use the time bar's date.</p></section>
+      <section id="help-tables"><h2>Tables (Compare)</h2><table class="itab wide"><tbody>${Object.entries(LAYOUTS).map(([k, l]) => `<tr><th>${esc(l)}</th><td>${k === "pm" ? "Two or more places and any metrics; one date (the time bar's or a chosen year)." : k === "py" ? "Two or more places and one metric; a range of years (values on 1 July)." : "One place and any metrics; a range of years. No totals (different units)."}</td></tr>`).join("")}${HELP.tables.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</tbody></table></section>
+      <section id="help-honesty"><h2>Labels: measured, estimated, missing, not meaningful</h2>${honestyHTML()}</section>
+      <section id="help-levels"><h2>Where metrics apply</h2><p>Some metrics only mean something for some boundary sets; elsewhere the map leaves areas unfilled and the menu greys them out.</p><ul>${levelled}</ul></section></div>`;
+  }
+  function openHelp(anchor) {
+    let t = TABS.find(x => x.help); if (!t) { t = { id: "help", label: "Help", help: true }; TABS.push(t); }
+    activateTab("help"); closeMenu();
+    if (anchor) requestAnimationFrame(() => { const el = $(anchor.startsWith("help-") ? anchor : "help-" + anchor); if (el) { el.scrollIntoView({ block: "start" }); el.classList.add("hflash"); setTimeout(() => el.classList.remove("hflash"), 1200); } });
+  }
+  document.addEventListener("click", e => {
+    const i = e.target.closest("[data-info]"); if (i) { e.preventDefault(); e.stopPropagation(); const k = i.dataset.info; if (k === "__charts") openInfo("charts", "Chart styles", chartInfoHTML()); else if (k === "__honesty") openInfo("honesty", "What the labels mean", honestyHTML()); else openMetricInfo(k); return; }
+    const h = e.target.closest("[data-help]"); if (h) { e.preventDefault(); e.stopPropagation(); const sec = h.dataset.help; openHelp(sec === "honesty" ? "help-honesty" : sec === "charts" ? "help-charts" : sec === "tables" ? "help-tables" : sec.startsWith("m-") ? "help-" + sec : "help-methods"); return; }
+    const g = e.target.closest("[data-hgo]"); if (g) { const el = $(g.dataset.hgo); if (el) el.scrollIntoView({ block: "start" }); return; }
+    const x = e.target.closest("[data-hexample]"); if (x) { const ex = (HELP.methods[x.dataset.hexample] || {}).example; if (!ex) return;
+      activateTab("map"); Object.assign(AN, { metrics: ex.metrics.filter(id => M[id]), mode: ex.mode || "across", level: ex.level || AN.level, within: UKC, place: ex.place || AN.place, method: ex.method }); saveAN(); openAnalyse(); AN.method = ex.method; renderAnalyse(); }
+  }, true);
+
+  // ---------- floating windows (1.8): windows.js owns stacking, focus, size and position; this puts back the header buttons ----------
+  function addFctl(el) { WM.decorate(el); }
 
   // ---------- interactive tables: sort by any column, hover a row to find the place, click to focus it ----------
   document.addEventListener("click", e => {
@@ -2492,14 +2962,35 @@
   const vals = (m, codes, d) => codes.map(c => { const r = m.get(c, d); return r && r.v != null && isFinite(r.v) ? +r.v : null; });
   const fmtOf = m => m.fmt || (v => CH.compact(v));
   const pct = v => Math.round(v * 100) + "%";
-  // which methods suit this choice (the engine's job: explain what each one does)
+  // Every method and what it needs (1.8). The Analyse window greys out a method whose needs aren't met and says why; the Help
+  // centre reads its "needs" text from this same table, so the thresholds it states are the ones used here.
+  //   k: numeric metrics chosen; n: places compared; annual: every chosen metric is a yearly series
+  const nums = (k, w) => `${k === 0 ? "none" : k === 1 ? "one" : k === 2 ? "two" : k}${w ? " " + w : ""}`;
+  const AN_METHODS = [
+    { id: "dist", mode: "across", label: "Distribution", needs: "One numeric metric; at least 3 places with a value", check: c => c.k !== 1 ? `For one metric: you have ${nums(c.k)}. With two, use “Each distribution”` : c.n < 3 ? `Needs at least 3 places: you have ${c.n}` : null },
+    { id: "spatial", mode: "across", label: "Spatial pattern (hot spots)", needs: "One numeric metric; one boundary set compared as whole areas (not a selection); at least 8 places with a value, each paired with its 6 nearest neighbours",
+      check: c => c.k !== 1 ? `For one metric: you have ${nums(c.k)}` : c.sel ? "Needs whole areas (a nation, region or the UK), not a selection: neighbours must be complete" : c.n < 8 ? `Needs at least 8 places: you have ${c.n}` : null },
+    { id: "rel", mode: "across", label: "Relationship", needs: "Exactly two numeric metrics; at least 3 places with both values", check: c => c.k !== 2 ? `Needs exactly two numeric metrics: you have ${nums(c.k)}` : c.n < 3 ? `Needs at least 3 places: you have ${c.n}` : null },
+    { id: "byarea", mode: "across", label: "Within each area", needs: "Exactly two numeric metrics; areas (nations or regions) with at least 5 places each", check: c => c.k !== 2 ? `Needs exactly two numeric metrics: you have ${nums(c.k)}` : c.sel ? "Needs whole areas, not a selection" : null },
+    { id: "dist2", mode: "across", label: "Each distribution", needs: "Exactly two numeric metrics", check: c => c.k !== 2 ? `For two metrics: you have ${nums(c.k)}` : null },
+    { id: "matrix", mode: "across", label: "Correlation matrix", needs: "Three or more numeric metrics", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : null },
+    { id: "partial", mode: "across", label: "Partial correlations", needs: "Three or more numeric metrics; at least metrics + 3 places with every value", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n < c.k + 3 ? `Needs at least ${c.k + 3} places: you have ${c.n}` : null },
+    { id: "reg", mode: "across", label: "Regression", needs: "Three or more numeric metrics (one outcome, two or more predictors); more places than metrics + 10 (Atlas's minimum)",
+      check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n <= c.k + 10 ? `Needs more than ${c.k + 10} places (metrics + 10): you have ${c.n}` : null },
+    { id: "pca", mode: "across", label: "Components (what moves together)", needs: "Three or more numeric metrics, standardised; at least metrics + 3 places with every value", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n < c.k + 3 ? `Needs at least ${c.k + 3} places: you have ${c.n}` : null },
+    { id: "cluster", mode: "across", label: "Clusters (similar places)", needs: "Three or more numeric metrics, standardised; at least twice as many places as groups", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n < 4 ? `Needs at least 4 places: you have ${c.n}` : null },
+    { id: "unusual", mode: "across", label: "Unusual places", needs: "Three or more numeric metrics; at least metrics + 3 places with every value", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n < c.k + 3 ? `Needs at least ${c.k + 3} places: you have ${c.n}` : null },
+    { id: "trend", mode: "time", label: "Trend over time", needs: "One metric that changes over time; at least 3 years with a value in the place", check: c => c.k !== 1 ? `For one metric: you have ${nums(c.k)}` : null },
+    { id: "timeline", mode: "time", label: "Side by side over time", needs: "Two or more metrics that change over time", check: c => c.k < 2 ? `Needs at least two metrics: you have ${nums(c.k)}` : null },
+    { id: "lag", mode: "time", label: "Do they move together? (lagged)", needs: "Two metrics with yearly data (the first two chosen); year-on-year changes are compared at lags of up to 3 years",
+      check: c => c.k < 2 ? `Needs two metrics: you have ${nums(c.k)}` : !c.annual2 ? "Needs yearly data: election and event metrics have points at elections or events only" : null },
+  ];
+  const AN_BY = Object.fromEntries(AN_METHODS.map(x => [x.id, x]));
+  // which methods suit this choice: all of the mode's methods, each with ok and the reason when it isn't
   function anMethods(cfg) {
-    const k = cfg.metrics.length, over = cfg.mode === "time";
-    if (!k) return [];
-    if (over) return k === 1 ? [["trend", "Trend over time"]] : [["timeline", "Side by side over time"], ["lag", "Do they move together? (lagged)"]];
-    if (k === 1) return [["dist", "Distribution"], ["spatial", "Spatial pattern (hot spots)"]];
-    if (k === 2) return [["rel", "Relationship"], ["byarea", "Within each area"], ["dist2", "Each distribution"]];
-    return [["matrix", "Correlation matrix"], ["partial", "Partial correlations"], ["reg", "Regression"], ["pca", "Components (what moves together)"], ["cluster", "Clusters (similar places)"], ["unusual", "Unusual places"]];
+    const over = cfg.mode === "time", ms = cfg.metrics.map(id => M[id]).filter(Boolean);
+    const c = { k: ms.length, n: over ? 0 : anCodes(cfg).length, sel: cfg.within === "sel", annual2: ms.slice(0, 2).every(m => m.temporal === "annual") };
+    return AN_METHODS.filter(x => x.mode === (over ? "time" : "across")).map(x => { const why = x.check(c); return [x.id, x.label, !why, why]; });
   }
   const METHOD_WHY = {
     dist: "How the values are spread across places: the middle, the spread, any lopsidedness (skew) and outliers.",
@@ -2699,11 +3190,11 @@
   }
   function renderAnalyse() {
     if (anEl.hidden) return;
-    const cfg = Object.assign({}, AN, { date: state.date }), methods = anMethods(cfg);
-    if (!methods.some(m => m[0] === AN.method)) AN.method = methods.length ? methods[0][0] : null; cfg.method = AN.method;
+    const cfg = Object.assign({}, AN, { date: state.date }), methods = anMethods(cfg), okM = methods.filter(m => m[2]);
+    if (!okM.some(m => m[0] === AN.method)) AN.method = okM.length && cfg.metrics.length ? okM[0][0] : null; cfg.method = AN.method;
     const pers = PERSPECTIVES.filter(p => p.ready && p.id !== "analysis").map(p => { const ms = anMetricsAll().filter(m => m.p === p.id); return ms.length ? `<h4 style="--c:${p.hue}">${svgIcon(p.id)}${esc(p.name)}</h4>` + ms.map(m => `<label style="--c:${p.hue}"><input type="checkbox" data-anm="${m.id}" ${AN.metrics.includes(m.id) ? "checked" : ""}>${esc(m.label)}</label>`).join("") : ""; }).join("");
     const res = cfg.method ? anResult(cfg, Math.max(360, Math.min(900, anEl.offsetWidth - 330))) : null;
-    anEl.innerHTML = `<div class="an-head"><b>Analyse</b><span class="cp-sub">How metrics relate across places, within an area, or over time. No need to pick places.</span><button class="x" data-anx aria-label="Close">×</button></div>
+    anEl.innerHTML = `<div class="an-head"><b>Analyse</b><span class="cp-sub">How metrics relate across places, within an area, or over time. No need to pick places.</span>${helpBtn("methods", "Help: analysis methods")}<button class="x" data-anx aria-label="Close">×</button></div>
       <div class="an-body"><div class="an-side">
         <div class="an-row"><b>Look</b><div class="seg sm"><button data-anmode="across" class="${AN.mode !== "time" ? "on" : ""}">Across places</button><button data-anmode="time" class="${AN.mode === "time" ? "on" : ""}">Over time</button></div></div>
         ${AN.mode === "time" ? `<div class="an-row"><b>Place</b><select data-anplace>${[UKC, "E92000001", "S92000003", "W92000004", "N92000002"].concat(state.focus && !["E92000001", "S92000003", "W92000004", "N92000002", UKC].includes(state.focus) ? [state.focus] : [], state.sel.map(s => s.code)).filter((c, i, a) => a.indexOf(c) === i).map(c => `<option value="${c}" ${AN.place === c ? "selected" : ""}>${esc(nameOf(c))}</option>`).join("")}</select></div>`
@@ -2712,21 +3203,22 @@
         <div class="an-row"><b>Date</b><span class="muted">${esc(longDate(state.date))} (time bar)</span></div>
         <div class="an-metrics"><div class="an-mh">Metrics <small>${AN.metrics.length} chosen</small>${AN.metrics.length ? `<button class="btn" data-anclear>Clear</button>` : ""}</div>${pers}</div>
       </div><div class="an-main">
-        ${methods.length ? `<div class="an-methods">${methods.map(([id, l]) => `<button class="${id === AN.method ? "on" : ""}" data-anmethod="${id}">${esc(l)}</button>`).join("")}</div><p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")}</p>` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
+        ${AN.metrics.length ? `<div class="an-methods">${methods.map(([id, l, ok, why]) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}>${esc(l)}</button>`).join("")}</div>${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")} ${helpBtn("m-" + AN.method, "Help: what this method needs and assumes")}</p>` : `<p class="anwhy">No method suits this choice yet. ${methods.filter(m => !m[2]).slice(0, 3).map(([id, l, , why]) => `<button class="linkish" data-help="m-${id}">${esc(l)}: ${esc(why)}</button>`).join(" · ")}</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
         ${AN.method === "rel" ? `<label class="anpick">Split by a category <select data-ansplit><option value="">none</option>${anCats().map(m => `<option value="${m.id}" ${AN.split === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : ""}
         <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
         ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Show on map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy data (CSV)</button>` : ""}</div>` : ""}
       </div></div>`;
-    addFctl(anEl, ".an-head"); anEl._last = res;
+    addFctl(anEl); anEl._last = res;
   }
-  function openAnalyse(o) { closeMenu(); closePMenu(); if (o && o.metrics) AN.metrics = o.metrics.filter(id => M[id] && EN.isNum(M[id])); if (o && o.level) AN.level = o.level; anEl.hidden = false; renderAnalyse(); }
-  const sideWin = (max, share) => { const w = Math.round(Math.min(max, innerWidth - 40, Math.max(600, innerWidth * share))); return { x: Math.max(20, innerWidth - w - 66), y: 60, w, h: innerHeight - 96 }; };   // docked right, leaving the map on the left
-  floating(anEl, ".an-head", "atlas-16-an-pos", () => sideWin(1000, 0.66));
-  anEl.addEventListener("fwin-resized", renderAnalyse);
+  // o.from: the window it was opened from (e.g. Compare): Analyse opens above it, with a way back
+  function openAnalyse(o) { o = o || {}; closeMenu(); closePMenu(); if (o.metrics) AN.metrics = o.metrics.filter(id => M[id] && EN.isNum(M[id])); if (o.level) AN.level = o.level; WM.open(anEl, { parent: o.from }); renderAnalyse(); }
+  function closeAnalyse() { return WM.close(anEl); }
+  WM.register(anEl, { type: "analyse", title: "Analyse", handle: ".an-head", min: { w: 360, h: 260 }, onResize: renderAnalyse, close: closeAnalyse });
   anEl.addEventListener("click", e => {
     const a = e.target.closest("[data-go]"); if (a) { focus(a.dataset.go); return; }
     const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
-    if (b.hasAttribute("data-anx")) { anEl.hidden = true; return; }
+    if (b.hasAttribute("data-anx")) { closeAnalyse(); return; }
+    if (ds.anmethod && b.getAttribute("aria-disabled") === "true") { undoToast(`${AN_BY[ds.anmethod].label}: ${b.title}.`, () => {}); const t = $("toast"), u = $("undo-btn"); if (u) { u.textContent = "What it needs"; u.onclick = () => { t.hidden = true; openHelp("help-m-" + ds.anmethod); }; } return; }
     if (ds.antrim) AN.trim = ds.antrim === "1"; else if (ds.anmode) AN.mode = ds.anmode; else if (ds.anmethod) AN.method = ds.anmethod; else if (ds.ancorr) AN.corr = ds.ancorr;
     else if (b.hasAttribute("data-anclear")) AN.metrics = [];
     else if (b.hasAttribute("data-anws")) { const cfg = Object.assign({}, AN, { date: state.date }); sendToWS({ type: "analysis", title: anEl._last.title, cfg }); return; }
@@ -2768,6 +3260,7 @@
     switch (it.type) {
       case "chart": return `<div class="cp-styles">${stylesHTML(it.spec, true, "w")}</div>` + withDate(it.date, () => drawChart(it.spec, w));
       case "table": return `<div class="wsmeta">Values on ${esc(longDate(it.date))}</div><div class="wstab">${withDate(it.date, () => tableHTML(it.codes.filter(c => P[c]), it.metrics.map(id => M[id]).filter(Boolean), false))}</div>`;
+      case "ctable": return `<div class="wsmeta">${esc(LAYOUTS[it.spec.layout])}${it.spec.layout === "pm" && it.spec.when === "bar" ? " · values on " + esc(longDate(it.date)) : ""}</div><div class="wstab">${withDate(it.date, () => cmpTableHTML(it.spec))}</div>`;
       case "analysis": { const r = withDate(it.cfg.date || it.date, () => anResult(it.cfg, w)); return `<div class="an-res">${it.cfg.trim ? (r.trim || "").replace(/<button[^>]*>.*?<\/button>/g, "") : ""}${r.html}</div>`; }
       case "card": return `<div class="wscard">${it.html}</div>`;
       case "tile": return tileSVG(it.codes, it.fills, w, Math.max(160, it.h - 120)) + `<div class="wsmeta">${it.codes.map(c => esc(nameOf(c))).join(" · ")}${it.lines ? `</div><ul class="extra">${it.lines}</ul>` : "</div>"}`;
@@ -2777,7 +3270,7 @@
     }
     return "";
   }
-  const LIVE = { chart: 1, table: 1, analysis: 1 };
+  const LIVE = { chart: 1, table: 1, ctable: 1, analysis: 1 };
   function renderWS() {
     const p = proj();
     wsEl.innerHTML = `<div class="ws-bar"><select data-wsproj aria-label="Project">${WS.projects.map(q => `<option value="${q.id}" ${q.id === p.id ? "selected" : ""}>${esc(q.name)}</option>`).join("")}</select>
@@ -2915,7 +3408,7 @@
     wsEl.hidden = mode === "map"; wsDiv.hidden = mode !== "split";
     if (mode !== "map") renderWS();
     activeTab = mode === "map" ? "map" : mode === "ws" ? "ws" : activeTab === "ws" || activeTab === "map" ? "split" : activeTab;
-    if (mode !== "map" && tabview && !tabview.hidden) tabview.hidden = true;
+    if (mode !== "map" && tabview && !tabview.hidden) { tabview.hidden = true; document.body.classList.remove("tab-on"); }
     renderTabs(); setTimeout(() => { map.resize(); refit(); }, 60);
   }
   function refit() { // keep the focused place (or the places shown together) and their cards inside the map pane
@@ -2955,11 +3448,11 @@
     const lines = codes.slice(0, 6).map(c => `<li><b>${esc(nameOf(c))}</b>: ${ms.map(m => { const r = m.get(c, state.date); return `${esc(m.label)} ${esc(r ? r.text : "—")}`; }).join(" · ")}</li>`).join("");
     sendToWS({ type: "tile", title: codes.length <= 3 ? codes.map(nameOf).join(", ") : `${codes.length} places`, codes, fills, lines, w: 420, h: 420 });
   }
-  floating(cpanel, ".cp-head", "atlas-16-chart-pos", () => ({ x: innerWidth - 660, y: Math.max(60, innerHeight - 700), w: 640, h: Math.min(620, innerHeight - 140) }));
-  cpanel.addEventListener("fwin-resized", () => { if (CHART.drawn) renderChartBody(); });
-  floating(cmpEl, ".cmp-top", "atlas-16-cmp-pos", () => sideWin(980, 0.62));
-  floating(expEl, ".cmp-top", "atlas-16-exp-pos", () => sideWin(900, 0.6));
+  WM.register(cpanel, { type: "chart", title: "Chart", handle: ".cp-head", min: { w: 340, h: 240 }, onResize: () => { if (CHART.drawn) renderChartBody(); }, close: closeChart });
+  WM.register(cmpEl, { type: "compare", title: "Compare", handle: ".cmp-top", min: { w: 360, h: 260 }, close: closeCmp });
+  WM.register(expEl, { type: "export", title: "Export", handle: ".cmp-top", min: { w: 360, h: 260 }, close: closeExport });
   $("open-analyse").addEventListener("click", () => openAnalyse());
+  $("open-help").addEventListener("click", () => openHelp());
   ovEl.addEventListener("click", e => { const b = e.target.closest("[data-ov]"); ovEl.hidden = true; if (b) goTab(b.dataset.ov); });
 
   // ---------- fly ----------
@@ -2987,10 +3480,11 @@
     if (ecardPinned) { ecard.hidden = true; ecardPinned = false; return; }
     if (!ovEl.hidden) { ovEl.hidden = true; return; }
     if (activeTab !== "map" && activeTab !== "split" && VIEW.mode === "map") { activateTab("map"); return; }
-    if (!anEl.hidden) { anEl.hidden = true; return; }
-    if (!cpanel.hidden) { closeChart(); return; }
+    if (SPIDER.on) { unspider(); return; }
+    if (closePMenu() || closeBrowse() || closeMenu() || closeTools()) return;   // menus first: they sit above windows
+    if (WM.closeTop()) return;   // then the top window only (1.8)
     if (!notesEl.hidden) { notesEl.hidden = true; notesH.classList.remove("open"); return; }
-    if (closePMenu() || closeHist() || closeExport() || closeCmp() || closeBrowse() || closeMenu() || closeTools() || clearGroup()) return;
+    if (closeHist() || clearGroup()) return;
     if (state.iso) { state.iso = null; LEVELS.forEach(paintLevel); renderLegend(); return; }
     if (state.focus || state.pinned) { unfocus(); return; }
     if (anyMapped()) clearAllLayers();
@@ -3046,7 +3540,8 @@
   function searchNames(q) { return names.filter(c => nameOf(c).toLowerCase().includes(q) || c.toLowerCase() === q).sort((a, b) => (nameOf(a).toLowerCase() === q ? 0 : nameOf(a).toLowerCase().startsWith(q) ? 1 : 2) - (nameOf(b).toLowerCase() === q ? 0 : nameOf(b).toLowerCase().startsWith(q) ? 1 : 2) || rankL[P[a].level] - rankL[P[b].level]).slice(0, 10); }
   let hits = [], cur = 0, picked = [], ddOpen = false;
   const subOf = c => (P[c].level === "ward" || P[c].level === "constituency") && P[c].parent && P[P[c].parent] ? " · " + esc(nameOf(P[c].parent)) : "";
-  const row = (c, i) => `<li data-c="${c}" class="${i === cur ? "on" : ""}${picked.includes(c) ? " ticked" : ""}" role="option" aria-selected="${picked.includes(c)}"><input type="checkbox" tabindex="-1" ${picked.includes(c) ? "checked" : ""} aria-label="Tick ${esc(nameOf(c))}"><span class="nm">${esc(nameOf(c))}</span><small>${LABEL[P[c].level]}${subOf(c)}</small></li>`;
+  const noDataFor = c => { const ms = planMetrics(); return ms.length > 0 && ms.every(m => { try { const r = m.get(c, state.date); return !r || r.v == null || r.nm; } catch (e) { return true; } }); };
+  const row = (c, i) => `<li data-c="${c}" class="${i === cur ? "on" : ""}${picked.includes(c) ? " ticked" : ""}" role="option" aria-selected="${picked.includes(c)}"><input type="checkbox" tabindex="-1" ${picked.includes(c) ? "checked" : ""} aria-label="Tick ${esc(nameOf(c))}"><span class="nm">${esc(nameOf(c))}</span><small>${LABEL[P[c].level]}${subOf(c)}</small>${noDataFor(c) ? `<em class="ndtag" title="None of the metrics on the map has a value for this place on this date">no data</em>` : ""}</li>`;
   function showHits() {
     const extra = picked.filter(c => !hits.includes(c));
     const body = (extra.length ? `<li class="sec">Ticked</li>${extra.map(c => row(c, -1)).join("")}${hits.length ? `<li class="sec">Results</li>` : ""}` : "") + hits.map(row).join("");
@@ -3193,9 +3688,10 @@
   function renderLevelPicker() {
     const el = $("lvpick"); if (!el) return;
     $("browse-lv").textContent = PLURAL[state.level] || "Areas";
+    const ms = planMetrics();
     el.innerHTML = `<div class="lvt">Boundaries on the map <small>${LV.auto ? "following the zoom" : "at every zoom"}</small></div>
       <label class="lvrow lvauto"><input type="checkbox" data-lv="auto" ${LV.auto ? "checked" : ""}><span>Automatic</span><small>switch with zoom</small></label>
-      ${["nation", "region", "council", "constituency", "ward"].map(l => { const on = !LV.auto && LV.on.includes(l), act = state.level === l; return `<div class="lvrow${act ? " act" : ""}${on ? " on" : ""}"><input type="checkbox" id="lv-${l}" data-lv="${l}" ${on ? "checked" : ""} aria-label="Show ${PLURAL[l]} on the map"><button data-mk="${l}" title="${act ? "Colours, hover cards and clicks use this set" : "Use this set for colours, hover cards and clicks"}">${PLURAL[l]}</button>${act ? `<small>colours &amp; hover</small>` : on ? `<small>outline</small>` : ""}</div>${l === "constituency" && window.ATLAS_HEX ? `<label class="lvrow lvhex"><input type="checkbox" data-hex ${PS.hex ? "checked" : ""}><span>Hex map (equal area)</span><small>one hexagon per seat</small></label>` : ""}`; }).join("")}`;
+      ${["nation", "region", "council", "constituency", "ward"].map(l => { const on = !LV.auto && LV.on.includes(l), act = state.level === l, nd = ms.length && !ms.some(m => avail(m, l).ok); return `<div class="lvrow${act ? " act" : ""}${on ? " on" : ""}${nd ? " lvnd" : ""}"><input type="checkbox" id="lv-${l}" data-lv="${l}" ${on ? "checked" : ""} aria-label="Show ${PLURAL[l]} on the map"><button data-mk="${l}" title="${nd ? "None of the metrics on the map has data for " + PLURAL[l].toLowerCase() + " on this date (the boundaries still show)" : act ? "Colours, hover cards and clicks use this set" : "Use this set for colours, hover cards and clicks"}">${PLURAL[l]}</button>${nd ? `<small class="ndtag">no data for what's on the map</small>` : act ? `<small>colours &amp; hover</small>` : on ? `<small>outline</small>` : ""}</div>${l === "constituency" && window.ATLAS_HEX ? `<label class="lvrow lvhex"><input type="checkbox" data-hex ${PS.hex ? "checked" : ""}><span>Hex map (equal area)</span><small>one hexagon per seat</small></label>` : ""}`; }).join("")}`;
   }
   $("lvpick").addEventListener("change", e => {
     if (e.target.hasAttribute("data-hex")) { PS.hex = e.target.checked; savePS(); syncPcon.warned = false; if (PS.hex && state.level !== "constituency") makeActive("constituency"); syncPcon(true); renderLevelPicker(); toast(PS.hex ? "Hex map: every seat the same size, so big rural seats don't dominate. Positions are approximate." : "Back to the real boundaries."); return; }
@@ -3208,6 +3704,50 @@
   $("plevel").addEventListener("click", () => { if (bcat !== "country") makeActive(bcat); });
   $("pfoot").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; if (b.hasAttribute("data-psearch")) searchTicked(); else if (b.hasAttribute("data-pclear")) { picked = []; showHits(); renderBrowse(); } });
   $("plist").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; if (b.dataset.council) { bopen = bopen === b.dataset.council ? null : b.dataset.council; renderBrowse(); return; } if (b.dataset.place) { toggleTick(b.dataset.place); renderBrowse(); } });
+
+  // ---------- 1.8: the open app: its bar, panels and tools, and the ctx it gets ----------
+  const CTX = {
+    get app() { return APP; }, M, METRICS, P, PER, PARTY, POL, PR, MK, EL: window.ATLAS_EL || null, LOC: window.ATLAS_LOCAL || null, SPANS, CH, EN, ST, XL, WM,
+    esc, fmtInt, fmtBig, fmtPct, longDate, shortDate, dmy, nameOf, partyName, partyCol, LABEL, PLURAL_L, UKC, today: TODAY,
+    get date() { return state.date; }, get level() { return state.level; }, get focus() { return state.focus; }, get sel() { return state.sel.map(x => x.code); },
+    setDate: d => setDate(d), mapOnly, setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); },
+    focus: c => focus(c), view: (center, zoom) => map.flyTo({ center, zoom, duration: 1000 }), allCodesAt, popAt, seriesOf, resultFor, resultsOf: code => (RES[code] || []).map(decode), areaOf: c => AREA[c] || null, previousFor, ELX, GE_DAYS, metricSpan: id => metricSpan(M[id]),
+    openChart: o => openChart(o), openCmp: () => openCmp(), openProtestList: () => openProtestList(), openProtestCard: i => openProtestCard(i), openInfo: id => openMetricInfo(id),
+    sendToWS: it => sendToWS(it), toast, copy, download, searchNames, onDate: f => appListeners.push(f), openPanel: id => openAppPanel(id), store,
+    defineMetric: m => { if (!M[m.id]) def(m); PS.active[m.id] = true; }, repaint: () => repaint(),
+  };
+  window.AtlasCtx = CTX;
+  const appWins = {};
+  function openAppPanel(id) {
+    const x = [...APP.panels, ...APP.tools].find(p => p.id === id); if (!x) return;
+    const have = appWins[id]; if (have && WM.isOpen(have.el)) { WM.front(have.el); WM.pulse(have.el); return; }
+    const w = appWins[id] = have || WM.make({ type: "app-" + APP.id + "-" + id, title: x.title, dispose: false, min: x.min || { w: 340, h: 240 }, def: x.def });
+    w.el.classList.add("apppanel"); WM.open(w.el);
+    const draw = () => { if (!w.el.hidden) { try { x.render(CTX, w.body); } catch (e) { console.error(e); w.body.innerHTML = `<p class="aempty">Couldn't draw this: ${esc(e.message)}</p>`; } } };
+    draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
+  }
+  function renderAppsMenu() {
+    const el = $("apps-list"); if (!el) return;
+    el.innerHTML = (APP ? `<a class="btn" href="${location.pathname}" target="_blank" rel="noopener">Atlas Multi (all perspectives) ↗</a>` : "") + PERSPECTIVES.filter(p => !p.hidden).map(p => p.ready
+      ? `<a class="btn" href="${appHref(p.id)}" target="_blank" rel="noopener" style="--c:${p.hue}">Open as ${esc(appName(p.id))} ↗</a>`
+      : `<span class="btn dis" title="Not available yet: no ${esc(p.name.toLowerCase())} data is loaded">${esc(appName(p.id))}: not available yet</span>`).join("");
+  }
+  function bootApp() {
+    if (!APP_ID) return;
+    if (!APP) { toast("There's no such app: showing Atlas Multi."); return; }
+    document.title = APP.name; document.body.classList.add("appmode"); document.documentElement.style.setProperty("--app", APP.accent);
+    const bar = $("appbar");
+    if (!APP.ok) {
+      bar.innerHTML = `<b style="color:${APP.accent}">${esc(APP.name)}</b><span class="appna">Not available yet</span>`; bar.hidden = false;
+      const w = WM.make({ type: "app-na", title: APP.name + ": not available yet", html: `<p>No ${esc(PER[APP.perspective].name.toLowerCase())} data is loaded yet, so this app has nothing to show.</p>${(PER[APP.perspective].planned || []).length ? `<p>Planned:</p><ul>${PER[APP.perspective].planned.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}<p><a href="${location.pathname}">Back to Atlas Multi</a></p>` });
+      WM.open(w.el); return;
+    }
+    bar.innerHTML = `<b style="color:${APP.accent}">${esc(APP.name)}</b>${[...APP.panels, ...APP.tools].map(x => `<button class="btn sm${APP.tools.includes(x) ? " tool" : ""}" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("")}`;
+    bar.hidden = false; bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) openAppPanel(b.dataset.apanel); });
+    dockOpenP = APP.perspective; setFold(false);
+    if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) map.loaded() ? APP.init(CTX) : map.once("load", () => APP.init(CTX)); }
+  }
+  $("brand").addEventListener("click", renderAppsMenu);
 
   // ---------- start ----------
   draggable(legend, $("legend-grip"), "atlas-031-legend-pos", positionLegend);
@@ -3223,8 +3763,8 @@
   document.body.classList.toggle("hot", !!PS.hot); renderTabs();
   slider.value = monthIdx(state.date); dateIn.value = dmy(state.date);
   document.documentElement.dataset.mode = look.mode;
-  curPlan = EN.plan(planMetrics(), PS.prefs);
-  renderLegend(); renderTNote();
+  curPlan = EN.plan(planMetrics(), PS.prefs); syncRange(true);
+  renderLegend(); renderTNote(); bootApp();
   document.documentElement.style.setProperty("--veil-a", (0.55 * TOOLS.soften).toFixed(3));
   document.documentElement.style.setProperty("--veil-blur", (3 * TOOLS.soften * TOOLS.soften * 1.6).toFixed(2) + "px");
 })();
