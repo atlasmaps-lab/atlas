@@ -22,7 +22,8 @@ def main():
         js("() => { const m = [...document.querySelectorAll('.prcl')].sort((a, b) => +b.textContent - +a.textContent)[0]; m.click(); }"); page.wait_for_timeout(1200)
         rep.check(js("() => !document.getElementById('prpick').hidden && document.querySelectorAll('#prpick li[data-ppe]').length > 1"), "clicking a group lists its protests to pick from (0.7.1)")
         hasz = js("() => { const z = document.querySelector('#prpick [data-ppzoom]'); if (z) z.click(); return !!z; }"); page.wait_for_timeout(1500)
-        rep.check(not hasz or js("() => atlasMap.getZoom()") > z0, "“Zoom in” in the list zooms into the group (when the group can be split by zooming)")
+        z1 = js("() => atlasMap.getZoom()"); print("   zoom", z0, "->", z1, "button", hasz)
+        rep.check(not hasz or z1 > z0, "“Zoom in” in the list zooms into the group (when the group can be split by zooming)")
         # the same point: many London events share one centre
         stack = js("""() => { const P = window.ATLAS_PROTESTS, by = {}; P.sites.forEach(s => { const k = s[1] + ',' + s[2]; (by[k] = by[k] || new Set()).add(s[0]); });
             const best = Object.entries(by).sort((a, b) => b[1].size - a[1].size)[0]; return [best[0], best[1].size]; }""")

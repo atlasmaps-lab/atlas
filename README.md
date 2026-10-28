@@ -51,6 +51,13 @@ Atlas 0.7.1 is Ruben's round of fixes and features on top of 0.7 (Mo's numbering
 - The app shows 0.7.1.
 - The phone layout is still to come.
 
+**Type.** Text is set in Surveyor Text Light, and headers and titles in Surveyor Text Book, in capitals and bold. Every digit is Archer Numeric Bold, everywhere. Both are Hoefler&Co fonts (typography.com) and need a licence, so they aren't in this public repository. Atlas uses them wherever it can get them:
+1. installed on the computer;
+2. licensed web font files in `fonts/` (see `fonts-files.example.css`, then set `fontFiles: true` in `config.js`);
+3. a Hoefler&Co Cloud.typography kit (put its CSS address in `fontKitCss` in `config.js`). This is the way to get them on the public website.
+
+Until then the free stand-ins are Newsreader (text and headers) and Zilla Slab Bold (digits). Map labels drawn by the basemap keep the basemap's own fonts. Everything is in `fonts.css`.
+
 **Rebuilding the new data:** `python3 pipeline/build_polls.py` (add new polls to `pipeline/sources/polls_wikipedia.csv` first) and `python3 pipeline/fetch_news.py`.
 
 ## What's new in 1.8 (Mo's 0.7)

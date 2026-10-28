@@ -1,0 +1,53 @@
+/* Atlas 0.7.1 · type
+ *
+ *   Text:              Surveyor Text Light      (Hoefler&Co)
+ *   Headers, titles:   Surveyor Text Book, in capitals and bold
+ *   Numbers:           Archer Numeric Bold      (Hoefler&Co): every digit, everywhere, through a unicode-range face
+ *
+ * Surveyor and Archer are licensed fonts, so they are not in this public repository. Atlas uses them whenever the
+ * browser can get them, in this order:
+ *   1. Installed on the computer (local(...) below): on a machine with the fonts installed, Atlas shows them.
+ *   2. Web font files you have a licence for: copy fonts-files.example.css to fonts/atlas-fonts.css, put the .woff2
+ *      files beside it, and set fontFiles: true in config.js (fonts/ is git-ignored, so they are never published by
+ *      accident, and nothing is requested when the switch is off).
+ *   3. A Hoefler&Co Cloud.typography kit: set fontKitCss in config.js to the kit's CSS address and Atlas loads it;
+ *      the kit's family names ("Surveyor Text A", "Archer A", ...) are in the stacks too.
+ * Until then, free stand-ins from Google Fonts keep the same feel: Newsreader (a light, map-like serif) for text and
+ * headers, Zilla Slab Bold (a slab serif like Archer) for digits.
+ */
+@font-face { font-family: "Atlas Text"; font-weight: 300; font-style: normal; font-display: swap;
+  src: local("Surveyor Text Light"), local("SurveyorText-Light"); }
+@font-face { font-family: "Atlas Text"; font-weight: 300; font-style: italic; font-display: swap;
+  src: local("Surveyor Text Light Italic"), local("SurveyorText-LightItalic"); }
+@font-face { font-family: "Atlas Text"; font-weight: 600; font-style: normal; font-display: swap;   /* bold words inside text */
+  src: local("Surveyor Text Semibold"), local("SurveyorText-Semibold"), local("Surveyor Text Book"), local("SurveyorText-Book"); }
+@font-face { font-family: "Atlas Head"; font-weight: 400; font-style: normal; font-display: swap;   /* bolded by the browser, as asked */
+  src: local("Surveyor Text Book"), local("SurveyorText-Book"); }
+@font-face { font-family: "Atlas Digits"; font-weight: 100 900; font-style: normal; font-display: swap;
+  src: local("Archer Numeric Bold"), local("ArcherNumeric-Bold"), local("Archer Bold"), local("Archer-Bold");
+  unicode-range: U+0030-0039; }
+
+:root {
+  --f-text: "Atlas Digits", "Zilla Slab", "Atlas Text", "Surveyor Text A", "Surveyor Text B", "Newsreader", Georgia, serif;
+  --f-head: "Atlas Digits", "Zilla Slab", "Atlas Head", "Surveyor Text A", "Surveyor Text B", "Newsreader", Georgia, serif;
+  --f-num: "Atlas Digits", "Archer Numeric", "Archer A", "Archer B", "Zilla Slab", "Atlas Text", "Newsreader", Georgia, serif;
+  --f: var(--f-text);
+  --mono: var(--f-text);   /* the small labels that used a monospaced face now use the text face; digits stay in Archer */
+}
+body { font-weight: 300; font-variant-numeric: lining-nums tabular-nums; }
+b, strong, th, .num b { font-weight: 600; }
+
+/* headers and titles: Surveyor Text Book, capitals, bold */
+h1, h2, h3, h4, h5, h6, .wm-title, .wm-head b, .cmp-top h2, .an-head > b, .cp-head b, #chartp .cp-head b, .tv-head h2,
+#dock .dt span:first-child, .pname, .pgroup, .lg h5 > span, .grip-bar, .card h3, .sq-h, .lvt, .tb-tools + *, #menu h2,
+.ah-brand, .ah-brand b, .ah-link, .appbar .ah-link, .pm-head h3, details.mt-p > summary span, .sq-reg > summary, #prpick .pp-head b,
+.brand b, .keybox h1, #keybox h1, .tab span, .ap-help summary {
+  font-family: var(--f-head); font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+}
+.card h3, .sq-h, .wm-title, .wm-head b { letter-spacing: .04em; }
+
+/* numbers set on their own (tables, ticks, the date, counts): Archer Numeric Bold */
+.num, td.num, .ticks, .lg .ticks, .marks, #date, .tcur, .ap-big, .seatbar + .ap-row b, .mt-n, .n, .k, .ah-ver, .tb-num, .prcl svg text, .chip small {
+  font-family: var(--f-num); font-weight: 700;
+}
+input, select, textarea, button { font-family: var(--f-text); }
