@@ -1188,7 +1188,7 @@
       const evs = leaves.map(l => l.properties.e);
       return Promise.resolve(src.getClusterExpansionZoom(id)).then(z => {
         const canZoom = z <= 14 && z <= map.getMaxZoom();
-        showProtestPicker(evs, pt, canZoom ? () => map.easeTo({ center: at, zoom: z + 0.2, duration: 600 }) : null);
+        showProtestPicker(evs, pt, canZoom ? () => map.easeTo({ center: at, zoom: Math.min(map.getMaxZoom(), Math.max(z + 0.2, map.getZoom() + 1)), duration: 600 }) : null);
       });
     }).catch(() => {});
   }

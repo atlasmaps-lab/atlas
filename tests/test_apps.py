@@ -25,7 +25,7 @@ def main():
 
         page = open_atlas(b, base, (1440, 900), query="debug#app=markets"); js = page.evaluate; page.wait_for_timeout(1200)
         rep.check(js("() => document.title") == "Atlas Markets" and page.is_visible("#appbar"), "#app=markets opens Atlas Markets with its own bar")
-        rep.check(js("() => [...document.querySelectorAll('#dock .pname')].map(b => b.dataset.open).join()") == "markets", "the dock offers only the Markets perspective")
+        rep.check(js("() => [...document.querySelectorAll('#dock .pname')].filter(b => b.dataset.open !== 'analysis').length") == 0 and js("() => [...new Set([...document.querySelectorAll('#dock .pgroup')].map(b => b.dataset.p))].join()") == "markets", "the dock offers only Markets' own categories (0.7.1: no perspective headers)")
         rep.check("not available" in js("() => document.querySelector('.apppanel:not([hidden]) .wm-body').textContent").lower(), "the market overview says prices are not available, and why")
         page.click("#appbar [data-apanel=dcf]"); page.wait_for_timeout(400)
         r = js("() => { const w = [...document.querySelectorAll('.apppanel:not([hidden])')].pop(); return [w.querySelectorAll('.mk-sens td').length, /Enterprise value/.test(w.textContent), /not investment advice/.test(w.textContent)]; }")
@@ -43,7 +43,7 @@ def main():
         page.context.close()
 
         page = open_atlas(b, base, (1440, 900), query="debug#app=politics"); js = page.evaluate; page.wait_for_timeout(2000)
-        rep.check(js("() => document.body.classList.contains('hexmode')"), "Atlas Politics opens on the hex map")
+        rep.check(not js("() => document.body.classList.contains('hexmode')") and js("() => AtlasDebug.PS.mapped.political.includes('ge_winner')"), "Atlas Politics opens with every seat coloured by its winner (0.7.1: real boundaries; hex is a view under Constituencies)")
         rep.check("650 seats" in js("() => document.querySelector('.apppanel:not([hidden])').textContent"), "the election view shows the seat count (650)")
         page.click("#appbar [data-apanel=swing]"); page.wait_for_timeout(400)
         before = js("() => [...document.querySelectorAll('.apppanel:not([hidden])')].pop().querySelector('.seatbar').innerHTML")
@@ -52,7 +52,7 @@ def main():
         rep.check(before != after, "the swingometer projects different seats when Labour's share falls")
         rep.check("simple model" in js("() => [...document.querySelectorAll('.apppanel:not([hidden])')].pop().textContent"), "it says uniform swing is a simple model")
         js("() => [...document.querySelectorAll('.apppanel:not([hidden])')].pop().querySelector('[data-swmap]').click()"); page.wait_for_timeout(800)
-        rep.check(js("() => AtlasDebug.PS.mapped.political.includes('uns_winner')"), "the projection goes on the hex map")
+        rep.check(js("() => AtlasDebug.PS.mapped.political.includes('uns_winner')"), "the projection goes on the map")
         for pid in ("seat", "councils", "referendums"):
             page.click(f"#appbar [data-apanel={pid}]"); page.wait_for_timeout(400)
         rep.check(js("() => !!document.querySelector('.apppanel:not([hidden]) svg.ap-svg')"), "councils draw seats over time and control")

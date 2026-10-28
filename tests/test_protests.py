@@ -20,7 +20,9 @@ def main():
         rep.check(js("() => [...document.querySelectorAll('.prcl')].every(m => /\\d/.test(m.textContent) && m.querySelector('path,circle'))"), "each group shows its count and a ring of causes")
         z0 = js("() => atlasMap.getZoom()")
         js("() => { const m = [...document.querySelectorAll('.prcl')].sort((a, b) => +b.textContent - +a.textContent)[0]; m.click(); }"); page.wait_for_timeout(1200)
-        rep.check(js("() => atlasMap.getZoom()") > z0 or js("() => atlasMap.getSource('pr-spider')._data.features.length") > 0, "clicking a group zooms in (or fans it out)")
+        rep.check(js("() => !document.getElementById('prpick').hidden && document.querySelectorAll('#prpick li[data-ppe]').length > 1"), "clicking a group lists its protests to pick from (0.7.1)")
+        hasz = js("() => { const z = document.querySelector('#prpick [data-ppzoom]'); if (z) z.click(); return !!z; }"); page.wait_for_timeout(1500)
+        rep.check(not hasz or js("() => atlasMap.getZoom()") > z0, "“Zoom in” in the list zooms into the group (when the group can be split by zooming)")
         # the same point: many London events share one centre
         stack = js("""() => { const P = window.ATLAS_PROTESTS, by = {}; P.sites.forEach(s => { const k = s[1] + ',' + s[2]; (by[k] = by[k] || new Set()).add(s[0]); });
             const best = Object.entries(by).sort((a, b) => b[1].size - a[1].size)[0]; return [best[0], best[1].size]; }""")
@@ -28,11 +30,10 @@ def main():
         js(f"() => atlasMap.jumpTo({{ center: [{lon}, {lat}], zoom: 15.5 }})"); page.wait_for_timeout(1500)
         pt = js(f"() => {{ const q = atlasMap.project([{lon}, {lat}]), r = atlasMap.getCanvas().getBoundingClientRect(); return [q.x + r.left, q.y + r.top]; }}")
         page.mouse.click(pt[0], pt[1]); page.wait_for_timeout(600)
-        sp = js("() => atlasMap.getSource('pr-spider')._data.features.filter(f => f.geometry.type === 'Point').length")
-        rep.check(sp >= 2, f"{stack[1]} protests on one point: clicking fans them out ({sp} points in a ring)")
-        # click one of the fanned-out points: its card opens
-        p1 = js("""() => { const f = atlasMap.getSource('pr-spider')._data.features.find(f => f.geometry.type === 'Point'); const q = atlasMap.project(f.geometry.coordinates), r = atlasMap.getCanvas().getBoundingClientRect(); return [q.x + r.left, q.y + r.top]; }""")
-        page.mouse.click(p1[0], p1[1]); page.wait_for_timeout(500)
+        n = js("() => document.getElementById('prpick').hidden ? 0 : document.querySelectorAll('#prpick li[data-ppe]').length")
+        rep.check(n >= 2, f"{stack[1]} protests on one point: clicking lists them to pick from ({n} in the list)")
+        # pick one from the list: its card opens
+        js("() => document.querySelector('#prpick li[data-ppe]').click()"); page.wait_for_timeout(500)
         rep.check(js("() => document.querySelectorAll('.wmwin[data-wm-type=protest]:not([hidden])').length") == 1, "clicking a protest opens its card")
         card = js("() => document.querySelector('.wmwin[data-wm-type=protest]:not([hidden])').textContent")
         rep.check("Read more on Wikipedia" in card, "the card links to Wikipedia")
