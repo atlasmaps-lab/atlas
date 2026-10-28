@@ -1,5 +1,7 @@
 # Atlas 1.7 — United Kingdom
 
+Atlas 1.7 combines Mo's political work with Ruben's health, housing and government debt data. Download this exact version from the repo's Releases page (tag `v1.7`).
+
 Atlas 1.7 fills in the Political perspective: Westminster results since 1997, the EU referendum, council tax, council make-up, party positions, and the measures political scientists use to read them. It also makes Atlas say how sure it is about each number. Built on 1.6 in the GitHub repository (branch `mo/1.7-political`).
 
 ## What's new in 1.7
