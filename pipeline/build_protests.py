@@ -133,7 +133,7 @@ Written by `pipeline/build_protests.py` from `pipeline/sources/protests_log.json
 
 1. **Country:** kept only if Wikidata gives the event's country as the United Kingdom (P17 = Q145), or a place it names resolves to a UK Wikidata item inside the UK polygons.
 2. **Places:** every place goes through its Wikidata item: the item's country must be the UK *and* its coordinates must fall inside the UK polygons (not a bounding box).
-3. **International events:** only UK places that the article itself describes as protest sites are kept (the sentence is in the log), labelled "UK part of an international protest". A crowd figure is shown only if the article gives one for the UK place; a global figure is never put on a UK point.
+3. **International events:** only UK places that the article itself describes as protest sites are kept (a sentence that names the place and a protest, in a UK section of the article or naming the UK itself), labelled "UK part of an international protest". A crowd figure is shown only if the article gives one for the UK place; a global figure is never put on a UK point.
 4. **Regions, counties and countries** get no point; the event counts for the nation.
 
 ## Events dropped, and why
@@ -152,7 +152,7 @@ Written by `pipeline/build_protests.py` from `pipeline/sources/protests_log.json
 ## UK parts of international protests
 
 {table([(d['event'], ', '.join(d['uk_sites']), d['crowd']) for d in log.get('international', [])], ['Event', 'UK sites kept', 'Crowd shown'])}
-## Changes since the previous file (138-line CSV from Atlas 1.7)
+## Changes since the previous file (Atlas 1.7)
 
 - Events no longer included: {len(ch.get('events_gone', []))}{(': ' + '; '.join(ch.get('events_gone', []))) if ch.get('events_gone') else ''}
 - New events: {len(ch.get('events_new', []))}{(': ' + '; '.join(ch.get('events_new', []))) if ch.get('events_new') else ''}
