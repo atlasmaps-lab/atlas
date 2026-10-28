@@ -915,6 +915,57 @@ details.mt-p.na > summary { opacity: .5; cursor: default; }
 .mt-item.on { font-weight: 600; color: var(--c, var(--ink)); }
 #hits li.smetrics { display: block; padding: 2px 6px 6px; cursor: default; }
 #hits li.smetrics:hover { background: none; }
+/* apps as tabs inside Atlas (0.7.1): the app runs in a frame under a slim browser-like tab strip */
+.appframe { position: fixed; left: 0; right: 0; top: var(--tabh, 46px); bottom: 0; width: 100%; height: calc(100% - var(--tabh, 46px)); border: 0; z-index: 650; background: var(--solid); }
+body.apptab-on #top { top: 0; left: 0; right: 0; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--rule); box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+body.apptab-on #top > .brand, body.apptab-on #top > .finder, body.apptab-on #top > .appbar { display: none; }
+body.apptab-on #tabs { box-shadow: none; border: 0; background: none; max-width: none; padding: 0; }
+body.apptab-on #menu { top: 50px; }
+/* the app header (0.7.1): a normal website menu bar, centred and wide, with the app's tools underneath like bookmarks */
+#apphead { position: fixed; top: 0; left: 0; right: 0; z-index: 705; background: var(--panel); border-bottom: 1px solid var(--rule); box-shadow: 0 1px 6px rgba(0,0,0,.06); border-top: 3px solid var(--app, var(--ink)); }
+#apphead .ah-row { max-width: 1240px; margin: 0 auto; display: flex; align-items: center; gap: 18px; padding: 8px 20px; }
+#apphead .ah-brand { display: flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--ink); white-space: nowrap; }
+#apphead .ah-logo { font-weight: 800; letter-spacing: .22em; font-size: 17px; }
+#apphead .ah-brand b { color: var(--app); font-size: 15px; font-weight: 700; letter-spacing: .02em; }
+#apphead .ah-search { flex: 1; display: flex; justify-content: center; }
+#apphead .ah-search .finder { width: 100%; max-width: 680px; box-shadow: none; }
+#apphead .ah-search .search { flex: 1; } #apphead .ah-search #search { width: 100%; }
+#apphead .ah-right { display: flex; align-items: center; gap: 10px; }
+#apphead .ah-ver { font: 11px var(--mono); color: var(--ink-3); }
+#apphead .ah-more { border: 1px solid var(--rule); background: var(--solid); border-radius: 6px; width: 38px; height: 32px; font-size: 20px; line-height: 1; cursor: pointer; color: var(--ink); }
+#apphead .ah-more:hover { background: rgba(0,0,0,.05); }
+#apphead .ah-nav { max-width: 1240px; margin: 0 auto; padding: 0 20px; border-top: 1px solid var(--rule); }
+#apphead .ah-nav .appbar { display: flex; gap: 2px; background: none; border: 0; box-shadow: none; padding: 0; max-width: none; border-radius: 0; overflow-x: auto; }
+#apphead .ah-link { border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 8px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
+#apphead .ah-link:hover { color: var(--ink); border-bottom-color: color-mix(in srgb, var(--app) 40%, transparent); }
+#apphead .ah-link.on { color: var(--app); border-bottom-color: var(--app); }
+#apphead .ah-link.tool::before { content: "⚙ "; font-weight: 400; color: var(--ink-3); }
+body.appmode #top > .brand { display: none; }
+body.appmode #map { top: var(--ahh, 92px); height: calc(100% - var(--ahh, 92px)); }
+body.appmode #menu { left: auto; right: max(16px, calc((100vw - 1240px) / 2 + 20px)); top: 52px; }
+body.appmode #legend:not(.moved) { top: calc(var(--ahh, 92px) + 12px) !important; }
+body.appmode #tabs { position: fixed; right: 16px; top: 100px; }
+.lvrow.lvhex { display: flex; gap: 12px; align-items: center; padding-left: 30px; font-size: 12px; } .lvhex .lvv { color: var(--ink-3); } .lvhex label { display: flex; gap: 4px; align-items: center; cursor: pointer; }
+body.hexmode #map, body.hexmode .maplibregl-canvas { background: #eef1f2; }
+/* Atlas Politics panels (0.7.1) */
+.ap-help { background: rgba(123,79,166,.06); border: 1px solid rgba(123,79,166,.18); border-radius: 6px; padding: 6px 10px; margin: 6px 0; font-size: 12.5px; }
+.ap-help summary { cursor: pointer; font-weight: 600; } .ap-help p { margin: 6px 0; line-height: 1.45; }
+.sq-h { margin: 8px 0 2px; font-size: 18px; } .sq-prof { font-size: 13px; line-height: 1.55; margin: 4px 0 8px; }
+.sq-list { display: flex; flex-direction: column; gap: 2px; }
+.sq-reg > summary { cursor: pointer; font-weight: 600; font-size: 12.5px; padding: 4px 2px; } .sq-reg > summary small { color: var(--ink-3); font-weight: 400; }
+.sq-it { display: flex; gap: 6px; align-items: baseline; width: 100%; text-align: left; border: 0; background: none; padding: 3px 6px 3px 14px; font: inherit; font-size: 12.5px; cursor: pointer; border-radius: 4px; color: var(--ink); }
+.sq-it:hover { background: rgba(123,79,166,.08); } .sq-it small { margin-left: auto; color: var(--ink-3); white-space: nowrap; }
+.sq-mps { margin: 4px 0; padding-left: 18px; font-size: 12.5px; }
+tr.clk { cursor: pointer; } tr.clk:hover th, tr.clk:hover td { background: rgba(123,79,166,.06); }
+.lnk { border: 0; background: none; color: var(--app, #2b6cb0); text-decoration: underline; cursor: pointer; font: inherit; font-size: 11.5px; padding: 0 3px; }
+td.acts3 { white-space: nowrap; text-align: right; }
+.nw-list { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.nw-it { border-bottom: 1px solid var(--rule); padding-bottom: 7px; } .nw-it a { font-weight: 600; font-size: 13px; color: var(--ink); text-decoration: none; } .nw-it a:hover { text-decoration: underline; }
+.nw-it p { margin: 3px 0; font-size: 12px; color: var(--ink-2); line-height: 1.4; } .nw-meta { font-size: 11px; color: var(--ink-3); margin-bottom: 2px; }
+.nw-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.nw-tag { font-size: 10.5px; border-radius: 10px; padding: 1px 7px; border: 1px solid var(--rule); background: var(--solid); display: inline-flex; gap: 4px; align-items: center; }
+.nw-tag.pl { cursor: pointer; border-color: rgba(123,79,166,.4); color: #5b3a8c; } .nw-tag.tp { color: var(--ink-3); }
+.proj .sw { outline: 1px dashed rgba(0,0,0,.35); outline-offset: 1px; }
 #hits li.sec small { font-weight: 400; color: var(--ink-3); margin-left: 6px; text-transform: none; letter-spacing: 0; }
 </style>
 </head>
@@ -1033,6 +1084,8 @@ details.mt-p.na > summary { opacity: .5; cursor: default; }
 <script src="data/elections.js"></script>
 <script src="data/hex_constituencies.js"></script>
 <script src="data/local.js"></script>
+<script src="data/polls.js"></script>
+<script src="data/news.js"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
 <script src="stats.js?v=18272300"></script>

@@ -1,0 +1,23 @@
+# Atlas 0.7.1: refresh the political news feed (data/news.js) every morning from official sources.
+name: News feed
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  news:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python pipeline/fetch_news.py
+      - name: Commit if changed
+        run: |
+          git config user.name "atlas-news-bot"
+          git config user.email "atlas-news-bot@users.noreply.github.com"
+          git add data/news.js
+          git diff --cached --quiet || (git commit -m "News feed: $(date -u +%F)" && git push)

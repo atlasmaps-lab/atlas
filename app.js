@@ -527,6 +527,37 @@
     get(code, d) { const r = resultFor(code, d); if (!r || !r.electorate) return r ? { v: null, text: "Electorate not recorded" } : null; const per = r.agg ? r.electorate / r.n : r.electorate;
       const quota = r.e.day >= "2024-07-04" ? QUOTA_2023 : meanElectorate(r.agg ? r.day : (geAt(r.e.day) || r.e.day)); if (!quota) return null; const v = 100 * (per / quota - 1);
       return { v, text: `${fmtInt(per)} electors${r.agg ? " per seat" : ""} (${this.fmt(v)} against ${r.e.day >= "2024-07-04" ? "the 2023 quota of 73,393" : "the UK mean of " + fmtInt(quota)})`, yr: elWhen(r) }; } });
+  // ---------- 0.7.1: seat projection from the polling average (uniform national swing) ----------
+  // Every seat's 2024 shares move by the change between the 2024 Great Britain result and the latest polling average
+  // (data/polls.js); the largest share wins. Northern Ireland isn't polled with GB, so it stays as it was. A simple model.
+  const POLLS = window.ATLAS_POLLS || null;
+  let PROJ = null;
+  function projection() {
+    if (PROJ || !POLLS || !GE_DAYS.length) return PROJ;
+    const day = GE_DAYS[GE_DAYS.length - 1], gb = ["E92000001", "S92000003", "W92000004"].map(c => resultFor(c, day)).filter(Boolean);
+    const tot = gb.reduce((a, r) => a + r.t.total, 0), base = {}; gb.forEach(r => Object.entries(r.t.by).forEach(([p, v]) => { base[p] = (base[p] || 0) + v / tot; }));
+    const delta = {}; Object.entries(POLLS.avg).forEach(([p, v]) => { delta[p] = v / 100 - (base[p] || 0); });
+    const seat = new Map();
+    for (const c in RES) {
+      const L = RES[c]; const r = L && L.length ? decode(L[L.length - 1]) : null; if (!r || r.e.kind !== "general" || r.e.day !== day) continue;
+      const sh = sharesOf(r), was = winnerOf(r), a = AREA[c] || [];
+      if (a[0] !== "N92000002" && !r.spk) Object.keys(delta).forEach(p => { if (sh[p] != null || delta[p] > 0) sh[p] = Math.max(0, (sh[p] || 0) + delta[p]); });
+      const order = Object.keys(sh).sort((x, y) => sh[y] - sh[x]), w = r.spk ? "spk" : order[0];
+      seat.set(c, { w, was, sh, order, margin: order[1] ? sh[order[0]] - sh[order[1]] : null, ni: a[0] === "N92000002" });
+    }
+    return (PROJ = { day, base, delta, seat });
+  }
+  const projText = (x, short) => `${partyName(x.w)}${x.w === x.was ? " hold" : ` gain from ${partyName(x.was)}`}${short ? "" : ` · ${x.order.slice(0, 3).map(p => `${partyName(p)} ${pct1(100 * x.sh[p])}`).join(", ")}`}${x.ni ? " (Northern Ireland: as in 2024)" : ""}`;
+  if (EL && POLLS) {
+    wm({ id: "proj_winner", label: "Projected winner (polling average)", scale: "nominal", nature: "category", temporal: "static", est: true,
+      desc: `Atlas's projection from the polling average up to ${POLLS.latest} (${POLLS.n} polls), by uniform national swing from 2024`,
+      how: "Each seat's 2024 share for a party + (polling average − the party's 2024 Great Britain share), floored at zero; the largest share wins. Northern Ireland unchanged. Region, nation, UK: projected seats", ...partyCat,
+      get(code) { const P0 = projection(); if (!P0) return null; const lv = P[code] && P[code].level;
+        if (lv === "constituency") { const x = P0.seat.get(code); return x ? { v: x.w, text: projText(x), yr: "polls to " + POLLS.latest, est: true, estWhy: "A projection, not a result" } : null; }
+        const n = {}; let tot = 0; P0.seat.forEach((x, c) => { const a = AREA[c] || []; if (lv === "nation" && a[0] !== code) return; if (lv === "region" && a[1] !== code) return; if (lv !== "country" && lv !== "nation" && lv !== "region") return; n[x.w] = (n[x.w] || 0) + 1; tot++; });
+        if (!tot) return null; const top = Object.keys(n).sort((a, b) => n[b] - n[a])[0];
+        return { v: top, text: `${partyName(top)}: ${n[top]} of ${tot} seats (projected)`, counts: n, tot, yr: "polls to " + POLLS.latest, est: true }; } });
+  }
   // political: referendums (1.7)
   const G5 = "Referendums", REF = EL ? EL.ref || {} : {}, EU_DAY = "2016-06-23";
   function euAt(code) { // a council's row, or votes summed over the councils in a region, nation or the UK (never averaged)
@@ -986,6 +1017,29 @@
     map.getSource("pt-ward").setData({ type: "FeatureCollection", features: wardPoints });
     map.once("idle", () => { state.sel.forEach(t => t.level === "ward" && setFS(t, { sel: true })); paintLevel("ward"); });
   };
+  // ---------- 0.7.1: the hex map is a whole-map view, not an overlay ----------
+  // In hex mode only the hexagons (and the tools) are drawn: the basemap, coastline, other boundaries and anything placed
+  // by real coordinates (protests, head offices) step aside, and come back exactly as they were when you leave.
+  const HEX_KEEP = /constituency|^focus|^group|^tool|^grid|^lasso|^selbox|^sel-box/;
+  let hexOnNow = false; const hexWant = {};
+  const _setLayout = map.setLayoutProperty.bind(map);
+  map.setLayoutProperty = (id, prop, v, o) => {
+    if (prop === "visibility" && hexOnNow && !HEX_KEEP.test(id)) { hexWant[id] = v; return _setLayout(id, prop, "none", o); }
+    return _setLayout(id, prop, v, o);
+  };
+  function hexScene(on) {
+    if (on === hexOnNow || !map.getStyle()) return;
+    const layers = map.getStyle().layers;
+    if (on) {
+      layers.forEach(l => { if (HEX_KEEP.test(l.id) || l.type === "background") return; hexWant[l.id] = map.getLayoutProperty(l.id, "visibility") || "visible"; _setLayout(l.id, "visibility", "none"); });
+      const bg = layers.find(l => l.type === "background"); if (bg) { hexWant.__bg = [bg.id, map.getPaintProperty(bg.id, "background-color")]; map.setPaintProperty(bg.id, "background-color", "#eef1f2"); }
+      hexOnNow = true;
+    } else {
+      hexOnNow = false;
+      Object.entries(hexWant).forEach(([id, v]) => { if (id === "__bg") { if (map.getLayer(v[0])) map.setPaintProperty(v[0], "background-color", v[1]); } else if (map.getLayer(id)) _setLayout(id, "visibility", v); });
+      Object.keys(hexWant).forEach(k => delete hexWant[k]);
+    }
+  }
   // ---------- constituencies over time ----------
   // The constituency layer shows the boundaries in force on the date: 2024 seats from 4 July 2024; the 2010 set from 2010
   // (Scotland's from 2005); the 1997 set before that. Older sets load the first time they're needed. Before 1997: none.
@@ -1009,11 +1063,11 @@
     if (missing.length) { missing.forEach(k => { if (pconLoading.has(k)) return; pconLoading.add(k); const sc = document.createElement("script"); sc.src = `data/constituencies_${k}.js`; sc.onerror = () => { pconLoading.delete(k); toast("Couldn't load the older constituency boundaries."); }; document.body.appendChild(sc); }); toast("Loading the constituency boundaries for that date…"); return; }
     const real = sig === "2024" ? PSETS["2024"].features : need.flatMap(k => PSETS[k].features).filter(f => activeAt(f.properties.code, state.date));
     // 1.7: hex map (equal area): the same seats and codes as hexagons, from data/hex_constituencies.js (2024 and 2010 sets only)
-    const HX = window.ATLAS_HEX, hexOn = !!PS.hex && HX && HX[sig === "2010" ? "2010" : sig];
+    const HX = window.ATLAS_HEX, hexOn = !!PS.hex && pconInUse() && HX && HX[sig === "2010" ? "2010" : sig];
     if (PS.hex && !hexOn && !syncPcon.warned) { syncPcon.warned = true; toast("There's no hex map for the 1997 boundaries: showing the real ones."); }
     const feats = hexOn ? HX[sig === "2010" ? "2010" : sig].features.filter(f => activeAt(f.properties.code, state.date)) : real;
     G.pconReal = { type: "FeatureCollection", features: real }; G.constituencies = { type: "FeatureCollection", features: feats }; pconSig = sig;
-    document.body.classList.toggle("hexmode", !!hexOn);
+    document.body.classList.toggle("hexmode", !!hexOn); hexScene(!!hexOn);
     map.getSource("constituencies").setData(G.constituencies);
     map.getSource("pt-constituency").setData({ type: "FeatureCollection", features: feats.map(f => ({ type: "Feature", properties: { code: f.properties.code }, geometry: { type: "Point", coordinates: hexOn ? f.properties.pt : PT[f.properties.code] || repPoint(f.geometry) } })) });
     for (const k in paCache) delete paCache[k]; for (const k in qCache) delete qCache[k];
@@ -1367,10 +1421,10 @@
   function renderDock() {
     dock.classList.toggle("collapsed", !!dockFold.folded);
     const n = PERSPECTIVES.reduce((a, p) => a + mappedIn(p.id), 0);
-    dock.innerHTML = `<div class="dt-row"><button class="dt" data-fold aria-expanded="${!dockFold.folded}"><span>Perspectives</span>${n ? `<span class="n">${n}</span>` : ""}<span class="chev">▾</span></button><button class="dclear" data-dclear ${n ? "" : "disabled"} title="${n ? "Take everything off the map (Esc). Undo in the message that follows" : "Nothing is on the map"}">Clear all</button></div>
-      <div class="dbody"><div class="dinner">${APP ? `<a class="appswitch" href="${location.pathname}" target="_blank" rel="noopener" title="All perspectives together, in a new tab">Atlas Multi ↗</a>` : ""}${PERSPECTIVES.filter(p => !(p.hidden && !p.ready) && (!APP || p.id === APP.perspective || (p.id === "analysis" && p.ready))).map(p => { const on = mappedIn(p.id) > 0, open = dockOpenP === p.id; return `<div class="pr${on ? " on" : ""}${p.ready ? "" : " locked"}" style="--c:${p.hue}">
-        <div class="phead"><button class="pname" data-open="${p.id}" aria-expanded="${open}" ${p.ready ? "" : `title="Not available yet: no data loaded. Click to see what's planned"`}>${esc(p.name)}${p.ready ? "" : `<small>not available yet</small>`}<span class="caret">▾</span></button>${on ? `<button class="pclear" data-pclear="${p.id}" title="Take the ${esc(p.name)} metrics off the map">clear</button>` : ""}${!APP && p.ready && p.id !== "analysis" ? `<a class="papp" href="${appHref(p.id)}" target="_blank" rel="noopener" title="Open as ${esc(appName(p.id))}, in its own tab">↗</a>` : ""}</div>
-        ${open ? `<div class="pgroups">${groupsOfP(p).map(g => { const k = mappedIn(p.id, g) + cardIn(p.id, g), sel = pmOpen && pmOpen.p === p.id && pmOpen.g === g; return `<button class="pgroup${k ? " on" : ""}${sel ? " sel" : ""}" data-group="${esc(g)}" data-p="${p.id}" aria-expanded="${sel}">${esc(g || p.name)}${k ? `<span class="k">${k}</span>` : ""}</button>`; }).join("")}</div>` : ""}</div>`; }).join("")}</div></div>`;
+    dock.innerHTML = `<div class="dt-row"><button class="dt" data-fold aria-expanded="${!dockFold.folded}"><span>${APP ? esc(APP.short) : "Perspectives"}</span>${n ? `<span class="n">${n}</span>` : ""}<span class="chev">▾</span></button><button class="dclear" data-dclear ${n ? "" : "disabled"} title="${n ? "Take everything off the map (Esc). Undo in the message that follows" : "Nothing is on the map"}">Clear all</button></div>
+      <div class="dbody"><div class="dinner">${PERSPECTIVES.filter(p => !(p.hidden && !p.ready) && (!APP || p.id === APP.perspective || (p.id === "analysis" && p.ready))).map(p => { const on = mappedIn(p.id) > 0, open = dockOpenP === p.id; return `<div class="pr${on ? " on" : ""}${p.ready ? "" : " locked"}" style="--c:${p.hue}">
+        ${APP && p.id === APP.perspective ? "" : `<div class="phead"><button class="pname" data-open="${p.id}" aria-expanded="${open}" ${p.ready ? "" : `title="Not available yet: no data loaded. Click to see what's planned"`}>${esc(p.name)}${p.ready ? "" : `<small>not available yet</small>`}<span class="caret">▾</span></button>${on ? `<button class="pclear" data-pclear="${p.id}" title="Take the ${esc(p.name)} metrics off the map">clear</button>` : ""}${!APP && p.ready && p.id !== "analysis" ? `<a class="papp" href="${appHref(p.id)}" title="Open ${esc(appName(p.id))} as a tab inside Atlas">↗</a>` : ""}</div>`}
+        ${open || (APP && p.id === APP.perspective) ? `<div class="pgroups">${groupsOfP(p).map(g => { const k = mappedIn(p.id, g) + cardIn(p.id, g), sel = pmOpen && pmOpen.p === p.id && pmOpen.g === g; return `<button class="pgroup${k ? " on" : ""}${sel ? " sel" : ""}" data-group="${esc(g)}" data-p="${p.id}" aria-expanded="${sel}">${esc(g || p.name)}${k ? `<span class="k">${k}</span>` : ""}</button>`; }).join("")}</div>` : ""}</div>`; }).join("")}</div></div>`;
   }
   function mapOnly(ids) { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.filter(id => M[id]).forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); }
   // ---------- 1.8: perspective apps ----------
@@ -1689,6 +1743,7 @@
       return `<div class="lvl"><span>${esc(LABEL[p.level])}</span></div><h3>${esc(nameOf(code))}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}${keep.length ? `<ul class="extra">${keep.join("")}</ul>` : `<div class="hint2">Put a metric on the map to see it here.</div>`}`;
     }
     if (curPlan.grid && curPlan.shade) { const k = LAST.k[code] || {}; if (k.sh != null && k.gr != null) mapped.push(`<li class="bivw"><i class="sw" style="background:${LAST.fc[code]}"></i><span>${esc(bivWords(k.sh, k.gr, PS.biv.n, curPlan.shade, curPlan.grid))}</span></li>`); }
+    if (p.level === "constituency" && POLLS && M.proj_winner && !onMap.includes(M.proj_winner)) { const pr = projection(), x = pr && pr.seat.get(code); if (x && isNow()) mapped.push(`<li class="proj"><i class="sw" style="background:${partyCol(x.w)}"></i><span><b>Projection:</b> ${esc(projText(x))} <small>(Atlas, polls to ${esc(POLLS.latest)}; uniform swing, a simple model)</small></span></li>`); }
     const extra = METRICS.filter(m => m.nature === "text" && PS.card[m.id] && PS.active[m.id] && PER[m.p].ready && !["ruler", "party"].includes(m.id)).map(m => { const r = m.get(code, d); return `<li><i class="sw empty"></i><span><b>${esc(m.label)}:</b> ${esc(r ? r.text : "—")}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}</span></li>`; });
     const par = parentOf(code);
     const dj = par && P[par] ? `<div class="dejure">De jure part of: ${pinned ? `<button data-go="${par}">${esc(nameOf(par))}</button>` : `<b>${esc(nameOf(par))}</b>`} <small style="color:var(--ink-3)">(${esc(LABEL[P[par].level])})</small></div>` : "";
@@ -2842,6 +2897,7 @@
   bubble.addEventListener("click", () => { if (!cpanel.hidden) return closeChart(); openChart(); });
   // tabs: the map is always the first tab; any chart can open full screen in its own tab
   const TABS = [{ id: "map", label: "Map" }, { id: "ws", label: "Workspace" }]; let activeTab = "map", tabSeq = 0;
+  const appFrames = {};
   function openTab(spec) {
     const m = mOf(spec.metrics[0]), label = (spec.companies.length ? (spec.companies.length === 1 ? COS[spec.companies[0]].n : spec.companies.length + " companies") : (spec.metrics.length > 1 ? spec.metrics.length + " metrics" : m.label)) + (spec.places.length === 1 ? " · " + nameOf(spec.places[0]) : "");
     const t = { id: "t" + (++tabSeq), label, spec: JSON.parse(JSON.stringify(spec)) }; TABS.push(t); activateTab(t.id);
@@ -2849,7 +2905,7 @@
   function openTableTab(spec, label) { const t = { id: "t" + (++tabSeq), label: label || "Table", table: spec }; TABS.push(t); activateTab(t.id); }
   function renderTabs() {
     const on = t => t.id === "map" ? VIEW.mode !== "ws" && (activeTab === "map" || activeTab === "split" || VIEW.mode === "split") : t.id === "ws" ? VIEW.mode !== "map" : t.id === activeTab;
-    const icon = t => t.help ? `<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/></svg>` : t.table ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>` : t.id === "map" ? `<svg class="ico" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/></svg>` : t.id === "ws" ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/></svg>` : sIcon(t.spec.style);
+    const icon = t => t.app ? svgIcon(t.pid) : t.help ? `<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/></svg>` : t.table ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>` : t.id === "map" ? `<svg class="ico" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/></svg>` : t.id === "ws" ? `<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/></svg>` : sIcon(t.spec.style);
     const label = t => t.id === "ws" ? `Workspace${proj().items.length ? ` (${proj().items.length})` : ""}` : t.label;
     tabsEl.innerHTML = TABS.map(t => `<button class="tab${on(t) ? " on" : ""}" data-tab="${t.id}">${icon(t)}<span>${esc(label(t).length > 28 ? label(t).slice(0, 27) + "…" : label(t))}</span>${t.id === "map" || t.id === "ws" ? "" : `<i data-tabx="${t.id}" aria-label="Close tab">×</i>`}</button>`).join("") +
       `<button class="tab tool${VIEW.mode === "split" ? " on" : ""}" data-split title="Map and workspace side by side (drag the divider to change the share)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></button><button class="tab tool" data-overview title="All tabs (or swipe up over the top bar)"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>`;
@@ -2858,6 +2914,15 @@
   }
   function activateTab(id) {
     activeTab = id; renderTabs(); const t = TABS.find(x => x.id === id);
+    Object.entries(appFrames).forEach(([k, f]) => { f.hidden = "app-" + k !== id; });
+    document.body.classList.toggle("apptab-on", !!t && !!t.app);
+    if (t && t.app) {   // 0.7.1: an app is a tab inside Atlas: the app page in a frame, kept alive while you switch tabs
+      tabview.hidden = true; document.body.classList.remove("tab-on");
+      let f = appFrames[t.app];
+      document.documentElement.style.setProperty("--tabh", $("top").offsetHeight + "px");
+      if (!f) { f = appFrames[t.app] = document.createElement("iframe"); f.className = "appframe"; f.title = t.label; f.src = location.pathname + "#app=" + t.app + "&embed=1"; document.body.appendChild(f); }
+      f.hidden = false; return;
+    }
     document.body.classList.toggle("tab-on", !!t && !!(t.spec || t.table || t.help));   // floating windows step aside while a chart or table has the screen
     if (!t || id === "map" || id === "ws" || id === "split") { tabview.hidden = true; return; }
     if (t.help) { tabview.innerHTML = helpHTML(); tabview.hidden = false; document.body.classList.add("tab-on"); return; }
@@ -2870,7 +2935,7 @@
       <div class="cp-what">${whatHTML(spec, "t")}</div><div class="cp-styles">${stylesHTML(spec, true, "t")}</div><div class="tv-body">${drawChart(spec, Math.min(1100, window.innerWidth - 80))}</div></div>`;
     tabview.hidden = false;
   }
-  tabsEl.addEventListener("click", e => { const x = e.target.closest("[data-tabx]"); if (x) { const i = TABS.findIndex(t => t.id === x.dataset.tabx); TABS.splice(i, 1); activateTab(activeTab === x.dataset.tabx ? "map" : activeTab); e.stopPropagation(); return; } if (e.target.closest("[data-split]")) { setView(VIEW.mode === "split" ? "map" : "split"); return; } if (e.target.closest("[data-overview]")) { openOverview(); return; } const b = e.target.closest("[data-tab]"); if (b) goTab(b.dataset.tab); });
+  tabsEl.addEventListener("click", e => { const x = e.target.closest("[data-tabx]"); if (x) { const i = TABS.findIndex(t => t.id === x.dataset.tabx); const tt = TABS[i]; if (tt && tt.app && appFrames[tt.app]) { appFrames[tt.app].remove(); delete appFrames[tt.app]; } TABS.splice(i, 1); activateTab(activeTab === x.dataset.tabx ? "map" : activeTab); e.stopPropagation(); return; } if (e.target.closest("[data-split]")) { setView(VIEW.mode === "split" ? "map" : "split"); return; } if (e.target.closest("[data-overview]")) { openOverview(); return; } const b = e.target.closest("[data-tab]"); if (b) goTab(b.dataset.tab); });
   tabview.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return; const t = TABS.find(x => x.id === activeTab); if (!t) return;
     if (b.hasAttribute("data-tback")) return activateTab("map");
@@ -3567,7 +3632,7 @@
   document.addEventListener("mousedown", e => {
     if (pmOpen && !pmenu.contains(e.target) && !dock.contains(e.target)) closePMenu();
     if (!$("browse").hidden && !e.target.closest(".finder")) closeBrowse();
-    if (!menu.hidden && !menu.contains(e.target) && !brand.contains(e.target)) closeMenu();
+    if (!menu.hidden && !menu.contains(e.target) && !brand.contains(e.target) && !e.target.closest(".ah-more")) closeMenu();
     if (!tbMenu.hidden && !tbMenu.contains(e.target) && !tbBtn.contains(e.target)) closeTools();
     if (ecardPinned && !ecard.contains(e.target) && !e.target.closest("#map")) { ecard.hidden = true; ecardPinned = false; }
   });
@@ -3776,9 +3841,10 @@
     const ms = planMetrics();
     el.innerHTML = `<div class="lvt">Boundaries on the map <small>${LV.auto ? "following the zoom" : "at every zoom"}</small></div>
       <label class="lvrow lvauto"><input type="checkbox" data-lv="auto" ${LV.auto ? "checked" : ""}><span>Automatic</span><small>switch with zoom</small></label>
-      ${["nation", "region", "council", "constituency", "ward"].map(l => { const on = !LV.auto && LV.on.includes(l), act = state.level === l, nd = ms.length && !ms.some(m => avail(m, l).ok); return `<div class="lvrow${act ? " act" : ""}${on ? " on" : ""}${nd ? " lvnd" : ""}"><input type="checkbox" id="lv-${l}" data-lv="${l}" ${on ? "checked" : ""} aria-label="Show ${PLURAL[l]} on the map"><button data-mk="${l}" title="${nd ? "None of the metrics on the map has data for " + PLURAL[l].toLowerCase() + " on this date (the boundaries still show)" : act ? "Colours, hover cards and clicks use this set" : "Use this set for colours, hover cards and clicks"}">${PLURAL[l]}</button>${nd ? `<small class="ndtag">no data for what's on the map</small>` : act ? `<small>colours &amp; hover</small>` : on ? `<small>outline</small>` : ""}</div>${l === "constituency" && window.ATLAS_HEX ? `<label class="lvrow lvhex"><input type="checkbox" data-hex ${PS.hex ? "checked" : ""}><span>Hex map (equal area)</span><small>one hexagon per seat</small></label>` : ""}`; }).join("")}`;
+      ${["nation", "region", "council", "constituency", "ward"].map(l => { const on = !LV.auto && LV.on.includes(l), act = state.level === l, nd = ms.length && !ms.some(m => avail(m, l).ok); return `<div class="lvrow${act ? " act" : ""}${on ? " on" : ""}${nd ? " lvnd" : ""}"><input type="checkbox" id="lv-${l}" data-lv="${l}" ${on ? "checked" : ""} aria-label="Show ${PLURAL[l]} on the map"><button data-mk="${l}" title="${nd ? "None of the metrics on the map has data for " + PLURAL[l].toLowerCase() + " on this date (the boundaries still show)" : act ? "Colours, hover cards and clicks use this set" : "Use this set for colours, hover cards and clicks"}">${PLURAL[l]}</button>${nd ? `<small class="ndtag">no data for what's on the map</small>` : act ? `<small>colours &amp; hover</small>` : on ? `<small>outline</small>` : ""}</div>${l === "constituency" && window.ATLAS_HEX && (state.level === "constituency" || (!LV.auto && LV.on.includes("constituency"))) ? `<div class="lvrow lvhex"><span class="lvv">View as</span><label><input type="radio" name="pconview" data-hexv="0" ${PS.hex ? "" : "checked"}>Real boundaries</label><label title="Every seat the same size: the whole map turns into hexagons"><input type="radio" name="pconview" data-hexv="1" ${PS.hex ? "checked" : ""}>Hex map</label></div>` : ""}`; }).join("")}`;
   }
   $("lvpick").addEventListener("change", e => {
+    if (e.target.dataset.hexv != null) { PS.hex = e.target.dataset.hexv === "1"; savePS(); syncPcon.warned = false; syncPcon(true); renderLevelPicker(); toast(PS.hex ? "Hex map: every seat is the same size, so big rural seats don't dominate. The whole map is drawn as hexagons; positions are approximate." : "Back to the real boundaries."); return; }
     if (e.target.hasAttribute("data-hex")) { PS.hex = e.target.checked; savePS(); syncPcon.warned = false; if (PS.hex && state.level !== "constituency") makeActive("constituency"); syncPcon(true); renderLevelPicker(); toast(PS.hex ? "Hex map: every seat the same size, so big rural seats don't dominate. Positions are approximate." : "Back to the real boundaries."); return; }
     const t = e.target.closest("[data-lv]"); if (t) setLevelOn(t.dataset.lv, t.checked); renderBrowse(); });
   $("lvpick").addEventListener("click", e => { const b = e.target.closest("[data-mk]"); if (b) { makeActive(b.dataset.mk); renderBrowse(); } });
@@ -3800,35 +3866,85 @@
     openChart: o => openChart(o), openCmp: () => openCmp(), openProtestList: () => openProtestList(), openProtestCard: i => openProtestCard(i), openInfo: id => openMetricInfo(id),
     sendToWS: it => sendToWS(it), toast, copy, download, searchNames, onDate: f => appListeners.push(f), openPanel: id => openAppPanel(id), store,
     defineMetric: m => { if (!M[m.id]) def(m); PS.active[m.id] = true; }, repaint: () => repaint(),
+    // 0.7.1
+    projection: () => projection(), POLLS, get NEWS() { return window.ATLAS_NEWS || null; }, parentOf: c => parentOf(c), value: (id, c, d) => { const m = M[id]; if (!m) return null; try { return m.get(c, d || state.date); } catch (e) { return null; } },
+    select: codes => { clearCompare(); codes.filter(c => P[c]).slice(0, MAX_SEL).forEach(c => { const t = { code: c, level: P[c].level }; state.sel.push(t); setFS(t, { sel: true }); }); renderTray(); },
+    openCmpWith: codes => { CTX.select(codes); openCmp(); }, openAnalyse: o => openAnalyse(o || {}), mapAdd: id => { if (M[id] && !isMapped(id)) toggleMapped(id); },
+    isMapped: id => isMapped(id), kids: c => (UNDER[c] || []).slice(),
   };
   window.AtlasCtx = CTX;
   const appWins = {};
   function openAppPanel(id) {
     const x = [...APP.panels, ...APP.tools].find(p => p.id === id); if (!x) return;
+    if (x.onOpen) { try { x.onOpen(CTX); } catch (e) { console.error(e); } }
     const have = appWins[id]; if (have && WM.isOpen(have.el)) { WM.front(have.el); WM.pulse(have.el); return; }
-    const w = appWins[id] = have || WM.make({ type: "app-" + APP.id + "-" + id, title: x.title, dispose: false, min: x.min || { w: 340, h: 240 }, def: x.def });
-    w.el.classList.add("apppanel"); WM.open(w.el);
+    const w = appWins[id] = have || WM.make({ type: "app-" + APP.id + "-" + id, title: x.title, dispose: false, min: x.min || { w: 340, h: 240 }, def: x.def, onClose: () => markLinks() });
+    w.el.classList.add("apppanel");
+    // 0.7.1: each new panel opens a step below the last one, so the ones underneath still show their titles
+    const open = Object.values(appWins).filter(o => o !== w && WM.isOpen(o.el)).map(o => WM.rectOf(o.el)).filter(Boolean);
+    WM.open(w.el);
+    const pw = Math.max((x.min || {}).w || 340, Math.min(520, Math.round(innerWidth * 0.36))), ph = Math.max((x.min || {}).h || 240, Math.round(innerHeight * 0.62));
+    const last = open.sort((a, b) => b.y - a.y)[0], top = WM.TOPNOW ? WM.TOPNOW() : 100;
+    WM.place(w.el, last ? { x: last.x, y: last.y + 44, w: last.w, h: ph } : { x: innerWidth - pw - 16, y: top, w: pw, h: ph });
+    markLinks();
     const draw = () => { if (!w.el.hidden) { try { x.render(CTX, w.body); } catch (e) { console.error(e); w.body.innerHTML = `<p class="aempty">Couldn't draw this: ${esc(e.message)}</p>`; } } };
     draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
   }
+  function markLinks() { document.querySelectorAll("#appbar [data-apanel]").forEach(b => { const o = appWins[b.dataset.apanel]; b.classList.toggle("on", !!o && WM.isOpen(o.el)); }); }
   function renderAppsMenu() {
     const el = $("apps-list"); if (!el) return;
-    el.innerHTML = (APP ? `<a class="btn" href="${location.pathname}" target="_blank" rel="noopener">Atlas Multi (all perspectives) ↗</a>` : "") + PERSPECTIVES.filter(p => !p.hidden).map(p => p.ready
-      ? `<a class="btn" href="${appHref(p.id)}" target="_blank" rel="noopener" style="--c:${p.hue}">Open as ${esc(appName(p.id))} ↗</a>`
+    el.innerHTML = (APP ? `<a class="btn to-multi" href="${location.pathname}">Atlas Multi (all perspectives)</a>` : "") + PERSPECTIVES.filter(p => !p.hidden).map(p => p.ready
+      ? `<a class="btn" href="${appHref(p.id)}" style="--c:${p.hue}" title="Opens as a tab inside Atlas (Ctrl/Cmd-click for a browser tab)">Open ${esc(appName(p.id))}</a>`
       : `<span class="btn dis" title="Not available yet: no ${esc(p.name.toLowerCase())} data is loaded">${esc(appName(p.id))}: not available yet</span>`).join("");
+  }
+  // ---------- 0.7.1: apps open as tabs inside Atlas (not new browser tabs) ----------
+  const EMBED = !!APP_ID && /embed=1/.test(location.hash) && window.parent !== window;
+  function openAppTab(appId) {
+    if (APP) { if (EMBED) parent.postMessage({ atlas: "openApp", app: appId }, "*"); else location.href = location.pathname + "#app=" + appId, location.reload(); return; }
+    const def = window.AtlasApps && AtlasApps.get(appId), pid = def ? def.perspective : Object.keys(APP_FOR).find(k => APP_FOR[k] === appId) || appId;
+    if (!PER[pid]) return;
+    const id = "app-" + appId; if (!TABS.find(x => x.id === id)) TABS.push({ id, label: def ? def.name : "Atlas " + PER[pid].name, app: appId, pid });
+    closeMenu(); setView("map"); activateTab(id);
+  }
+  document.addEventListener("click", e => {
+    const a = e.target.closest("a[href]"); if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;   // Ctrl/Cmd-click still opens a browser tab
+    const h = a.getAttribute("href") || "", m = h.match(/#app=([a-z]+)/);
+    if (m) { e.preventDefault(); openAppTab(m[1]); return; }
+    if (APP && (h === location.pathname || a.classList.contains("to-multi"))) { e.preventDefault(); if (EMBED) parent.postMessage({ atlas: "multi" }, "*"); else location.href = location.pathname; }
+  }, true);
+  window.addEventListener("message", e => {
+    const d = e.data || {}; if (!d.atlas || APP) return;
+    if (d.atlas === "multi") goTab("map");
+    if (d.atlas === "openApp") openAppTab(d.app);
+  });
+  // the app header: a normal website menu bar (brand, one search for places and metrics, ⋯ for everything else),
+  // with the app's own tools underneath like bookmarks
+  function buildAppHead() {
+    const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
+    head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
+      <div class="ah-search"></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.7.1</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
+    document.body.appendChild(head);
+    head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));
+    head.querySelector(".ah-nav").appendChild($("appbar"));
+    head.querySelector(".ah-more").addEventListener("click", () => brand.click());
+    const fitTop = () => { const h = head.offsetHeight; document.documentElement.style.setProperty("--ahh", h + "px"); if (WM.setTop) WM.setTop(h + 8); map.resize(); };
+    requestAnimationFrame(fitTop); window.addEventListener("resize", fitTop); setTimeout(fitTop, 600);
   }
   function bootApp() {
     if (!APP_ID) return;
     if (!APP) { toast("There's no such app: showing Atlas Multi."); return; }
-    document.title = APP.name; document.body.classList.add("appmode"); document.documentElement.style.setProperty("--app", APP.accent);
-    const bar = $("appbar");
+    document.title = APP.name; document.body.classList.add("appmode"); if (EMBED) document.body.classList.add("embedded"); document.documentElement.style.setProperty("--app", APP.accent);
+    const bar = $("appbar"); buildAppHead();
     if (!APP.ok) {
       bar.innerHTML = `<b style="color:${APP.accent}">${esc(APP.name)}</b><span class="appna">Not available yet</span>`; bar.hidden = false;
       const w = WM.make({ type: "app-na", title: APP.name + ": not available yet", html: `<p>No ${esc(PER[APP.perspective].name.toLowerCase())} data is loaded yet, so this app has nothing to show.</p>${(PER[APP.perspective].planned || []).length ? `<p>Planned:</p><ul>${PER[APP.perspective].planned.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}<p><a href="${location.pathname}">Back to Atlas Multi</a></p>` });
       WM.open(w.el); return;
     }
-    bar.innerHTML = `<b style="color:${APP.accent}">${esc(APP.name)}</b>${[...APP.panels, ...APP.tools].map(x => `<button class="btn sm${APP.tools.includes(x) ? " tool" : ""}" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("")}`;
+    bar.innerHTML = [...APP.panels, ...APP.tools].map(x => `<button class="ah-link${APP.tools.includes(x) ? " tool" : ""}" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("");
     bar.hidden = false; bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) openAppPanel(b.dataset.apanel); });
+    requestAnimationFrame(() => { const h = $("apphead").offsetHeight; document.documentElement.style.setProperty("--ahh", h + "px"); WM.setTop(h + 8); map.resize(); });
     dockOpenP = APP.perspective; setFold(false);
     if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) map.loaded() ? APP.init(CTX) : map.once("load", () => APP.init(CTX)); }
   }

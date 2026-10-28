@@ -17,7 +17,7 @@
  */
 (function () {
   "use strict";
-  const MARGIN = 16, TOP = 56, Z0 = 100;
+  const MARGIN = 16, Z0 = 100; let TOP = 56;
   const reg = new Map();   // element → its record
   let stack = [];          // open windows, bottom to top
   let seq = 0;
@@ -182,5 +182,5 @@
   function closeTop() { const el = top(); if (!el) return false; reg.get(el).close(); return true; }
   window.addEventListener("resize", () => reg.forEach(rec => { rec.st = fit(rec, rec.st); apply(rec); if (!rec.el.hidden) changed(rec); }));
 
-  window.AtlasWM = { edges, register, make, open, close, front, top, closeTop, isOpen, decorate, pulse, rectOf: el => reg.has(el) ? Object.assign({}, reg.get(el).st) : null, stack: () => stack.slice(), MARGIN, TOP };
+  window.AtlasWM = { TOPNOW: () => TOP, place: (el, r) => { const rec = reg.get(el); if (!rec) return; rec.maxed = false; el.classList.remove("maxed"); rec.st = fit(rec, Object.assign({}, rec.st, r)); apply(rec); save(rec); changed(rec); }, setTop: t => { TOP = t; reg.forEach(rec => { rec.st = fit(rec, rec.st); apply(rec); }); }, edges, register, make, open, close, front, top, closeTop, isOpen, decorate, pulse, rectOf: el => reg.has(el) ? Object.assign({}, reg.get(el).st) : null, stack: () => stack.slice(), MARGIN, TOP };
 })();
