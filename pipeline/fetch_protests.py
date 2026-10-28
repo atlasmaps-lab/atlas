@@ -27,6 +27,7 @@ UA = "AtlasMap/1.8 (student geography project; contact via github.com/atlasmaps-
 sys.path.insert(0, HERE)
 from build import polys, inside, bbox
 UK_Q = "Q145"
+UK_PARTS = {"Q21", "Q22", "Q25", "Q26"}   # England, Scotland, Wales, Northern Ireland: Wikidata sometimes gives these as the country
 CATEGORIES = ["Category:Protests in the United Kingdom", "Category:Riots and civil disorder in the United Kingdom",
               "Category:Labour disputes in the United Kingdom", "Category:Protest marches in the United Kingdom",
               "Category:Strikes in the United Kingdom", "Category:Protests in London"]
@@ -67,7 +68,12 @@ SEEDS = ["15 February 2003 Iraq War protests", "2017 Women's March", "September 
          "Broadwater Farm riot", "Strangeways Prison riot", "2009 G20 London summit protests", "1995 Brixton riot", "2011 United Kingdom public sector strikes",
          "Poll tax riots", "2010 United Kingdom student protests", "2011 London anti-cuts protest", "Occupy London"]
 # articles about something other than a protest (a killing, an attack, a fire) even when riots followed: those have their own articles
-NOT_PROTEST = re.compile(r"^(death|murder|killing|stabbing|shooting|assassination|attempted murder) of\b|\bstabbings?$|\battacks?$|\bbombings?$|\bmassacre$|\bfire$|\bpageant$|\bfeud$|^timeline of\b", re.I)
+NOT_PROTEST = re.compile(r"^(death|murder|killing|stabbing|shooting|assassination|attempted murder) of\b|\bstabbings?$|\battacks?$|\bbombings?$|\bmassacre$|\bfire$|\bpageant$|\bfeud$|^timeline of\b|^list of\b|^reactions to\b", re.I)
+# topic articles about a kind of protest, not one event
+TOPIC = re.compile(r"^(road protest|environmental direct action|occupation \(protest\)|die-in|sectarianism in|protest songs?)\b", re.I)
+# an article with no protest infobox counts only if a protest category and its title both say protest
+EVENT_WORDS = re.compile(r"protest|riot|strike|march|demonstration|occupation(?! of the)|dispute|unrest|camp\b|blockade|vigil|rall(y|ies)|sit-in|uprising|disorder|clashes|convoy|picket|parade|battle of|stop the|kill the bill|says no|walkout|boycott|lockout", re.I)
+UK_WORDS = re.compile(r"united kingdom|\buk\b|\bu\.k\.|britain|british|(?<!new )england|english|scotland|scottish|(?<!south )wales|welsh|northern ireland", re.I)   # not New England or New South Wales
 AMBIGUOUS = {"london", "birmingham", "perth", "boston", "cambridge", "richmond", "halifax", "hamilton", "newcastle", "manchester", "bangor", "newport", "reading",
              "kingston", "plymouth", "aberdeen", "dover", "lincoln", "portsmouth", "windsor", "durham", "derby", "brighton", "york", "oxford", "bristol", "salisbury"}
 FOREIGN = re.compile(r"^\s*,?\s*(ontario|alabama|massachusetts|western australia|australia|nova scotia|new south wales|virginia|new zealand|connecticut|new hampshire|texas|tasmania|maine|ohio|canada|united states|u\.s\.|usa|jamaica|ireland)", re.I)
@@ -310,7 +316,9 @@ def parse(title, page):
     m = INFOBOX.search(text)
     first = ANY_INFOBOX.search(text)
     if NOT_PROTEST.search(title):
-        return {"protest_like": False, "why": "not a protest article (a killing, attack, fire or timeline; protests that followed have their own articles)"}
+        return {"protest_like": False, "why": "not a protest article (a killing, attack, fire, list or timeline; protests that followed have their own articles)"}
+    if TOPIC.search(title):
+        return {"protest_like": False, "why": "a topic article about a kind of protest, not one event"}
     if first and not (m and m.start() == first.start()):   # the article is about something else (a person, an attack, an organisation)
         return {"protest_like": False, "why": f"not a protest article (its infobox is “{first.group(1).strip()}”)"}
     box = fields(template(text, m.start())) if m else {}
@@ -343,7 +351,7 @@ def parse(title, page):
     for c in CITIES:
         short = CITY_ALIASES.get(c, c)
         for mm in re.finditer(r"\b" + re.escape(short) + r"\b", ld):
-            if FOREIGN.match(ld[mm.end():mm.end() + 30]): skipped.append(short + ld[mm.end():mm.end() + 24].split(".")[0]); continue
+            if FOREIGN.match(ld[mm.end():mm.end() + 30]) or PRE_FOREIGN.search(ld[max(0, mm.start() - 8):mm.start()]): skipped.append(ld[max(0, mm.start() - 4):mm.end() + 24].split(".")[0]); continue
             named.append(c); break
     cause_text = plain(" ; ".join(box.get(k, "") for k in ("causes", "cause", "goals", "motive", "theme", "type")))
     side = plain(" ; ".join(box.get(k, "") for k in ("side1", "organisers", "organizers", "organiser", "organizer", "parties", "participants", "lead_figures1", "leadfigures1", "organised_by", "organized_by")))
@@ -358,11 +366,11 @@ def parse(title, page):
     worldwide = bool(re.search(r"worldwide|global|international|around the world|countries|cities around", (plain(loc_raw) + " " + title).lower()))
     plain_all = plain(re.sub(r"\{\{(?:[^{}]|\{\{[^{}]*\}\})*\}\}", "", text))
     protest_like = bool(m and m.group(1).lower() in ("civil conflict", "protest", "strike", "riot", "demonstration")) or \
-        any(re.search(r"protest|riot|strike|demonstration|march|occupation|disorder|hunger strike|blockade", c, re.I) for c in page["cats"])
+        (any(re.search(r"protest|riot|strike|demonstration|march|occupation|disorder|hunger strike|blockade", c, re.I) for c in page["cats"]) and bool(EVENT_WORDS.search(title)))
     return {"scope": scope, "title": title, "start": a, "end": b, "size_low": lo, "size_high": hi, "size_text": stext, "crowd": crowd, "cause_category": cat,
             "causes": cause_text[:300], "organisers": side[:300], "parties": " ".join(involved), "links": links, "named": named, "foreign_named": skipped,
             "coord": page["coord"], "qid": page["qid"], "outcome": outcome, "worldwide": worldwide, "plain": plain_all, "lead": ld,
-            "protest_like": protest_like, "why": "" if protest_like else "no protest infobox or protest category"}
+            "protest_like": protest_like, "why": "" if protest_like else "no protest infobox, and its title and categories don't both say protest"}
 
 
 # ---------- places: every name goes through its Wikidata item ----------
@@ -420,11 +428,21 @@ class UKShape:
         return None
 
 
-def sentences_with(text, name):
-    """sentences of the article that name the place and describe a protest there"""
-    out = []
-    for s in re.split(r"(?<=[.!?])\s+", text):
-        if re.search(r"\b" + re.escape(name) + r"\b", s) and PROTEST_WORDS.search(s) and not FOREIGN.match(s[s.find(name) + len(name):][:30]): out.append(s.strip())
+PRE_FOREIGN = re.compile(r"\b(new|port|mount|fort|east|west|north|south)\s+$", re.I)   # New York, Port Richmond, East London (South Africa)…
+
+
+def sentences_with(text, name, uk_context=False):
+    """sentences of the article that name the place and describe a protest there. uk_context: the sentence, the two before
+    it or the section it sits in must also name the UK (for international events, where "London" may be in Ontario)"""
+    out, heading, prev = [], "", []
+    for line in text.split("\n"):
+        h = re.match(r"^\s*=+\s*(.+?)\s*=+\s*$", line)
+        if h: heading = h.group(1); prev = []; continue
+        for s in re.split(r"(?<=[.!?])\s+", line):
+            for mm in re.finditer(r"\b" + re.escape(name) + r"\b", s):
+                if FOREIGN.match(s[mm.end():mm.end() + 30]) or PRE_FOREIGN.search(s[max(0, mm.start() - 8):mm.start()]): continue
+                if PROTEST_WORDS.search(s) and (not uk_context or UK_WORDS.search(heading + " " + s)): out.append(s.strip()); break
+            prev.append(s)
     return out
 
 
@@ -476,8 +494,14 @@ def main():
         if not e["end"] and isinstance(t1, dict): e["end"] = t1["time"][1:11].replace("-00", "-01")
         if not e["start"] or not ("1974-01-01" <= e["start"] <= time.strftime("%Y-%m-%d")):
             log["dropped"].append({"title": e["title"], "reason": f"date outside 1974 to today ({e['start'] or 'no date found'})"}); continue
-        countries = ev_country.get(e["qid"] or "", [])
-        intl = (bool(countries) and UK_Q not in countries) or len(set(countries)) > 1 or e["worldwide"]
+        countries = [UK_Q if c in UK_PARTS else c for c in ev_country.get(e["qid"] or "", [])]
+        intl = UK_Q not in countries and (bool(countries) or e["worldwide"])
+        if intl and not EVENT_WORDS.search(e["title"]):   # an international article must itself be about a protest
+            log["dropped"].append({"title": e["title"], "reason": "international article whose title doesn't describe a protest (e.g. a war, coup or movement overview)"}); continue
+        if not intl and not e["links"] and not e["named"]:   # no place in the infobox or opening: UK places named in a UK section of the article
+            e["named"] = [c for c in CITIES if sentences_with(e["plain"], CITY_ALIASES.get(c, c), True)][:8]
+        if intl:   # UK places anywhere in the article (international articles often name them only in a "United Kingdom" section)
+            e["named"] = [c for c in CITIES if sentences_with(e["plain"], CITY_ALIASES.get(c, c), True)]
         sites, broad_nations = [], set()
         cand = [("link", l) for l in e["links"]] + ([("named", l) for l in e["named"][:8]] if not e["links"] or intl else [])
         for how, l in cand:
@@ -497,9 +521,9 @@ def main():
             if l.lower() in TOO_BROAD or v["title"].lower() in TOO_BROAD or (BROAD_KIND.search(kinds) and not LOCAL_KIND.search(kinds)):
                 broad_nations.add(nat); log["no_point"].append({"event": e["title"], "site": v["title"], "reason": f"too broad to place ({kinds or 'region or country'}): counts for {nat}"}); continue
             if intl:   # an international event: keep a UK site only where the article describes a protest there
-                ev_s = sentences_with(e["plain"], v["title"].split(",")[0].split("(")[0].strip()) or sentences_with(e["plain"], l.split(",")[0].split("(")[0].strip())
+                ev_s = sentences_with(e["plain"], v["title"].split(",")[0].split("(")[0].strip(), True) or sentences_with(e["plain"], CITY_ALIASES.get(l, l).split(",")[0].split("(")[0].strip(), True)
                 if not ev_s:
-                    log["sites_removed"].append({"event": e["title"], "site": v["title"], "reason": "international event: the article names this place but doesn't describe a protest there"}); continue
+                    log["sites_removed"].append({"event": e["title"], "site": v["title"], "reason": "international event: no sentence describes a protest at this UK place (with the UK named nearby or in its section)"}); continue
                 v = dict(v, evidence=ev_s[0][:240])
             sites.append([v["title"], round(v["lat"], 4), round(v["lon"], 4), v["qid"] or "", v.get("evidence", "")])
         own = e["coord"] if e["coord"].get("lat") else None
@@ -514,6 +538,10 @@ def main():
             log["dropped"].append({"title": e["title"], "reason": "not in the UK (Wikidata country is not the UK)"}); continue
         if not sites and not scope:
             log["dropped"].append({"title": e["title"], "reason": "no place in the UK could be named"}); continue
+        if not sites and not EVENT_WORDS.search(e["title"]):
+            log["dropped"].append({"title": e["title"], "reason": "no single place, and the title doesn't describe a protest"}); continue
+        if not sites and not (countries == [UK_Q] or UK_WORDS.search(e["title"])):
+            log["dropped"].append({"title": e["title"], "reason": "no UK place, and neither Wikidata nor the title says it was in the UK"}); continue
         lo, hi, stext, crowd, note = e["size_low"], e["size_high"], e["size_text"], e["crowd"], ""
         if intl:   # never put a global crowd figure on a UK point
             lo = hi = None; crowd = []; stext = ""
@@ -523,6 +551,8 @@ def main():
                     if a is not None: lo, hi, stext, crowd = a, b, "UK figure from the article: “" + s[4][:150] + "”", [[a, b, ""]]; break
             note = "UK part of an international protest." + ("" if lo else " The source's crowd figure is for the whole international protest, so none is shown for the UK.")
             log["international"].append({"event": e["title"], "uk_sites": [s[0] for s in sites], "crowd": stext or "none (global figure only)"})
+        if lo and lo == hi and 1974 <= lo <= 2035:   # a year read as a crowd (a real crowd of exactly that size is unlikely)
+            lo = hi = None; stext = ""; crowd = []
         if lo is None and isinstance(n, dict) and "amount" in n and not intl:
             lo = hi = int(float(n["amount"])); stext = "Wikidata: number of participants"; crowd = [[lo, hi, "Wikidata"]]
         rows.append({"title": e["title"], "start": e["start"], "end": e["end"] or "", "size_low": lo or "", "size_high": hi or "", "size_text": stext, "crowd": json.dumps(crowd),

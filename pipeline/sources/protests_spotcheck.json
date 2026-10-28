@@ -1,0 +1,116 @@
+{
+ "date": "2026-10-28",
+ "summary": "14 of 15 agree on every point; the 15th agrees on reading (note below).",
+ "rows": [
+  {
+   "title": "Ulster Workers' Council strike",
+   "date": "match",
+   "places": "no point: counted for N92000002",
+   "crowd": "none shown",
+   "verdict": "agrees"
+  },
+  {
+   "title": "1981 England riots",
+   "date": "match",
+   "places": "6 of 6 named",
+   "crowd": "none shown",
+   "verdict": "agrees"
+  },
+  {
+   "title": "1985 Handsworth riots",
+   "date": "match",
+   "places": "2 of 2 named",
+   "crowd": "none shown",
+   "verdict": "agrees"
+  },
+  {
+   "title": "1992 Coalisland riots",
+   "date": "match",
+   "places": "1 of 1 named",
+   "crowd": "none shown",
+   "verdict": "agrees"
+  },
+  {
+   "title": "July 2001 Belfast riots",
+   "date": "match",
+   "places": "1 of 1 named",
+   "crowd": "none shown",
+   "verdict": "agrees"
+  },
+  {
+   "title": "2006 Islamist demonstration outside the Embassy of Denmark in London",
+   "date": "match",
+   "places": "2 of 2 named",
+   "crowd": "none shown (The source's crowd figure is for the whole international protest, so none is shown for the UK)",
+   "verdict": "agrees"
+  },
+  {
+   "title": "Camp for Climate Action",
+   "date": "match",
+   "places": "3 of 3 named",
+   "crowd": "none shown",
+   "verdict": "agrees"
+  },
+  {
+   "title": "2011 England riots",
+   "date": "match",
+   "places": "1 of 1 named",
+   "crowd": "none shown",
+   "verdict": "agrees"
+  },
+  {
+   "title": "2013 United Kingdom higher education strike",
+   "date": "match",
+   "places": "1 of 1 named",
+   "crowd": "none shown",
+   "verdict": "agrees"
+  },
+  {
+   "title": "2018–2023 United Kingdom higher education strikes",
+   "date": "match",
+   "places": "7 of 8 named",
+   "crowd": "none shown",
+   "verdict": "check"
+  },
+  {
+   "title": "United States racial unrest (2020–2023)",
+   "date": "match",
+   "places": "3 of 3 named",
+   "crowd": "none shown (The source's crowd figure is for the whole international protest, so none is shown for the UK)",
+   "verdict": "agrees"
+  },
+  {
+   "title": "Camp Beagle",
+   "date": "match",
+   "places": "1 of 1 named",
+   "crowd": "none shown",
+   "verdict": "agrees"
+  },
+  {
+   "title": "2022–2023 University of Sheffield protests",
+   "date": "match",
+   "places": "1 of 1 named",
+   "crowd": "none shown",
+   "verdict": "agrees"
+  },
+  {
+   "title": "People's March",
+   "date": "match",
+   "places": "4 of 4 named",
+   "crowd": "none shown (The source's crowd figure is for the whole international protest, so none is shown for the UK)",
+   "verdict": "agrees"
+  },
+  {
+   "title": "2026 Victoria and Albert Museum strikes",
+   "date": "match",
+   "places": "1 of 1 named",
+   "crowd": "found (700)",
+   "verdict": "agrees"
+  }
+ ],
+ "notes": [
+  "2018–2023 United Kingdom higher education strikes: the eighth site, Newcastle upon Tyne, is named in the article as “Newcastle” (the city's university), in its UK section; Atlas files it under the city's full name. Agrees on reading.",
+  "Reviewed by hand as well: the dates match each infobox, every point lies in the town the article names, and the three international events show no crowd because their articles give only worldwide figures.",
+  "Known gap: one of the 20 Wikipedia searches (a CirrusSearch query) was refused as “too busy” during the first crawl; the category crawl and the other searches cover the same ground, and re-running fetch_protests.py repeats it."
+ ]
+}
