@@ -1026,6 +1026,8 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
 <link rel="stylesheet" href="fonts.css?v=0712">
+<script src="theme.js?v=0729"></script>
+<script src="theme-apply.js?v=0729"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1051,6 +1053,7 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
   <button class="btn primary menu-cmp" id="open-cmp"><svg class="ico" viewBox="0 0 24 24"><path d="M5 4v16M12 9v11M19 6v14"/></svg>Compare places and metrics…</button>
   <button class="btn primary menu-cmp" id="open-analyse"><svg class="ico" viewBox="0 0 24 24"><circle cx="6" cy="17" r="1.6"/><circle cx="10" cy="11" r="1.6"/><circle cx="15" cy="13" r="1.6"/><circle cx="19" cy="6" r="1.6"/><path d="M4 20 20 4"/></svg>Stats for nerds…</button>
   <div class="menu-row" hidden><button class="btn" id="open-tools" title="Measure, lasso, copy or capture the map, grid lines, sliders">Tools…</button><button class="btn" id="open-ws" title="Your project board: tables, charts, analyses, notes">Workspace</button><button class="btn" id="open-notes">Notes</button></div>
+  <button class="btn menu-cmp dev-only" id="open-design" hidden>Design (developers)…</button>
   <button class="btn menu-cmp" id="open-help"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/></svg>Help: methods, charts, labels</button>
   <button class="btn menu-cmp" id="open-export"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>Export a table (Excel / CSV)…</button>
   <div class="apps-list" id="apps-list" hidden></div>
@@ -1168,6 +1171,7 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
 <script src="apps/health.js?v=0712"></script>
 <script src="data/prices.js"></script>
 <script src="windows.js?v=0712"></script>
+<script src="devdesign.js?v=0729"></script>
 <script src="app.js?v=0712"></script>
 </body>
 </html>

@@ -869,6 +869,7 @@
     Object.entries(LINE_STOPS).forEach(([id, st]) => setP(id, "line-width", widthExpr(st, look.thick)));
     LEVELS.forEach(l => setP(l + "-sel", "line-width", ["case", ["boolean", ["feature-state", "sel"], false], 2.8 * Math.max(1, look.thick * .8), ["boolean", ["feature-state", "hover"], false], 2 * Math.max(1, look.thick * .8), 0]));
     if (!plain) { try { applyType(first); } catch (e) {} }
+    applyThemeMap();
     syncMenu(); store.set("atlas-uk-look", look);
     try { applyMapColours(); } catch (e) { /* the style isn't ready yet */ }
   }
@@ -1239,7 +1240,7 @@
     return (qCache[ck] = res);
   }
   const LAST = { fc: {}, k: {}, present: {}, presentB: {} };
-  const NODATA = "#b9bcbd";
+  let NODATA = "#b9bcbd";   // changeable from the Design panel (theme.js palettes.nodata)
   const noDataKey = level => (["__nd", "__nm", "__est"].some(k => LAST.present[level] && LAST.present[level].has(k)) ? `<div class="ndkey"><button class="linkish" data-info="__honesty">ⓘ What these labels mean</button></div>` : "") + (LAST.present[level] && LAST.present[level].has("__nd") ? `<div class="ndkey"><span ${isoAttr("nd", 1)}><i class="sw" style="background:${NODATA}"></i>No data</span></div>` : "") +
     (LAST.present[level] && LAST.present[level].has("__nm") ? `<div class="ndkey"><span><i class="sw" style="background:transparent;border:1px dashed var(--ink-3)"></i>Unfilled: not meaningful at this level</span></div>` : "") +
     (LAST.present[level] && LAST.present[level].has("__est") ? `<div class="ndkey"><span><i class="sw hatchsw"></i>Hatched: estimated (e.g. notional results on new boundaries)</span></div>` : "");
@@ -4059,6 +4060,38 @@
     if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) map.loaded() ? APP.init(CTX) : map.once("load", () => APP.init(CTX)); }
   }
   $("brand").addEventListener("click", renderAppsMenu);
+
+  // ---------- 1.8: the theme's palettes and map layers (theme.js; edited in the Design panel, index.html?dev) ----------
+  const THEME_PAL = { per: PER, party: PARTY, cause: CAUSE_COL, align: ALIGN_COL, div: DIV, over: OVER, sector: GRP_COL, chart: CH.PALETTE, cluster: CLUSTER_COL, hot: HOT_COL };
+  const DEFAULT_PAL = JSON.parse(JSON.stringify({ per: Object.fromEntries(PERSPECTIVES.map(p => [p.id, { hue: p.hue, ramp: p.ramp || null, bar: p.bar || null }])), party: Object.fromEntries(Object.entries(PARTY).map(([k, v]) => [k, v[1]])),
+    cause: CAUSE_COL, align: ALIGN_COL, div: DIV, over: OVER, sector: GRP_COL, chart: CH.PALETTE, cluster: CLUSTER_COL, hot: HOT_COL, nodata: NODATA }));
+  function applyThemePalettes(pal) { // put a palette set (or the defaults, for anything it leaves out) into the live tables
+    const P0 = DEFAULT_PAL, t = pal || {}, put = (dst, src) => { if (Array.isArray(dst)) src.forEach((v, i) => { dst[i] = v; }); else Object.assign(dst, src); };
+    Object.entries(P0.per).forEach(([id, d]) => { const o = (t.per || {})[id] || {}; PER[id].hue = o.hue || d.hue; if (d.ramp) PER[id].ramp = d.ramp.map((c, i) => (o.ramp || [])[i] || c); if (d.bar) PER[id].bar = d.bar.map((c, i) => (o.bar || [])[i] || c); });
+    Object.entries(P0.party).forEach(([k, c]) => { if (PARTY[k]) PARTY[k][1] = (t.party || {})[k] || c; });
+    ["cause", "align", "sector", "hot"].forEach(k => put(THEME_PAL[k], Object.assign({}, P0[k], t[k] || {})));
+    ["div", "chart", "cluster"].forEach(k => put(THEME_PAL[k], P0[k].map((c, i) => (t[k] || [])[i] || c)));
+    Object.keys(P0.over).forEach(m => Object.assign(OVER[m], P0.over[m], (t.over || {})[m] || {}));
+    NODATA = t.nodata || P0.nodata;
+  }
+  function applyThemeMap() { const mp = ((window.AtlasTheme && AtlasTheme.theme) || {}).map || {}; Object.entries(mp).forEach(([id, props]) => Object.entries(props).forEach(([k, v]) => { if (map.getLayer && map.getLayer(id)) try { map.setPaintProperty(id, k, v); } catch (e) {} })); }
+  function themeRefresh() { // after a palette change: recolour the map, the key, the dock and the protest points
+    for (const k in qCache) delete qCache[k];
+    if (map.getSource && map.getSource("protests")) { map.getSource("protests").setData(protestFeatures()); syncProtestLayer.key = ""; }
+    applyLook(); repaint(); paintAppHead();
+  }
+  function paintAppHead() { // the app header in its perspective's colours (0.7.2), redone when the Design panel changes them
+    const head = $("apphead"); if (!head || !APP) return; const P0 = PER[APP.perspective]; if (!P0) return;
+    const bar = P0.bar || (P0.ramp && [P0.ramp[1], P0.ramp[4]]); if (!bar) return;
+    const lum = h => { const v = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4); return .2126 * v[0] + .7152 * v[1] + .0722 * v[2]; };
+    const ink = h => (1.05 / (lum(h) + .05)) >= ((lum(h) + .05) / (lum("#1f2a2e") + .05)) ? "255,255,255" : "31,42,46";
+    head.style.setProperty("--ah-l", bar[0]); head.style.setProperty("--ah-d", bar[1]); head.style.setProperty("--ah-ink-l", ink(bar[0])); head.style.setProperty("--ah-ink-d", ink(bar[1]));
+    head.style.setProperty("--app", APP.accent); document.documentElement.style.setProperty("--app", APP.accent);
+  }
+  applyThemePalettes(((window.AtlasTheme && AtlasTheme.theme) || {}).palettes);
+  window.AtlasDesignHooks = { map, PERSPECTIVES, PARTY, partyName, defaults: DEFAULT_PAL, applyPalettes: applyThemePalettes, applyMap: applyThemeMap, refresh: themeRefresh, WM, toast, download, copy, get mode() { return look.mode; } };
+  if (window.AtlasTheme) AtlasTheme.onRemote = () => { applyThemePalettes(AtlasTheme.theme.palettes); themeRefresh(); };
+  if (window.AtlasTheme && AtlasTheme.dev) { $("open-design").hidden = false; $("open-design").addEventListener("click", () => { closeMenu(); window.AtlasDesign && AtlasDesign.open(); }); }
 
   // ---------- start ----------
   draggable(legend, $("legend-grip"), "atlas-031-legend-pos", positionLegend);

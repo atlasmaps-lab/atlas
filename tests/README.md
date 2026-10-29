@@ -17,6 +17,7 @@ python tests/run_all.py
 | Test | What it checks |
 |---|---|
 | `test_windows.py` | Compare → Analyse: Analyse is above Compare and visible; Esc closes the top window only; default window sizes; saved positions stay on screen |
+| `test_design.py` | The Design panel: hidden without `?dev`; settings, picked elements, palettes and map layers change live; theme.js downloads |
 | `test_timebar.py` | Time-bar labels at 320, 480, 800 px and full width (no overlaps, current date always shown); the range follows the data (GDP only, MPs only, Controlling party only) |
 
 `python tests/shots.py <name> [scene ...]` saves screenshots at 1024×700, 1280×800, 1440×900 and 1920×1080 in `docs/screenshots/1.8/` and reports console errors.

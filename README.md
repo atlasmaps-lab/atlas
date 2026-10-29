@@ -125,6 +125,15 @@ Atlas 1.8 makes Atlas easier to use and to trust: windows that stay where you ca
 - **Atlas Politics:** election view on the hex map with a seat bar and results table, a uniform-swing calculator (it says it's a simple model), a seat explorer, councils over time, referendums and protests.
 - **Atlas Economic** and **Atlas Social:** light versions (dashboards, rankings, growth decomposition, population change); the rest is marked "Not available yet" (`docs/perspective-apps.md`).
 
+**Design panel (developers only).** Open `index.html?dev` (once is enough; `?dev=0` turns it off), then ATLAS menu → **Design** or Ctrl/Cmd+Shift+D. Everything changes live:
+- **Settings:** every colour, shadow and font setting, in light and dark mode.
+- **Elements:** press **Pick**, click anything on screen and change its CSS: background, border, rounding, spacing, size, type, shadow, or hide it.
+- **Palettes:** party, cause, alignment and perspective colours, map boundary colours, chart and Analyse colours, no data.
+- **Map:** every map layer's paint, Atlas's and the basemap's.
+- **CSS:** the CSS your changes make, plus any extra CSS you type.
+
+Changes stay in your browser until you press **Save to the atlas folder** (Chrome or Edge write `theme.js` directly; otherwise download it and put it in the `atlas` folder). Commit `theme.js` and everyone sees the new look.
+
 **Tests.** `tests/` has browser tests for each phase (`python tests/run_all.py`; see `tests/README.md`), including the Compare → Analyse visibility test, the time-bar label and range tests, and the "no protest point outside the UK" check. Screenshots at 1024×700, 1280×800, 1440×900 and 1920×1080 are in `docs/screenshots/1.8/`.
 
 **Fixed along the way:** "Copy data (CSV)" buttons called a function that didn't exist; the time bar slid under the Perspectives panel at 1024 px; the tab bar ran under Tools on narrow screens; tables opened in their own tab were hidden behind floating windows.
