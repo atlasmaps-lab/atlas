@@ -2,6 +2,20 @@
 
 Atlas 0.7.1 is Ruben's round of fixes and features on top of 0.7 (Mo's numbering; the sections below call 0.7 "1.8"). The next version is 0.7.2.
 
+## What's new in 0.7.2
+
+- **Header bars**: each perspective's app header is a solid bar in its own colour, with a light shade for light mode and a dark shade for dark mode (Political #9d4edd / #3c096c, Economic #a4ac86 / #333d29, Social #d69f7e / #774936, Health #ff8fa3 / #a4133c, Transport #90e0ef / #023e8a, Markets #8d99ae / #2b2d42). The text switches between white and ink, whichever reads better on the bar.
+- **Top bar**: a larger ATLAS logo sits right beside the search bar. The search bar is wider and rounded. The boundary picker is a three-line button (the current level shows in its tooltip). Tools is a toolbox icon with no label.
+- **In-app tabs**: the Map / Workspace strip from Atlas Multi no longer shows at the top of an app tab. In an app, the map's own tabs and Tools sit in the header, so a maxed card (for example a protest page) is never covered by them.
+- **Settings menu**: the Apps list is gone, "Analyse relationships" is now **Stats for nerds…**, and the Tools / Workspace / Notes buttons are removed. Tools is back at the top right of the first map; in an app it sits under ⋯ and the version. Workspace and Notes are still reachable from the tab bar and the notes handle, and apps open from ↗ on each perspective row.
+- **Swingometer**: the boxes accept decimals (28.5) without the panel redrawing mid-typing. A warning shows if the shares add up to more than 100%.
+- **Charts**: each series has a colour swatch on its chip; click it to pick any colour.
+- **Time bar**: it can be resized from every edge and corner but no longer dragged around; it stays centred.
+- **Links**: people, places and companies (MPs, council leaders, election winners, protest names, companies, financial districts) are blue links that open Wikipedia.
+- **Dark mode** changes the interface only. The map keeps its light palette, because the OS basemap only recoloured Great Britain and left Europe light.
+- **Markets**: DCF, Comparables, Dividend discount and Returns are now tabs inside a single **Calculator** panel.
+- **Grey dots in London**: these were railway and Underground stations from the Ordnance Survey basemap, drawn from zoom 11. They now appear only at street zoom (14+), with their labels.
+
 ## What's new in 0.7.1
 
 **Apps open inside Atlas.** Opening Atlas Politics, Health, Markets, Economic or Social (ATLAS menu → Apps, or ↗ on a perspective) adds a tab inside Atlas, next to Map and Workspace, instead of a new browser tab. Ctrl- or Cmd-click still opens a browser tab. Each app keeps running while you switch tabs.
