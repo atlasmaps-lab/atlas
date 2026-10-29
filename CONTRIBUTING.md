@@ -27,3 +27,6 @@ Atlas Multi and each perspective app (`index.html#app=markets`, `#app=politics`,
 
 ## Tests
 `tests/` has browser tests (Playwright) and screenshot scripts; see `tests/README.md`. Run `python tests/run_all.py` before opening a pull request.
+
+## Changing the design
+Use the Design panel (`index.html?dev`, then ATLAS menu → Design) and save to `theme.js`, rather than editing colours across `index.html`. `theme.js` is the one file that holds design changes, so two people's design work merges in one place. Bigger structural CSS still goes in `index.html`.
