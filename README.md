@@ -2,6 +2,10 @@
 
 Atlas 0.7.1 is Ruben's round of fixes and features on top of 0.7 (Mo's numbering; the sections below call 0.7 "1.8"). The next version is 0.7.2.
 
+## Views have their own folders
+
+Each view (Atlas Politics, Economic, Social, Health, Markets) now lives in `views/<id>/`: its script, its own styles (loaded only in its tab), a README with its owner and plans, and its tests. Work inside your view's folder and two people can build two views at once without clashing; changes to the shared core go in separate `core: …` pull requests. See CONTRIBUTING.md, "Views".
+
 ## What's new in 0.7.2
 
 - **Header bars**: each perspective's app header is a solid bar in its own colour, with a light shade for light mode and a dark shade for dark mode (Political #9d4edd / #3c096c, Economic #a4ac86 / #333d29, Social #d69f7e / #774936, Health #ff8fa3 / #a4133c, Transport #90e0ef / #023e8a, Markets #8d99ae / #2b2d42). The text switches between white and ink, whichever reads better on the bar.

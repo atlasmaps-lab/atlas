@@ -5,7 +5,7 @@ Atlas Multi (all perspectives together) stays the default. Any perspective can a
 ## How it works
 
 - **One core, no copies.** An app is the same page: the same map engine, boundaries, time bar, cards, charts, Compare, Analyse and Workspace. The only differences are which metrics the Perspectives panel offers, the colour accent, the default layout, and the app's own panels and tools.
-- **A small registry.** Each app is a module in `apps/` that registers itself:
+- **A small registry.** Each app is a view in its own folder, `views/<id>/view.js`, that registers itself (the folders and their files are listed in `views/views.js`; see CONTRIBUTING.md, "Views"):
 
   ```js
   AtlasApps.register({
@@ -19,7 +19,7 @@ Atlas Multi (all perspectives together) stays the default. Any perspective can a
   ```
 
   `ctx` is the only door into the core: the metrics, the places, the time-bar date, `openWindow` (the window manager), charts, the workspace, and the map. Apps never reach into `app.js` directly.
-- **Rule (also in CONTRIBUTING.md):** a fix that every view needs goes in the core and reaches Multi and every app. A feature only one app needs stays in its module.
+- **Rule (also in CONTRIBUTING.md):** a fix that every view needs goes in the core and reaches Multi and every app. A feature only one app needs stays in its folder in `views/`.
 - An app whose perspective has no data (Health had none before 1.7's extra data; Transport still has none) shows as **Not available yet**, following the Phase 2 rule.
 
 ## Atlas Markets
