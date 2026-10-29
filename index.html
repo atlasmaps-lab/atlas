@@ -998,9 +998,6 @@ body.apptab-on .appframe { top: 0; height: 100%; }
 .chipcol i { width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,.25); display: inline-block; }
 .ap-form input.bad { border-color: #b3261e; background: #fdecea; }
 #timebar { align-content: center; grid-template-columns: auto 1fr auto; } #tb-grip[hidden] { display: none !important; }
-.calc-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--rule); margin-bottom: 6px; }
-.calc-tab { border: 0; background: none; font: inherit; font-weight: 600; font-size: 12.5px; padding: 6px 10px; color: var(--ink-2); border-bottom: 3px solid transparent; cursor: pointer; }
-.calc-tab.on { color: var(--app, var(--ink)); border-bottom-color: var(--app, var(--ink)); }
 a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,95,180,.25); } a.ent:hover { border-bottom-color: currentColor; }
 :root[data-mode="dark"] a.ent { color: #8ab4f8; border-bottom-color: rgba(138,180,248,.3); }
 .pcard .pname-l { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
@@ -1164,11 +1161,7 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
 </script>
 <script src="help.js?v=0712"></script>
 <script src="apps.js?v=0712"></script>
-<script src="apps/markets.js?v=0712"></script>
-<script src="apps/politics.js?v=0712"></script>
-<script src="apps/economic.js?v=0712"></script>
-<script src="apps/social.js?v=0712"></script>
-<script src="apps/health.js?v=0712"></script>
+<script src="views/views.js?v=0712"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
 <script src="windows.js?v=0712"></script>
 <script src="devdesign.js?v=0729"></script>

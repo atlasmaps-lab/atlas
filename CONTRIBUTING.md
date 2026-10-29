@@ -19,14 +19,36 @@ When a Claude works on Atlas, tell it the folder is a git repository and to comm
 `main` is published by GitHub Pages: every push updates the live site within a minute or two.
 MapTiler keys: allow the site's address (`https://<user>.github.io`) on your key at cloud.maptiler.com, or use *Continue without basemap*.
 
-## Perspective apps (Atlas 1.8)
-Atlas Multi and each perspective app (`index.html#app=markets`, `#app=politics`, …) run on the same core: `app.js`, `windows.js`, `engine.js`, `charts.js`, `stats.js` and the data files.
-- **A fix every view needs goes in the core**, so it reaches Multi and every app at once.
-- **A feature only one app needs stays in its module** in `apps/` (e.g. the DCF calculator in `apps/markets.js`). Modules talk to the core only through the `ctx` they are given, never by reaching into `app.js`.
-- A new app: copy one of the modules in `apps/`, register it with `AtlasApps.register({...})`, and add its `<script>` line to `index.html`. See `docs/perspective-apps.md`.
+## Views: one folder each, so two people can work at once
+Atlas Multi and each view (Atlas Politics, Economic, Social, Health, Markets) run on the same core: `app.js`, `windows.js`, `engine.js`, `charts.js`, `stats.js`, `index.html` and the data files. Each view has its own folder:
+
+```
+views/
+  views.js          the list of views and their files (one line each)
+  politics/         view.js · view.css · README.md · test_*.py · any extra files
+  economic/  social/  health/  markets/
+  _template/        copy this to start a new view
+```
+
+**The rule: work inside your own view's folder.** Then two people on two views never edit the same file, and their pull requests can't clash.
+- `view.js` registers the view and holds its panels and tools. It talks to the core only through the `ctx` it is given, never by reaching into `app.js`.
+- `view.css` holds styles for that view only. It loads only in that view's tab, so it can't change Atlas Multi or another view.
+- Need another script or a data file just for your view? Put it in your folder and add it to your view's line in `views/views.js`.
+- Each view's `README.md` says who owns it and what's planned. Put your name there and in `views/views.js` when you take a view.
+
+**Branches:** name them after the person and the view, e.g. `ruben/politics-devolved-elections` or `mo/economic-gdhi`. Open a pull request for each; the "Files changed" tab should show only `views/<your view>/`.
+
+**When you need the core to change** (a new `ctx` function, a fix every view needs, anything in `app.js`, `index.html` or `data/`):
+1. Make it a **separate, small pull request** titled `core: …`, and tell the other person.
+2. Merge it quickly. Then both of you pull `main` into your view branches (GitHub Desktop: *Branch → Update from main*).
+3. Keep going in your view folder.
+
+A fix every view needs goes in the core, so it reaches Multi and every view at once. A feature only one view needs stays in its folder.
+
+**A new view:** copy `views/_template/` to `views/<id>/`, change the id and name in `view.js`, and add a line for it in `views/views.js`. See `docs/perspective-apps.md` for everything `ctx` offers.
 
 ## Tests
-`tests/` has browser tests (Playwright) and screenshot scripts; see `tests/README.md`. Run `python tests/run_all.py` before opening a pull request.
+`tests/` has browser tests (Playwright) and screenshot scripts; see `tests/README.md`. A view's own tests go in its folder (`views/<id>/test_*.py`). Run `python tests/run_all.py` before opening a pull request: it runs both.
 
 ## Changing the design
 Use the Design panel (`index.html?dev`, then ATLAS menu → Design) and save to `theme.js`, rather than editing colours across `index.html`. `theme.js` is the one file that holds design changes, so two people's design work merges in one place. Bigger structural CSS still goes in `index.html`.

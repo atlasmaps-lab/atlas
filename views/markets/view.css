@@ -1,0 +1,6 @@
+/* Atlas Markets only: this file loads only in the Markets tab (views/views.js). */
+
+/* Calculator: DCF, Comparables, Dividend discount, Returns as tabs in one panel */
+.calc-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--rule); margin-bottom: 6px; }
+.calc-tab { border: 0; background: none; font: inherit; font-weight: 600; font-size: 12.5px; padding: 6px 10px; color: var(--ink-2); border-bottom: 3px solid transparent; cursor: pointer; }
+.calc-tab.on { color: var(--app, var(--ink)); border-bottom-color: var(--app, var(--ink)); }
