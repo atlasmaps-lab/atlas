@@ -44,6 +44,14 @@
   const CORE = [{ id: "population", label: "Population" }, { id: "gdp", label: "GDP" }, { id: "average_age", label: "Average age" }, { id: "ruler", label: "De facto ruler" }, { id: "party", label: "Party / alignment" }];
 
   const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  // 0.7.2: people, events and special places (companies, districts) are blue links to read about them
+  const WIKI = n => "https://en.wikipedia.org/wiki/Special:Search?go=Go&search=" + encodeURIComponent(n);
+  const ent = (name, url) => `<a class="ent" href="${esc(url || WIKI(name))}" target="_blank" rel="noopener" title="Read about ${esc(name)} (opens Wikipedia)">${esc(name)}</a>`;
+  function linkPerson(text) {   // "Andy Burnham (Prime Minister)" or "Andy Burnham, Prime Minister" → the name linked, the rest as text
+    const t = String(text || ""), m = /^([A-Z][^()—,;:]{2,60}?)( \(.*|, .*)$/.exec(t);
+    if (!m || /^(Leader|No |Not |None|Wikipedia|Constituency|Earlier)/.test(m[1]) || /\d/.test(m[1])) return esc(t);
+    return ent(m[1].trim()) + esc(m[2]);
+  }
   const $ = id => document.getElementById(id);
   let tt; function toast(m) { const el = $("toast"); el.textContent = m; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 3000); }
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } } };
@@ -245,13 +253,13 @@
     sel.dispatchEvent(new Event("change", { bubbles: true }));
   }, true);
   const PERSPECTIVES = [
-    { id: "political", name: "Political", hue: "#7b4fa6", ready: true, ramp: ["#efe7f6", "#d2bde6", "#ad8fd0", "#8560b5", "#5b3a8c"], desc: "Who governs each area and how that changed since 1974, plus notable protests (test case)." },
-    { id: "economic", name: "Economic", hue: "#13876b", ready: true, ramp: ["#e3f4ee", "#b3e0cf", "#73c2a6", "#33997b", "#0f6b52"], desc: "Output and income, every year since 1998." },
-    { id: "social", name: "Social", hue: "#d0701c", ready: true, ramp: ["#fdeedc", "#f9cf9f", "#f2a65c", "#d97a26", "#a3510f"], desc: "Population every year since 1998; age latest only." },
-    { id: "health", name: "Health", hue: "#c2364b", ready: false, ramp: ["#fbe9ec", "#f3bcc5", "#e48596", "#c94f66", "#8f2338"], planned: ["Life expectancy", "Healthy life expectancy", "Patients per GP", "Obesity rate"], desc: "Not loaded yet." },
-    { id: "transport", name: "Transportation", hue: "#2b6cb0", ready: false, planned: ["Commute time", "Households without a car", "Rail stations", "Bus services"], desc: "Not loaded yet." },
+    { id: "political", bar: ["#9d4edd", "#3c096c"], name: "Political", hue: "#7b4fa6", ready: true, ramp: ["#efe7f6", "#d2bde6", "#ad8fd0", "#8560b5", "#5b3a8c"], desc: "Who governs each area and how that changed since 1974, plus notable protests (test case)." },
+    { id: "economic", bar: ["#a4ac86", "#333d29"], name: "Economic", hue: "#13876b", ready: true, ramp: ["#e3f4ee", "#b3e0cf", "#73c2a6", "#33997b", "#0f6b52"], desc: "Output and income, every year since 1998." },
+    { id: "social", bar: ["#d69f7e", "#774936"], name: "Social", hue: "#d0701c", ready: true, ramp: ["#fdeedc", "#f9cf9f", "#f2a65c", "#d97a26", "#a3510f"], desc: "Population every year since 1998; age latest only." },
+    { id: "health", bar: ["#ff8fa3", "#a4133c"], name: "Health", hue: "#c2364b", ready: false, ramp: ["#fbe9ec", "#f3bcc5", "#e48596", "#c94f66", "#8f2338"], planned: ["Life expectancy", "Healthy life expectancy", "Patients per GP", "Obesity rate"], desc: "Not loaded yet." },
+    { id: "transport", bar: ["#90e0ef", "#023e8a"], name: "Transportation", hue: "#2b6cb0", ready: false, planned: ["Commute time", "Households without a car", "Rail stations", "Bus services"], desc: "Not loaded yet." },
     { id: "analysis", name: "Analysis", hue: "#4a4f55", ready: false, hidden: true, ramp: ["#eef0f1", "#cfd4d8", "#a3abb2", "#6f7880", "#3d444b"], planned: [], desc: "Results you put on the map from the Analyse window: clusters, residuals, component scores, hot spots." },
-    { id: "markets", name: "Markets", hue: "#a07a12", ready: !!MK, ramp: ["#fbf3d5", "#f1dc93", "#ddb94f", "#b8902a", "#7d5f12"], planned: ["House prices", "Rents", "Business births", "Broadband speed"], desc: "Test case: FTSE 100 companies headquartered in London, and London's financial districts." },
+    { id: "markets", bar: ["#8d99ae", "#2b2d42"], name: "Markets", hue: "#a07a12", ready: !!MK, ramp: ["#fbf3d5", "#f1dc93", "#ddb94f", "#b8902a", "#7d5f12"], planned: ["House prices", "Rents", "Business births", "Broadband speed"], desc: "Test case: FTSE 100 companies headquartered in London, and London's financial districts." },
   ];
   const PER = Object.fromEntries(PERSPECTIVES.map(p => [p.id, p]));
   const M = {}, METRICS = [];
@@ -844,7 +852,9 @@
     light: { line: "#7d6f86", nation: "#6d5a7a", pcon: "#8a6d3b", sel: "#1f2a2e", hover: "#3b5b78", edge: "#1f2a2e" }, dark: { line: "#a497ad", nation: "#c2b3cc", pcon: "#d1b27a", sel: "#f2f4f5", hover: "#9fc2e6", edge: "#f2f4f5" },
     cvdLight: { line: "#555555", nation: "#222222", pcon: "#7a4e00", sel: "#000000", hover: "#0072b2", edge: "#000000" }, cvdDark: { line: "#b8b8b8", nation: "#eeeeee", pcon: "#e69f00", sel: "#ffffff", hover: "#56b4e9", edge: "#ffffff" },
   };
-  const paletteKey = () => look.cvd ? (look.mode === "dark" ? "cvdDark" : "cvdLight") : look.mode;
+  // 0.7.2: dark mode darkens the panels, not the map (the basemap's dark palette only covered Great Britain, so the
+  // rest of Europe stayed light and the map looked cut out). The map type menu changes the map.
+  const paletteKey = () => look.cvd ? "cvdLight" : "light";
   const origOpacity = {};
   function setP(id, prop, v) { if (!map.getLayer(id)) return; try { map.setPaintProperty(id, prop, v); } catch (e) {} }
   function widthExpr(stops, k) { const e = ["interpolate", ["linear"], ["zoom"]]; stops.forEach(([z, w]) => e.push(z, +(w * k).toFixed(3))); return e; }
@@ -935,6 +945,9 @@
     return x.getImageData(0, 0, s, s);
   }
   map.once("idle", () => { try { applyMapColours(); } catch (e) {} });
+  // 0.7.2: the basemap drew a grey dot for every railway station from zoom 11, which filled London with grey dots that
+  // looked like data. Stations now appear only when zoomed right in (street level), with their names.
+  map.on("load", () => { ["railwaystation dots", "railwaystations"].forEach(id => { if (map.getLayer(id)) map.setLayerZoomRange(id, 14, 24); }); });
   map.on("load", () => {
     before = (map.getStyle().layers.find(l => l.type === "symbol") || {}).id;
     ["nation", "region", "council", "constituency"].forEach(l => {
@@ -1188,7 +1201,7 @@
       const evs = leaves.map(l => l.properties.e);
       return Promise.resolve(src.getClusterExpansionZoom(id)).then(z => {
         const canZoom = z <= 14 && z <= map.getMaxZoom();
-        showProtestPicker(evs, pt, canZoom ? () => map.easeTo({ center: at, zoom: Math.min(map.getMaxZoom(), Math.max(z + 0.2, map.getZoom() + 1)), duration: 600 }) : null);
+        showProtestPicker(evs, pt, canZoom ? () => map.easeTo({ center: at, zoom: Math.min(map.getMaxZoom(), Math.max(z + 0.2, map.getZoom() + 1)), duration: 500, essential: true }) : null);
       });
     }).catch(() => {});
   }
@@ -1384,7 +1397,7 @@
     if (key) apply(store.get(key, null));
     g.addEventListener("pointerdown", e => {
       if (e.button) return; e.preventDefault(); e.stopPropagation(); g.setPointerCapture(e.pointerId); document.body.classList.add("resizing");
-      const r = el.getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY, centred = getComputedStyle(el).transform !== "none" && opts.centred;
+      const r = el.getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY, centred = (getComputedStyle(el).transform !== "none" && opts.centred) || opts.fixed;
       const mv = ev => { const w = clamp(r.width + (ev.clientX - x0) * (centred ? 2 : 1), opts.minW || 220, window.innerWidth - 16), h = clamp(r.height + ev.clientY - y0, opts.minH || 80, window.innerHeight - 60); apply({ w: Math.round(w), h: opts.widthOnly ? 0 : Math.round(h) }); if (opts.after) opts.after(); };
       const up = () => { g.removeEventListener("pointermove", mv); document.body.classList.remove("resizing"); if (key) store.set(key, el._size); if (opts.done) opts.done(); };
       g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up, { once: true }); g.addEventListener("pointercancel", up, { once: true });
@@ -1395,6 +1408,11 @@
         start() { r0 = el.getBoundingClientRect(); },
         move(dx, dy, d) {
           const minW = opts.minW || 220, minH = opts.minH || 80; let w = r0.width, h = r0.height, x = r0.left, y = r0.top;
+          if (opts.fixed) {   // stays where it is (centred, bottom-anchored): sideways edges grow both sides, top and bottom grow upwards
+            if (d.includes("e")) w = r0.width + 2 * dx; if (d.includes("w")) w = r0.width - 2 * dx;
+            if (d.includes("n")) h = r0.height - dy; if (d.includes("s")) h = r0.height + dy;
+            apply({ w: Math.round(clamp(w, minW, window.innerWidth - 16)), h: Math.round(clamp(h, minH, window.innerHeight * 0.5)) }); if (opts.after) opts.after(); return;
+          }
           if (d.includes("e")) w = r0.width + dx * (opts.centred && !el.classList.contains("moved") ? 2 : 1);
           if (d.includes("s")) h = r0.height + dy;
           if (d.includes("w")) { w = Math.max(minW, r0.width - dx); x = r0.right - w; }
@@ -1774,12 +1792,12 @@
   }
   function cardHTML(code, pinned) {
     const p = P[code], rec = E.areas[code], d = state.date, past = !isNow();
-    if (p.level === "zone") return `${pinned ? `<button class="x" data-close aria-label="Close">×</button>` : ""}<div class="lvl"><span>${esc(p.kind || "Custom zone")}</span><span>${esc(code)}</span></div><h3>${esc(nameOf(code))}</h3>${zoneBody(code)}
+    if (p.level === "zone") return `${pinned ? `<button class="x" data-close aria-label="Close">×</button>` : ""}<div class="lvl"><span>${esc(p.kind || "Custom zone")}</span><span>${esc(code)}</span></div><h3>${pinned ? ent(nameOf(code).replace(/ \(.*\)$/, "")) : esc(nameOf(code))}</h3>${zoneBody(code)}
       ${pinned ? `<div class="acts"><button class="btn primary" data-chartzone>Chart these companies</button><button class="btn" data-zoom>Zoom to</button></div>` : `<div class="hint2">Click to explore this district</div>`}`;
-    const items = CORE.map(f => { let v = value(code, f.id); if (past && (f.id === "ruler" || f.id === "party")) v = { text: M[f.id].get(code, d).text, yr: "" }; return `<li><b>${esc(f.label)}:</b> ${esc(v.text)}${v.yr ? ` <small>(${esc(v.yr)})</small>` : ""}${v.edited ? ` <span class="tag">edited</span>` : ""}</li>`; });
+    const items = CORE.map(f => { let v = value(code, f.id); if (past && (f.id === "ruler" || f.id === "party")) v = { text: M[f.id].get(code, d).text, yr: "" }; return `<li><b>${esc(f.label)}:</b> ${f.id === "ruler" ? linkPerson(v.text) : esc(v.text)}${v.yr ? ` <small>(${esc(v.yr)})</small>` : ""}${v.edited ? ` <span class="tag">edited</span>` : ""}</li>`; });
     ((rec && rec.fields) || []).forEach(f => { if (f.label) items.push(`<li><b>${esc(f.label)}:</b> ${esc(f.value || "—")}</li>`); });
     const onMap = planMetrics(); // everything ticked shows in the card, drawn or not
-    const mapped = onMap.map(m => { const r = m.get(code, d); return `<li${r && r.nm ? ' class="nm"' : ""}>${swatchOf(m, code)}<span><b>${esc(m.label)}:</b> ${esc(r && (r.v != null || !EN.isNum(m) || r.nm) ? r.text : "No data")}${estTag(r)}${r && r.note ? ` <small>· ${esc(r.note)}</small>` : ""}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}${r && r.nm ? "" : sparkFor(m, code)}${pinned && m.how && !(r && r.nm) && PS.detail !== "simple" ? `<small class="how">How this is worked out: ${esc(m.how)}</small>` : ""}${pinned ? infoBtn(m.id) : ""}${pinned && r && r.detail ? `<div class="mdet">${r.detail}</div>` : ""}</span></li>`; });
+    const mapped = onMap.map(m => { const r = m.get(code, d); return `<li${r && r.nm ? ' class="nm"' : ""}>${swatchOf(m, code)}<span><b>${esc(m.label)}:</b> ${esc(r && (r.v != null || !EN.isNum(m) || r.nm) ? r.text : "No data")}${estTag(r)}${r && r.note ? ` <small>· ${m.id === "control" ? linkPerson(r.note) : esc(r.note)}</small>` : ""}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}${r && r.nm ? "" : sparkFor(m, code)}${pinned && m.how && !(r && r.nm) && PS.detail !== "simple" ? `<small class="how">How this is worked out: ${esc(m.how)}</small>` : ""}${pinned ? infoBtn(m.id) : ""}${pinned && r && r.detail ? `<div class="mdet">${r.detail}</div>` : ""}</span></li>`; });
     if (PS.detail === "simple" && !pinned) {   // short: Westminster results become one line (winner, share, majority); the rest stays
       const wmOn = onMap.some(m => m.group === G4), keep = onMap.map((m, i) => m.group === G4 ? null : mapped[i]).filter(Boolean);
       if (wmOn) { const r = resultFor(code, d); if (r && !(M.ge_winner.get(code, d) || {}).nm) { const w = r.agg ? Object.keys(r.seats).sort((a, b) => r.seats[b] - r.seats[a])[0] : winnerOf(r), mj = r.agg ? null : PSE.majority(r.cl, r.t.total);
@@ -1872,7 +1890,7 @@
     const cr = (e.cr || []).length ? e.cr.map(([lo, hi, t]) => `${lo === hi ? fmtBig(lo) : `${fmtBig(lo)} – ${fmtBig(hi)}`}${CROWD_SRC[t] ? ` <small>(${CROWD_SRC[t]})</small>` : ""}`).join(" · ") : e.lo ? (e.lo === e.hi ? fmtBig(e.lo) : `${fmtBig(e.lo)} – ${fmtBig(e.hi)}`) : "";
     const s0 = sites[0], ctl = s0 ? seg(POL.control[s0[3]], d0) : null, gov = s0 ? govAt(P[s0[3]].nation, d0) : (e.scope || []).length ? govAt(e.scope.find(c => c !== UKC) || UKC, d0) : null;
     const row = (k, v) => v ? `<li><b>${k}:</b> ${v}</li>` : "";
-    return `<div class="pcard">${e.intl ? `<div class="pintl">UK part of an international protest</div>` : ""}<div class="lvl"><span>Protest${e.src === "ACLED" ? " · ACLED" : ""}</span><span>${esc(longDate(d0))}${d1 && d1 !== d0 ? " – " + esc(longDate(d1)) : ""}</span></div>
+    return `<div class="pcard"><div class="pname-l">${ent(e.n, e.u || null)}</div>${e.intl ? `<div class="pintl">UK part of an international protest</div>` : ""}<div class="lvl"><span>Protest${e.src === "ACLED" ? " · ACLED" : ""}</span><span>${esc(longDate(d0))}${d1 && d1 !== d0 ? " – " + esc(longDate(d1)) : ""}</span></div>
       ${e.sum ? `<p class="psum">${esc(e.sum)} <small class="pattr">From <a href="${esc(e.u)}" target="_blank" rel="noopener">Wikipedia</a> (CC BY-SA 4.0)</small></p>` : ""}
       <ul>${row("Cause", `<i class="sw dot" style="background:${CAUSE_COL[CAUSES[e.c]]}"></i> ${esc(CAUSES[e.c])}${e.ct ? `<br><small>${esc(e.ct.slice(0, 220))}</small>` : ""}`)}
       ${row(`Where (${places.length || "no single place"})`, places.length ? esc(places.slice(0, 14).join(", ")) + (places.length > 14 ? ` and ${places.length - 14} more` : "") + (councils.length ? `<br><small>${esc(councils.slice(0, 8).join(", "))}${councils.length > 8 ? "…" : ""}</small>` : "") : (e.scope || []).length ? esc(e.scope.map(nameOf).join(", ")) + " <small>(no town named: counted for the nation)</small>" : "")}
@@ -1941,7 +1959,7 @@
     const where = c.zone ? nameOf(c.zone) : c.council ? nameOf(c.council) : "London (office not located)";
     if (!pinned) return `<div class="lvl"><span>${esc(c.sector)}</span><span>${esc(c.t)}</span></div><h3>${esc(c.n)}</h3><ul><li><b>Market value:</b> ${esc(capTxt)}</li><li><b>Where:</b> ${esc(where)}</li>${ch != null ? `<li><b>Share price, 12 months:</b> ${esc(fmtPct(ch))}</li>` : ""}</ul>${CH.spark(pts, { w: 200, h: 34, colour: GRP_COL[c.grp] })}<div class="hint2">Click for more</div>`;
     const ctl = c.council ? seg(POL.control[c.council], state.date) : null;
-    return `<button class="x" data-x aria-label="Close">×</button><div class="lvl"><span>${esc(c.sector)}</span><span>LSE: ${esc(c.t)}</span></div><h3>${esc(c.n)}</h3>
+    return `<button class="x" data-x aria-label="Close">×</button><div class="lvl"><span>${esc(c.sector)}</span><span>LSE: ${esc(c.t)}</span></div><h3>${ent(c.n, c.wiki)}</h3>
       <ul><li><b>Head office:</b> ${esc(c.hq || "—")}${c.prec === "city" ? " <small>(exact office not found)</small>" : ""}</li><li><b>District:</b> ${esc(where)}</li>
       <li><b>Market value:</b> ${esc(capTxt)}</li>${c.rev ? `<li><b>Revenue:</b> ${esc((c.rev.cur === "GBP" ? "£" : c.rev.cur === "USD" ? "US$" : "€") + compactNum(c.rev.v))}${c.rev.yr ? ` (${esc(c.rev.yr)})` : ""}</li>` : ""}
       ${c.emp ? `<li><b>Employees:</b> ${esc(c.emp)}</li>` : ""}${c.founded ? `<li><b>Founded:</b> ${esc(c.founded)}</li>` : ""}
@@ -2124,7 +2142,7 @@
     setTimeout(() => { if (!state.focus && map.getSource("focus")) map.getSource("focus").setData({ type: "FeatureCollection", features: [] }); }, 320);
     renderTray(); renderProtestList(); notifyApps();
   }
-  function syncFocusColour() { if (!FX) return; const c = LAST.fc[FX.code]; setP("focus-lift", "fill-color", c || (look.mode === "dark" ? "#2a3237" : "#ffffff")); }
+  function syncFocusColour() { if (!FX) return; const c = LAST.fc[FX.code]; setP("focus-lift", "fill-color", c || "#ffffff"); }
   function updateOverlay() {
     if (!FX) return;
     const W = window.innerWidth, H = window.innerHeight; let d = `M0 0H${W}V${H}H0Z`;
@@ -2847,12 +2865,14 @@
     if (spec.rebase || spec.index) out.forEach(s => { const b = (s.pts.find(p => p[1] != null) || [0, 0])[1]; if (b) s.pts = s.pts.map(p => [p[0], p[1] / b * 100]); });
     return out;
   }
+  // 0.7.2: each place's line or bar can take its own colour (the swatch on its chip); otherwise the standard palette
+  const pcol = (spec, c, k) => (spec.cols && spec.cols[c]) || CH.PALETTE[k % 10];
   function chartData(spec) { // returns { series, rows, items, label, fmt } for the first metric
     const m = mOf(spec.metrics[0]);
     if (spec.companies.length) { const series = priceSeries(spec); const rb = spec.rebase || spec.index; return { m, series, items: series.map(s => ({ name: s.name, v: (s.pts.filter(p => p[1] != null).slice(-1)[0] || [])[1], colour: s.colour })), label: rb ? "Share price, rebased (first month = 100)" : "Share price (pence)", fmt: rb ? (v => v.toFixed(0)) : PRICE.fmt }; }
-    const series = spec.places.map((c, k) => ({ name: nameOf(c), colour: CH.PALETTE[k % 10], pts: EN.isNum(m) ? seriesOf(m, c, spec.from, spec.to, 1) : [] }));
+    const series = spec.places.map((c, k) => ({ name: nameOf(c), colour: pcol(spec, c, k), pts: EN.isNum(m) ? seriesOf(m, c, spec.from, spec.to, 1) : [] }));
     const rows = EN.isCat(m) ? spec.places.map(c => ({ name: nameOf(c), cells: bandOf(m, c, spec.from, spec.to, 1) })) : [];
-    const items = spec.places.map((c, k) => { const r = m.get(c, state.date); return { code: c, name: nameOf(c), v: r ? r.v : null, cat: r && EN.isCat(m) ? r.v : null, colour: EN.isCat(m) && r && r.v ? m.colour(r.v) : CH.PALETTE[k % 10], size: popAt(c, state.date) || 1, counts: r && r.counts }; });
+    const items = spec.places.map((c, k) => { const r = m.get(c, state.date); return { code: c, name: nameOf(c), v: r ? r.v : null, cat: r && EN.isCat(m) ? r.v : null, colour: EN.isCat(m) && r && r.v ? m.colour(r.v) : pcol(spec, c, k), size: popAt(c, state.date) || 1, counts: r && r.counts }; });
     return { m, series, rows, items, label: m.label, fmt: m.fmt || (v => v) };
   }
   function drawChart(spec, w) {
@@ -2869,9 +2889,9 @@
         if (EN.isCat(m)) { const one = D.items.length === 1 && D.items[0].counts; const n = {}; if (one) Object.assign(n, D.items[0].counts); else D.items.forEach(i => { if (i.cat) n[i.cat] = (n[i.cat] || 0) + 1; }); return CH.pie(Object.entries(n).map(([k, v]) => ({ name: m.catName(k), v, colour: m.colour(k) })), Object.assign(o, { centre: one ? "share" : D.items.length + " places", vfmt: v => +v.toFixed(2) })); }
         return CH.pie(numItems.map(i => ({ name: i.name, v: i.v, colour: i.colour })), o);
       }
-      case "dual": { const a = mOf(spec.metrics[0]), b = mOf(spec.metrics[1]); const S = mm => spec.places.map((c, k) => ({ name: nameOf(c), colour: CH.PALETTE[k % 10], pts: seriesOf(mm, c, spec.from, spec.to, 1) })); return CH.dual({ label: a.label, fmt: v => CH.compact(v), series: S(a) }, { label: b.label, fmt: v => CH.compact(v), series: S(b) }, o); }
+      case "dual": { const a = mOf(spec.metrics[0]), b = mOf(spec.metrics[1]); const S = mm => spec.places.map((c, k) => ({ name: nameOf(c), colour: pcol(spec, c, k), pts: seriesOf(mm, c, spec.from, spec.to, 1) })); return CH.dual({ label: a.label, fmt: v => CH.compact(v), series: S(a) }, { label: b.label, fmt: v => CH.compact(v), series: S(b) }, o); }
       case "multiples": return CH.multiples(spec.metrics.map(id => { const mm = mOf(id), so = { w: 360, h: 170, vfmt: mm.fmt, yfmt: v => CH.compact(v), mid: mm.mid, now: yearNow() };
-        return { title: mm.label, svg: EN.isNum(mm) ? CH.line(spec.places.map((c, k) => ({ name: nameOf(c), colour: CH.PALETTE[k % 10], pts: seriesOf(mm, c, spec.from, spec.to, 1) })), so) : CH.band(spec.places.map(c => ({ name: nameOf(c), cells: bandOf(mm, c, spec.from, spec.to, 1) })), so) }; }));
+        return { title: mm.label, svg: EN.isNum(mm) ? CH.line(spec.places.map((c, k) => ({ name: nameOf(c), colour: pcol(spec, c, k), pts: seriesOf(mm, c, spec.from, spec.to, 1) })), so) : CH.band(spec.places.map(c => ({ name: nameOf(c), cells: bandOf(mm, c, spec.from, spec.to, 1) })), so) }; }));
       case "dye": return CH.dye(numItems, o);
       case "scale": return numItems.length >= 2 ? CH.scale(numItems[0], numItems[1], o) : CH.scale({}, {}, o);
       case "orbits": {
@@ -2897,12 +2917,12 @@
   const STYLE_ICON = { line: "M3 17l5-6 4 3 7-9", area: "M3 18l5-6 4 3 7-9V18z", bars: "M5 18V9M10 18V5M15 18v-7M20 18v-4", slope: "M5 6l14 10M5 16l14-8M5 4v16M19 4v16", ranked: "M4 6h14M4 11h10M4 16h6", band: "M3 8h6M9 8h7M16 8h5M3 14h9M12 14h9", pie: "M12 3a9 9 0 1 0 9 9h-9z", dual: "M3 16l6-5 4 3 8-8M3 7l6 4 4-2 8 6", multiples: "M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z",
     dye: "M7 4l1 16h8l1-16M8 12h8", scale: "M12 3v18M5 7h14M5 7l-3 7h6zM19 7l-3 7h6z", orbits: "M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18", tree: "M12 21V9M12 13l-5-4M12 11l5-4M7 9a3 3 0 1 1 0-.1M17 7a3 3 0 1 1 0-.1M12 6a3 3 0 1 1 0-.1" };
   const sIcon = id => `<svg class="ico" viewBox="0 0 24 24"><path d="${STYLE_ICON[id] || ""}"/></svg>`;
-  function specNow() { return { metrics: CHART.metrics.slice(), places: CHART.places.slice(), companies: CHART.companies.slice(), style: CHART.style, from: CHART.from, to: CHART.to, rebase: CHART.rebase, index: CHART.index }; }
+  function specNow() { return { metrics: CHART.metrics.slice(), places: CHART.places.slice(), companies: CHART.companies.slice(), cols: Object.assign({}, CHART.cols), style: CHART.style, from: CHART.from, to: CHART.to, rebase: CHART.rebase, index: CHART.index }; }
   function whatHTML(spec, prefix) {
     const cand = METRICS.filter(m => PER[m.p].ready && m.nature !== "text" && m.nature !== "site" && m.nature !== "event" && m.temporal !== "static" && !spec.metrics.includes(m.id));
     return `<div class="cp-row"><b>Metric</b><div class="chips">${spec.metrics.map(id => `<span class="chip" style="--c:${PER[mOf(id).p].hue}">${esc(mOf(id).label)}${spec.metrics.length > 1 ? `<button data-${prefix}rmm="${id}" aria-label="Remove">×</button>` : ""}</span>`).join("")}
         ${spec.companies.length ? "" : mtPicker(`data-${prefix}addm aria-label="Add a metric"`, cand)}</div></div>
-      <div class="cp-row"><b>${spec.companies.length ? "Companies" : "Places"}</b><div class="chips">${spec.companies.length ? spec.companies.map(i => `<span class="chip">${esc(COS[i].n)}${spec.companies.length > 1 ? `<button data-${prefix}rmc="${i}" aria-label="Remove">×</button>` : ""}</span>`).join("") : spec.places.map(c => `<span class="chip">${esc(nameOf(c))}${spec.places.length > 1 ? `<button data-${prefix}rmp="${c}" aria-label="Remove">×</button>` : ""}</span>`).join("") + placeSearch(prefix === "t" ? "tplace" : "cplace", "Add any place…") + `<small class="tip">or Shift-click areas on the map</small>`}</div></div>
+      <div class="cp-row"><b>${spec.companies.length ? "Companies" : "Places"}</b><div class="chips">${spec.companies.length ? spec.companies.map(i => `<span class="chip">${esc(COS[i].n)}${spec.companies.length > 1 ? `<button data-${prefix}rmc="${i}" aria-label="Remove">×</button>` : ""}</span>`).join("") : spec.places.map((c, k) => `<span class="chip"><label class="chipcol" title="Choose this line's colour"><input type="color" data-${prefix}col="${c}" value="${pcol(spec, c, k)}"><i style="background:${pcol(spec, c, k)}"></i></label>${esc(nameOf(c))}${spec.places.length > 1 ? `<button data-${prefix}rmp="${c}" aria-label="Remove">×</button>` : ""}</span>`).join("") + placeSearch(prefix === "t" ? "tplace" : "cplace", "Add any place…") + `<small class="tip">or Shift-click areas on the map</small>`}</div></div>
       <div class="cp-row"><b>Years</b><span class="yrs"><input type="number" data-${prefix}from value="${spec.from}" min="1974" max="${TODAY.slice(0, 4)}"> to <input type="number" data-${prefix}to value="${spec.to}" min="1974" max="${TODAY.slice(0, 4)}"></span>
         ${spec.companies.length ? `<label class="ck"><input type="checkbox" data-${prefix}rebase ${spec.rebase ? "checked" : ""}>Rebase to 100</label><label class="ck"><input type="checkbox" data-${prefix}index ${spec.index ? "checked" : ""}>Add FTSE 100 index</label>` : ""}</div>`;
   }
@@ -2947,6 +2967,7 @@
   function specInput(target, el) {
     const k = Object.keys(el.dataset)[0] || "", key = k.replace(/^[ct]/, "");
     if (key === "addm" && el.value) { target.metrics.push(el.value); target.from = spanFor(target.metrics.map(mOf)); }
+    else if (key === "col") { target.cols = Object.assign({}, target.cols, { [el.dataset[k]]: el.value }); }
     else if (key === "from") target.from = clamp(+el.value || 1974, 1974, target.to);
     else if (key === "to") target.to = clamp(+el.value || target.from, target.from, +TODAY.slice(0, 4));
     else if (key === "rebase") target.rebase = el.checked; else if (key === "index") target.index = el.checked;
@@ -3912,7 +3933,7 @@
   const PLURAL = { nation: "Nations", region: "Regions", council: "Councils", constituency: "Constituencies", ward: "Wards" };
   function renderLevelPicker() {
     const el = $("lvpick"); if (!el) return;
-    $("browse-lv").textContent = PLURAL[state.level] || "Areas";
+    $("browse-lv").textContent = PLURAL[state.level] || "Areas"; $("browse-btn").title = "Boundaries: " + (PLURAL[state.level] || "Areas") + " (choose which show, or browse places)";
     const ms = planMetrics();
     el.innerHTML = `<div class="lvt">Boundaries on the map <small>${LV.auto ? "following the zoom" : "at every zoom"}</small></div>
       <label class="lvrow lvauto"><input type="checkbox" data-lv="auto" ${LV.auto ? "checked" : ""}><span>Automatic</span><small>switch with zoom</small></label>
@@ -3942,7 +3963,7 @@
     sendToWS: it => sendToWS(it), toast, copy, download, searchNames, onDate: f => appListeners.push(f), openPanel: id => openAppPanel(id), store,
     defineMetric: m => { if (!M[m.id]) def(m); PS.active[m.id] = true; }, repaint: () => repaint(),
     // 0.7.1
-    projection: () => projection(), POLLS, get NEWS() { return window.ATLAS_NEWS || null; }, parentOf: c => parentOf(c), value: (id, c, d) => { const m = M[id]; if (!m) return null; try { return m.get(c, d || state.date); } catch (e) { return null; } },
+    projection: () => projection(), POLLS, ent, linkPerson, get NEWS() { return window.ATLAS_NEWS || null; }, parentOf: c => parentOf(c), value: (id, c, d) => { const m = M[id]; if (!m) return null; try { return m.get(c, d || state.date); } catch (e) { return null; } },
     select: codes => { clearCompare(); codes.filter(c => P[c]).slice(0, MAX_SEL).forEach(c => { const t = { code: c, level: P[c].level }; state.sel.push(t); setFS(t, { sel: true }); }); renderTray(); },
     openCmpWith: codes => { CTX.select(codes); openCmp(); }, openAnalyse: o => openAnalyse(o || {}), mapAdd: id => { if (M[id] && !isMapped(id)) toggleMapped(id); },
     isMapped: id => isMapped(id), kids: c => (UNDER[c] || []).slice(),
@@ -3998,11 +4019,25 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.7.1</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.7.2</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));
     head.querySelector(".ah-nav").appendChild($("appbar"));
+    // 0.7.2: Tools sits under ⋯ and the version; the map's own tabs (Map, Workspace, charts) live in the header too,
+    // so a full-screen window or card never has tabs floating over it
+    const nr = document.createElement("div"); nr.className = "ah-navr"; head.querySelector(".ah-nav").appendChild(nr);
+    nr.appendChild($("tabs")); nr.appendChild($("tools-btn"));
+    // a solid header in the perspective's colour: a light tint in light mode, a deep shade in dark mode
+    const ramp = PER[APP.perspective] && PER[APP.perspective].ramp;
+    // 0.7.2: the header's own palette (light mode, dark mode); text is white or ink, whichever reads better on it
+    const bar = (PER[APP.perspective] && PER[APP.perspective].bar) || (ramp && [ramp[1], ramp[4]]);
+    if (bar) {
+      const lum = h => { const v = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4); return .2126 * v[0] + .7152 * v[1] + .0722 * v[2]; };
+      const ink = h => (1.05 / (lum(h) + .05)) >= ((lum(h) + .05) / (lum("#1f2a2e") + .05)) ? "255,255,255" : "31,42,46";
+      head.style.setProperty("--ah-l", bar[0]); head.style.setProperty("--ah-d", bar[1]);
+      head.style.setProperty("--ah-ink-l", ink(bar[0])); head.style.setProperty("--ah-ink-d", ink(bar[1]));
+    }
     head.querySelector(".ah-more").addEventListener("click", () => brand.click());
     const fitTop = () => { const h = head.offsetHeight; document.documentElement.style.setProperty("--ahh", h + "px"); if (WM.setTop) WM.setTop(h + 8); map.resize(); };
     requestAnimationFrame(fitTop); window.addEventListener("resize", fitTop); setTimeout(fitTop, 600);
@@ -4028,12 +4063,13 @@
   // ---------- start ----------
   draggable(legend, $("legend-grip"), "atlas-031-legend-pos", positionLegend);
   resizable(legend, "atlas-061-legend-size", { minW: 240, minH: 120, after: positionLegend });
-  resizable(timebar, "atlas-061-timebar-size", { widthOnly: true, centred: true, minW: 320 });
+  // 0.7.2: the time bar stays centred at the bottom (it can't be moved) and resizes from every edge and corner
+  resizable(timebar, "atlas-072-timebar-size", { fixed: true, minW: 320, minH: 64 });
   $("legend-grip").insertAdjacentHTML("beforeend", `<button class="kclear" data-lclear title="Take everything off the map (Esc)">Clear all</button>`);
   $("legend-grip").querySelector(".kx") && $("legend-grip").appendChild($("legend-grip").querySelector(".kx"));
   $("legend-x").addEventListener("click", () => { setKeyHidden(true); toast("Key closed. Press Key (bottom left) to bring it back."); });
   $("key-show").addEventListener("click", () => setKeyHidden(false));
-  draggable(timebar, $("tb-grip"), "atlas-031-timebar-pos");
+  store.set("atlas-031-timebar-pos", null); $("tb-grip").hidden = true;
   if (window.ResizeObserver) new ResizeObserver(() => positionLegend()).observe(dock);
   syncMenu(); renderSteps(); renderDock(); renderSup(); renderLevelPicker(); armFold();
   document.body.classList.toggle("hot", !!PS.hot); renderTabs();

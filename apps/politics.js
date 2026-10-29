@@ -78,22 +78,38 @@
         out.set(c, w); count[w] = (count[w] || 0) + 1; });
       return { out, count };
     };
-    const P = project();
     ctx.defineMetric({ id: "uns_winner", p: "political", group: "Westminster elections", label: "Projected winner (swingometer)", scale: "nominal", nature: "category", temporal: "static", levels: ["constituency"],
       desc: "The Swingometer's projection: every seat's party shares move by the national change", how: "Each seat's share for a party + (new national share − actual national share), floored at zero; the largest share wins. Northern Ireland unchanged",
       colour: ctx.partyCol, catName: ctx.partyName, cats: () => Object.keys(ctx.PARTY), get: c => SW.proj && SW.proj.has(c) ? { v: SW.proj.get(c), text: ctx.partyName(SW.proj.get(c)) + " (projected)", est: true, estWhy: "A projection, not a result" } : null });
-    SW.proj = P.out;
-    const sum = MAIN.reduce((a, p) => a + (+SW.to[p] || 0), 0), avg = ctx.POLLS && ctx.POLLS.avg;
-    el.innerHTML = `${SWING_HELP}<p class="ap-note">Base: the ${ctx.esc(day.slice(0, 4))} general election, Great Britain shares.</p>
-      <div class="ap-form">${MAIN.map(p => `<label><i class="sw" style="background:${ctx.partyCol(p)}"></i> ${ctx.esc(ctx.partyName(p))} <small>(was ${pc1(nat[p] || 0)})</small></label><input type="number" step="0.5" min="0" max="80" data-sw="${p}" value="${SW.to[p]}">`).join("")}</div>
-      <p class="ap-note">These parties add up to ${sum.toFixed(1)}% (others: ${(100 - sum).toFixed(1)}%).</p>
-      <h4>Projected seats (Great Britain changes; Northern Ireland as it was)</h4>${seatBar(ctx, { seats: P.count, n: P.out.size })}
+    const avg = ctx.POLLS && ctx.POLLS.avg;
+    // 0.7.2: the boxes are drawn once; typing only redraws the results underneath them, so "28." or a cleared box
+    // isn't wiped out halfway through typing (that was the decimal-point bug)
+    const results = () => {
+      const P = project(); SW.proj = P.out;
+      const sum = MAIN.reduce((a, p) => a + (+SW.to[p] || 0), 0);
+      el.querySelector(".sw-out").innerHTML = `<p class="ap-note">These parties add up to ${sum.toFixed(1)}% (others: ${(100 - sum).toFixed(1)}%)${sum > 100.05 ? ` <b style="color:#b3261e">: more than 100%, so lower one of them</b>` : ""}.</p>
+        <h4>Projected seats (Great Britain changes; Northern Ireland as it was)</h4>${seatBar(ctx, { seats: P.count, n: P.out.size })}`;
+    };
+    const fillBoxes = () => el.querySelectorAll("[data-sw]").forEach(i => { i.value = SW.to[i.dataset.sw]; });
+    el.innerHTML = `${SWING_HELP}<p class="ap-note">Base: the ${ctx.esc(day.slice(0, 4))} general election, Great Britain shares. Type any share, decimals included (28.5).</p>
+      <div class="ap-form">${MAIN.map(p => `<label for="sw-${p}"><i class="sw" style="background:${ctx.partyCol(p)}"></i> ${ctx.esc(ctx.partyName(p))} <small>(was ${pc1(nat[p] || 0)})</small></label><input id="sw-${p}" type="text" inputmode="decimal" autocomplete="off" data-sw="${p}" value="${SW.to[p]}">`).join("")}</div>
+      <div class="sw-out"></div>
       <div class="ap-row"><button class="btn sm" data-swmap>Show on the map</button>${avg ? `<button class="btn sm" data-swpolls title="Fill in the latest polling average">Use the polling average (to ${ctx.esc(ctx.POLLS.latest)})</button>` : ""}<button class="btn sm" data-swreset>Back to the result</button></div>`;
-    el.oninput = e => { const p = e.target.dataset.sw; if (p) { SW.to[p] = parseFloat(e.target.value) || 0; clearTimeout(SW.t); SW.t = setTimeout(() => { swing(ctx, el); ctx.repaint(); }, 250); } };
+    results();
+    el.oninput = e => {
+      const p = e.target.dataset.sw; if (!p) return;
+      const t = e.target.value.replace(",", ".").trim();
+      if (!/^\d{0,2}(\.\d*)?$/.test(t)) { e.target.classList.add("bad"); return; }   // only numbers like 28, 28., 28.5
+      e.target.classList.remove("bad");
+      const v = parseFloat(t); if (!isFinite(v)) return;   // an empty box or a lone "." waits for more typing
+      SW.to[p] = Math.min(100, v);
+      clearTimeout(SW.t); SW.t = setTimeout(() => { results(); ctx.repaint(); }, 250);
+    };
+    el.onfocusout = e => { const p = e.target.dataset && e.target.dataset.sw; if (p) { e.target.value = SW.to[p]; e.target.classList.remove("bad"); } };   // tidy "28." to "28" once you move on
     el.onclick = e => {
       if (e.target.closest("[data-swmap]")) { ctx.setDate(day > ctx.date ? day : ctx.date); ctx.setLevel("constituency"); ctx.mapOnly(["uns_winner"]); }
-      if (e.target.closest("[data-swreset]")) { SW.to = null; swing(ctx, el); ctx.repaint(); }
-      if (e.target.closest("[data-swpolls]")) { MAIN.forEach(p => { if (avg[p] != null) SW.to[p] = avg[p]; }); swing(ctx, el); ctx.repaint(); }
+      if (e.target.closest("[data-swreset]")) { SW.to = Object.fromEntries(MAIN.map(p => [p, +(100 * (nat[p] || 0)).toFixed(1)])); fillBoxes(); results(); ctx.repaint(); }
+      if (e.target.closest("[data-swpolls]")) { MAIN.forEach(p => { if (avg[p] != null) SW.to[p] = avg[p]; }); fillBoxes(); results(); ctx.repaint(); }
     };
   }
 
@@ -130,7 +146,7 @@
     const uk = ctx.resultFor(ctx.UKC, last.e.day), ukTo = uk && uk.electorate ? uk.elect_valid / uk.electorate : null;
     const s = [];
     s.push(`<b>${ctx.esc(ctx.nameOf(code))}</b> is a Westminster seat${where ? ` in ${ctx.esc(where)}` : ""}.`);
-    s.push(`At the ${ctx.esc(last.e.label)} it was won by <b>${ctx.esc(ctx.partyName(w))}</b>${last.winner ? ` (${ctx.esc(last.winner)})` : ""} with ${pc1(cl[0][2])} of the vote${cl[1] ? `, ${pc1(mj)} ahead of ${ctx.esc(ctx.partyName(cl[1][0]))}` : ""}: a <b>${marginClass(mj)}</b> seat${mj != null && mj < 0.2 ? ` (a swing of ${(50 * mj).toFixed(1)} points would change it)` : ""}.`);
+    s.push(`At the ${ctx.esc(last.e.label)} it was won by <b>${ctx.esc(ctx.partyName(w))}</b>${last.winner ? ` (${ctx.ent(last.winner)})` : ""} with ${pc1(cl[0][2])} of the vote${cl[1] ? `, ${pc1(mj)} ahead of ${ctx.esc(ctx.partyName(cl[1][0]))}` : ""}: a <b>${marginClass(mj)}</b> seat${mj != null && mj < 0.2 ? ` (a swing of ${(50 * mj).toFixed(1)} points would change it)` : ""}.`);
     s.push(since < last.e.day.slice(0, 4) ? `${ctx.esc(ctx.partyName(w))} has held it at every general election since ${since} in these boundaries.` : `It changed hands at that election.`);
     if (to != null) s.push(`Turnout was ${pc1(to)}${ukTo ? ` (UK: ${pc1(ukTo)})` : ""}.`);
     const pr = ctx.projection && ctx.projection(), x = pr && pr.seat.get(code);
@@ -158,7 +174,7 @@
       <div class="ap-row"><button class="btn sm" data-sqfocus>Focus on the map</button><button class="btn sm" data-sqchart>Chart its vote shares</button><button class="btn sm" data-sqcmp>Compare with its neighbours</button><a class="btn sm" href="${wikiUrl(ctx.nameOf(code))}" target="_blank" rel="noopener">Wikipedia ↗</a></div>
       ${x ? `<h4>Projection</h4><p>${ctx.esc(ctx.partyName(x.w))} ${x.w === x.was ? "hold" : `gain from ${ctx.esc(ctx.partyName(x.was))}`} · ${x.order.slice(0, 4).map(p => `${ctx.esc(ctx.partyName(p))} ${pc1(x.sh[p])}`).join(", ")}</p><p class="ap-note">Atlas, polls to ${ctx.esc(ctx.POLLS.latest)}, uniform swing (a simple model). <button class="lnk" data-popen="projection">How this is worked out</button></p>` : ""}
       <h4>Results</h4><div class="tscroll"><table class="cmp"><thead><tr><th>Election</th><th>Winner</th><th>Share</th><th>Majority</th><th>Turnout</th><th title="Change in the winner's share since the previous general election (points)">Winner's change</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <h4>MPs</h4><ul class="sq-mps">${spans.slice().reverse().map(s => `<li><i class="sw" style="background:${ctx.partyCol(s[2])}"></i>${ctx.esc(s[3])} · ${ctx.esc(ctx.partyName(s[2]))} <small>${s[0].slice(0, 4)}–${s[1] ? s[1].slice(0, 4) : "now"}</small></li>`).join("")}</ul>
+      <h4>MPs</h4><ul class="sq-mps">${spans.slice().reverse().map(s => `<li><i class="sw" style="background:${ctx.partyCol(s[2])}"></i>${ctx.ent(s[3])} · ${ctx.esc(ctx.partyName(s[2]))} <small>${s[0].slice(0, 4)}–${s[1] ? s[1].slice(0, 4) : "now"}</small></li>`).join("")}</ul>
       <h4>In the news</h4>${newsList(ctx, newsFor(ctx, [code], 6), "No official news items name this seat yet.")}
       <p class="ap-note">Results are this seat's own record within its boundary set; across the 2010 and 2024 reviews the "before" result is the Commons Library's notional one (est.).</p>`;
     el.oninput = e => { if (!e.target.matches("[data-sq]")) return; const q = e.target.value.trim().toLowerCase(), hits = q.length < 2 ? [] : Object.keys(ctx.P).filter(c => ctx.P[c].level === "constituency" && ctx.nameOf(c).toLowerCase().includes(q)).slice(0, 12);
@@ -218,7 +234,7 @@
         <select data-cf="ctl"><option value="">Any control</option>${[...new Set(allC.map(ctlOf).filter(Boolean))].sort((a, b) => ctx.partyName(a).localeCompare(ctx.partyName(b))).map(p => `<option value="${p}" ${CF.ctl === p ? "selected" : ""}>${ctx.esc(ctx.partyName(p))}</option>`).join("")}</select>
         <select data-cc>${list.map(c => `<option value="${c}" ${c === cur ? "selected" : ""}>${ctx.esc(ctx.nameOf(c))}</option>`).join("")}</select></div>
       <h3 class="sq-h">${ctx.esc(ctx.nameOf(cur))}</h3>
-      <p class="sq-prof">${ctx.esc(ctx.nameOf(cur))} is run by <b>${ctx.esc(ctlNow ? ctlNow.text.replace(/ \(council control\)$/, "") : "—")}</b>${ruler && ruler.text ? `, led by ${ctx.esc(ruler.text)}` : ""}.${sinceRec ? " It has had the same control since at least 1974 (where the records start)." : `${ten && ten.v != null ? ` Control last changed ${ten.v < 1 ? "within the last year" : `${ten.v.toFixed(0)} years ago`}` : ""}${turn && turn.v != null ? `, and has changed ${turn.v} time${turn.v === 1 ? "" : "s"} in the last 20 years` : ""}.${changes ? ` Since 1974 control has changed ${changes} time${changes === 1 ? "" : "s"}.` : ""}`}${lastComp ? ` After the ${lastComp[0]} elections the council had ${lastComp[1]} seats: ${Object.entries(lastComp[2]).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([p, k]) => `${ctx.esc(ctx.partyName(p))} ${k}`).join(", ")}.` : ""}${nWards ? ` It has ${nWards} wards.` : ""}</p>
+      <p class="sq-prof">${ctx.esc(ctx.nameOf(cur))} is run by <b>${ctx.esc(ctlNow ? ctlNow.text.replace(/ \(council control\)$/, "") : "—")}</b>${ruler && ruler.text ? `, led by ${ctx.linkPerson(ruler.text)}` : ""}.${sinceRec ? " It has had the same control since at least 1974 (where the records start)." : `${ten && ten.v != null ? ` Control last changed ${ten.v < 1 ? "within the last year" : `${ten.v.toFixed(0)} years ago`}` : ""}${turn && turn.v != null ? `, and has changed ${turn.v} time${turn.v === 1 ? "" : "s"} in the last 20 years` : ""}.${changes ? ` Since 1974 control has changed ${changes} time${changes === 1 ? "" : "s"}.` : ""}`}${lastComp ? ` After the ${lastComp[0]} elections the council had ${lastComp[1]} seats: ${Object.entries(lastComp[2]).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([p, k]) => `${ctx.esc(ctx.partyName(p))} ${k}`).join(", ")}.` : ""}${nWards ? ` It has ${nWards} wards.` : ""}</p>
       <div class="ap-row"><button class="btn sm" data-cfocus>Focus on the map</button><button class="btn sm" data-cwards>Show its wards</button><button class="btn sm" data-ccmp>Compare with the region's councils</button><button class="btn sm" data-can>Analyse councils</button><button class="btn sm" data-cws>Send to workspace</button></div>
       <h4>Seats by party, ${y0}–${y1}</h4>${comp.length ? `<svg viewBox="0 0 ${Wd} ${H}" class="ap-svg">${areas}<text x="30" y="${H - 3}">${y0}</text><text x="${Wd - 10}" y="${H - 3}" text-anchor="end">${y1}</text></svg><div class="ap-row">${parties.slice(0, 8).map(p => `<span><i class="sw" style="background:${ctx.partyCol(p)}"></i>${ctx.esc(ctx.partyName(p))}</span>`).join("")}</div>` : `<p class="ap-note">No composition record.</p>`}
       <h4>Control since 1974</h4>${ctl.length ? `<svg viewBox="0 0 ${Wd} 34" class="ap-svg">${ctl.map(s => `<rect x="${CX(s[0]).toFixed(1)}" y="4" width="${Math.max(1, CX(s[1] || ctx.today) - CX(s[0])).toFixed(1)}" height="18" fill="${ctx.partyCol(s[2])}"><title>${ctx.esc(ctx.partyName(s[2]))} ${s[0].slice(0, 4)}–${s[1] ? s[1].slice(0, 4) : "now"}</title></rect>`).join("")}<text x="30" y="33">1974</text><text x="${Wd - 10}" y="33" text-anchor="end">${cy1}</text></svg>` : `<p class="ap-note">No control record.</p>`}

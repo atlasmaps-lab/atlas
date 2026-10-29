@@ -148,6 +148,18 @@
     el.innerHTML = `<h4>By financial district</h4>${tab(by("zone"), "District")}<h4>By council</h4>${tab(by("council"), "Council")}<p class="ap-note">Hover a row to find it on the map; double-click to focus it. Regional listed-company exposure (where companies' staff and sites are) is for later.</p>`;
   }
 
+  const CALCS = [
+    { id: "dcf", title: "DCF", blurb: "Discounted cash flow: FCFF, WACC, terminal value, sensitivity table", render: dcf },
+    { id: "comps", title: "Comparables", blurb: "Trading comparables: peer multiples to a value range (football field)", render: comps },
+    { id: "ddm", title: "Dividend discount", blurb: "Gordon growth and two-stage dividend discount model", render: ddm },
+    { id: "returns", title: "Returns", blurb: "CAGR, total return, volatility, max drawdown, beta", render: returns },
+  ];
+  function calculator(ctx, el) {
+    const cur = CALCS.find(c => c.id === calculator.at) || CALCS[0]; calculator.at = cur.id;
+    el.innerHTML = `<div class="calc-tabs" role="tablist">${CALCS.map(c => `<button role="tab" class="calc-tab${c.id === cur.id ? " on" : ""}" data-calc="${c.id}" title="${ctx.esc(c.blurb)}" aria-selected="${c.id === cur.id}">${ctx.esc(c.title)}</button>`).join("")}</div><p class="ap-note">${ctx.esc(cur.blurb)}.</p><div class="calc-body"></div>`;
+    const body = el.querySelector(".calc-body"); cur.render(ctx, body);
+    el.querySelector(".calc-tabs").onclick = e => { const b = e.target.closest("[data-calc]"); if (b) { calculator.at = b.dataset.calc; calculator(ctx, el); } };
+  }
   window.AtlasApps && AtlasApps.register({
     id: "markets", name: "Atlas Markets", perspective: "markets", accent: "#a07a12", dataNeeds: ["ATLAS_MARKETS"],
     init(ctx) { ctx.mapOnly(["market_sites", "market_count"]); ctx.setLevel("council"); ctx.view([-0.11, 51.513], 10.6); ctx.openPanel("overview"); },
@@ -156,11 +168,7 @@
       { id: "companies", title: "Companies & screener", render: companies, min: { w: 420, h: 280 } },
       { id: "places", title: "Places & markets", render: places },
     ],
-    tools: [
-      { id: "dcf", title: "DCF", blurb: "Discounted cash flow: FCFF, WACC, terminal value, sensitivity table", render: dcf, min: { w: 400, h: 300 } },
-      { id: "comps", title: "Comparables", blurb: "Trading comparables: peer multiples to a value range (football field)", render: comps, min: { w: 400, h: 300 } },
-      { id: "ddm", title: "Dividend discount", blurb: "Gordon growth and two-stage dividend discount model", render: ddm },
-      { id: "returns", title: "Returns", blurb: "CAGR, total return, volatility, max drawdown, beta", render: returns, min: { w: 400, h: 300 } },
-    ],
+    // 0.7.2: the four calculators live together in one Calculator, with a tab for each
+    tools: [{ id: "calc", title: "Calculator", blurb: "DCF, comparables, dividend discount and returns calculators", render: calculator, min: { w: 440, h: 360 } }],
   });
 })();
