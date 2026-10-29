@@ -47,6 +47,21 @@ def main():
         rep.check(js("() => getComputedStyle(document.getElementById('dock')).backgroundColor") == "rgb(255, 240, 200)" and js("() => atlasMap.getPaintProperty('nation-line', 'line-width')") == 5, "unsaved edits survive a reload in this browser")
         rep.check(not page.errors, "no console errors" + (f": {page.errors}" if page.errors else ""))
         page.context.close()
+
+        # 0.7.2: inside Atlas Politics, from ⋯; the app header's colours; an edit in one Atlas tab reaches another
+        page = open_atlas(b, base, (1440, 900), query="debug&dev#app=politics"); js = page.evaluate; page.wait_for_timeout(1500)
+        page.click("#apphead .ah-more"); page.wait_for_timeout(200)
+        rep.check(page.is_visible("#open-design"), "Atlas Politics: ⋯ → Design (developers) is there")
+        page.click("#open-design"); page.wait_for_timeout(300)
+        page.click(".dd-win [data-tab=palettes]"); page.wait_for_timeout(200)
+        sel = """.dd-win input[type=text][data-pal='["per","political","bar","0"]']"""
+        page.fill(sel, "#123456"); page.dispatch_event(sel, "input"); page.wait_for_timeout(600)
+        rep.check(js("() => document.getElementById('apphead').style.getPropertyValue('--ah-l')") == "#123456", "the app header's colour changes live")
+        other = page.context.new_page(); other.goto(base + "index.html?debug#app=politics", wait_until="load"); other.wait_for_timeout(2500)
+        page.fill(sel, "#654321"); page.dispatch_event(sel, "input"); page.wait_for_timeout(1200)
+        rep.check(other.evaluate("() => document.getElementById('apphead').style.getPropertyValue('--ah-l')") == "#654321", "an edit in one Atlas tab shows in another straight away")
+        rep.check(not page.errors, "Atlas Politics: no console errors" + (f": {page.errors}" if page.errors else ""))
+        page.context.close()
     rep.done()
 
 
