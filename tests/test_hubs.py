@@ -29,7 +29,19 @@ def main():
         rep.check(js("() => atlasMap.getSource('place-pin')._data.features.length") == 1 and not js("() => document.body.classList.contains('focused')"), "…with a pin and no outline")
         js("() => atlasMap.jumpTo({ center: [-1.5, 53.6], zoom: 8 })"); page.wait_for_timeout(600)
         rep.check(js("() => [...document.querySelectorAll('.fwin')].some(w => !w.hidden && /Hebden Bridge/.test(w.textContent))"), "the place card stays while the map moves")
-        # networks
+        # networks: ticked from the Perspectives menu, as a person would, at every zoom
+        js("() => AtlasDebug.mapOnly([])"); page.wait_for_timeout(300)
+        if js("() => document.getElementById('dock').classList.contains('collapsed')"): page.click("#dock [data-fold]"); page.wait_for_timeout(500)
+        page.click("#dock [data-open='transport']"); page.wait_for_timeout(300); page.click("#dock [data-group='Networks (drawn as lines)']"); page.wait_for_timeout(300)
+        row = js("() => { const i = document.getElementById('cb-inf_rail'); return { dis: i.disabled, text: i.closest('.crow').textContent }; }")
+        rep.check(not row["dis"] and "No data" not in row["text"], f"Railways can be ticked in the menu (not greyed as “no data”: {row['text'].strip()[:60]})")
+        page.check("#cb-inf_rail"); page.wait_for_timeout(2500); page.keyboard.press("Escape")
+        rep.check(js("() => atlasMap.getLayoutProperty('net-osm-rail', 'visibility') === 'visible' && atlasMap.getSource('net-osm')._data.features.length > 1000"), "ticking Railways draws the national rail network")
+        ok = []
+        for z in (5, 7.5, 9.5):
+            js(f"() => {{ atlasMap.jumpTo({{ center: [-1.5, 53], zoom: {z} }}); }}"); page.wait_for_timeout(600)
+            ok.append(js("() => AtlasDebug.availOf ? true : !document.getElementById('cb-inf_rail') || !document.getElementById('cb-inf_rail').disabled"))
+        rep.check(all(ok), "…and stays available at every zoom")
         js("() => AtlasCtx.mapAdd('inf_freight')"); page.wait_for_timeout(2500)
         rep.check(js("() => atlasMap.getLayoutProperty('net-freight', 'visibility') === 'visible' && atlasMap.getSource('net-freight')._data.features.length > 300"), "freight routes draw as lines")
         rep.check(js("() => atlasMap.getSource('net-freight-dots')._data.features.length > 100"), "…with moving dots for the flow")

@@ -2001,6 +2001,7 @@
   function avail(m, level, d) {
     d = d || state.date;
     if (m.nature === "text") return { ok: true };
+    if (m.nature === "line") { const why = m.valid && m.valid(); return why ? { ok: false, why } : { ok: true }; }   // 0.8.1: networks are lines, not values per area: always available (unless they need the basemap)
     const key = m.id + "|" + level + "|" + d.slice(0, 4) + "|" + (m.temporal === "event" ? PS.win : "") + (m.pick ? "|" + pickOf(m.id) : ""); if (key in availCache) return availCache[key];
     const pl = (PLURAL_L[level] || "these areas").toLowerCase();
     if (m.levels && !m.levels.includes(level)) return (availCache[key] = { ok: false, nm: true, why: (m.nmText && m.nmText[level]) || `Not meaningful for ${pl}` });
