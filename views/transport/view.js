@@ -110,7 +110,7 @@
   function reach(ctx, el) {
     const I = S.iso;
     el.innerHTML = `<p class="ap-note">Everywhere you can reach from a point within a time, and the places inside it.</p>${`<div class="tr-pl"><span class="tr-dot from"></span><input data-trq="iso" placeholder="From: a station, town or address" value="${ctx.esc((I.from || {}).label || "")}" autocomplete="off"><button class="btn sm" data-trpick="iso">Map</button><ul class="tr-hits" data-trhits="iso" hidden></ul></div>`}
-      <div class="tr-modes">${MODES.filter(m => m[0] !== "transit" && m[0] !== "hike").map(([k, l, c]) => `<button class="${I.mode === k ? "on" : ""}" data-trimode="${k}" style="--c:${c}">${l}</button>`).join("")}</div>
+      <div class="tr-modes">${[["auto", "Car", "#1d5590"], ["transit", "Train and public transport", "#d63a2f"], ["bicycle", "Cycle", "#2e8b57"], ["pedestrian", "Walk", "#7b4fa6"]].map(([k, l, c]) => `<button class="${I.mode === k ? "on" : ""}" data-trimode="${k}" style="--c:${c}">${l}</button>`).join("")}</div>
       <div class="ap-row">${[15, 30, 45, 60].map(m => `<button class="btn sm ${I.mins === m ? "primary" : ""}" data-trmins="${m}">${m} min</button>`).join("")}</div>
       <div data-trisoout>${I.out || ""}</div><p class="tr-src">Isochrones: Valhalla (FOSSGIS). Places are counted when their centre is inside the area.</p>`;
   }
@@ -118,6 +118,7 @@
     const I = S.iso; if (!I.from) return; ensureLayers(ctx);
     const body = { locations: [{ lat: I.from.lat, lon: I.from.lon }], costing: I.mode, contours: [{ time: I.mins }], polygons: true, denoise: 0.3 };
     I.out = `<p class="ap-note">Working it out…</p>`; if (PANEL && PANEL.isoEl) reach(ctx, PANEL.isoEl);
+    if (I.mode === "transit") return reachTransit(ctx);
     try {
       const j = await fetch(`${VALHALLA}/isochrone?json=${encodeURIComponent(JSON.stringify(body))}`).then(r => r.json());
       const col = (MODES.find(m => m[0] === I.mode) || [])[2]; (j.features || []).forEach(f => { f.properties = { c: col }; });
@@ -133,6 +134,27 @@
       I.codes = codes;
       ctx.map.fitBounds(bboxOf(ring), { padding: 80, duration: 900 });
     } catch (e) { I.out = `<p class="ap-note">The isochrone service didn't answer. Try again in a moment.</p>`; }
+    if (PANEL && PANEL.isoEl) reach(ctx, PANEL.isoEl);
+  }
+  // 0.8.1: by train (and any public transport): every stop reachable within the time (Transitous "one to all"), plus the
+  // walk from it with the minutes left (at most 15), drawn as soft circles; a council counts if its centre is inside one
+  async function reachTransit(ctx) {
+    const I = S.iso, when = new Date(); when.setMinutes(Math.ceil(when.getMinutes() / 15) * 15, 0, 0);
+    try {
+      const j = await fetch(`https://api.transitous.org/api/v1/one-to-all?one=${I.from.lat},${I.from.lon}&maxTravelTime=${I.mins}&time=${encodeURIComponent(when.toISOString())}`).then(r => r.json());
+      const seen = new Map(); (j.all || []).forEach(x => { const k = x.place.lat.toFixed(3) + "," + x.place.lon.toFixed(3), left = I.mins - x.duration; if (left > 0 && (!seen.has(k) || seen.get(k).left < left)) seen.set(k, { lon: x.place.lon, lat: x.place.lat, left, name: x.place.name, rail: (x.place.modes || []).some(m => /RAIL|SUBWAY|METRO|HIGHSPEED/.test(m)) }); });
+      const pts = [...seen.values()].sort((a, b) => b.left - a.left).slice(0, 4000), m = left => Math.min(15, left) * 80;   // metres walked at ~5 km/h
+      const circle = p => { const r = m(p.left) / 111320, cs = []; for (let k = 0; k <= 16; k++) { const a = k / 16 * 2 * Math.PI; cs.push([p.lon + r * Math.cos(a) / Math.cos(p.lat * Math.PI / 180), p.lat + r * Math.sin(a)]); } return cs; };
+      setData(ctx, "tr-iso", pts.map(p => ({ type: "Feature", properties: { c: "#d63a2f" }, geometry: { type: "Polygon", coordinates: [circle(p)] } })));
+      const km = (a, b) => Math.hypot((a[0] - b[0]) * 111.3 * Math.cos(a[1] * Math.PI / 180), (a[1] - b[1]) * 111.3);
+      const codes = Object.keys(ctx.P).filter(c => ctx.P[c].level === "council" && ctx.P[c].pt && pts.some(p => km(ctx.P[c].pt, [p.lon, p.lat]) * 1000 < m(p.left)));
+      const pop = codes.reduce((s, c) => s + (((ctx.value("population", c) || {}).v) || 0), 0), stations = pts.filter(p => p.rail).length;
+      I.codes = codes;
+      I.out = `<p><b>${seen.size.toLocaleString("en-GB")}</b> stops reachable within ${I.mins} minutes (${stations} by rail, Tube or tram), leaving now-ish; <b>${codes.length}</b> councils have their centre within walking distance of one${pop ? ` (about <b>${ctx.fmtBig(pop)}</b> people)` : ""}.</p>${codes.length ? `<p class="ap-note">${codes.slice(0, 24).map(c => ctx.esc(ctx.nameOf(c))).join(", ")}${codes.length > 24 ? "…" : ""}</p><button class="btn sm" data-trisosel>Select them on the map</button>` : ""}
+        <p class="tr-src">Timetables: Transitous (MOTIS). Walking at about 5 km/h for the minutes left, up to 15.</p>`;
+      let b = [180, 90, -180, -90]; pts.forEach(p => { b = [Math.min(b[0], p.lon), Math.min(b[1], p.lat), Math.max(b[2], p.lon), Math.max(b[3], p.lat)]; });
+      if (pts.length) ctx.map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 80, duration: 900, maxZoom: 12 });
+    } catch (e) { I.out = `<p class="ap-note">The public transport service didn't answer. Try again in a moment.</p>`; }
     if (PANEL && PANEL.isoEl) reach(ctx, PANEL.isoEl);
   }
   const bboxOf = ring => { let b = [180, 90, -180, -90]; (ring || []).forEach(([x, y]) => { b = [Math.min(b[0], x), Math.min(b[1], y), Math.max(b[2], x), Math.max(b[3], y)]; }); return [[b[0], b[1]], [b[2], b[3]]]; };
@@ -152,7 +174,9 @@
   function planner(ctx, el) {
     const has = id => ctx.M[id];
     const rows = [["rail_usage", "Rail journeys", "Entries and exits at the area's stations (ORR)"], ["rail_stations", "Railway stations", "How many stations"], ["air_pax", "Airport passengers", "Terminal passengers (CAA)"], ["port_freight", "Port freight", "Tonnes handled (DfT)"], ["bus_stops", "Bus and coach stops", "NaPTAN"], ["bus_stop_density", "Bus stop coverage", "Stops per km²"]].filter(r => has(r[0]));
-    el.innerHTML = `<p class="ap-note">The transport figures on the map, by council (and added up for regions and nations).</p><ul class="tr-plan">${rows.map(([id, l, d]) => `<li><button class="btn sm" data-trmap="${id}">${ctx.isMapped(id) ? "✓ " : ""}${l}</button> <small>${ctx.esc(d)}</small> <button class="linkish" data-trinfo="${id}">ⓘ</button></li>`).join("")}</ul>
+    const nets = [["inf_rail", "Railways"], ["inf_roads", "Motorways and A roads"], ["inf_ferry", "Ferry routes"], ["inf_freight", "Freight routes from ports"], ["inf_power", "Electricity transmission lines"]].filter(r => has(r[0]));
+    el.innerHTML = `<h4>Networks, drawn as their routes</h4><ul class="tr-plan">${nets.map(([id, l]) => `<li><button class="btn sm" data-trmap="${id}">${ctx.isMapped(id) ? "✓ " : ""}${l}</button> <small>${ctx.esc(ctx.M[id].desc || "")}</small></li>`).join("")}</ul>
+      <h4>Figures by place</h4><p class="ap-note">The transport figures on the map, by council (and added up for regions and nations).</p><ul class="tr-plan">${rows.map(([id, l, d]) => `<li><button class="btn sm" data-trmap="${id}">${ctx.isMapped(id) ? "✓ " : ""}${l}</button> <small>${ctx.esc(d)}</small> <button class="linkish" data-trinfo="${id}">ⓘ</button></li>`).join("")}</ul>
       <p class="ap-note">Coming next: road traffic counts (DfT), road casualties (STATS19), journey times to services (DfT connectivity), how people get to work (Census 2021).</p>`;
   }
 

@@ -558,6 +558,15 @@ textarea[data-sotext], .so-form textarea, .so-form input, .so-f input { width: 1
 .ec-chg { font-size: 11px; color: var(--ink-3); } .ec-chg.good, td.good { color: #1b7a3a; } .ec-chg.bad, td.bad { color: #b03a2e; }
 .ec-per { font-size: 10.5px; color: var(--ink-3); } .ec-tile svg.spark { color: #13876b; } .ec-src { font-size: 11px; color: var(--ink-3); margin-top: 10px; }
 .ec-fc td:first-child { white-space: nowrap; } .ec-chartwrap svg { width: 100%; height: auto; }
+/* 0.8.1: network lines in the key */
+.sw.ln { width: 18px; height: 0; border-top: 3px solid var(--c); border-radius: 0; background: none; vertical-align: 3px; } .sw.ln.dash { border-top-style: dashed; }
+/* 0.8.1: place cards, airport and port cards */
+.pl-in { font-size: 12.5px; line-height: 1.7; } .pl-in small { color: var(--ink-3); } .pl-wiki p { margin: 4px 0; font-size: 12.5px; line-height: 1.5; } .pl-img { float: right; width: 96px; margin: 0 0 6px 10px; border-radius: 6px; }
+.pl-facts { list-style: none; padding: 0; margin: 4px 0; font-size: 12.5px; display: grid; gap: 4px; } .pl-facts small { color: var(--ink-3); } .pl-live { background: var(--chip); border-radius: 8px; padding: 6px 9px; }
+.ap-status { font-weight: 600; font-size: 13px; padding: 6px 9px; border-radius: 8px; margin: 4px 0 6px; } .ap-status.poi-good { background: #e6f4ea; color: #1b5e2f; } .ap-status.poi-warn { background: #fff4d6; color: #7a5300; } .ap-status.poi-bad { background: #fde4e1; color: #8a1f14; }
+.poi-bad { color: #b03a2e; font-weight: 600; } .poi-warn { color: #a06a00; } .poi-good { color: #1b7a3a; }
+:root[data-mode="dark"] .ap-status.poi-good { background: #173b22; color: #bfe8c8; } :root[data-mode="dark"] .ap-status.poi-warn { background: #3f3210; color: #f5dc9a; } :root[data-mode="dark"] .ap-status.poi-bad { background: #4a1c17; color: #f6c3bc; }
+.pt-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 6px 0 4px; } .pt-key { font-size: 11.5px; }
 .nw2-why { font-size: 12px; color: var(--ink-2); margin: 0 0 10px; }
 #chart-bubble:hover { transform: scale(1.06); }
 #chart-bubble.open { background: var(--accent); color: var(--on-accent); }
@@ -1091,9 +1100,9 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=0810">
-<script src="theme.js?v=0810"></script>
-<script src="theme-apply.js?v=0810"></script>
+<link rel="stylesheet" href="fonts.css?v=0812">
+<script src="theme.js?v=0812"></script>
+<script src="theme-apply.js?v=0812"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1214,18 +1223,19 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=0810"></script>
+<script src="data/places_poi.js?v=0812"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=0810"></script>
-<script src="data/transport.js?v=0810"></script>
-<script src="data/economy.js?v=0810"></script>
+<script src="data/money.js?v=0812"></script>
+<script src="data/transport.js?v=0812"></script>
+<script src="data/economy.js?v=0812"></script>
+<script src="data/airports.js?v=0812"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="stats.js?v=0810"></script>
-<script src="psephology.js?v=0810"></script>
-<script src="charts.js?v=0810"></script>
-<script src="engine.js?v=0810"></script>
-<script src="xlsx.js?v=0810"></script>
+<script src="stats.js?v=0812"></script>
+<script src="psephology.js?v=0812"></script>
+<script src="charts.js?v=0812"></script>
+<script src="engine.js?v=0812"></script>
+<script src="xlsx.js?v=0812"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1235,13 +1245,13 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=0810"></script>
-<script src="apps.js?v=0810"></script>
-<script src="views/views.js?v=0810"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=0812"></script>
+<script src="apps.js?v=0812"></script>
+<script src="views/views.js?v=0812"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=0810"></script>
-<script src="money.js?v=0810"></script>
-<script src="devdesign.js?v=0810"></script>
-<script src="app.js?v=0810"></script>
+<script src="windows.js?v=0812"></script>
+<script src="money.js?v=0812"></script>
+<script src="devdesign.js?v=0812"></script>
+<script src="app.js?v=0812"></script>
 </body>
 </html>

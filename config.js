@@ -6,6 +6,8 @@ window.ATLAS_CONFIG = {
   start: { center: [-3.3, 54.6], zoom: 4.9 },
   homeBounds: [-8.6, 49.9, 1.8, 60.9],
   minZoom: 4.6,
+  // 0.8.1: the address of the flights proxy for live airport boards (docs/flights-proxy.md). Leave empty until it's set up.
+  flightsProxy: "",
   // How long the pointer must rest on an area before its card appears, in milliseconds.
   hoverDelayMs: 500,
   // 0.7.1: a Hoefler&Co Cloud.typography kit for Surveyor and Archer, if you have one (the kit's CSS address). Leave

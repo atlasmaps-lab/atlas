@@ -1,0 +1,6 @@
+name = "atlas-flights"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://atlasmaps-lab.github.io,http://localhost:8740"
