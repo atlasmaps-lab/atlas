@@ -291,7 +291,7 @@ input[type=range] { accent-color: var(--ink); }
 .lg-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-2); border-top: 1px solid var(--rule); padding-top: 6px; }
 
 /* ---------- time bar (bottom-centre) ---------- */
-#timebar { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); bottom: 26px; width: min(640px, calc(100% - 520px)); min-width: 380px; display: grid; grid-template-columns: auto auto 1fr auto; gap: 4px 10px; align-items: center; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; box-shadow: var(--shadow); padding: 7px 12px 5px 6px; }
+#timebar { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); bottom: 26px; width: min(440px, calc(100% - 520px)); min-width: 320px; display: grid; grid-template-columns: auto auto 1fr auto; gap: 4px 10px; align-items: center; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; box-shadow: var(--shadow); padding: 7px 12px 5px 6px; }
 #timebar .grip { width: 10px; height: 30px; cursor: grab; border-radius: 3px; background-image: radial-gradient(circle, var(--ink-3) 1.1px, transparent 1.3px); background-size: 5px 5px; opacity: .8; }
 #timebar .grip:hover { background-color: var(--hover); }
 .dragging, .dragging * { cursor: grabbing !important; user-select: none; }
@@ -492,6 +492,16 @@ body[data-tool="measure"] #map .maplibregl-canvas, body[data-tool="lasso"] #map 
 /* ---------- 1.4: charts, tabs, zones, companies, hot zones, notes ---------- */
 #chart-bubble { position: absolute; right: 14px; bottom: 74px; z-index: 6; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--rule); background: var(--panel); box-shadow: var(--shadow); display: grid; place-items: center; color: var(--ink); padding: 0; transition: transform .2s; }
 #chart-bubble .ico { width: 22px; height: 22px; }
+/* 0.8: Stats for nerds and News, stacked above the chart button (News only when there's news for what's on screen) */
+.fab2 { position: absolute; right: 14px; z-index: 6; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--rule); background: var(--panel); box-shadow: var(--shadow); display: grid; place-items: center; color: var(--ink); cursor: pointer; transition: transform .15s, background var(--fade); }
+.fab2:hover { transform: scale(1.06); } .fab2 .ico { width: 22px; height: 22px; } .fab2[hidden] { display: none; }
+#nerd-bubble { bottom: 130px; } #news-bubble { bottom: 186px; }
+.fab2 .n { position: absolute; top: -3px; right: -3px; min-width: 17px; height: 17px; border-radius: 9px; background: var(--accent); color: var(--on-accent); font: 600 10px/17px var(--f); padding: 0 4px; box-sizing: border-box; text-align: center; }
+body.split .fab2 { right: calc(var(--wsw) + 14px); }
+body.wsfull .fab2 { visibility: hidden; }
+.nw2-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; } .nw2-list li { border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+.nw2-meta { font-size: 11px; color: var(--ink-3); } .nw2-list a { font-weight: 600; color: var(--ink); text-decoration: none; } .nw2-list a:hover { text-decoration: underline; } .nw2-list p { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-2); }
+.nw2-why { font-size: 12px; color: var(--ink-2); margin: 0 0 10px; }
 #chart-bubble:hover { transform: scale(1.06); }
 #chart-bubble.open { background: var(--accent); color: var(--on-accent); }
 #chart-bubble.nudge { animation: bounce .9s ease 2; }
@@ -658,7 +668,7 @@ body.split #map { right: var(--wsw); }
 #ws-div:hover, body.resizing #ws-div { background: linear-gradient(90deg, transparent 2px, #3b78b5 2px, #3b78b5 6px, transparent 6px); }
 body.split #tools-btn, body.split #tools, body.split #chart-bubble, body.split #cmp-fab, body.split #notes-handle, body.split #notes { right: calc(var(--wsw) + 14px); }
 body.split #cmp-fab { right: calc(var(--wsw) + 74px); } body.split #notes-handle { right: var(--wsw); }
-body.split #timebar:not(.moved) { left: calc((100vw - var(--wsw)) / 2); width: min(560px, calc(100vw - var(--wsw) - 280px)); min-width: 300px; }
+body.split #timebar:not(.moved) { left: calc((100vw - var(--wsw)) / 2); width: min(420px, calc(100vw - var(--wsw) - 280px)); min-width: 280px; }
 body.split .maplibregl-ctrl-bottom-right { right: 0; }
 body.wsfull #dock, body.wsfull #legend, body.wsfull #timebar, body.wsfull #chart-bubble, body.wsfull #cmp-fab, body.wsfull #notes-handle, body.wsfull #key-show, body.wsfull #tools-btn { visibility: hidden; }
 .ws-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--rule); }
@@ -692,7 +702,7 @@ svg.tile { width: 100%; height: auto; display: block; background: #f6f4ef; borde
 /* printing (PDF) */
 #print-area { display: none; }
 @media print { body.printing > *:not(#print-area) { display: none !important; } body.printing { overflow: visible; background: #fff; } body.printing #print-area { display: block; } .pitem { page-break-after: always; padding: 10mm; } .pitem h2 { font-size: 18pt; margin: 0 0 4pt; } .ptitle h1 { font-size: 30pt; margin-top: 60mm; } .pmeta { color: #777; font-size: 10pt; margin-bottom: 8pt; } .pitem .cp-styles, .pitem .fctl { display: none; } }
-@media (max-width: 1100px) { #timebar { width: calc(100% - 420px); min-width: 320px; } }
+@media (max-width: 1100px) { #timebar { width: min(440px, calc(100% - 420px)); min-width: 300px; } }
 @media (max-width: 900px) { .search > input { width: 140px; } .tray { left: 120px; right: 12px; transform: none; width: auto; min-width: 0; } #timebar { left: 120px; right: 12px; transform: none; width: auto; min-width: 0; } #legend { width: 230px; } .cmp-page { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; } .cmp-side { max-height: 150px; border-right: 0; border-bottom: 1px solid var(--rule); } .scatter-wrap { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } }
 
@@ -732,7 +742,7 @@ body.resizing, body.resizing * { cursor: nwse-resize !important; user-select: no
 .wsi-head button[data-wssep] { font-size: 11.5px; white-space: nowrap; }
 #measure-label small { opacity: .75; }
 /* Split view: keep the time bar clear of the Perspectives panel in the narrower map pane */
-body.split #timebar:not(.moved) { left: calc(296px + (100vw - var(--wsw) - 296px) / 2); width: min(560px, calc(100vw - var(--wsw) - 316px)); min-width: 260px; }
+body.split #timebar:not(.moved) { left: calc(296px + (100vw - var(--wsw) - 296px) / 2); width: min(420px, calc(100vw - var(--wsw) - 316px)); min-width: 260px; }
 body.split #timebar:not(.moved) .steps { display: none; }
 
 /* 1.7: data honesty */
@@ -772,7 +782,7 @@ sup.est { margin-left: 3px; }
 .tscroll table.cmp { min-width: 100%; }
 #chartp.fwin { overflow: hidden; } #chartp.fwin .cp-body { overflow: auto; }
 /* 1.8: time bar labels fit the width; the current date sits above the handle; the range follows the data */
-#timebar { container-type: inline-size; min-width: 320px; }
+#timebar { container-type: inline-size; min-width: 300px; }
 .track { padding-top: 15px; min-width: 0; }
 .tcur { position: absolute; top: 0; left: 0; font: 600 10px var(--mono); color: var(--ink); white-space: nowrap; padding: 0 3px; border-radius: 3px; background: var(--panel); pointer-events: none; line-height: 14px; }
 .marks span { transform: none; text-align: center; white-space: nowrap; }
@@ -786,7 +796,7 @@ sup.est { margin-left: 3px; }
 @container (max-width: 560px) { #now { display: none; } }
 @container (max-width: 430px) { #date { display: none; } .tb-full { padding: 4px 5px; font-size: 10px; } }
 /* narrow screens: the time bar sits between the Perspectives panel and the chart button; the tabs never run under Tools */
-@media (max-width: 1100px) { #timebar:not(.moved) { left: 300px; right: 76px; transform: none; width: auto !important; } .tabs { max-width: calc(100vw - 830px); } }
+@media (max-width: 1100px) { #timebar:not(.moved) { left: 300px; right: auto; transform: none; width: min(420px, calc(100vw - 376px)) !important; } .tabs { max-width: calc(100vw - 830px); } }
 @media (max-width: 1240px) { .tab:not(.on) span { display: none; } }
 /* 1.8: Clear all at the top of the Perspectives panel; per-perspective "clear"; options with no data say so */
 .dclear:disabled { opacity: .45; cursor: default; color: var(--ink-3); border-color: var(--rule); }
@@ -1114,6 +1124,8 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <div id="notes" hidden></div>
 <div id="hist" hidden></div>
 <div id="tray" class="tray" hidden></div>
+<button id="nerd-bubble" class="fab2" aria-label="Stats for nerds" title="Stats for nerds: regressions, clusters and tests on what you're looking at"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="17" r="1.6"/><circle cx="10" cy="11" r="1.6"/><circle cx="15" cy="13" r="1.6"/><circle cx="19" cy="6" r="1.6"/><path d="M4 20 20 4"/></svg></button>
+<button id="news-bubble" class="fab2" hidden aria-label="News about what you're looking at" title="News about what you're looking at"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 8h3v9a2 2 0 0 1-2 2"/><path d="M7 9h7M7 12h7M7 15h4"/></svg><span class="n"></span></button>
 <button id="cmp-fab" hidden aria-label="Compare the selected places"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5h16"/><path d="M7 16.5v-4M12 16.5V7M17 16.5v-7"/></svg><span class="n"></span></button>
 <div id="cmp" hidden></div>
 <div id="toast" class="toast" hidden></div>

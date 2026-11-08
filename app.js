@@ -57,6 +57,8 @@
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } } };
   const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
   const appListeners = [], notifyApps = () => appListeners.forEach(f => { try { f(); } catch (e) { console.error(e); } });   // live app panels (1.8)
+  let newsSyncT = 0;
+  function syncNewsSoon() { clearTimeout(newsSyncT); newsSyncT = setTimeout(() => { try { syncNewsBubble(); } catch (e) {} }, 120); }   // 0.8: the News button follows what's on screen
   const TOOLS = Object.assign({ zoom: 0.5, cursor: 0.5, contrast: 0.5, overlay: 0.5, soften: 0.25, grid: "off" }, store.get("atlas-13-tools", {}));
   const fillOp = () => +(0.15 + 0.9 * TOOLS.overlay).toFixed(2);
 
@@ -852,9 +854,9 @@
     light: { line: "#7d6f86", nation: "#6d5a7a", pcon: "#8a6d3b", sel: "#1f2a2e", hover: "#3b5b78", edge: "#1f2a2e" }, dark: { line: "#a497ad", nation: "#c2b3cc", pcon: "#d1b27a", sel: "#f2f4f5", hover: "#9fc2e6", edge: "#f2f4f5" },
     cvdLight: { line: "#555555", nation: "#222222", pcon: "#7a4e00", sel: "#000000", hover: "#0072b2", edge: "#000000" }, cvdDark: { line: "#b8b8b8", nation: "#eeeeee", pcon: "#e69f00", sel: "#ffffff", hover: "#56b4e9", edge: "#ffffff" },
   };
-  // 0.7.2: dark mode darkens the panels, not the map (the basemap's dark palette only covered Great Britain, so the
-  // rest of Europe stayed light and the map looked cut out). The map type menu changes the map.
-  const paletteKey = () => look.cvd ? "cvdLight" : "light";
+  // 0.8: dark mode darkens the map as well as the panels. The basemap's dark palette covers every layer, inside Great
+  // Britain (OS Zoomstack) and outside it (the omt-* layers), so nothing is left light.
+  const paletteKey = () => look.mode === "dark" ? (look.cvd ? "cvdDark" : "dark") : (look.cvd ? "cvdLight" : "light");
   const origOpacity = {};
   function setP(id, prop, v) { if (!map.getLayer(id)) return; try { map.setPaintProperty(id, prop, v); } catch (e) {} }
   function widthExpr(stops, k) { const e = ["interpolate", ["linear"], ["zoom"]]; stops.forEach(([z, w]) => e.push(z, +(w * k).toFixed(3))); return e; }
@@ -873,18 +875,25 @@
     syncMenu(); store.set("atlas-uk-look", look);
     try { applyMapColours(); } catch (e) { /* the style isn't ready yet */ }
   }
+  const RELIEF = { map: ["interpolate", ["linear"], ["zoom"], 5, 0.12, 8, 0.2, 12, 0.3], terrain: ["interpolate", ["linear"], ["zoom"], 5, 0.45, 10, 0.6], satellite: 0, hybrid: 0 };
   function rememberOpacity(id, prop) { if (!(id + prop in origOpacity)) { const v = map.getPaintProperty(id, prop); origOpacity[id + prop] = v == null ? 1 : v; } return origOpacity[id + prop]; }
   function applyType() {
     const t = look.type, sat = t === "satellite" || t === "hybrid";
     if (sat) { map.setLayoutProperty("satellite", "visibility", "visible"); setP("satellite", "raster-opacity", 1); }
     else { setP("satellite", "raster-opacity", 0); setTimeout(() => { if (!(look.type === "satellite" || look.type === "hybrid")) try { map.setLayoutProperty("satellite", "visibility", "none"); } catch (e) {} }, 1000); }
-    if (t === "terrain") { map.setLayoutProperty("hillshade", "visibility", "visible"); setP("hillshade", "hillshade-exaggeration", 0.5); }
-    else { setP("hillshade", "hillshade-exaggeration", 0); setTimeout(() => { if (look.type !== "terrain") try { map.setLayoutProperty("hillshade", "visibility", "none"); } catch (e) {} }, 1000); }
+    // 0.8: the lie of the land shows on every map type, faintly when zoomed out and a little more from county zoom;
+    // Terrain makes it strong. Satellite already shows it, so it stays off there.
+    const dark = look.mode === "dark", reliefOf = x => x in RELIEF ? RELIEF[x] : RELIEF.map, relief = reliefOf(t);
+    if (relief) { map.setLayoutProperty("hillshade", "visibility", "visible"); setP("hillshade", "hillshade-exaggeration", relief); }
+    else { setP("hillshade", "hillshade-exaggeration", 0); setTimeout(() => { if (!reliefOf(look.type)) try { map.setLayoutProperty("hillshade", "visibility", "none"); } catch (e) {} }, 1000); }
+    setP("hillshade", "hillshade-shadow-color", dark ? "#05080a" : "#5a5045"); setP("hillshade", "hillshade-highlight-color", dark ? "#3c444a" : "#ffffff"); setP("hillshade", "hillshade-accent-color", dark ? "#0b1013" : "#6f6252");
+    if (sat) setP("satellite", "raster-brightness-max", dark ? 0.82 : 1);
     const roads = OS.groups.roads, labels = OS.groups.labels;
     roads.forEach(id => { const l = map.getLayer(id); if (!l || l.type !== "line") return; const o = rememberOpacity(id, "line-opacity"); setP(id, "line-opacity", t === "satellite" ? 0 : t === "hybrid" ? (typeof o === "number" ? o * 0.85 : o) : o); });
     labels.forEach(id => { if (!map.getLayer(id)) return; const o = rememberOpacity(id, "text-opacity"); setP(id, "text-opacity", t === "satellite" ? 0 : o); });
     if (t === "hybrid") labels.forEach(id => { setP(id, "text-color", "#ffffff"); setP(id, "text-halo-color", "rgba(0,0,0,0.75)"); });
     else if (OS.palettes) { const pal = OS.palettes[paletteKey()]; labels.forEach(id => { const p = pal[id] || {}; if (p["text-color"]) setP(id, "text-color", p["text-color"]); if (p["text-halo-color"]) setP(id, "text-halo-color", p["text-halo-color"]); }); }
+    paintAreaNames();
     ["contours"].forEach(id => { if (!map.getLayer(id)) return; const o = rememberOpacity(id, "line-opacity"); setP(id, "line-opacity", t === "terrain" ? ["interpolate", ["linear"], ["zoom"], 9, 0.25, 12, 0.6, 14, 0.8] : o); });
   }
 
@@ -1034,17 +1043,65 @@
     map.addLayer({ id: "tool-fill", type: "fill", source: "tool", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#3b78b5", "fill-opacity": 0.12 } });
     map.addLayer({ id: "tool-line", type: "line", source: "tool", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": "#1f2a2e", "line-width": 2, "line-dasharray": [2, 1.5] } });
     map.addLayer({ id: "tool-pts", type: "circle", source: "tool", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5.5, "circle-color": "#ffffff", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2 } });
+    addAreaNames();
     applyLook(true); applyLevels(); applyTools();
     const at = document.querySelector(".maplibregl-ctrl-attrib"); if (at) at.classList.remove("maplibregl-compact-show"); // credits folded into the ⓘ button
     map.on("moveend", loadVisibleWards);
     repaint();
   });
+  // ---------- 0.8: area names on the map, shown by size and zoom ----------
+  // Each area's name appears once the area is big enough on screen to hold it: a nation from the start, a county as you
+  // close in, a small borough or a ward only when you zoom towards it. Where names would collide the bigger area wins.
+  const NAME_PX = 72;   // an area must be about this many pixels across before its name shows
+  const KM_PER_PX0 = 44.9;   // km per screen pixel at zoom 0, at the UK's latitude
+  const areaKm2 = (code, f) => { const a = INFO[code] && INFO[code].area; if (a && a[0] > 0) return a[0]; return f ? polysOf(f.geometry).reduce((s, pl) => s + sphArea(pl[0]), 0) : 1; };
+  const nameMinZoom = km2 => +clamp(Math.log2(NAME_PX * KM_PER_PX0 / Math.sqrt(Math.max(km2, 0.02))), 0, 18).toFixed(2);
+  const NAME_LV = { nation: [0, 7.6], region: [Z.region - 0.2, Z.council + 0.6], council: [Z.council - 0.6, Z.ward + 1.2], constituency: [0, 24], ward: [Z.ward, 24] };
+  function nameFeatures(level, fc) {
+    return (fc ? fc.features : []).map(f => { const code = f.properties.code, pt = PT[code]; if (!pt) return null; const km = areaKm2(code, f);
+      return { type: "Feature", geometry: { type: "Point", coordinates: pt }, properties: { code, name: (P[code] && P[code].name) || f.properties.name || code, km: Math.round(km * 10) / 10, minz: level === "nation" ? 0 : nameMinZoom(km) } }; }).filter(Boolean);
+  }
+  const NAME_STYLE = { // nations and regions in spaced capitals, counties smaller capitals, constituencies and wards in normal case
+    nation: { font: ["Noto Sans Bold"], size: ["interpolate", ["linear"], ["zoom"], 4.5, 13, 7, 18], spacing: 0.32, caps: true },
+    region: { font: ["Noto Sans Bold"], size: ["interpolate", ["linear"], ["zoom"], 5.5, 11, 7.5, 14], spacing: 0.22, caps: true },
+    council: { font: ["Noto Sans Bold"], size: ["interpolate", ["linear"], ["zoom"], 6.5, 9.5, 10, 13], spacing: 0.12, caps: true },
+    constituency: { font: ["Noto Sans Regular"], size: ["interpolate", ["linear"], ["zoom"], 6, 9.5, 11, 13], spacing: 0.03, caps: false },
+    ward: { font: ["Noto Sans Regular"], size: ["interpolate", ["linear"], ["zoom"], 10, 10, 14, 13], spacing: 0.02, caps: false },
+  };
+  function addAreaNames() {
+    if (plain) return;   // no basemap means no font server: names stay in the cards
+    LEVELS.forEach(l => {
+      const fc = l === "ward" ? { features: wardFeatures } : G[SRC[l]];
+      map.addSource("names-" + l, { type: "geojson", data: { type: "FeatureCollection", features: nameFeatures(l, fc) } });
+      const st = NAME_STYLE[l], r = NAME_LV[l];
+      map.addLayer({ id: "names-" + l, type: "symbol", source: "names-" + l, minzoom: r[0], maxzoom: r[1],
+        filter: [">=", ["zoom"], ["get", "minz"]],
+        layout: { "text-field": ["get", "name"], "text-font": st.font, "text-size": st.size, "text-letter-spacing": st.spacing, "text-transform": st.caps ? "uppercase" : "none",
+          "text-max-width": 8, "text-padding": 6, "symbol-sort-key": ["-", 0, ["get", "km"]], "text-allow-overlap": false, "text-optional": false },
+        paint: { "text-color": "#4a3f52", "text-halo-color": "rgba(242,239,233,0.85)", "text-halo-width": 1.4, "text-opacity": ["interpolate", ["linear"], ["zoom"], r[0], 0, r[0] + 0.4, 1] } }, map.getLayer("pr-heat") ? "pr-heat" : undefined);
+    });
+    // the basemap's own country names said the same as the nation names
+    if (map.getLayer("country names")) map.setLayoutProperty("country names", "visibility", "none");
+  }
+  function syncAreaNames() { // only the boundary sets being shown get names
+    if (plain || !map.getLayer("names-nation")) return;
+    LEVELS.forEach(l => { const on = LV.auto ? l !== "constituency" : (LV.on.includes(l) || (l === "nation")); map.setLayoutProperty("names-" + l, "visibility", on ? "visible" : "none");
+      map.setLayerZoomRange("names-" + l, LV.auto ? NAME_LV[l][0] : 0, LV.auto ? NAME_LV[l][1] : 24); });
+  }
+  function paintAreaNames() {
+    if (plain || !map.getLayer("names-nation")) return;
+    const dark = look.mode === "dark", hyb = look.type === "satellite" || look.type === "hybrid";
+    LEVELS.forEach(l => { setP("names-" + l, "text-color", hyb ? "#ffffff" : dark ? (l === "nation" || l === "region" ? "#c9bfd2" : "#d6d0db") : (l === "nation" || l === "region" ? "#5b4a6a" : "#3f3a45"));
+      setP("names-" + l, "text-halo-color", hyb ? "rgba(0,0,0,0.7)" : dark ? "rgba(20,24,27,0.85)" : "rgba(242,239,233,0.85)"); });
+  }
+  if (window.AtlasDebug) { Object.assign(window.AtlasDebug, { nameMinZoom, nameFeatures: l => nameFeatures(l, l === "ward" ? { features: wardFeatures } : G[SRC[l]]), paletteKey: () => paletteKey() }); Object.defineProperty(window.AtlasDebug, "LV", { get: () => LV }); }
   window.ATLAS_WARDS_LOADED = function (council, fc) {
     if (loadedWards.has(council + ":done")) return; loadedWards.add(council + ":done");
     const pts = fc.features.map(ptFeature); pts.forEach(f => { PT[f.properties.code] = f.geometry.coordinates; });
     wardFeatures.push(...fc.features); wardPoints.push(...pts);
     map.getSource("wards").setData({ type: "FeatureCollection", features: wardFeatures });
     map.getSource("pt-ward").setData({ type: "FeatureCollection", features: wardPoints });
+    if (map.getSource("names-ward")) map.getSource("names-ward").setData({ type: "FeatureCollection", features: nameFeatures("ward", { features: wardFeatures }) });
     map.once("idle", () => { state.sel.forEach(t => t.level === "ward" && setFS(t, { sel: true })); paintLevel("ward"); });
   };
   // ---------- 0.7.1: the hex map is a whole-map view, not an overlay ----------
@@ -1292,7 +1349,7 @@
     curPlan = EN.plan(planMetrics(), PS.prefs); syncRange();
     if (state.iso && state.iso.ch !== "nd" && !curPlan[state.iso.ch === "vbl" ? "hue" : state.iso.ch]) state.iso = null;
     if (map.getSource && map.getSource("councils")) { LEVELS.forEach(paintLevel); syncProtestLayer(); syncCompanyLayer(); syncZones(); }
-    renderLegend(); renderDock(); renderSup(); renderTNote(); syncFocusColour();
+    renderLegend(); renderDock(); renderSup(); renderTNote(); syncFocusColour(); syncNewsSoon();
     if (pmOpen) renderPMenu();
     if (state.focus) { renderMind(); refreshPinned(); }
     renderTray(); if (!$("cmp").hidden) renderCmp(); if (!cpanel.hidden && CHART.drawn) renderChartBody();
@@ -1719,14 +1776,14 @@
   // Chosen: the person ticks boundary sets in the Areas menu; they show at any zoom and the map never moves.
   // The most recently ticked set is the "active" one: it takes the colours, hover cards and clicks; the others show as outlines.
   const levelAt = z => z >= Z.ward ? "ward" : z >= Z.council ? "council" : z >= Z.region ? "region" : "nation";
-  const LV = Object.assign({ auto: true, on: [], active: null }, store.get("atlas-031-levels", {}));
+  // 0.8: Atlas always opens in Automatic; a boundary set picked by hand lasts until the page is closed
+  const LV = { auto: true, on: [], active: null };
   LV.on = (LV.on || []).filter(l => LEVELS.includes(l)); if (!LV.on.length || !LEVELS.includes(LV.active)) { LV.auto = true; LV.on = []; LV.active = null; }
   const FINE = ["ward", "constituency", "council", "region", "nation"];
   const fillIds = l => ["pf-" + l, ...[0, 1, 2, 3, 4].map(k => `pdt-${l}-${k}`), l + "-fill", "pd-" + l, "pb-" + l];
   const LINE_OF = { nation: "nation-line", region: "region-line", council: "council-line", constituency: "constituency-line", ward: "ward-line" };
   const AUTO_LINE = { nation: [0, 0.9], region: [Z.region - 0.3, 0.85], council: [Z.council - 0.3, ["interpolate", ["linear"], ["zoom"], Z.council - 0.3, 0, Z.council, 0.8]], ward: [Z.ward - 0.3, ["interpolate", ["linear"], ["zoom"], Z.ward - 0.3, 0, Z.ward, 0.7]] };
   function applyLevels() {
-    store.set("atlas-031-levels", LV);
     if (!map.getLayer || !map.getLayer("pf-nation")) { syncLevel(); return; }
     LEVELS.forEach(l => {
       const on = LV.auto ? l !== "constituency" : l === LV.active, range = LV.auto ? VIS[l] : [0, 24];
@@ -1735,7 +1792,7 @@
       if (LV.auto) { map.setLayoutProperty(ln, "visibility", a ? "visible" : "none"); if (a) { map.setLayerZoomRange(ln, a[0], 24); setP(ln, "line-opacity", a[1]); } }
       else { const show = LV.on.includes(l) || l === "nation"; map.setLayoutProperty(ln, "visibility", show ? "visible" : "none"); map.setLayerZoomRange(ln, 0, 24); setP(ln, "line-opacity", l === "ward" ? 0.7 : 0.85); }
     });
-    clearHover(); syncLevel(); loadVisibleWards(); renderLevelPicker(); syncPcon();
+    clearHover(); syncLevel(); loadVisibleWards(); renderLevelPicker(); syncPcon(); syncAreaNames();
   }
   function syncLevel() { const l = LV.auto ? levelAt(map.getZoom()) : LV.active; const changed = l !== state.level; state.level = l; if (changed) { renderLegend(); renderLevelPicker(); if (pmOpen) renderPMenu(); } }
   map.on("zoom", () => { if (LV.auto) syncLevel(); });
@@ -2133,7 +2190,7 @@
     syncFocusColour(); veil.classList.add("on"); document.body.classList.add("focused");
     card.className = "card pinned"; card.innerHTML = cardHTML(code, true); card.hidden = false; hist.hidden = true;
     if (!(opts && opts.noFly)) flyTo(code, 0, true);
-    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList(); notifyApps();
+    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList(); notifyApps(); syncNewsSoon();
   }
   function unfocus() {
     if (!state.focus && !state.pinned) return;
@@ -2141,7 +2198,7 @@
     veil.classList.remove("on"); document.body.classList.remove("focused"); veil.style.clipPath = ""; veil.style.webkitClipPath = ""; mind.innerHTML = ""; card.hidden = true; hist.hidden = true;
     setP("focus-lift", "fill-opacity", 0); setP("focus-edge", "line-opacity", 0); setP("focus-shadow", "line-opacity", 0);
     setTimeout(() => { if (!state.focus && map.getSource("focus")) map.getSource("focus").setData({ type: "FeatureCollection", features: [] }); }, 320);
-    renderTray(); renderProtestList(); notifyApps();
+    renderTray(); renderProtestList(); notifyApps(); syncNewsSoon();
   }
   function syncFocusColour() { if (!FX) return; const c = LAST.fc[FX.code]; setP("focus-lift", "fill-color", c || "#ffffff"); }
   function updateOverlay() {
@@ -2341,7 +2398,7 @@
   const fab = $("cmp-fab");
   function renderTray() {
     tray.hidden = true; const n = state.sel.length;
-    fab.hidden = !n; fab.querySelector(".n").textContent = n;
+    fab.hidden = !n; fab.querySelector(".n").textContent = n; syncNewsSoon();
     fab.title = n ? `Compare the ${n} selected ${n === 1 ? "place" : "places"} (right-click an area to deselect it)` : "";
   }
   fab.addEventListener("click", openCmp);
@@ -3970,6 +4027,37 @@
     isMapped: id => isMapped(id), kids: c => (UNDER[c] || []).slice(),
   };
   window.AtlasCtx = CTX;
+
+  // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------
+  // News shows only when the feed has items for what's on screen: the focused place (or anything inside it), the topics
+  // of the perspectives being mapped or of the open view, and the selected places.
+  const TOPIC_OF = { political: ["Elections", "Local government"], economic: ["Economy", "Housing"], social: ["Housing", "Immigration", "Education", "Crime & justice"], health: ["Health"], transport: ["Transport"], markets: ["Economy"], environment: ["Environment"] };
+  $("nerd-bubble").addEventListener("click", () => openAnalyse({}));
+  function newsNow() {
+    const N = window.ATLAS_NEWS; if (!N || !N.items) return { items: [], why: "" };
+    const places = new Set(), why = [];
+    const addPlace = c => { if (!c || !P[c]) return; places.add(c); (UNDER[c] || []).forEach(k => places.add(k)); if (lvlOf(c) === "council") Object.keys(P).forEach(w => { if (P[w].parent === c) places.add(w); }); };
+    if (state.focus) { addPlace(state.focus); why.push(nameOf(state.focus)); }
+    state.sel.forEach(x => addPlace(x.code)); if (state.sel.length) why.push(state.sel.length === 1 ? nameOf(state.sel[0].code) : state.sel.length + " selected places");
+    const persp = new Set(onPersps().filter(p => (PS.mapped[p] || []).length)); if (APP) persp.add(APP.perspective);
+    const topics = new Set(); persp.forEach(p => (TOPIC_OF[p] || []).forEach(t => topics.add(t)));
+    let items;
+    if (places.size) items = N.items.filter(it => it.pl.some(c => places.has(c)));
+    else { items = topics.size ? N.items.filter(it => it.tp.some(t => topics.has(t))) : []; if (topics.size) why.push([...topics].join(", ")); }
+    return { items: items.slice(0, 60), why: why.join(" · ") };
+  }
+  let newsWin = null;
+  function syncNewsBubble() { const b = $("news-bubble"), n = newsNow().items.length; b.hidden = !n; b.querySelector(".n").textContent = n > 99 ? "99+" : n; if (newsWin && !newsWin.el.hidden) renderNewsWin(); }
+  function renderNewsWin() {
+    const { items, why } = newsNow(), N = window.ATLAS_NEWS || {};
+    newsWin.setBody(`<p class="nw2-why">${items.length} items about <b>${esc(why || "this view")}</b>, newest first. Official sources (GOV.UK, UK Parliament), refreshed daily${N.built ? ` (${esc(longDate(N.built))})` : ""}.</p>
+      <ul class="nw2-list">${items.map(it => `<li><div class="nw2-meta">${esc(longDate(it.d))} · ${esc(it.s)}</div><a href="${esc(it.u)}" target="_blank" rel="noopener">${esc(it.t)}</a>${it.x ? `<p>${esc(it.x)}</p>` : ""}</li>`).join("")}</ul>`);
+  }
+  $("news-bubble").addEventListener("click", () => {
+    if (!newsWin) newsWin = WM.make({ type: "news", title: "News", dispose: false, min: { w: 300, h: 220 }, def: () => ({ x: innerWidth - 400 - 76, y: 70, w: 400, h: Math.round(innerHeight * 0.6) }) });
+    WM.open(newsWin.el); renderNewsWin();
+  });
+  CTX.newsNow = newsNow;
   const appWins = {};
   function openAppPanel(id) {
     const x = [...APP.panels, ...APP.tools].find(p => p.id === id); if (!x) return;
@@ -4097,7 +4185,7 @@
   draggable(legend, $("legend-grip"), "atlas-031-legend-pos", positionLegend);
   resizable(legend, "atlas-061-legend-size", { minW: 240, minH: 120, after: positionLegend });
   // 0.7.2: the time bar stays centred at the bottom (it can't be moved) and resizes from every edge and corner
-  resizable(timebar, "atlas-072-timebar-size", { fixed: true, minW: 320, minH: 64 });
+  resizable(timebar, "atlas-08-timebar-size", { fixed: true, minW: 300, minH: 64 });   // 0.8: a shorter bar; sizes saved by 0.7.2 are left behind
   $("legend-grip").insertAdjacentHTML("beforeend", `<button class="kclear" data-lclear title="Take everything off the map (Esc)">Clear all</button>`);
   $("legend-grip").querySelector(".kx") && $("legend-grip").appendChild($("legend-grip").querySelector(".kx"));
   $("legend-x").addEventListener("click", () => { setKeyHidden(true); toast("Key closed. Press Key (bottom left) to bring it back."); });
