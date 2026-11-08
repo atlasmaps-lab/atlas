@@ -34,11 +34,22 @@
     el.innerHTML = `<h4>${ctx.esc(ctx.nameOf(c))}</h4><div class="ap-row">From <input type="number" data-dc="y0" value="${DC.y0}" style="width:70px"> to <input type="number" data-dc="y1" value="${DC.y1}" style="width:70px"></div>${body}`;
     el.onchange = e => { const k = e.target.dataset.dc; if (k) { DC[k] = +e.target.value; decomp(ctx, el); } };
   }
-  function missing(ctx, el) { el.innerHTML = `<p>Not available yet in Atlas Economic:</p><ul><li>Household income (GDHI) by place</li><li>Jobs, employment rate and earnings</li><li>Productivity per hour worked</li></ul><p class="ap-note">None of these is loaded; they are the next sources to add (ONS, Open Government Licence).</p>`; }
+  function missing(ctx, el) { el.innerHTML = `<p>Not available yet in Atlas Economic:</p><ul><li>Household income (GDHI) by place</li><li>Jobs, employment rate and earnings by place (the UK figures are in Indicators)</li><li>Productivity per hour worked</li></ul><p class="ap-note">None of these is loaded; they are the next sources to add (ONS, Open Government Licence).</p>`; }
+  // 0.8: the top bar follows what an economist tracks: the headline indicators, forecasts against outturn, the regions,
+  // the release calendar, then the place view and rankings (econ.js holds the shared panels)
+  const EC = id => (ctx, el) => window.AtlasEcon ? AtlasEcon[id](ctx, el) : (el.innerHTML = "<p class='ap-note'>The economic panels didn't load.</p>");
   window.AtlasApps && AtlasApps.register({
     id: "economic", name: "Atlas Economic", perspective: "economic", accent: "#13876b", dataNeeds: ["ATLAS_SERIES"],
-    init(ctx) { ctx.mapOnly(["gdp_per_head"]); ctx.openPanel("dashboard"); },
-    panels: [{ id: "dashboard", title: "Place dashboard", live: true, render: dashboard }, { id: "rankings", title: "Rankings", live: true, render: rankings }, { id: "missing", title: "Not available yet", render: missing }],
-    tools: [{ id: "decomp", title: "Growth decomposition", live: true, render: decomp }],
+    init(ctx) { ctx.mapOnly(["gdp_per_head"]); ctx.openPanel("indicators"); },
+    panels: [
+      { id: "indicators", title: "Indicators", blurb: "GDP, inflation, jobs, pay, public finances and trade: latest, trend and next release", render: EC("indicators"), min: { w: 520, h: 420 } },
+      { id: "forecasts", title: "Forecasts vs outturn", blurb: "Independent forecasters and the OBR, against what was published", render: EC("forecasts"), min: { w: 520, h: 380 } },
+      { id: "regions", title: "Regions", blurb: "GVA per head and growth by region", render: EC("regions"), min: { w: 480, h: 380 } },
+      { id: "calendar", title: "Release calendar", render: EC("calendar"), min: { w: 440, h: 360 } },
+      { id: "rates", title: "Rates & sterling", render: EC("rates"), min: { w: 480, h: 320 } },
+      { id: "dashboard", title: "Place dashboard", live: true, render: dashboard },
+      { id: "rankings", title: "Rankings", live: true, render: rankings },
+    ],
+    tools: [{ id: "decomp", title: "Growth decomposition", live: true, render: decomp }, { id: "missing", title: "Not available yet", render: missing }],
   });
 })();

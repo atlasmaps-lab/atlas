@@ -1,6 +1,57 @@
-# Atlas 0.7.1 — United Kingdom
+# Atlas 0.8 — United Kingdom
 
-Atlas 0.7.1 is Ruben's round of fixes and features on top of 0.7 (Mo's numbering; the sections below call 0.7 "1.8"). The next version is 0.7.2.
+Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
+
+## What's new in 0.8
+
+**The map**
+- **Dark mode darkens the map too**, in Great Britain and abroad, on every map type. Relief shading shows the lie of the land on every map type, faintly, and stays visible through the data colours.
+- **Area names on the map.** Nations, regions, counties, constituencies and wards are labelled. Each name appears once the area is big enough on screen to hold it, so small places show their name only as you zoom towards them.
+- **Zoom is always Automatic** when Atlas opens (a boundary set picked by hand lasts until the page closes).
+- **The time bar is shorter.**
+- **New round buttons** above the chart button:
+  - **Stats for nerds** (Analyse)
+  - **News**, shown only when there is news for what's on screen
+- **Map symbols** (click one for its card, with figures and trends; all are in search):
+  - airports: a plane (CAA passengers)
+  - ports: a ship (DfT freight)
+  - railway stations: a train (ORR entries and exits)
+  - financial centres: a bank (the four districts, the Bank of England, the Stock Exchange, Lloyd's, the FCA, Edinburgh)
+- **Bus, tram and ferry stops** appear at street zoom (NaPTAN), with live arrivals for London stops (TfL).
+
+**Written context beside the numbers.** Atlas gathers official releases, briefings and forecasts, and writes headline sentences from the official figures ("UK GDP grew 0.5% in April to June 2026…"). Each is tied to the metrics and places it's about, and shows in:
+- area cards
+- the ⓘ metric information ("Recent context", and what's coming)
+- charts
+
+Sources are the ONS release calendar and time series, the Commons Library, the OBR, the Bank of England and GOV.UK statistics (`pipeline/fetch_context.py`, daily).
+
+**Money in politics** (Atlas Politics → Money, and wherever there's a money link):
+- **Data:**
+  - every donation and loan reported to the Electoral Commission since 2001
+  - MPs' registered interests
+  - ministers' meetings with outside organisations
+  - companies that donate and have won public contracts (Find a Tender)
+- **Cards:** for MPs, parties, donors and places. Seat cards show a "Political money" line, and FTSE 100 company cards show a possible donor link.
+- **On the map:** the metric "Political donations registered here".
+
+Wording is strictly "registered". See `pipeline/reports/validation_money.md` for match rates.
+
+**Atlas Transport** (new): directions by car, bike, on foot, hiking or public transport (rail, Tube, tram, bus, ferry), isochrones ("where can I get to in 30 minutes, and who lives there"), hiking and cycling trails, the busiest stations, airports and ports, and transport metrics on the map.
+
+**Atlas Social** is now a social layer on the map:
+- feed, posts with photos (location data removed) and video, events, messages, profile and safety
+- an anonymous activity map, shown only where at least 10 people checked in
+- a **marketplace**, also in Atlas Markets, with no payments: banned items are blocked, and the total price and whether the seller is a trader are always shown
+
+It runs in your browser only, with demo content, until the UK launch checklist is done (`docs/social-launch-checklist.md`). The statistics are kept, with a new **Deprivation** panel.
+
+**Views built around specialists** (`docs/perspective-research.md`):
+- **Economic:** Indicators (16 headline series), Forecasts vs outturn (HM Treasury's consensus and the OBR), Regions, Release calendar, Rates & sterling.
+- **Health:** Against England (a Fingertips-style spine chart) and Inequality (by deprivation decile).
+- **Markets:** Rates & sterling, Political money, Marketplace.
+- **Social:** Deprivation (IMD 2025, seven domains). Deprivation is on the map too, for England's councils.
+
 
 ## Views have their own folders
 

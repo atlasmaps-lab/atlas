@@ -57,6 +57,8 @@
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } } };
   const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
   const appListeners = [], notifyApps = () => appListeners.forEach(f => { try { f(); } catch (e) { console.error(e); } });   // live app panels (1.8)
+  let newsSyncT = 0;
+  function syncNewsSoon() { clearTimeout(newsSyncT); newsSyncT = setTimeout(() => { try { syncNewsBubble(); } catch (e) {} }, 120); }   // 0.8: the News button follows what's on screen
   const TOOLS = Object.assign({ zoom: 0.5, cursor: 0.5, contrast: 0.5, overlay: 0.5, soften: 0.25, grid: "off" }, store.get("atlas-13-tools", {}));
   const fillOp = () => +(0.15 + 0.9 * TOOLS.overlay).toFixed(2);
 
@@ -257,7 +259,7 @@
     { id: "economic", bar: ["#a4ac86", "#333d29"], name: "Economic", hue: "#13876b", ready: true, ramp: ["#e3f4ee", "#b3e0cf", "#73c2a6", "#33997b", "#0f6b52"], desc: "Output and income, every year since 1998." },
     { id: "social", bar: ["#d69f7e", "#774936"], name: "Social", hue: "#d0701c", ready: true, ramp: ["#fdeedc", "#f9cf9f", "#f2a65c", "#d97a26", "#a3510f"], desc: "Population every year since 1998; age latest only." },
     { id: "health", bar: ["#ff8fa3", "#a4133c"], name: "Health", hue: "#c2364b", ready: false, ramp: ["#fbe9ec", "#f3bcc5", "#e48596", "#c94f66", "#8f2338"], planned: ["Life expectancy", "Healthy life expectancy", "Patients per GP", "Obesity rate"], desc: "Not loaded yet." },
-    { id: "transport", bar: ["#90e0ef", "#023e8a"], name: "Transportation", hue: "#2b6cb0", ready: false, planned: ["Commute time", "Households without a car", "Rail stations", "Bus services"], desc: "Not loaded yet." },
+    { id: "transport", bar: ["#90e0ef", "#023e8a"], name: "Transportation", hue: "#2b6cb0", ready: !!(window.ATLAS_POI || window.ATLAS_TRANSPORT), ramp: ["#e3eef8", "#b5d0ea", "#7aa9d6", "#3f7fbf", "#1d5590"], planned: ["Commute time", "Households without a car", "Road traffic", "Road casualties"], desc: "Railway stations and how busy they are, airports and ports, bus and tram stops; directions and journey planning in Atlas Transport." },
     { id: "analysis", name: "Analysis", hue: "#4a4f55", ready: false, hidden: true, ramp: ["#eef0f1", "#cfd4d8", "#a3abb2", "#6f7880", "#3d444b"], planned: [], desc: "Results you put on the map from the Analyse window: clusters, residuals, component scores, hot spots." },
     { id: "markets", bar: ["#8d99ae", "#2b2d42"], name: "Markets", hue: "#a07a12", ready: !!MK, ramp: ["#fbf3d5", "#f1dc93", "#ddb94f", "#b8902a", "#7d5f12"], planned: ["House prices", "Rents", "Business births", "Broadband speed"], desc: "Test case: FTSE 100 companies headquartered in London, and London's financial districts." },
   ];
@@ -677,6 +679,13 @@
     get(code, d) { const r = compAt(code, d); if (!r) return null; const v = PSE.enp(Object.values(r[2]).map(n => n / r[1])); return v ? { v, text: this.fmt(v), yr: compWhen(r) } : null; } });
   // political: representation (1.7)
   const G8 = "Representation";
+  // 0.8: money in politics (data/money.js). Registered donations to local parties and MPs here, in the five years to the date
+  const MO = window.ATLAS_MONEY, G9 = "Money in politics";
+  if (MO) def({ id: "money_received", p: "political", group: G9, label: "Political donations registered here (5 years)", scale: "ratio", nature: "amount", temporal: "annual", fmt: v => "£" + fmtInt(v),
+    levels: ["constituency", "council"], nmText: { ward: "Registered by constituency and council parties, not wards", region: "Shown for constituencies and councils (the local party units that registered them)", nation: "Shown for constituencies and councils", country: "Shown for constituencies and councils" },
+    source: MO.sources, how: "Donations registered with the Electoral Commission by local party units matched to this place (by name), plus donations registered to the MP for this seat, in the five calendar years to the date. Units covering several seats aren't placed.",
+    desc: "Money registered by local parties and MPs here",
+    get(code, d) { const v = window.AtlasMoney ? AtlasMoney.placeTotal(code, d) : null; return v ? { v, text: "£" + fmtInt(v), yr: `${+d.slice(0, 4) - 4}–${d.slice(0, 4)}` } : { v: null, text: "None registered" }; } });
   function regAt(code) { // 2024 constituencies; regions and nations add up their constituencies (England and Wales: adults by seat)
     const R = LOC.reg; if (!R) return null; const lv = P[code].level;
     if (lv === "constituency") { const r = R[code]; return r ? { reg: r[0], adults: r[1], n: 1 } : null; }
@@ -723,6 +732,51 @@
     get(code, d) { const a = (INFO[code] || {}).area; const p = popAt(code, d); if (!a || !a[0] || !p) return null; const v = p / a[0]; return { v, text: this.fmt(v) }; } });
   def({ id: "pop_change", p: "social", label: "Population change (10 years)", scale: "interval", nature: "change", temporal: "annual", mid: 0, fmt: fmtPct, desc: "Growth over the 10 years to the date",
     get(code, d) { const a = serAt("population", code, d); if (!a) return null; const b = serAt("population", code, (a.yr - 10) + "-07-01"); if (!b || b.yr !== a.yr - 10) return null; const v = (a.v / b.v - 1) * 100; return { v, text: this.fmt(v), yr: `${b.yr}–${a.yr}` }; } });
+  // ---------- 0.8: transport (stations, airports and ports from data/places_poi.js; stops from data/transport.js) ----------
+  const TR = window.ATLAS_TRANSPORT || null, POIDATA = window.ATLAS_POI || null, GT = "Stations, stops and hubs";
+  const COUNCIL_LV = ["council", "region", "nation", "country"], TR_NM = { ward: "Counted by council", constituency: "Counted by council (stations and stops are filed under their council)" };
+  const councilsIn = code => P[code].level === "council" ? [code] : (UNDER[code] || []).filter(c => P[c] && P[c].level === "council");
+  const sumCouncils = (code, f) => { let t = 0, any = false; councilsIn(code).forEach(c => { const v = f(c); if (v != null) { t += v; any = true; } }); return any ? t : null; };
+  const poiBy = {}; if (POIDATA) POIDATA.items.forEach(i => { if (i.c) (poiBy[i.c + ":" + i.k] = poiBy[i.c + ":" + i.k] || []).push(i); });
+  const poiYear = (i, y) => { if (!i.s) return null; const k = y - i.s[0] + 1; return k >= 1 && k < i.s.length ? i.s[k] : null; };
+  const TR_MAXY = {}; if (POIDATA) POIDATA.items.forEach(i => { if (i.s) TR_MAXY[i.k] = Math.max(TR_MAXY[i.k] || 0, i.s[0] + i.s.length - 2); });
+  const trYear = (kind, code, d) => { const y = Math.min(+d.slice(0, 4), TR_MAXY[kind] || 9999); return sumCouncils(code, c => { const xs = poiBy[c + ":" + kind]; if (!xs) return null; let t = 0, ok = false; xs.forEach(i => { const v = poiYear(i, y); if (v != null) { t += v; ok = true; } }); return ok ? t : null; }); };
+  if (POIDATA) {
+    def({ id: "rail_usage", p: "transport", group: GT, label: "Rail journeys (entries and exits)", scale: "ratio", nature: "count", temporal: "annual", levels: COUNCIL_LV, nmText: TR_NM, fmt: v => fmtBig(v), span: () => ["2013-01-01", TODAY],
+      source: POIDATA.sources.station, desc: "Entries and exits at the area's railway stations in the year to March", how: "ORR's estimates of station usage, summed over the stations in the area (April to March; the year shown is the one ending in March)",
+      get(code, d) { const v = trYear("station", code, d); const y = Math.min(+d.slice(0, 4), TR_MAXY.station || 9999); return v != null ? { v, text: fmtBig(v), yr: `${y - 1}–${String(y).slice(2)}` } : { v: null, text: "No stations with figures" }; } });
+    def({ id: "rail_stations", p: "transport", group: GT, label: "Railway stations", scale: "ratio", nature: "count", temporal: "static", levels: COUNCIL_LV, nmText: TR_NM, fmt: fmtInt, source: POIDATA.sources.station, desc: "National Rail stations in the area (with ORR usage figures)",
+      get(code) { const v = sumCouncils(code, c => (poiBy[c + ":station"] || []).length || null); return { v: v || 0, text: fmtInt(v || 0) }; } });
+    def({ id: "air_pax", p: "transport", group: GT, label: "Airport passengers", scale: "ratio", nature: "count", temporal: "annual", levels: COUNCIL_LV, nmText: TR_NM, fmt: v => fmtBig(v), span: () => ["2015-01-01", TODAY], source: POIDATA.sources.airport,
+      desc: "Terminal passengers at the area's airports in the year", get(code, d) { const v = trYear("airport", code, d); return v != null ? { v, text: fmtBig(v), yr: String(Math.min(+d.slice(0, 4), TR_MAXY.airport || 9999)) } : { v: null, text: "No airport" }; } });
+    def({ id: "port_freight", p: "transport", group: GT, label: "Port freight (tonnes)", scale: "ratio", nature: "count", temporal: "annual", levels: COUNCIL_LV, nmText: TR_NM, fmt: v => fmtBig(v) + " t", span: () => ["2011-01-01", TODAY], source: POIDATA.sources.port,
+      desc: "Freight handled by the area's major ports in the year", get(code, d) { const v = trYear("port", code, d); return v != null ? { v, text: fmtBig(v) + " t", yr: String(Math.min(+d.slice(0, 4), TR_MAXY.port || 9999)) } : { v: null, text: "No major port" }; } });
+  }
+  if (TR) {
+    def({ id: "bus_stops", p: "transport", group: GT, label: "Bus and coach stops", scale: "ratio", nature: "count", temporal: "static", levels: COUNCIL_LV, nmText: TR_NM, fmt: fmtInt, source: TR.sources.stops, desc: "Active bus and coach stops (NaPTAN)",
+      get(code) { const v = sumCouncils(code, c => TR.stops[c] ? TR.stops[c][0] : null); return v != null ? { v, text: fmtInt(v), yr: TR.built.slice(0, 4) } : { v: null, text: "Not in NaPTAN (Northern Ireland)" }; } });
+    def({ id: "bus_stop_density", p: "transport", group: GT, label: "Bus stops per km²", scale: "ratio", nature: "rate", temporal: "static", levels: COUNCIL_LV, nmText: TR_NM, fmt: v => v.toFixed(1) + " per km²", source: TR.sources.stops, desc: "How densely bus stops cover the area",
+      get(code) { const n = sumCouncils(code, c => TR.stops[c] ? TR.stops[c][0] : null), a = (INFO[code] || {}).area; return n != null && a && a[0] ? { v: n / a[0], text: (n / a[0]).toFixed(1) + " per km²", yr: TR.built.slice(0, 4) } : { v: null, text: "No figure" }; } });
+  }
+  // ---------- 0.8: deprivation (English Indices of Deprivation 2025, by council; data/economy.js) ----------
+  const ECON = window.ATLAS_ECONOMY || null, GD = "Deprivation (England, 2025)";
+  if (ECON && ECON.imd && Object.keys(ECON.imd).length) {
+    const IMD = ECON.imd, nIMD = Object.keys(IMD).length, IMD_NM = { ward: "By council (the index's own neighbourhoods are smaller than wards)", constituency: "By council", region: "By council", nation: "By council", country: "By council" };
+    const imdValid = code => /^E/.test(code) ? null : "England only: Wales, Scotland and Northern Ireland publish their own indices, which can't be compared with England's";
+    const SRC_IMD = "MHCLG, English Indices of Deprivation 2025, file 10 (local authority summaries), Open Government Licence v3.0";
+    def({ id: "imd_score", p: "social", group: GD, label: "Deprivation score (IMD 2025)", scale: "ratio", nature: "rate", temporal: "static", levels: ["council"], nmText: IMD_NM, valid: imdValid, fmt: v => v.toFixed(1), source: SRC_IMD,
+      desc: "Average deprivation score of the area's neighbourhoods (higher = more deprived)", how: "The population-weighted average of the area's neighbourhood (LSOA) scores on the Index of Multiple Deprivation",
+      get(code) { const r = IMD[code] && IMD[code].IMD; return r ? { v: r[0], text: r[0].toFixed(1), yr: "2025" } : { v: null, text: imdValid(code) ? "England only" : "Not in the index" }; } });
+    def({ id: "imd_decile", p: "social", group: GD, label: "Deprivation decile (1 = most deprived)", scale: "ordinal", nature: "rank", temporal: "static", levels: ["council"], nmText: IMD_NM, valid: imdValid, fmt: v => "Decile " + v, source: SRC_IMD,
+      desc: "Where the area ranks among England's local authorities, in tenths (1 = the most deprived tenth)", breaks: [2.5, 4.5, 6.5, 8.5],
+      get(code) { const r = IMD[code] && IMD[code].IMD; if (!r) return { v: null, text: "England only" }; const d = Math.min(10, 1 + Math.floor((r[1] - 1) / (nIMD / 10))); return { v: d, text: `Decile ${d} (rank ${r[1]} of ${nIMD})`, yr: "2025" }; } });
+    def({ id: "imd_share10", p: "social", group: GD, label: "Neighbourhoods in England's most deprived 10%", scale: "ratio", nature: "share", temporal: "static", levels: ["council"], nmText: IMD_NM, valid: imdValid, fmt: v => (100 * v).toFixed(0) + "%", source: SRC_IMD,
+      desc: "Share of the area's neighbourhoods among the most deprived 10% in England",
+      get(code) { const r = IMD[code]; return r && r.share10 != null ? { v: r.share10, text: (100 * r.share10).toFixed(0) + "%", yr: "2025" } : { v: null, text: "England only" }; } });
+    [["Income", "income"], ["Employment", "employment"], ["Education", "education, skills and training"], ["Health", "health and disability"], ["Crime", "crime"], ["Barriers", "barriers to housing and services"], ["Living", "living environment"]].forEach(([k, l]) =>
+      def({ id: "imd_" + k.toLowerCase(), p: "social", group: GD, label: `Deprivation: ${l} (rank)`, scale: "ordinal", nature: "rank", temporal: "static", levels: ["council"], nmText: IMD_NM, valid: imdValid, fmt: v => "Rank " + v, source: SRC_IMD,
+        desc: `Rank on the ${l} domain among England's local authorities (1 = most deprived)`, get(code) { const r = IMD[code] && IMD[code][k]; return r ? { v: r[1], text: `Rank ${r[1]} of ${nIMD}`, yr: "2025" } : { v: null, text: "England only" }; } }));
+  }
   def({ id: "average_age", p: "social", label: "Average age", scale: "ratio", nature: "rate", temporal: "static", fmt: v => v.toFixed(1) + " years", desc: "Mean age (latest year only)",
     get(code) { const x = (INFO[code] || {}).average_age; return x ? { v: x[0], text: x[0].toFixed(1) + " years", yr: x[2] } : null; } });
 
@@ -852,9 +906,9 @@
     light: { line: "#7d6f86", nation: "#6d5a7a", pcon: "#8a6d3b", sel: "#1f2a2e", hover: "#3b5b78", edge: "#1f2a2e" }, dark: { line: "#a497ad", nation: "#c2b3cc", pcon: "#d1b27a", sel: "#f2f4f5", hover: "#9fc2e6", edge: "#f2f4f5" },
     cvdLight: { line: "#555555", nation: "#222222", pcon: "#7a4e00", sel: "#000000", hover: "#0072b2", edge: "#000000" }, cvdDark: { line: "#b8b8b8", nation: "#eeeeee", pcon: "#e69f00", sel: "#ffffff", hover: "#56b4e9", edge: "#ffffff" },
   };
-  // 0.7.2: dark mode darkens the panels, not the map (the basemap's dark palette only covered Great Britain, so the
-  // rest of Europe stayed light and the map looked cut out). The map type menu changes the map.
-  const paletteKey = () => look.cvd ? "cvdLight" : "light";
+  // 0.8: dark mode darkens the map as well as the panels. The basemap's dark palette covers every layer, inside Great
+  // Britain (OS Zoomstack) and outside it (the omt-* layers), so nothing is left light.
+  const paletteKey = () => look.mode === "dark" ? (look.cvd ? "cvdDark" : "dark") : (look.cvd ? "cvdLight" : "light");
   const origOpacity = {};
   function setP(id, prop, v) { if (!map.getLayer(id)) return; try { map.setPaintProperty(id, prop, v); } catch (e) {} }
   function widthExpr(stops, k) { const e = ["interpolate", ["linear"], ["zoom"]]; stops.forEach(([z, w]) => e.push(z, +(w * k).toFixed(3))); return e; }
@@ -873,18 +927,28 @@
     syncMenu(); store.set("atlas-uk-look", look);
     try { applyMapColours(); } catch (e) { /* the style isn't ready yet */ }
   }
+  const RELIEF_OVER = ["interpolate", ["linear"], ["zoom"], 5, 0.08, 8, 0.18, 11, 0.28];
+  const RELIEF = { map: ["interpolate", ["linear"], ["zoom"], 5, 0.12, 8, 0.2, 12, 0.3], terrain: ["interpolate", ["linear"], ["zoom"], 5, 0.45, 10, 0.6], satellite: 0, hybrid: 0 };
   function rememberOpacity(id, prop) { if (!(id + prop in origOpacity)) { const v = map.getPaintProperty(id, prop); origOpacity[id + prop] = v == null ? 1 : v; } return origOpacity[id + prop]; }
   function applyType() {
     const t = look.type, sat = t === "satellite" || t === "hybrid";
     if (sat) { map.setLayoutProperty("satellite", "visibility", "visible"); setP("satellite", "raster-opacity", 1); }
     else { setP("satellite", "raster-opacity", 0); setTimeout(() => { if (!(look.type === "satellite" || look.type === "hybrid")) try { map.setLayoutProperty("satellite", "visibility", "none"); } catch (e) {} }, 1000); }
-    if (t === "terrain") { map.setLayoutProperty("hillshade", "visibility", "visible"); setP("hillshade", "hillshade-exaggeration", 0.5); }
-    else { setP("hillshade", "hillshade-exaggeration", 0); setTimeout(() => { if (look.type !== "terrain") try { map.setLayoutProperty("hillshade", "visibility", "none"); } catch (e) {} }, 1000); }
+    // 0.8: the lie of the land shows on every map type, faintly when zoomed out and a little more from county zoom;
+    // Terrain makes it strong. Satellite already shows it, so it stays off there.
+    const dark = look.mode === "dark", reliefOf = x => x in RELIEF ? RELIEF[x] : RELIEF.map, relief = reliefOf(t);
+    if (relief) { map.setLayoutProperty("hillshade", "visibility", "visible"); setP("hillshade", "hillshade-exaggeration", relief); }
+    else { setP("hillshade", "hillshade-exaggeration", 0); setTimeout(() => { if (!reliefOf(look.type)) try { map.setLayoutProperty("hillshade", "visibility", "none"); } catch (e) {} }, 1000); }
+    setP("hillshade", "hillshade-shadow-color", dark ? "#05080a" : "#5a5045"); setP("hillshade", "hillshade-highlight-color", dark ? "#3c444a" : "#ffffff"); setP("hillshade", "hillshade-accent-color", dark ? "#0b1013" : "#6f6252");
+    if (sat) setP("satellite", "raster-brightness-max", dark ? 0.82 : 1);
+    if (map.getLayer("relief-over")) { map.setLayoutProperty("relief-over", "visibility", sat ? "none" : "visible"); setP("relief-over", "hillshade-exaggeration", t === "terrain" ? ["interpolate", ["linear"], ["zoom"], 5, 0.15, 10, 0.35] : RELIEF_OVER);
+      setP("relief-over", "hillshade-highlight-color", dark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.18)"); }
     const roads = OS.groups.roads, labels = OS.groups.labels;
     roads.forEach(id => { const l = map.getLayer(id); if (!l || l.type !== "line") return; const o = rememberOpacity(id, "line-opacity"); setP(id, "line-opacity", t === "satellite" ? 0 : t === "hybrid" ? (typeof o === "number" ? o * 0.85 : o) : o); });
     labels.forEach(id => { if (!map.getLayer(id)) return; const o = rememberOpacity(id, "text-opacity"); setP(id, "text-opacity", t === "satellite" ? 0 : o); });
     if (t === "hybrid") labels.forEach(id => { setP(id, "text-color", "#ffffff"); setP(id, "text-halo-color", "rgba(0,0,0,0.75)"); });
     else if (OS.palettes) { const pal = OS.palettes[paletteKey()]; labels.forEach(id => { const p = pal[id] || {}; if (p["text-color"]) setP(id, "text-color", p["text-color"]); if (p["text-halo-color"]) setP(id, "text-halo-color", p["text-halo-color"]); }); }
+    paintAreaNames();
     ["contours"].forEach(id => { if (!map.getLayer(id)) return; const o = rememberOpacity(id, "line-opacity"); setP(id, "line-opacity", t === "terrain" ? ["interpolate", ["linear"], ["zoom"], 9, 0.25, 12, 0.6, 14, 0.8] : o); });
   }
 
@@ -1003,8 +1067,9 @@
       "circle-radius": ["step", ["get", "point_count"], 14, 5, 17, 15, 21, 40, 25], "circle-color": "rgba(0,0,0,0.01)" } });
     map.addLayer({ id: "pr-pts", type: "circle", source: "protests-cl", filter: ["!", ["has", "point_count"]], layout: { visibility: "none", "circle-sort-key": ["-", 0, ["get", "r"]] }, paint: {
       "circle-radius": PR_R, "circle-color": ["get", "fill"], "circle-stroke-color": ["get", "stroke"], "circle-stroke-width": 1.6, "circle-opacity": ["get", "op"], "circle-stroke-opacity": ["get", "op"] } });
+    // 0.8: zoom must be the outer expression here (before, the ring for new protests never drew)
     map.addLayer({ id: "pr-new", type: "circle", source: "protests-cl", filter: ["all", ["!", ["has", "point_count"]], ["==", ["get", "nw"], 1]], layout: { visibility: "none" }, paint: {
-      "circle-radius": ["+", 5, PR_R], "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": ["get", "col"], "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, ["+", 5, ["*", ["get", "r"], 0.85]], 10, ["+", 5, ["*", ["get", "r"], 1.5]]], "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": ["get", "col"], "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
     map.addLayer({ id: "pr-sp-line", type: "line", source: "pr-spider", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#1f2a2e", "line-width": 1, "line-opacity": 0.6 } });
     map.addLayer({ id: "pr-sp-pts", type: "circle", source: "pr-spider", filter: ["==", ["geometry-type"], "Point"], paint: {
       "circle-radius": ["max", 6, ["*", ["get", "r"], 1.2]], "circle-color": ["get", "fill"], "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.8 } });
@@ -1018,9 +1083,9 @@
       Object.values(GRP_COL).forEach((col, k) => { const S = 40, cv = document.createElement("canvas"); cv.width = cv.height = S; const x = cv.getContext("2d");
         x.fillStyle = col; x.strokeStyle = "#ffffff"; x.lineWidth = 4; x.beginPath(); x.roundRect ? x.roundRect(4, 4, S - 8, S - 8, 6) : x.rect(4, 4, S - 8, S - 8); x.fill(); x.stroke();
         map.addImage("co-" + k, x.getImageData(0, 0, S, S), { pixelRatio: 2 }); });
-      map.addLayer({ id: "zone-fill", type: "fill", source: "zones", minzoom: ZONE_Z, paint: { "fill-color": "#c9a227",
+      map.addLayer({ id: "zone-fill", type: "fill", source: "zones", minzoom: POI ? 12 : ZONE_Z, paint: { "fill-color": "#c9a227",
         "fill-opacity": ["case", ["boolean", ["feature-state", "sel"], false], 0.32, ["boolean", ["feature-state", "hover"], false], 0.26, 0.1] } });
-      map.addLayer({ id: "zone-line", type: "line", source: "zones", minzoom: ZONE_Z - 0.4, paint: { "line-color": "#a07a12", "line-width": ["interpolate", ["linear"], ["zoom"], ZONE_Z, 1.2, 14, 2.6], "line-dasharray": [3, 2], "line-opacity": ["interpolate", ["linear"], ["zoom"], ZONE_Z - 0.4, 0, ZONE_Z, 0.9] } });
+      map.addLayer({ id: "zone-line", type: "line", source: "zones", minzoom: POI ? 11.6 : ZONE_Z - 0.4, paint: { "line-color": "#a07a12", "line-width": ["interpolate", ["linear"], ["zoom"], ZONE_Z, 1.2, 14, 2.6], "line-dasharray": [3, 2], "line-opacity": ["interpolate", ["linear"], ["zoom"], ZONE_Z - 0.4, 0, ZONE_Z, 0.9] } });
       map.addLayer({ id: "zone-dot", type: "circle", source: "zone-pts", minzoom: 7.5, maxzoom: ZONE_Z, paint: { "circle-radius": 5, "circle-color": "#c9a227", "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.5, "circle-opacity": 0.9 } });
       map.addLayer({ id: "co-pts", type: "symbol", source: "cos", minzoom: 9, layout: { visibility: "none", "symbol-sort-key": ["-", 0, ["get", "r"]], "icon-image": ["concat", "co-", ["to-string", ["get", "g"]]],
         "icon-size": ["interpolate", ["linear"], ["zoom"], 9, ["/", ["get", "r"], 14], 13, ["/", ["get", "r"], 7]], "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": 0.92 } });
@@ -1034,17 +1099,176 @@
     map.addLayer({ id: "tool-fill", type: "fill", source: "tool", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#3b78b5", "fill-opacity": 0.12 } });
     map.addLayer({ id: "tool-line", type: "line", source: "tool", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": "#1f2a2e", "line-width": 2, "line-dasharray": [2, 1.5] } });
     map.addLayer({ id: "tool-pts", type: "circle", source: "tool", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5.5, "circle-color": "#ffffff", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2 } });
+    addAreaNames(); addPoi(); addStops();
     applyLook(true); applyLevels(); applyTools();
     const at = document.querySelector(".maplibregl-ctrl-attrib"); if (at) at.classList.remove("maplibregl-compact-show"); // credits folded into the ⓘ button
     map.on("moveend", loadVisibleWards);
     repaint();
   });
+  // ---------- 0.8: places as symbols (airports, ports, railway stations, financial sites) ----------
+  // A symbol says what is there; click it for its card. Bigger places appear first: Heathrow from the opening view, a
+  // small halt only at street zoom. Icons: Material Design icons (Apache 2.0), drawn white on a coloured disc.
+  const POI = window.ATLAS_POI || null;
+  const POI_KIND = {
+    airport: { col: "#2b6cb0", label: "Airport", path: "M2.5 19h19v2h-19v-2zm19.57-9.36c-.21-.8-1.04-1.28-1.84-1.06L14.92 10l-6.9-6.43-1.93.51 4.14 7.17-4.97 1.33-1.97-1.54-1.45.39 2.59 4.49L21 11.49c.81-.23 1.28-1.05 1.07-1.85z" },
+    port: { col: "#0f6b7a", label: "Port", path: "M20 21c-1.39 0-2.78-.47-4-1.32-2.44 1.71-5.56 1.71-8 0C6.78 20.53 5.39 21 4 21H2v2h2c1.38 0 2.74-.35 4-.99 2.52 1.29 5.48 1.29 8 0 1.26.65 2.62.99 4 .99h2v-2h-2zM3.95 19H4c1.6 0 3.02-.88 4-2 .98 1.12 2.4 2 4 2s3.02-.88 4-2c.98 1.12 2.4 2 4 2h.05l1.89-6.68c.08-.26.06-.54-.06-.78s-.34-.42-.6-.5L20 10.62V6c0-1.1-.9-2-2-2h-3V1H9v3H6c-1.1 0-2 .9-2 2v4.62l-1.29.42c-.26.08-.48.26-.6.5s-.15.52-.06.78L3.95 19zM6 6h12v3.97L12 8 6 9.97V6z" },
+    station: { col: "#b03a2e", label: "Railway station", path: "M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h2.23l2-2H14l2 2h2v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4zM7.5 17c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm3.5-7H6V6h5v4zm2 0V6h5v4h-5zm3.5 7c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" },
+    finance: { col: "#a07a12", label: "Financial centre", path: "M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z" },
+  };
+  const POI_BY = POI ? Object.fromEntries(POI.items.map(i => [i.id, i])) : {};
+  function poiImage(k) {
+    const S = 64, cv = document.createElement("canvas"); cv.width = cv.height = S; const x = cv.getContext("2d"), K = POI_KIND[k];
+    x.beginPath(); x.arc(S / 2, S / 2, S / 2 - 3, 0, Math.PI * 2); x.fillStyle = K.col; x.fill(); x.lineWidth = 3.5; x.strokeStyle = "#ffffff"; x.stroke();
+    x.save(); x.translate(S * 0.2, S * 0.2); x.scale(S * 0.6 / 24, S * 0.6 / 24); x.fillStyle = "#ffffff"; x.fill(new Path2D(K.path)); x.restore();
+    return x.getImageData(0, 0, S, S);
+  }
+  function addPoi() {
+    if (!POI) return;
+    Object.keys(POI_KIND).forEach(k => map.addImage("poi-" + k, poiImage(k), { pixelRatio: 2 }));
+    map.addSource("poi", { type: "geojson", data: { type: "FeatureCollection", features: POI.items.map(i => ({ type: "Feature", geometry: { type: "Point", coordinates: [i.lon, i.lat] },
+      properties: { id: i.id, k: i.k, n: i.n, minz: i.minz, sz: i.sz || 0.8, rank: i.rank || 0, lab: i.k === "station" ? "" : i.n } })) } });
+    const layout = { "icon-image": ["concat", "poi-", ["get", "k"]], "icon-size": ["interpolate", ["linear"], ["zoom"], 5, ["*", ["get", "sz"], 0.62], 10, ["*", ["get", "sz"], 0.82], 14, ["*", ["get", "sz"], 1]],
+      "icon-allow-overlap": false, "icon-padding": 1, "symbol-sort-key": ["get", "rank"] };
+    if (!plain) Object.assign(layout, { "text-field": ["get", "lab"], "text-font": ["Noto Sans Bold"], "text-size": ["step", ["zoom"], 0, 7.5, 10.5, 11, 12], "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true, "text-max-width": 9 });
+    map.addLayer({ id: "poi-sym", type: "symbol", source: "poi", filter: [">=", ["zoom"], ["get", "minz"]], layout,
+      paint: { "text-color": "#2a3236", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.3 } });
+    // the basemap's own airport labels, and the old gold dot for the financial districts, said the same thing
+    if (map.getLayer("airports")) map.setLayoutProperty("airports", "visibility", "none");
+    if (map.getLayer("zone-dot")) map.setLayoutProperty("zone-dot", "visibility", "none");
+  }
+  function pickPoi(e) { if (!map.getLayer("poi-sym")) return null; const f = map.queryRenderedFeatures(pbox(e, 3), { layers: ["poi-sym"] })[0]; return f ? f.properties.id : null; }
+  const poiFmt = (k, v) => k === "port" ? (v >= 1e6 ? (v / 1e6).toFixed(1) + " million tonnes" : Math.round(v / 1e3).toLocaleString("en-GB") + " thousand tonnes") : (v >= 1e6 ? (v / 1e6).toFixed(1) + " million" : Math.round(v).toLocaleString("en-GB"));
+  const poiSeries = i => { if (!i.s) return []; const y0 = i.s[0]; return i.s.slice(1).map((v, j) => [y0 + j, v]).filter(p => p[1] != null); };
+  function poiHoverHTML(id) { const i = POI_BY[id]; if (!i) return ""; const K = POI_KIND[i.k];
+    return `<div class="poi-h"><span class="poi-ic" style="background:${K.col}"></span><b>${esc(i.n)}</b><div class="poi-sub">${esc(K.label)}${i.v ? ` · ${esc(poiFmt(i.k, i.v))} ${esc(i.k === "port" ? "" : POI.units[i.k].split(" a year")[0])} in ${i.k === "station" ? `${i.vy - 1}–${String(i.vy).slice(2)}` : i.vy}` : ""}</div><div class="poi-sub">Click for more</div></div>`; }
+  function poiCardHTML(id) {
+    const i = POI_BY[id], K = POI_KIND[i.k], ser = poiSeries(i), prev = ser.length > 1 ? ser[ser.length - 2][1] : null;
+    const pre = ser.find(p => p[0] === (i.k === "station" ? 2020 : 2019));
+    const pct = (a, b) => b ? ((a / b - 1) * 100).toFixed(1).replace("-", "−") + "%" : "—";
+    const yr = y => i.k === "station" ? `April ${y - 1} to March ${y}` : String(y);
+    const yrShort = y => i.k === "station" ? `${y - 1}–${String(y).slice(2)}` : String(y);
+    const council = i.c && P[i.c] ? i.c : null;
+    const rankText = i.rank ? ` · ${ordinal(i.rank)} busiest ${i.k === "port" ? "major port by tonnage" : K.label.toLowerCase()} in the UK` : "";
+    const links = [];
+    if (i.k === "station" && i.crs && /^[A-Z]{3}$/.test(i.crs)) links.push(`<a href="https://www.nationalrail.co.uk/stations/${i.crs.toLowerCase()}/" target="_blank" rel="noopener">National Rail: station page</a>`);
+    if (i.url) links.push(`<a href="${esc(i.url)}" target="_blank" rel="noopener">Official site</a>`);
+    links.push(`<a href="https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(i.n)}" target="_blank" rel="noopener">Wikipedia</a>`);
+    return `<div class="poi-card"><div class="poi-top"><span class="poi-ic lg" style="background:${K.col}"><svg viewBox="0 0 24 24"><path d="${K.path}" fill="#fff"/></svg></span><div><div class="poi-kind">${esc(K.label)}${esc(rankText)}</div>${council ? `<div class="poi-sub">${esc(nameOf(council))}${P[council].parent && P[P[council].parent] ? ", " + esc(nameOf(P[council].parent)) : ""}</div>` : ""}</div></div>
+      ${i.v ? `<div class="poi-big"><b>${esc(poiFmt(i.k, i.v))}</b> ${esc(i.k === "port" ? "of freight" : POI.units[i.k].replace(" a year", "").replace(" (April to March)", ""))}<div class="poi-sub">${esc(yr(i.vy))}${prev ? ` · ${pct(i.v, prev)} on the year before` : ""}${pre ? ` · ${pct(i.v, pre[1])} on ${i.k === "station" ? "2019–20" : "2019"}` : ""}</div></div>` : ""}
+      ${ser.length > 2 ? `<div class="poi-spark">${CH.spark(ser, { w: 300, h: 54, colour: K.col })}<div class="poi-sub">${esc(yrShort(ser[0][0]))} to ${esc(yrShort(ser[ser.length - 1][0]))}</div></div>` : ""}
+      ${i.k === "airport" && (i.mv || i.fr) ? `<div class="poi-row">${i.mv ? `<span><b>${i.mv.toLocaleString("en-GB")}</b> aircraft movements</span>` : ""}${i.fr ? `<span><b>${Math.round(i.fr).toLocaleString("en-GB")}</b> tonnes of air freight</span>` : ""} <small>(${i.vy})</small></div>` : ""}
+      ${i.k === "port" && i.grp ? `<div class="poi-row"><span>Port group: ${esc(i.grp)}</span></div>` : ""}
+      ${i.note ? `<p class="poi-note">${esc(i.note)}</p>` : ""}
+      <div class="poi-acts">${council ? `<button class="btn sm" data-poigo="${council}">Show ${esc(nameOf(council))}</button>` : ""}${i.zone ? `<button class="btn sm" data-poigo="${i.zone}">Open the district</button>` : ""}<button class="btn sm" data-poizoom="${i.id}">Zoom in</button></div>
+      <div class="poi-links">${links.join(" · ")}</div><div class="poi-src">Source: ${esc(POI.sources[i.k])}.</div></div>`;
+  }
+  const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+  const poiCards = new Map();
+  function openPoiCard(id) {
+    const i = POI_BY[id]; if (!i) return;
+    const have = poiCards.get(id); if (have && WM.isOpen(have.el)) { WM.front(have.el); WM.pulse(have.el); return have; }
+    const w = WM.make({ type: "poi", title: i.n, html: poiCardHTML(id), cascade: true, min: { w: 300, h: 220 }, def: () => ({ x: innerWidth - 380 - 76, y: 80, w: 380, h: Math.min(470, innerHeight - 120) }), onClose: () => poiCards.delete(id) });
+    w.el.addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return;
+      if (b.dataset.poigo) focus(b.dataset.poigo); else if (b.dataset.poizoom) map.flyTo({ center: [i.lon, i.lat], zoom: Math.max(map.getZoom(), i.k === "airport" || i.k === "port" ? 12.5 : 15), duration: 1200 }); });
+    poiCards.set(id, w); WM.open(w.el); return w;
+  }
+  function searchPoi(q) { if (!POI || q.length < 3) return []; return POI.items.filter(i => i.n.toLowerCase().includes(q)).sort((a, b) => (a.n.toLowerCase().startsWith(q) ? 0 : 1) - (b.n.toLowerCase().startsWith(q) ? 0 : 1) || (b.v || 0) - (a.v || 0)).slice(0, 6); }
+
+  // ---------- 0.8: bus, tram and ferry stops at street zoom (NaPTAN, data/stops/<council>.js, loaded as you get there) ----------
+  const STOP_Z = 14.5, STOP_COL = { b: "#d63a2f", t: "#7b4fa6", f: "#0f6b7a" }, STOP_KIND = { b: "Bus stop", t: "Tram or metro stop", f: "Ferry berth" };
+  const stopFeats = [], stopLoaded = new Set();
+  function addStops() {
+    if (!window.ATLAS_TRANSPORT) return;
+    map.addSource("stops", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "stops-pt", type: "circle", source: "stops", minzoom: STOP_Z, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], STOP_Z, 2.5, 17, 5.5], "circle-color": ["match", ["get", "k"], "t", STOP_COL.t, "f", STOP_COL.f, STOP_COL.b],
+      "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2, "circle-opacity": ["interpolate", ["linear"], ["zoom"], STOP_Z, 0, STOP_Z + 0.4, 0.95] } }, map.getLayer("poi-sym") ? "poi-sym" : undefined);
+    if (!plain) map.addLayer({ id: "stops-lab", type: "symbol", source: "stops", minzoom: 16.3, layout: { "text-field": ["get", "n"], "text-font": ["Noto Sans Regular"], "text-size": 10.5, "text-offset": [0, 0.9], "text-anchor": "top", "text-optional": true, "text-max-width": 8 },
+      paint: { "text-color": "#3a3f44", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.2 } });
+    map.on("moveend", loadVisibleStops); loadVisibleStops();
+  }
+  function loadVisibleStops() {
+    if (map.getZoom() < STOP_Z - 0.5) return;
+    const b = map.getBounds(), seen = new Set();
+    map.queryRenderedFeatures({ layers: ["council-fill"] }).forEach(f => seen.add(f.properties.code));
+    Object.entries(P).forEach(([c, p]) => { if (p.level === "council" && p.pt && b.contains(p.pt)) seen.add(c); });
+    if (!seen.size) { const c = map.getCenter(); Object.entries(P).forEach(([k, p]) => { if (p.level === "council" && p.pt && Math.hypot(p.pt[0] - c.lng, p.pt[1] - c.lat) < 0.15) seen.add(k); }); }
+    [...seen].slice(0, 12).forEach(c => { if (stopLoaded.has(c)) return; stopLoaded.add(c); const sc = document.createElement("script"); sc.src = "data/stops/" + c + ".js"; sc.onerror = () => {}; document.body.appendChild(sc); });
+  }
+  window.ATLAS_STOPS_LOADED = (code, stops) => {
+    stops.forEach(s => stopFeats.push({ type: "Feature", geometry: { type: "Point", coordinates: [s[0], s[1]] }, properties: { n: s[2], k: s[3], id: s[4] } }));
+    if (map.getSource("stops")) map.getSource("stops").setData({ type: "FeatureCollection", features: stopFeats });
+  };
+  function pickStop(e) { if (!map.getLayer("stops-pt") || map.getZoom() < STOP_Z) return null; const f = map.queryRenderedFeatures(pbox(e, 4), { layers: ["stops-pt"] })[0]; return f ? f.properties : null; }
+  const stopCards = new Map();
+  function openStopCard(st) {
+    const have = stopCards.get(st.id); if (have && WM.isOpen(have.el)) { WM.front(have.el); return; }
+    const london = /^490/.test(st.id), body = extra => `<div class="poi-card"><div class="poi-top"><span class="poi-ic lg" style="background:${STOP_COL[st.k] || STOP_COL.b}"><svg viewBox="0 0 24 24"><path d="${POI_KIND.station.path}" fill="#fff"/></svg></span><div><div class="poi-kind">${esc(STOP_KIND[st.k] || "Stop")}</div><div class="poi-sub">NaPTAN ${esc(st.id)}</div></div></div>
+      ${extra}<div class="poi-links">${london ? "" : `<a href="https://bustimes.org/stops/${encodeURIComponent(st.id)}" target="_blank" rel="noopener">Departures (bustimes.org)</a> · `}<a href="https://www.traveline.info/" target="_blank" rel="noopener">Traveline</a></div><div class="poi-src">Stop: NaPTAN (DfT).${london ? " Live arrivals: Powered by TfL Open Data." : ""}</div></div>`;
+    const w = WM.make({ type: "stop", title: st.n, html: body(london ? `<p class="ap-note">Loading live arrivals…</p>` : `<p class="ap-note">Live times outside London need a data feed that requires a server (Bus Open Data Service); timetables are in Atlas Transport's journey planner.</p>`), cascade: true, min: { w: 280, h: 200 },
+      def: () => ({ x: innerWidth - 360 - 76, y: 90, w: 360, h: 380 }), onClose: () => stopCards.delete(st.id) });
+    stopCards.set(st.id, w); WM.open(w.el);
+    if (london) fetch("https://api.tfl.gov.uk/StopPoint/" + encodeURIComponent(st.id) + "/Arrivals").then(r => r.json()).then(a => {
+      const xs = (Array.isArray(a) ? a : []).sort((x, y) => x.timeToStation - y.timeToStation).slice(0, 12);
+      w.setBody(body(xs.length ? `<table class="mo-tab">${xs.map(x => `<tr><td><b>${esc(x.lineName)}</b> ${esc(x.destinationName || "")}</td><td class="num">${x.timeToStation < 60 ? "due" : Math.round(x.timeToStation / 60) + " min"}</td></tr>`).join("")}</table>` : `<p class="ap-note">No arrivals expected right now.</p>`));
+    }).catch(() => w.setBody(body(`<p class="ap-note">Live arrivals couldn't be loaded (TfL).</p>`)));
+  }
+
+  // ---------- 0.8: area names on the map, shown by size and zoom ----------
+  // Each area's name appears once the area is big enough on screen to hold it: a nation from the start, a county as you
+  // close in, a small borough or a ward only when you zoom towards it. Where names would collide the bigger area wins.
+  const NAME_PX = 72;   // an area must be about this many pixels across before its name shows
+  const KM_PER_PX0 = 44.9;   // km per screen pixel at zoom 0, at the UK's latitude
+  const areaKm2 = (code, f) => { const a = INFO[code] && INFO[code].area; if (a && a[0] > 0) return a[0]; return f ? polysOf(f.geometry).reduce((s, pl) => s + sphArea(pl[0]), 0) : 1; };
+  const nameMinZoom = km2 => +clamp(Math.log2(NAME_PX * KM_PER_PX0 / Math.sqrt(Math.max(km2, 0.02))), 0, 18).toFixed(2);
+  const NAME_LV = { nation: [0, 7.6], region: [Z.region - 0.2, Z.council + 0.6], council: [Z.council - 0.6, Z.ward + 1.2], constituency: [0, 24], ward: [Z.ward, 24] };
+  function nameFeatures(level, fc) {
+    return (fc ? fc.features : []).map(f => { const code = f.properties.code, pt = PT[code]; if (!pt) return null; const km = areaKm2(code, f);
+      return { type: "Feature", geometry: { type: "Point", coordinates: pt }, properties: { code, name: (P[code] && P[code].name) || f.properties.name || code, km: Math.round(km * 10) / 10, minz: level === "nation" ? 0 : nameMinZoom(km) } }; }).filter(Boolean);
+  }
+  const NAME_STYLE = { // nations and regions in spaced capitals, counties smaller capitals, constituencies and wards in normal case
+    nation: { font: ["Noto Sans Bold"], size: ["interpolate", ["linear"], ["zoom"], 4.5, 13, 7, 18], spacing: 0.32, caps: true },
+    region: { font: ["Noto Sans Bold"], size: ["interpolate", ["linear"], ["zoom"], 5.5, 11, 7.5, 14], spacing: 0.22, caps: true },
+    council: { font: ["Noto Sans Bold"], size: ["interpolate", ["linear"], ["zoom"], 6.5, 9.5, 10, 13], spacing: 0.12, caps: true },
+    constituency: { font: ["Noto Sans Regular"], size: ["interpolate", ["linear"], ["zoom"], 6, 9.5, 11, 13], spacing: 0.03, caps: false },
+    ward: { font: ["Noto Sans Regular"], size: ["interpolate", ["linear"], ["zoom"], 10, 10, 14, 13], spacing: 0.02, caps: false },
+  };
+  function addAreaNames() {
+    if (plain) return;   // no basemap means no font server: names stay in the cards
+    // 0.8: a faint second shading drawn over the data colours, so hills and valleys still read through a coloured map
+    if (map.getSource("terrain")) map.addLayer({ id: "relief-over", type: "hillshade", source: "terrain", paint: { "hillshade-exaggeration": RELIEF_OVER,
+      "hillshade-shadow-color": "rgba(20,16,12,0.55)", "hillshade-highlight-color": "rgba(255,255,255,0.18)", "hillshade-accent-color": "rgba(0,0,0,0)", "hillshade-illumination-direction": 315 } }, map.getLayer("pr-heat") ? "pr-heat" : undefined);
+    LEVELS.forEach(l => {
+      const fc = l === "ward" ? { features: wardFeatures } : G[SRC[l]];
+      map.addSource("names-" + l, { type: "geojson", data: { type: "FeatureCollection", features: nameFeatures(l, fc) } });
+      const st = NAME_STYLE[l], r = NAME_LV[l];
+      map.addLayer({ id: "names-" + l, type: "symbol", source: "names-" + l, minzoom: r[0], maxzoom: r[1],
+        filter: [">=", ["zoom"], ["get", "minz"]],
+        layout: { "text-field": ["get", "name"], "text-font": st.font, "text-size": st.size, "text-letter-spacing": st.spacing, "text-transform": st.caps ? "uppercase" : "none",
+          "text-max-width": 8, "text-padding": 6, "symbol-sort-key": ["-", 0, ["get", "km"]], "text-allow-overlap": false, "text-optional": false },
+        paint: { "text-color": "#4a3f52", "text-halo-color": "rgba(242,239,233,0.85)", "text-halo-width": 1.4, "text-opacity": ["interpolate", ["linear"], ["zoom"], r[0], 0, r[0] + 0.4, 1] } }, map.getLayer("pr-heat") ? "pr-heat" : undefined);
+    });
+    // the basemap's own country names said the same as the nation names
+    if (map.getLayer("country names")) map.setLayoutProperty("country names", "visibility", "none");
+  }
+  function syncAreaNames() { // only the boundary sets being shown get names
+    if (plain || !map.getLayer("names-nation")) return;
+    LEVELS.forEach(l => { const on = LV.auto ? l !== "constituency" : (LV.on.includes(l) || (l === "nation")); map.setLayoutProperty("names-" + l, "visibility", on ? "visible" : "none");
+      map.setLayerZoomRange("names-" + l, LV.auto ? NAME_LV[l][0] : 0, LV.auto ? NAME_LV[l][1] : 24); });
+  }
+  function paintAreaNames() {
+    if (plain || !map.getLayer("names-nation")) return;
+    const dark = look.mode === "dark", hyb = look.type === "satellite" || look.type === "hybrid";
+    LEVELS.forEach(l => { setP("names-" + l, "text-color", hyb ? "#ffffff" : dark ? (l === "nation" || l === "region" ? "#c9bfd2" : "#d6d0db") : (l === "nation" || l === "region" ? "#5b4a6a" : "#3f3a45"));
+      setP("names-" + l, "text-halo-color", hyb ? "rgba(0,0,0,0.7)" : dark ? "rgba(20,24,27,0.85)" : "rgba(242,239,233,0.85)"); });
+  }
+  if (window.AtlasDebug) { Object.assign(window.AtlasDebug, { nameMinZoom, nameFeatures: l => nameFeatures(l, l === "ward" ? { features: wardFeatures } : G[SRC[l]]), paletteKey: () => paletteKey(), openPoiCard: id => openPoiCard(id), POI_BY, contextFor: (m, c, n) => contextFor(m, c, n) }); Object.defineProperty(window.AtlasDebug, "LV", { get: () => LV }); }
   window.ATLAS_WARDS_LOADED = function (council, fc) {
     if (loadedWards.has(council + ":done")) return; loadedWards.add(council + ":done");
     const pts = fc.features.map(ptFeature); pts.forEach(f => { PT[f.properties.code] = f.geometry.coordinates; });
     wardFeatures.push(...fc.features); wardPoints.push(...pts);
     map.getSource("wards").setData({ type: "FeatureCollection", features: wardFeatures });
     map.getSource("pt-ward").setData({ type: "FeatureCollection", features: wardPoints });
+    if (map.getSource("names-ward")) map.getSource("names-ward").setData({ type: "FeatureCollection", features: nameFeatures("ward", { features: wardFeatures }) });
     map.once("idle", () => { state.sel.forEach(t => t.level === "ward" && setFS(t, { sel: true })); paintLevel("ward"); });
   };
   // ---------- 0.7.1: the hex map is a whole-map view, not an overlay ----------
@@ -1292,7 +1516,7 @@
     curPlan = EN.plan(planMetrics(), PS.prefs); syncRange();
     if (state.iso && state.iso.ch !== "nd" && !curPlan[state.iso.ch === "vbl" ? "hue" : state.iso.ch]) state.iso = null;
     if (map.getSource && map.getSource("councils")) { LEVELS.forEach(paintLevel); syncProtestLayer(); syncCompanyLayer(); syncZones(); }
-    renderLegend(); renderDock(); renderSup(); renderTNote(); syncFocusColour();
+    renderLegend(); renderDock(); renderSup(); renderTNote(); syncFocusColour(); syncNewsSoon();
     if (pmOpen) renderPMenu();
     if (state.focus) { renderMind(); refreshPinned(); }
     renderTray(); if (!$("cmp").hidden) renderCmp(); if (!cpanel.hidden && CHART.drawn) renderChartBody();
@@ -1719,14 +1943,14 @@
   // Chosen: the person ticks boundary sets in the Areas menu; they show at any zoom and the map never moves.
   // The most recently ticked set is the "active" one: it takes the colours, hover cards and clicks; the others show as outlines.
   const levelAt = z => z >= Z.ward ? "ward" : z >= Z.council ? "council" : z >= Z.region ? "region" : "nation";
-  const LV = Object.assign({ auto: true, on: [], active: null }, store.get("atlas-031-levels", {}));
+  // 0.8: Atlas always opens in Automatic; a boundary set picked by hand lasts until the page is closed
+  const LV = { auto: true, on: [], active: null };
   LV.on = (LV.on || []).filter(l => LEVELS.includes(l)); if (!LV.on.length || !LEVELS.includes(LV.active)) { LV.auto = true; LV.on = []; LV.active = null; }
   const FINE = ["ward", "constituency", "council", "region", "nation"];
   const fillIds = l => ["pf-" + l, ...[0, 1, 2, 3, 4].map(k => `pdt-${l}-${k}`), l + "-fill", "pd-" + l, "pb-" + l];
   const LINE_OF = { nation: "nation-line", region: "region-line", council: "council-line", constituency: "constituency-line", ward: "ward-line" };
   const AUTO_LINE = { nation: [0, 0.9], region: [Z.region - 0.3, 0.85], council: [Z.council - 0.3, ["interpolate", ["linear"], ["zoom"], Z.council - 0.3, 0, Z.council, 0.8]], ward: [Z.ward - 0.3, ["interpolate", ["linear"], ["zoom"], Z.ward - 0.3, 0, Z.ward, 0.7]] };
   function applyLevels() {
-    store.set("atlas-031-levels", LV);
     if (!map.getLayer || !map.getLayer("pf-nation")) { syncLevel(); return; }
     LEVELS.forEach(l => {
       const on = LV.auto ? l !== "constituency" : l === LV.active, range = LV.auto ? VIS[l] : [0, 24];
@@ -1735,7 +1959,7 @@
       if (LV.auto) { map.setLayoutProperty(ln, "visibility", a ? "visible" : "none"); if (a) { map.setLayerZoomRange(ln, a[0], 24); setP(ln, "line-opacity", a[1]); } }
       else { const show = LV.on.includes(l) || l === "nation"; map.setLayoutProperty(ln, "visibility", show ? "visible" : "none"); map.setLayerZoomRange(ln, 0, 24); setP(ln, "line-opacity", l === "ward" ? 0.7 : 0.85); }
     });
-    clearHover(); syncLevel(); loadVisibleWards(); renderLevelPicker(); syncPcon();
+    clearHover(); syncLevel(); loadVisibleWards(); renderLevelPicker(); syncPcon(); syncAreaNames();
   }
   function syncLevel() { const l = LV.auto ? levelAt(map.getZoom()) : LV.active; const changed = l !== state.level; state.level = l; if (changed) { renderLegend(); renderLevelPicker(); if (pmOpen) renderPMenu(); } }
   map.on("zoom", () => { if (LV.auto) syncLevel(); });
@@ -1791,6 +2015,26 @@
     const y0 = m.temporal === "annual" ? (SY[0] || 1998) : m.temporal === "event" ? 1976 : 1975;
     return CH.spark(seriesOf(m, code, y0, y1, m.temporal === "event" ? 2 : 1), { w: 80, h: 18, now, colour: PER[m.p].hue });
   }
+  // ---------- 0.8: written context beside the numbers ----------
+  // data/context.js (pipeline/fetch_context.py): official releases, briefings, forecasts and headline figures, each tagged
+  // with the metrics, perspectives and places it is about. A card shows the newest line for each metric on it (for this
+  // place, or the UK, or its region); ⓘ lists more; charts list what was published about the metrics charted.
+  const CX = window.ATLAS_CONTEXT || { items: [], upcoming: [], ind: {} };
+  const ancestorsOf = c => { const out = new Set([c, UKC]); let x = c, n = 0; while (x && n++ < 6) { const p = P[x]; if (!p) break; if (p.nation) out.add(p.nation); x = p.parent; if (x) out.add(x); } (UP[c] || []).forEach(k => out.add(k)); return out; };
+  function contextFor(mid, code, n) {
+    const anc = code ? ancestorsOf(code) : null;
+    const hits = CX.items.filter(it => it.m && it.m.includes(mid) && (!it.pl.length || !anc || it.pl.some(c => anc.has(c))));
+    const here = x => (code && x.pl.includes(code) ? 2 : 0) + (x.k === "indicator" ? 1 : 0);
+    return hits.sort((a, b) => here(b) - here(a) || (b.d > a.d ? 1 : b.d < a.d ? -1 : 0)).slice(0, n || 3);
+  }
+  const contextWider = (p, n) => CX.items.filter(it => it.k === "indicator" && it.pp && it.pp.includes(p)).slice(0, n || 4);
+  const CX_KIND = { indicator: "Latest figure", release: "Published", report: "Briefing", forecast: "Forecast & outlook", upcoming: "Coming up" };
+  const ctxLine = (it, short) => `<span class="cx-k">${esc(CX_KIND[it.k] || "")}</span> ${short ? esc(it.t.length > 120 ? it.t.slice(0, 118) + "…" : it.t) : `<a href="${esc(it.u)}" target="_blank" rel="noopener">${esc(it.t)}</a>`} <small>${esc(it.s)}, ${esc(shortDate(it.d))}</small>`;
+  function cardContext(onMap, code, pinned) {
+    const seen = new Set(), lines = [];
+    onMap.forEach(m => contextFor(m.id, code, pinned ? 2 : 1).forEach(it => { if (!seen.has(it.u + it.t) && lines.length < (pinned ? 4 : 1)) { seen.add(it.u + it.t); lines.push(`<li>${ctxLine(it, !pinned)}</li>`); } }));
+    return lines.length ? `<ul class="cx-list${pinned ? "" : " short"}">${lines.join("")}</ul>` : "";
+  }
   function cardHTML(code, pinned) {
     const p = P[code], rec = E.areas[code], d = state.date, past = !isNow();
     if (p.level === "zone") return `${pinned ? `<button class="x" data-close aria-label="Close">×</button>` : ""}<div class="lvl"><span>${esc(p.kind || "Custom zone")}</span><span>${esc(code)}</span></div><h3>${pinned ? ent(nameOf(code).replace(/ \(.*\)$/, "")) : esc(nameOf(code))}</h3>${zoneBody(code)}
@@ -1803,7 +2047,7 @@
       const wmOn = onMap.some(m => m.group === G4), keep = onMap.map((m, i) => m.group === G4 ? null : mapped[i]).filter(Boolean);
       if (wmOn) { const r = resultFor(code, d); if (r && !(M.ge_winner.get(code, d) || {}).nm) { const w = r.agg ? Object.keys(r.seats).sort((a, b) => r.seats[b] - r.seats[a])[0] : winnerOf(r), mj = r.agg ? null : PSE.majority(r.cl, r.t.total);
         keep.unshift(`<li><i class="sw" style="background:${partyCol(w)}"></i><span><b>${esc(partyName(w))}</b> ${r.agg ? `${r.seats[w]} of ${r.n} seats` : pct1(100 * r.cl[0][2])}${mj ? ` · majority ${pct1(mj.pct)}` : ""} <small>(${esc(r.e.label)})</small></span></li>`); } }
-      return `<div class="lvl"><span>${esc(LABEL[p.level])}</span></div><h3>${esc(nameOf(code))}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}${keep.length ? `<ul class="extra">${keep.join("")}</ul>` : `<div class="hint2">Put a metric on the map to see it here.</div>`}`;
+      return `<div class="lvl"><span>${esc(LABEL[p.level])}</span></div><h3>${esc(nameOf(code))}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}${keep.length ? `<ul class="extra">${keep.join("")}</ul>${cardContext(onMap, code, false)}` : `<div class="hint2">Put a metric on the map to see it here.</div>`}`;
     }
     if (curPlan.grid && curPlan.shade) { const k = LAST.k[code] || {}; if (k.sh != null && k.gr != null) mapped.push(`<li class="bivw"><i class="sw" style="background:${LAST.fc[code]}"></i><span>${esc(bivWords(k.sh, k.gr, PS.biv.n, curPlan.shade, curPlan.grid))}</span></li>`); }
     if (p.level === "constituency" && POLLS && M.proj_winner && !onMap.includes(M.proj_winner)) { const pr = projection(), x = pr && pr.seat.get(code); if (x && isNow()) mapped.push(`<li class="proj"><i class="sw" style="background:${partyCol(x.w)}"></i><span><b>Projection:</b> ${esc(projText(x))} <small>(Atlas, polls to ${esc(POLLS.latest)}; uniform swing, a simple model)</small></span></li>`); }
@@ -1813,7 +2057,7 @@
     const era = p.level === "constituency" && p.to ? ` ${p.from.slice(0, 4)}–${p.to.slice(0, 4)}${p.approx ? " (approx. boundary)" : ""}` : "";
     return `${pinned ? `<button class="x" data-close aria-label="Close">×</button>` : ""}<div class="lvl"><span>${esc(LABEL[p.level])}${esc(era)}</span><span>${esc(code.replace(/^P\d\d-/, ""))}</span></div>
       <h3>${esc(nameOf(code))}${rec ? ` <span class="tag">edited</span>` : ""}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}<ul>${items.join("")}</ul>
-      ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
+      ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${cardContext(onMap, code, pinned)}${window.AtlasMoney && (p.level === "constituency" || p.level === "council") ? AtlasMoney.areaLine(code, d, pinned) : ""}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
       ${rec && rec.notes ? `<div class="notes">${esc(rec.notes)}</div>` : ""}
       ${pinned ? `<div class="acts"><button class="btn primary" data-edit>Edit</button><button class="btn" data-chartme>Chart</button><button class="btn" data-wscard title="Send this card to the workspace">Card → workspace</button><button class="btn" data-wstile title="Send this place as a tile (a small map) to the workspace">Tile → workspace</button><button class="btn" data-addcmp>${state.sel.some(s => s.code === code) ? "✓ Selected" : "+ Compare"}</button><button class="btn" data-zoom>Zoom to</button><button class="btn" data-outline title="Turn this place's outline into a shape you can drag over other places, at its real size">Drag outline</button>${PR.events.length ? `<button class="btn" data-prhere title="The protests here ${esc(winLabel())}">Protests here</button>` : ""}</div>` : ""}`;
   }
@@ -1965,7 +2209,7 @@
       <li><b>Market value:</b> ${esc(capTxt)}</li>${c.rev ? `<li><b>Revenue:</b> ${esc((c.rev.cur === "GBP" ? "£" : c.rev.cur === "USD" ? "US$" : "€") + compactNum(c.rev.v))}${c.rev.yr ? ` (${esc(c.rev.yr)})` : ""}</li>` : ""}
       ${c.emp ? `<li><b>Employees:</b> ${esc(c.emp)}</li>` : ""}${c.founded ? `<li><b>Founded:</b> ${esc(c.founded)}</li>` : ""}
       ${!c.px.length ? `<li><b>Share price:</b> <small>not included in this version</small></li>` : ""}<li style="${c.px.length ? "" : "display:none"}"><b>Share price:</b> ${last ? esc(last[1].toLocaleString("en-GB") + (c.cur === "GBp" ? "p" : " " + (c.cur || ""))) + ` <small>(${esc(last[0])})</small>` : "—"}${ch != null ? ` · ${esc(fmtPct(ch))} over 12 months` : ""}</li>
-      ${ctl ? `<li><b>Council:</b> ${esc(nameOf(c.council))} (${esc(partyName(ctl[2]))})</li>` : ""}</ul>
+      ${ctl ? `<li><b>Council:</b> ${esc(nameOf(c.council))} (${esc(partyName(ctl[2]))})</li>` : ""}${window.AtlasMoney ? AtlasMoney.companyBox(i) : ""}</ul>
       <div class="cospark">${CH.spark(pts, { w: 300, h: 50, colour: GRP_COL[c.grp], now: +state.date.slice(0, 4) + (+state.date.slice(5, 7) - 1) / 12 })}</div>
       <div class="acts"><button class="btn primary" data-cochart="${i}">Chart the share price</button>${c.wiki ? `<a class="btn" href="${esc(c.wiki)}" target="_blank" rel="noopener">Wikipedia</a>` : ""}</div>
       <div class="note2">${c.px.length ? `Prices: Yahoo Finance (monthly close). Market value: companiesmarketcap.com, converted to £ at ${MK ? MK.fx.USD_per_GBP : ""} US$ per £ (${MK ? esc(MK.fx.date) : ""}).` : "Share prices and market values are left out of the public version. Run pipeline/build_markets.py to add them on your own computer."}</div>`;
@@ -1988,6 +2232,10 @@
   function clearHover() { clearTimeout(timer); timer = null; if (hov) setFS(hov, { hover: false }); hov = null; hovCode = null; if (!state.pinned) card.hidden = true; }
   map.on("mousemove", e => {
     lastPt = e.point; if (lasso.active || state.tool === "measure") return;
+    const pp = pickPoi(e);
+    const ps = !pp && pickStop(e);
+    if (ps && !ecardPinned) { clearHover(); ecard.className = "card"; ecard.innerHTML = `<div class="poi-h"><b>${esc(ps.n)}</b><div class="poi-sub">${esc(STOP_KIND[ps.k] || "Stop")} · click for ${/^490/.test(ps.id) ? "live arrivals" : "more"}</div></div>`; ecard.hidden = false; place(e.point.x, e.point.y, ecard); map.getCanvas().style.cursor = "pointer"; return; }
+    if (pp && !ecardPinned) { clearHover(); ecard.className = "card"; ecard.innerHTML = poiHoverHTML(pp); ecard.hidden = false; place(e.point.x, e.point.y, ecard); map.getCanvas().style.cursor = "pointer"; return; }
     const pc = pickCompany(e);
     if (pc != null && !ecardPinned) { clearHover(); ecard.className = "card"; ecard.innerHTML = companyHTML(pc, false); ecard.hidden = false; place(e.point.x, e.point.y, ecard); return; }
     const pe = pickProtest(e);
@@ -2013,6 +2261,9 @@
     if (lasso.justDone) { lasso.justDone = false; return; }
     if (state.tool === "measure") return measureClick(e);
     if (map.getLayer("zone-dot") && marketsInUse() && map.getZoom() < ZONE_Z && map.queryRenderedFeatures([[e.point.x - 5, e.point.y - 5], [e.point.x + 5, e.point.y + 5]], { layers: ["zone-dot"] }).length) { map.flyTo({ center: [-0.1, 51.512], zoom: 11.6, duration: 1200 }); toast("London's financial districts: click a gold tile to explore it."); return; }
+    const pp = pickPoi(e);
+    if (pp) { ecard.hidden = true; ecardPinned = false; openPoiCard(pp); return; }
+    const ps = pickStop(e); if (ps) { ecard.hidden = true; ecardPinned = false; openStopCard(ps); return; }
     const pc = pickCompany(e);
     if (pc != null) { ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = companyHTML(pc, true); ecard.hidden = false; place(e.point.x + 10, e.point.y - 40, ecard); bubbleNudge(); return; }
     const cl = map.getLayer("pr-cl") && map.getLayoutProperty("pr-cl", "visibility") !== "none" ? map.queryRenderedFeatures(pbox(e, 2), { layers: ["pr-cl"] })[0] : null;
@@ -2133,7 +2384,7 @@
     syncFocusColour(); veil.classList.add("on"); document.body.classList.add("focused");
     card.className = "card pinned"; card.innerHTML = cardHTML(code, true); card.hidden = false; hist.hidden = true;
     if (!(opts && opts.noFly)) flyTo(code, 0, true);
-    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList(); notifyApps();
+    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList(); notifyApps(); syncNewsSoon();
   }
   function unfocus() {
     if (!state.focus && !state.pinned) return;
@@ -2141,7 +2392,7 @@
     veil.classList.remove("on"); document.body.classList.remove("focused"); veil.style.clipPath = ""; veil.style.webkitClipPath = ""; mind.innerHTML = ""; card.hidden = true; hist.hidden = true;
     setP("focus-lift", "fill-opacity", 0); setP("focus-edge", "line-opacity", 0); setP("focus-shadow", "line-opacity", 0);
     setTimeout(() => { if (!state.focus && map.getSource("focus")) map.getSource("focus").setData({ type: "FeatureCollection", features: [] }); }, 320);
-    renderTray(); renderProtestList(); notifyApps();
+    renderTray(); renderProtestList(); notifyApps(); syncNewsSoon();
   }
   function syncFocusColour() { if (!FX) return; const c = LAST.fc[FX.code]; setP("focus-lift", "fill-color", c || "#ffffff"); }
   function updateOverlay() {
@@ -2341,7 +2592,7 @@
   const fab = $("cmp-fab");
   function renderTray() {
     tray.hidden = true; const n = state.sel.length;
-    fab.hidden = !n; fab.querySelector(".n").textContent = n;
+    fab.hidden = !n; fab.querySelector(".n").textContent = n; syncNewsSoon();
     fab.title = n ? `Compare the ${n} selected ${n === 1 ? "place" : "places"} (right-click an area to deselect it)` : "";
   }
   fab.addEventListener("click", openCmp);
@@ -2660,9 +2911,11 @@
   const MAPCOL_DEF = { land: "#f2efe9", water: "#aad3df", lines: "#7d6f86" };
   const mapColNow = k => MAPCOL[k] || MAPCOL_DEF[k];
   const mcOrig = {};
-  const keepOrig = (id, prop) => { const k = id + "|" + prop; if (!(k in mcOrig)) mcOrig[k] = map.getPaintProperty(id, prop); return mcOrig[k]; };
+  const keepOrig0 = (id, prop) => { const k = id + "|" + prop; if (!(k in mcOrig)) mcOrig[k] = map.getPaintProperty(id, prop); return mcOrig[k]; };
   function applyMapColours() {
     if (!map.getStyle || !map.getStyle()) return;
+    const pal = (key && OS.palettes && OS.palettes[paletteKey()]) || {};
+    const keepOrig = (lid, prop) => (pal[lid] && pal[lid][prop]) || keepOrig0(lid, prop);   // 0.8: the current mode's colour, so dark and light both come back right
     map.getStyle().layers.forEach(l => {
       const id = l.id.toLowerCase(), noBase = !key;
       if (l.type === "background") { const want = noBase ? MAPCOL.water : MAPCOL.land, orig = keepOrig(l.id, "background-color"); setP(l.id, "background-color", want || orig); return; }
@@ -2944,7 +3197,12 @@
     if (CHART.drawn) renderChartBody();
     addFctl(cpanel);
   }
-  function renderChartBody() { const b = $("cp-body"); if (!b) return; if (!CHART.style) CHART.style = chartStylesFor(specNow()).best; b.innerHTML = drawChart(specNow(), Math.max(280, cpanel.offsetWidth - 30)); }
+  function renderChartBody() { const b = $("cp-body"); if (!b) return; if (!CHART.style) CHART.style = chartStylesFor(specNow()).best; b.innerHTML = drawChart(specNow(), Math.max(280, cpanel.offsetWidth - 30)) + chartContextHTML(); }
+  function chartContextHTML() { // 0.8: what was published about the metrics charted (newest first)
+    const seen = new Set(), its = [];
+    CHART.metrics.forEach(id => contextFor(id, CHART.places.length === 1 ? CHART.places[0] : null, 3).forEach(it => { if (!seen.has(it.u + it.t)) { seen.add(it.u + it.t); its.push(it); } }));
+    return its.length ? `<div class="cx-chart"><h4 class="cx-h">Context</h4><ul class="cx-list">${its.slice(0, 5).map(it => `<li>${ctxLine(it)}</li>`).join("")}</ul></div>` : "";
+  }
   function editSpec(target, ds, el) { // shared by the panel (target = CHART) and tabs
     if (ds.rmm) { target.metrics = target.metrics.filter(x => x !== ds.rmm); target.from = Math.max(target.from, spanFor(target.metrics.map(mOf))); }
     else if (ds.rmp) target.places = target.places.filter(x => x !== ds.rmp);
@@ -3103,6 +3361,8 @@
       ${row("Source", esc(src).replace(/(https?:\/\/[^\s;),]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>') || "—")}
       ${row("Estimated values", esc(est))}${row("Caveats", esc(CAVEAT[m.id] || ""))}
       ${row("Related", rel.map(x => `<button class="linkish" data-info="${x.id}">${esc(x.label)}</button>`).join(" · "))}</table>
+      ${(() => { const cx = contextFor(m.id, null, 6), up = (CX.upcoming || []).filter(u => u.m && u.m.includes(m.id)).slice(0, 3), wide = cx.length < 2 ? contextWider(m.p, 3) : [];
+        return cx.length || up.length || wide.length ? `<h4 class="cx-h">Recent context</h4><ul class="cx-list">${cx.map(it => `<li>${ctxLine(it)}${it.x ? `<div class="cx-x">${esc(it.x)}</div>` : ""}</li>`).join("")}${wide.map(it => `<li>${ctxLine(it)}</li>`).join("")}${up.map(it => `<li>${ctxLine(it)}</li>`).join("")}</ul><p class="cx-src">${esc(CX.sources || "")}</p>` : ""; })()}
       <p class="imore">${helpBtn("honesty", "What measured, estimated, missing and not meaningful mean")} <button class="linkish" data-help="honesty">What “estimated” and “not meaningful” mean</button></p>`;
   }
   const infoWins = new Map();
@@ -3790,12 +4050,14 @@
   function showHits() {
     const extra = picked.filter(c => !hits.includes(c));
     const body = (extra.length ? `<li class="sec">Ticked</li>${extra.map(c => row(c, -1)).join("")}${hits.length ? `<li class="sec">Results</li>` : ""}` : "") + hits.map(row).join("");
-    const mbody = mhits.length ? `<li class="sec">Metrics <small>click to put one on the map</small></li><li class="smetrics">${mtree("search", mhits, mrow, { all: true, isOn: m => isMapped(m.id) })}</li>` : "";
+    const pbody = phits.length ? `<li class="sec">Airports, ports and stations</li>${phits.map(i => `<li class="poi-hit" data-poi="${i.id}"><span class="poi-ic" style="background:${POI_KIND[i.k].col}"></span>${esc(i.n)} <small>${esc(POI_KIND[i.k].label)}</small></li>`).join("")}` : "";
+    const mbody = pbody + (mhits.length ? `<li class="sec">Metrics <small>click to put one on the map</small></li><li class="smetrics">${mtree("search", mhits, mrow, { all: true, isOn: m => isMapped(m.id) })}</li>` : "");
     hl.innerHTML = (hits.length || extra.length ? (mhits.length && !extra.length ? `<li class="sec">Places</li>` : "") + body : "") + mbody + `<li class="sfoot"><span>${picked.length ? `${picked.length} ticked` : "Tick places to show several together"}</span>${picked.length ? `<button type="button" class="btn" data-sclear>Clear</button>` : ""}<button type="button" class="btn primary" data-ssearch ${picked.length ? "" : "disabled"}>Search${picked.length > 1 ? ` (${picked.length})` : ""}</button></li>`;
-    hl.hidden = !ddOpen || (!hits.length && !picked.length && !mhits.length);
+    hl.hidden = !ddOpen || (!hits.length && !picked.length && !mhits.length && !phits.length);
     tickPill.hidden = !picked.length || !hl.hidden; tickPill.innerHTML = `<button type="button" data-sopen>${picked.length} ticked</button>`;
   }
-  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); mhits = searchMetrics(q); cur = 0; ddOpen = true; showHits(); });
+  let phits = [];
+  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); mhits = searchMetrics(q); phits = searchPoi(q); cur = 0; ddOpen = true; showHits(); });
   si.addEventListener("focus", () => { closeBrowse(); ddOpen = true; showHits(); });
   si.addEventListener("blur", () => { setTimeout(() => { if (document.activeElement !== si) { ddOpen = false; showHits(); } }, 120); });
   function toggleTick(c) { picked = picked.includes(c) ? picked.filter(x => x !== c) : picked.concat(c); showHits(); if (!browse.hidden) renderPFoot(); }
@@ -3818,6 +4080,7 @@
     if (b && b.hasAttribute("data-ssearch")) return searchTicked();
     if (b && b.hasAttribute("data-sclear")) { picked = []; showHits(); return; }
     if (b && b.dataset.sm) { const id = b.dataset.sm; if (!isMapped(id)) toggleMapped(id); else toast(`${M[id].label} is already on the map.`); si.value = ""; hits = []; mhits = []; ddOpen = false; showHits(); si.blur(); return; }
+    const pl = e.target.closest("li[data-poi]"); if (pl) { const i = POI_BY[pl.dataset.poi]; si.value = ""; hits = []; mhits = []; phits = []; ddOpen = false; showHits(); si.blur(); map.flyTo({ center: [i.lon, i.lat], zoom: Math.max(i.minz + 1.5, i.k === "station" ? 13 : 10), duration: 1200 }); openPoiCard(i.id); return; }
     const li = e.target.closest("li[data-c]"); if (li) toggleTick(li.dataset.c);
   });
   tickPill.addEventListener("mousedown", e => { e.preventDefault(); si.focus(); });
@@ -3970,6 +4233,40 @@
     isMapped: id => isMapped(id), kids: c => (UNDER[c] || []).slice(),
   };
   window.AtlasCtx = CTX;
+  CTX.money = window.AtlasMoney || null; CTX.CH = CH; CTX.MK = MK; CTX.LABEL = LABEL;
+  CTX.map = map; CTX.POI = POIDATA; CTX.openPoiCard = id => openPoiCard(id); CTX.plain = plain;   // 0.8: views that draw on the map (Atlas Transport)
+  if (window.AtlasMoney) AtlasMoney.init(CTX);
+
+  // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------
+  // News shows only when the feed has items for what's on screen: the focused place (or anything inside it), the topics
+  // of the perspectives being mapped or of the open view, and the selected places.
+  const TOPIC_OF = { political: ["Elections", "Local government"], economic: ["Economy", "Housing"], social: ["Housing", "Immigration", "Education", "Crime & justice"], health: ["Health"], transport: ["Transport"], markets: ["Economy"], environment: ["Environment"] };
+  $("nerd-bubble").addEventListener("click", () => openAnalyse({}));
+  function newsNow() {
+    const N = window.ATLAS_NEWS; if (!N || !N.items) return { items: [], why: "" };
+    const places = new Set(), why = [];
+    const addPlace = c => { if (!c || !P[c]) return; places.add(c); (UNDER[c] || []).forEach(k => places.add(k)); if (lvlOf(c) === "council") Object.keys(P).forEach(w => { if (P[w].parent === c) places.add(w); }); };
+    if (state.focus) { addPlace(state.focus); why.push(nameOf(state.focus)); }
+    state.sel.forEach(x => addPlace(x.code)); if (state.sel.length) why.push(state.sel.length === 1 ? nameOf(state.sel[0].code) : state.sel.length + " selected places");
+    const persp = new Set(onPersps().filter(p => (PS.mapped[p] || []).length)); if (APP) persp.add(APP.perspective);
+    const topics = new Set(); persp.forEach(p => (TOPIC_OF[p] || []).forEach(t => topics.add(t)));
+    let items;
+    if (places.size) items = N.items.filter(it => it.pl.some(c => places.has(c)));
+    else { items = topics.size ? N.items.filter(it => it.tp.some(t => topics.has(t))) : []; if (topics.size) why.push([...topics].join(", ")); }
+    return { items: items.slice(0, 60), why: why.join(" · ") };
+  }
+  let newsWin = null;
+  function syncNewsBubble() { const b = $("news-bubble"), n = newsNow().items.length; b.hidden = !n; b.querySelector(".n").textContent = n > 99 ? "99+" : n; if (newsWin && !newsWin.el.hidden) renderNewsWin(); }
+  function renderNewsWin() {
+    const { items, why } = newsNow(), N = window.ATLAS_NEWS || {};
+    newsWin.setBody(`<p class="nw2-why">${items.length} items about <b>${esc(why || "this view")}</b>, newest first. Official sources (GOV.UK, UK Parliament), refreshed daily${N.built ? ` (${esc(longDate(N.built))})` : ""}.</p>
+      <ul class="nw2-list">${items.map(it => `<li><div class="nw2-meta">${esc(longDate(it.d))} · ${esc(it.s)}</div><a href="${esc(it.u)}" target="_blank" rel="noopener">${esc(it.t)}</a>${it.x ? `<p>${esc(it.x)}</p>` : ""}</li>`).join("")}</ul>`);
+  }
+  $("news-bubble").addEventListener("click", () => {
+    if (!newsWin) newsWin = WM.make({ type: "news", title: "News", dispose: false, min: { w: 300, h: 220 }, def: () => ({ x: innerWidth - 400 - 76, y: 70, w: 400, h: Math.round(innerHeight * 0.6) }) });
+    WM.open(newsWin.el); renderNewsWin();
+  });
+  CTX.newsNow = newsNow;
   const appWins = {};
   function openAppPanel(id) {
     const x = [...APP.panels, ...APP.tools].find(p => p.id === id); if (!x) return;
@@ -4020,7 +4317,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.7.2</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.8</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));
@@ -4097,7 +4394,7 @@
   draggable(legend, $("legend-grip"), "atlas-031-legend-pos", positionLegend);
   resizable(legend, "atlas-061-legend-size", { minW: 240, minH: 120, after: positionLegend });
   // 0.7.2: the time bar stays centred at the bottom (it can't be moved) and resizes from every edge and corner
-  resizable(timebar, "atlas-072-timebar-size", { fixed: true, minW: 320, minH: 64 });
+  resizable(timebar, "atlas-08-timebar-size", { fixed: true, minW: 300, minH: 64 });   // 0.8: a shorter bar; sizes saved by 0.7.2 are left behind
   $("legend-grip").insertAdjacentHTML("beforeend", `<button class="kclear" data-lclear title="Take everything off the map (Esc)">Clear all</button>`);
   $("legend-grip").querySelector(".kx") && $("legend-grip").appendChild($("legend-grip").querySelector(".kx"));
   $("legend-x").addEventListener("click", () => { setKeyHidden(true); toast("Key closed. Press Key (bottom left) to bring it back."); });

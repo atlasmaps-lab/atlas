@@ -175,6 +175,7 @@
       ${x ? `<h4>Projection</h4><p>${ctx.esc(ctx.partyName(x.w))} ${x.w === x.was ? "hold" : `gain from ${ctx.esc(ctx.partyName(x.was))}`} · ${x.order.slice(0, 4).map(p => `${ctx.esc(ctx.partyName(p))} ${pc1(x.sh[p])}`).join(", ")}</p><p class="ap-note">Atlas, polls to ${ctx.esc(ctx.POLLS.latest)}, uniform swing (a simple model). <button class="lnk" data-popen="projection">How this is worked out</button></p>` : ""}
       <h4>Results</h4><div class="tscroll"><table class="cmp"><thead><tr><th>Election</th><th>Winner</th><th>Share</th><th>Majority</th><th>Turnout</th><th title="Change in the winner's share since the previous general election (points)">Winner's change</th></tr></thead><tbody>${rows}</tbody></table></div>
       <h4>MPs</h4><ul class="sq-mps">${spans.slice().reverse().map(s => `<li><i class="sw" style="background:${ctx.partyCol(s[2])}"></i>${ctx.ent(s[3])} · ${ctx.esc(ctx.partyName(s[2]))} <small>${s[0].slice(0, 4)}–${s[1] ? s[1].slice(0, 4) : "now"}</small></li>`).join("")}</ul>
+      ${ctx.money ? (() => { const ms = ctx.money.seatMPs(code).filter(x => ctx.money.data.mps[x.mid]); return ms.length || ctx.money.placeTotal(code, ctx.today) ? `<h4>Political money</h4><p>${ms.map(x => `${ctx.money.mpBtn(x.mid)} <small>${x.s.slice(0, 4)}–${x.e ? x.e.slice(0, 4) : "now"} · ${ctx.money.gbp(ctx.money.data.mps[x.mid].tot)} registered</small>`).join("<br>")}</p><button class="btn sm" data-moplace="${code}">Who gave money here</button>` : ""; })() : ""}
       <h4>In the news</h4>${newsList(ctx, newsFor(ctx, [code], 6), "No official news items name this seat yet.")}
       <p class="ap-note">Results are this seat's own record within its boundary set; across the 2010 and 2024 reviews the "before" result is the Commons Library's notional one (est.).</p>`;
     el.oninput = e => { if (!e.target.matches("[data-sq]")) return; const q = e.target.value.trim().toLowerCase(), hits = q.length < 2 ? [] : Object.keys(ctx.P).filter(c => ctx.P[c].level === "constituency" && ctx.nameOf(c).toLowerCase().includes(q)).slice(0, 12);
@@ -282,6 +283,52 @@
       <p class="ap-note">Scottish independence referendum 2014: not available (the official per-council results are behind browser checks; see the 1.7 notes).</p>`;
     el.onclick = e => { const b = e.target.closest("[data-ref]"); if (!b) return; ctx.setDate("2016-06-24"); if (b.dataset.ref === "council") { ctx.setLevel("council"); ctx.mapOnly(["eu_leave"]); } else { ctx.setLevel("constituency"); ctx.mapOnly(["eu_leave_est_pcon"]); } };
   }
+  // ---------- Money in politics (0.8) ----------
+  // Donations and loans registered with the Electoral Commission, MPs' registered interests, and donors who have won
+  // public contracts. The cards themselves (MP, party, donor, place) are core (money.js), so they open from anywhere.
+  const MF = { tab: "parties", q: "", party: "", st: "", min: 0, year: "" };
+  function moneyPanel(ctx, el) {
+    const Mo = ctx.money; if (!Mo) { el.innerHTML = `<p class="ap-note">The money data isn't loaded (data/money.js).</p>`; return; }
+    const D = Mo.data, Y = +ctx.today.slice(0, 4), tabs = [["parties", "Parties"], ["donors", "Top donors"], ["latest", "Every donation"], ["contracts", "Donors with contracts"], ["lobby", "Meetings with ministers"], ["map", "On the map"]];
+    let body = "";
+    if (MF.tab === "parties") {
+      const rows = Object.entries(D.parties).map(([k, P]) => { const t5 = [0, 1, 2, 3, 4].reduce((s, i) => s + ((P.y[Y - i] || [0])[0]), 0); return { k, t5, tot: Object.values(P.y).reduce((s, v) => s + v[0], 0) }; }).filter(r => r.tot >= 1e5).sort((a, b) => b.t5 - a.t5 || b.tot - a.tot);
+      body = `<p class="ap-note">Registered donations to each party (central and local), ${Y - 4}–${Y}, and since 2001. Click a party for its donors, loans and who gives.</p><table class="mo-tab"><thead><tr><th>Party</th><th class="num">${Y - 4}–${Y}</th><th class="num">Since 2001</th></tr></thead>${rows.slice(0, 25).map(r => `<tr><td><button class="linkish" data-moparty="${r.k}"><i class="sw" style="background:${Mo.partyCol(r.k)}"></i>${ctx.esc(Mo.partyName(r.k))}</button></td><td class="num">${Mo.gbp(r.t5)}</td><td class="num">${Mo.gbp(r.tot)}</td></tr>`).join("")}</table>`;
+    } else if (MF.tab === "donors") {
+      const list = (MF.q.length >= 2 ? Mo.searchDonors(MF.q) : Object.keys(D.donors).sort((a, b) => D.donors[b][3] - D.donors[a][3]).slice(0, 40));
+      body = `<div class="ap-row"><input data-mf="q" placeholder="Find a donor (person, company, union)…" value="${ctx.esc(MF.q)}" style="flex:1"></div><table class="mo-tab">${list.map(id => { const d = D.donors[id]; return `<tr><td>${Mo.donorBtn(id)} <small>${ctx.esc(D.status[d[1]] || "")}</small>${D.contracts[id] ? ` <span class="mo-badge">contracts</span>` : ""}<br><small>to ${d[6].map(k => ctx.esc(Mo.partyName(k))).join(", ")}</small></td><td class="num">${Mo.gbp(d[3])}</td></tr>`; }).join("")}</table><p class="ap-note">The biggest donors since 2001. Every donor is in "Every donation".</p>`;
+    } else if (MF.tab === "latest") {
+      const d = Mo.detail;
+      if (!d) { body = `<p class="ap-note">Loading every registered donation since 2010…</p>`; Mo.loadDetail().then(() => moneyPanel(ctx, el)); }
+      else {
+        const q = MF.q.toLowerCase();
+        const rows = d.rows.filter(r => (!MF.party || r[3] === MF.party) && (!MF.st || (d.donors[r[4]] || [])[1] === MF.st) && r[1] >= MF.min && (!MF.year || r[0].startsWith(MF.year)) && (!q || ((d.donors[r[4]] || [])[0] || "").toLowerCase().includes(q)));
+        const parties = Object.keys(D.parties).filter(k => D.parties[k].y && Object.values(D.parties[k].y).reduce((s, v) => s + v[0], 0) > 1e6);
+        body = `<div class="ap-row"><input data-mf="q" placeholder="Donor name…" value="${ctx.esc(MF.q)}" style="flex:1"><select data-mf="party"><option value="">Every party</option>${parties.map(k => `<option value="${k}" ${MF.party === k ? "selected" : ""}>${ctx.esc(Mo.partyName(k))}</option>`).join("")}</select>
+          <select data-mf="st"><option value="">Every kind of donor</option>${Object.entries(D.status).map(([k, v]) => `<option value="${k}" ${MF.st === k ? "selected" : ""}>${ctx.esc(v)}</option>`).join("")}</select>
+          <select data-mf="year"><option value="">Every year</option>${Array.from({ length: Y - 2009 }, (_, i) => Y - i).map(y => `<option ${MF.year === String(y) ? "selected" : ""}>${y}</option>`).join("")}</select>
+          <select data-mf="min">${[0, 10000, 50000, 100000, 500000, 1000000].map(v => `<option value="${v}" ${MF.min === v ? "selected" : ""}>${v ? "≥ " + Mo.gbp(v) : "Any size"}</option>`).join("")}</select></div>
+          <p class="ap-note">${rows.length.toLocaleString("en-GB")} donations, ${Mo.gbp(rows.reduce((s, r) => s + r[1], 0))} in all.</p>
+          <table class="mo-tab">${rows.slice(0, 150).map(r => `<tr><td><small>${Mo.day(r[0])}</small></td><td>${Mo.donorBtn(r[4])} → ${r[2] === "M" ? Mo.mpBtn(r[3]) : r[2] === "P" ? `<button class="linkish" data-moparty="${r[3]}">${ctx.esc(Mo.partyName(r[3]))}</button>${r[5] ? ` <small>${ctx.esc(r[5])}</small>` : ""}` : ctx.esc(r[3])}</td><td class="num">${Mo.gbp(r[1])}</td></tr>`).join("")}</table>`;
+      }
+    } else if (MF.tab === "contracts") {
+      const ids = Object.keys(D.contracts).sort((a, b) => D.contracts[b].v - D.contracts[a].v);
+      body = `<p class="mo-flag">Companies that are registered political donors <b>and</b> have won public contracts since 2024 (Find a Tender). Both facts are public record; Atlas puts them side by side. It is not evidence that one led to the other.</p>
+        <table class="mo-tab"><thead><tr><th>Donor</th><th class="num">Donated</th><th class="num">Contracts</th></tr></thead>${ids.map(id => `<tr><td>${Mo.donorBtn(id)}<br><small>to ${(D.donors[id] || [, , , , , , []])[6].map(k => ctx.esc(Mo.partyName(k))).join(", ")}</small></td><td class="num">${Mo.gbp((D.donors[id] || [])[3])}</td><td class="num">${D.contracts[id].n} · ${Mo.gbp(D.contracts[id].v)}</td></tr>`).join("")}</table>`;
+    } else if (MF.tab === "lobby") {
+      body = `<p class="ap-note">Outside organisations ministers met most often since July 2024, from each department's quarterly transparency release (GOV.UK). "Donor" marks an organisation with the same name as a registered political donor.</p>
+        <table class="mo-tab"><thead><tr><th>Organisation</th><th class="num">Meetings</th></tr></thead>${D.lobby.slice(0, 80).map(([org, n, did]) => `<tr><td>${did ? Mo.donorBtn(did) : ctx.esc(org)}${did ? ` <span class="mo-badge">donor</span>` : ""}</td><td class="num">${n}</td></tr>`).join("")}</table>`;
+    } else {
+      body = `<p>Show registered political money on the map: donations to local parties and MPs in each seat and council, in the five years to the date on the time bar.</p><div class="ap-row"><button class="btn sm" data-mfmap="constituency">By constituency</button><button class="btn sm" data-mfmap="council">By council</button></div>
+        <p class="ap-note">Local party units covering several seats aren't placed, so some areas show less than their party spent there. See pipeline/reports/validation_money.md.</p>`;
+    }
+    el.innerHTML = `<div class="tr-tabs">${tabs.map(([k, l]) => `<button class="${MF.tab === k ? "on" : ""}" data-mftab="${k}">${l}</button>`).join("")}</div><div class="mo-body">${body}</div><p class="mo-src">Electoral Commission political finance database (every reportable donation since 2001), House of Commons Register of Members' Financial Interests, Find a Tender. ${ctx.esc(D.built)}.</p>`;
+    el.onclick = e => { const t = e.target.closest("[data-mftab]"); if (t) { MF.tab = t.dataset.mftab; moneyPanel(ctx, el); return; }
+      const mp = e.target.closest("[data-mfmap]"); if (mp) { ctx.setHex(false); ctx.mapOnly(["money_received"]); ctx.setLevel(mp.dataset.mfmap); } };
+    el.oninput = e => { if (e.target.dataset.mf !== "q") return; MF.q = e.target.value; clearTimeout(moneyPanel.t); moneyPanel.t = setTimeout(() => { moneyPanel(ctx, el); const i = el.querySelector('[data-mf="q"]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); };
+    el.onchange = e => { const k = e.target.dataset.mf; if (!k || k === "q") return; MF[k] = k === "min" ? +e.target.value : e.target.value; moneyPanel(ctx, el); };
+  }
+
   function protests(ctx, el) {
     el.innerHTML = `<p>Notable protests since 1974, checked to be in the UK: the list follows the time bar and the area in focus.</p><div class="ap-row"><button class="btn sm" data-pl>Open the protest list</button><button class="btn sm" data-pm>Protests on the map</button></div>`;
     el.onclick = e => { if (e.target.closest("[data-pl]")) ctx.openProtestList(); if (e.target.closest("[data-pm]")) { ctx.setHex(false); ctx.mapOnly(["control", "protest_events"]); ctx.setLevel("auto"); } };
@@ -296,6 +343,7 @@
       { id: "councils", title: "Councils", render: councils, min: { w: 460, h: 360 } },
       { id: "projection", title: "Projection", render: projection, min: { w: 420, h: 320 } },
       { id: "news", title: "News", render: news, min: { w: 420, h: 320 } },
+      { id: "money", title: "Money", blurb: "Donations, loans, MPs' interests and donors with public contracts", render: moneyPanel, min: { w: 460, h: 380 } },
       { id: "referendums", title: "Referendums", render: referendums },
       { id: "protests", title: "Protests", render: protests },
     ],

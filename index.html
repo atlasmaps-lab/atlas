@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atlas 0.7.2 · UK</title>
+<title>Atlas 0.8 · UK</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
 <style>
 /* Layout: the map is the whole window.
@@ -291,7 +291,7 @@ input[type=range] { accent-color: var(--ink); }
 .lg-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-2); border-top: 1px solid var(--rule); padding-top: 6px; }
 
 /* ---------- time bar (bottom-centre) ---------- */
-#timebar { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); bottom: 26px; width: min(640px, calc(100% - 520px)); min-width: 380px; display: grid; grid-template-columns: auto auto 1fr auto; gap: 4px 10px; align-items: center; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; box-shadow: var(--shadow); padding: 7px 12px 5px 6px; }
+#timebar { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); bottom: 26px; width: min(440px, calc(100% - 520px)); min-width: 320px; display: grid; grid-template-columns: auto auto 1fr auto; gap: 4px 10px; align-items: center; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; box-shadow: var(--shadow); padding: 7px 12px 5px 6px; }
 #timebar .grip { width: 10px; height: 30px; cursor: grab; border-radius: 3px; background-image: radial-gradient(circle, var(--ink-3) 1.1px, transparent 1.3px); background-size: 5px 5px; opacity: .8; }
 #timebar .grip:hover { background-color: var(--hover); }
 .dragging, .dragging * { cursor: grabbing !important; user-select: none; }
@@ -492,6 +492,73 @@ body[data-tool="measure"] #map .maplibregl-canvas, body[data-tool="lasso"] #map 
 /* ---------- 1.4: charts, tabs, zones, companies, hot zones, notes ---------- */
 #chart-bubble { position: absolute; right: 14px; bottom: 74px; z-index: 6; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--rule); background: var(--panel); box-shadow: var(--shadow); display: grid; place-items: center; color: var(--ink); padding: 0; transition: transform .2s; }
 #chart-bubble .ico { width: 22px; height: 22px; }
+/* 0.8: Stats for nerds and News, stacked above the chart button (News only when there's news for what's on screen) */
+.fab2 { position: absolute; right: 14px; z-index: 6; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--rule); background: var(--panel); box-shadow: var(--shadow); display: grid; place-items: center; color: var(--ink); cursor: pointer; transition: transform .15s, background var(--fade); }
+.fab2:hover { transform: scale(1.06); } .fab2 .ico { width: 22px; height: 22px; } .fab2[hidden] { display: none; }
+#nerd-bubble { bottom: 130px; } #news-bubble { bottom: 186px; }
+.fab2 .n { position: absolute; top: -3px; right: -3px; min-width: 17px; height: 17px; border-radius: 9px; background: var(--accent); color: var(--on-accent); font: 600 10px/17px var(--f); padding: 0 4px; box-sizing: border-box; text-align: center; }
+body.split .fab2 { right: calc(var(--wsw) + 14px); }
+body.wsfull .fab2 { visibility: hidden; }
+.nw2-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; } .nw2-list li { border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+.nw2-meta { font-size: 11px; color: var(--ink-3); } .nw2-list a { font-weight: 600; color: var(--ink); text-decoration: none; } .nw2-list a:hover { text-decoration: underline; } .nw2-list p { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-2); }
+/* 0.8: map symbols (airports, ports, stations, financial sites) */
+.poi-ic { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -1px; margin-right: 6px; border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+.poi-ic.lg { width: 34px; height: 34px; display: grid; place-items: center; margin: 0; flex: none; } .poi-ic.lg svg { width: 20px; height: 20px; }
+.poi-h b { font-size: 13px; } .poi-sub { font-size: 11.5px; color: var(--ink-2); margin-top: 2px; }
+.poi-card { display: grid; gap: 10px; font-size: 13px; } .poi-top { display: flex; gap: 10px; align-items: center; } .poi-kind { font-weight: 600; font-size: 12.5px; }
+.poi-big b { font: 700 22px var(--num, var(--f)); } .poi-spark { color: var(--ink-2); } .poi-spark svg { width: 100%; height: auto; }
+.poi-row { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; } .poi-row small { color: var(--ink-3); }
+.poi-note { margin: 0; color: var(--ink-2); line-height: 1.45; } .poi-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.poi-links { font-size: 12px; } .poi-links a { color: var(--ink); } .poi-src { font-size: 11px; color: var(--ink-3); }
+#hits li.poi-hit { cursor: pointer; padding: 6px 10px; } #hits li.poi-hit:hover { background: var(--hover); } #hits li.poi-hit small { color: var(--ink-3); margin-left: 4px; }
+/* 0.8: written context beside the numbers */
+.cx-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; font-size: 12px; line-height: 1.4; }
+.cx-list li { border-left: 2px solid var(--rule); padding-left: 8px; } .cx-list a { color: var(--ink); } .cx-list small { color: var(--ink-3); }
+.cx-list.short { gap: 3px; font-size: 11.5px; color: var(--ink-2); }
+.cx-k { font: 600 10px var(--f); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-right: 3px; }
+.cx-x { color: var(--ink-2); font-size: 11.5px; margin-top: 2px; } .cx-h { margin: 12px 0 2px; font-size: 12.5px; } .cx-src { font-size: 11px; color: var(--ink-3); }
+.cx-chart { padding: 4px 6px 8px; }
+/* 0.8: money in politics */
+.mo-head { display: grid; gap: 4px; margin-bottom: 6px; } .mo-kind { font: 600 11px var(--f); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.mo-big b { font: 700 20px var(--num, var(--f)); } .mo-sub { font-size: 12px; color: var(--ink-2); }
+.mo-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; } .mo-tab td { padding: 4px 4px; border-bottom: 1px solid var(--rule); vertical-align: top; } .mo-tab td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mo-badge { font: 600 9.5px var(--f); text-transform: uppercase; letter-spacing: .05em; background: #fdecc8; color: #7a4b00; border-radius: 3px; padding: 1px 4px; }
+.mo-flag { font-size: 12px; background: #fff7e6; border-left: 3px solid #e0a020; padding: 6px 8px; color: #5b4500; }
+:root[data-mode="dark"] .mo-flag { background: #3a2f17; color: #f0d9a6; } :root[data-mode="dark"] .mo-badge { background: #4a3a14; color: #f3d48a; }
+.mo-list { margin: 4px 0; padding-left: 16px; font-size: 12px; display: grid; gap: 3px; } .mo-src { font-size: 11px; color: var(--ink-3); margin-top: 10px; }
+.mo-line { font-size: 12px; margin: 6px 0; color: var(--ink-2); } .mo-cobox { background: #fff7e6; } :root[data-mode="dark"] .mo-cobox { background: #3a2f17; }
+.mo-win h4 { margin: 12px 0 4px; font-size: 13px; } .mo-win details summary { cursor: pointer; font-size: 12.5px; padding: 3px 0; }
+/* 0.8: a small tab strip inside panels (Money, Transport hubs) */
+.tr-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--rule); margin: 0 0 8px; overflow-x: auto; scrollbar-width: none; }
+.tr-tabs button { border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 12.5px; padding: 6px 10px; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; }
+.tr-tabs button.on { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+/* 0.8: Atlas Social items (the marketplace also opens in Atlas Markets) */
+.so-it { border-bottom: 1px solid var(--rule); padding: 9px 0; font-size: 13px; } .so-it p { margin: 4px 0; line-height: 1.45; }
+.so-meta { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; } .so-meta small { color: var(--ink-3); }
+.so-demo { font: 600 9.5px var(--f); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); border: 1px solid var(--rule); border-radius: 3px; padding: 0 4px; margin-left: auto; }
+.so-badge { font: 600 10px var(--f); background: #222; color: #fff; border-radius: 3px; padding: 1px 5px; }
+.so-media img, .so-media video { width: 100%; max-height: 320px; object-fit: cover; border-radius: 8px; margin: 4px 0; background: #000; }
+.so-acts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; font-size: 12px; } .so-rep { color: var(--ink-3) !important; }
+.so-when { font-size: 12px; color: var(--ink-2); } .so-price b { font-size: 16px; } .so-seller { font-size: 11.5px; color: var(--ink-2); margin-top: 4px; }
+.so-src { font-size: 11px; color: var(--ink-3); margin-top: 10px; }
+textarea[data-sotext], .so-form textarea, .so-form input, .so-f input { width: 100%; box-sizing: border-box; border: 1px solid var(--rule); border-radius: 8px; padding: 7px 9px; font: inherit; font-size: 13px; background: var(--solid); color: var(--ink); margin: 3px 0; }
+.so-where { display: grid; gap: 3px; margin: 8px 0; font-size: 12.5px; } .so-where small { color: var(--ink-3); } .so-file { display: grid; gap: 4px; font-size: 12.5px; margin: 6px 0; }
+.so-f { display: grid; gap: 2px; font-size: 12.5px; margin: 6px 0; } .so-form { border: 1px solid var(--rule); border-radius: 8px; padding: 8px; margin: 6px 0; }
+.so-msgs { display: grid; grid-template-columns: 150px 1fr; gap: 8px; min-height: 260px; } .so-th { list-style: none; margin: 0; padding: 0; border-right: 1px solid var(--rule); }
+.so-th li { padding: 6px; cursor: pointer; font-size: 12px; border-radius: 6px; } .so-th li.on, .so-th li:hover { background: var(--hover); }
+.so-conv { display: grid; grid-template-rows: 1fr auto; gap: 6px; } .so-lines { display: grid; gap: 6px; align-content: start; overflow: auto; max-height: 320px; }
+.so-msg { background: var(--chip); border-radius: 10px; padding: 6px 9px; font-size: 13px; max-width: 80%; } .so-msg.me { background: #fde3c8; justify-self: end; } .so-msg small { display: block; color: var(--ink-3); font-size: 10.5px; }
+:root[data-mode="dark"] .so-msg.me { background: #5a3a1a; }
+.so-mine summary { cursor: pointer; font-size: 12.5px; padding: 4px 0; }
+
+/* 0.8: the economist's panels (Atlas Economic; rates also in Atlas Markets) */
+.ec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.ec-tile { text-align: left; border: 1px solid var(--rule); border-radius: 10px; background: var(--solid); color: var(--ink); padding: 8px 10px; cursor: pointer; font: inherit; display: grid; gap: 2px; }
+.ec-tile:hover { border-color: var(--ink-3); } .ec-lab { font-size: 11.5px; color: var(--ink-2); min-height: 28px; } .ec-val { font: 700 20px var(--num, var(--f)); }
+.ec-chg { font-size: 11px; color: var(--ink-3); } .ec-chg.good, td.good { color: #1b7a3a; } .ec-chg.bad, td.bad { color: #b03a2e; }
+.ec-per { font-size: 10.5px; color: var(--ink-3); } .ec-tile svg.spark { color: #13876b; } .ec-src { font-size: 11px; color: var(--ink-3); margin-top: 10px; }
+.ec-fc td:first-child { white-space: nowrap; } .ec-chartwrap svg { width: 100%; height: auto; }
+.nw2-why { font-size: 12px; color: var(--ink-2); margin: 0 0 10px; }
 #chart-bubble:hover { transform: scale(1.06); }
 #chart-bubble.open { background: var(--accent); color: var(--on-accent); }
 #chart-bubble.nudge { animation: bounce .9s ease 2; }
@@ -658,7 +725,7 @@ body.split #map { right: var(--wsw); }
 #ws-div:hover, body.resizing #ws-div { background: linear-gradient(90deg, transparent 2px, #3b78b5 2px, #3b78b5 6px, transparent 6px); }
 body.split #tools-btn, body.split #tools, body.split #chart-bubble, body.split #cmp-fab, body.split #notes-handle, body.split #notes { right: calc(var(--wsw) + 14px); }
 body.split #cmp-fab { right: calc(var(--wsw) + 74px); } body.split #notes-handle { right: var(--wsw); }
-body.split #timebar:not(.moved) { left: calc((100vw - var(--wsw)) / 2); width: min(560px, calc(100vw - var(--wsw) - 280px)); min-width: 300px; }
+body.split #timebar:not(.moved) { left: calc((100vw - var(--wsw)) / 2); width: min(420px, calc(100vw - var(--wsw) - 280px)); min-width: 280px; }
 body.split .maplibregl-ctrl-bottom-right { right: 0; }
 body.wsfull #dock, body.wsfull #legend, body.wsfull #timebar, body.wsfull #chart-bubble, body.wsfull #cmp-fab, body.wsfull #notes-handle, body.wsfull #key-show, body.wsfull #tools-btn { visibility: hidden; }
 .ws-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--rule); }
@@ -692,7 +759,7 @@ svg.tile { width: 100%; height: auto; display: block; background: #f6f4ef; borde
 /* printing (PDF) */
 #print-area { display: none; }
 @media print { body.printing > *:not(#print-area) { display: none !important; } body.printing { overflow: visible; background: #fff; } body.printing #print-area { display: block; } .pitem { page-break-after: always; padding: 10mm; } .pitem h2 { font-size: 18pt; margin: 0 0 4pt; } .ptitle h1 { font-size: 30pt; margin-top: 60mm; } .pmeta { color: #777; font-size: 10pt; margin-bottom: 8pt; } .pitem .cp-styles, .pitem .fctl { display: none; } }
-@media (max-width: 1100px) { #timebar { width: calc(100% - 420px); min-width: 320px; } }
+@media (max-width: 1100px) { #timebar { width: min(440px, calc(100% - 420px)); min-width: 300px; } }
 @media (max-width: 900px) { .search > input { width: 140px; } .tray { left: 120px; right: 12px; transform: none; width: auto; min-width: 0; } #timebar { left: 120px; right: 12px; transform: none; width: auto; min-width: 0; } #legend { width: 230px; } .cmp-page { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; } .cmp-side { max-height: 150px; border-right: 0; border-bottom: 1px solid var(--rule); } .scatter-wrap { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } }
 
@@ -732,7 +799,7 @@ body.resizing, body.resizing * { cursor: nwse-resize !important; user-select: no
 .wsi-head button[data-wssep] { font-size: 11.5px; white-space: nowrap; }
 #measure-label small { opacity: .75; }
 /* Split view: keep the time bar clear of the Perspectives panel in the narrower map pane */
-body.split #timebar:not(.moved) { left: calc(296px + (100vw - var(--wsw) - 296px) / 2); width: min(560px, calc(100vw - var(--wsw) - 316px)); min-width: 260px; }
+body.split #timebar:not(.moved) { left: calc(296px + (100vw - var(--wsw) - 296px) / 2); width: min(420px, calc(100vw - var(--wsw) - 316px)); min-width: 260px; }
 body.split #timebar:not(.moved) .steps { display: none; }
 
 /* 1.7: data honesty */
@@ -772,7 +839,7 @@ sup.est { margin-left: 3px; }
 .tscroll table.cmp { min-width: 100%; }
 #chartp.fwin { overflow: hidden; } #chartp.fwin .cp-body { overflow: auto; }
 /* 1.8: time bar labels fit the width; the current date sits above the handle; the range follows the data */
-#timebar { container-type: inline-size; min-width: 320px; }
+#timebar { container-type: inline-size; min-width: 300px; }
 .track { padding-top: 15px; min-width: 0; }
 .tcur { position: absolute; top: 0; left: 0; font: 600 10px var(--mono); color: var(--ink); white-space: nowrap; padding: 0 3px; border-radius: 3px; background: var(--panel); pointer-events: none; line-height: 14px; }
 .marks span { transform: none; text-align: center; white-space: nowrap; }
@@ -786,7 +853,7 @@ sup.est { margin-left: 3px; }
 @container (max-width: 560px) { #now { display: none; } }
 @container (max-width: 430px) { #date { display: none; } .tb-full { padding: 4px 5px; font-size: 10px; } }
 /* narrow screens: the time bar sits between the Perspectives panel and the chart button; the tabs never run under Tools */
-@media (max-width: 1100px) { #timebar:not(.moved) { left: 300px; right: 76px; transform: none; width: auto !important; } .tabs { max-width: calc(100vw - 830px); } }
+@media (max-width: 1100px) { #timebar:not(.moved) { left: 300px; right: auto; transform: none; width: min(420px, calc(100vw - 376px)) !important; } .tabs { max-width: calc(100vw - 830px); } }
 @media (max-width: 1240px) { .tab:not(.on) span { display: none; } }
 /* 1.8: Clear all at the top of the Perspectives panel; per-perspective "clear"; options with no data say so */
 .dclear:disabled { opacity: .45; cursor: default; color: var(--ink-3); border-color: var(--rule); }
@@ -934,6 +1001,8 @@ body.apptab-on #menu { top: 50px; }
 #apphead .ah-more { border: 1px solid var(--rule); background: var(--solid); border-radius: 6px; width: 38px; height: 32px; font-size: 20px; line-height: 1; cursor: pointer; color: var(--ink); }
 #apphead .ah-more:hover { background: rgba(0,0,0,.05); }
 #apphead .ah-nav { max-width: 1240px; margin: 0 auto; padding: 0 20px; border-top: 1px solid var(--rule); }
+#apphead .ah-nav .appbar::-webkit-scrollbar { display: none; }
+#apphead .ah-nav .appbar { scrollbar-width: none; }
 #apphead .ah-nav .appbar { display: flex; gap: 2px; background: none; border: 0; box-shadow: none; padding: 0; max-width: none; border-radius: 0; overflow-x: auto; }
 #apphead .ah-link { border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 8px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
 #apphead .ah-link:hover { color: var(--ink); border-bottom-color: color-mix(in srgb, var(--app) 40%, transparent); }
@@ -1022,9 +1091,9 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=0712">
-<script src="theme.js?v=0729"></script>
-<script src="theme-apply.js?v=0729"></script>
+<link rel="stylesheet" href="fonts.css?v=0810">
+<script src="theme.js?v=0810"></script>
+<script src="theme-apply.js?v=0810"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1032,7 +1101,7 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <svg id="mind" aria-hidden="false"></svg>
 
 <div id="top">
-  <button class="brand" id="brand" aria-expanded="false" aria-controls="menu" title="Settings, comparison and export"><b>ATLAS<sup id="sup"></sup></b><span>0.7.2 · United Kingdom ▾</span></button>
+  <button class="brand" id="brand" aria-expanded="false" aria-controls="menu" title="Settings, comparison and export"><b>ATLAS<sup id="sup"></sup></b><span>0.8 · United Kingdom ▾</span></button>
   <div class="finder">
     <button id="browse-btn" aria-expanded="false" aria-controls="browse" title="Choose which boundaries show, or browse places"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span id="browse-lv" class="vh">Areas</span></button>
     <div class="search"><input id="search" type="search" placeholder="Find a place or a metric…" autocomplete="off" aria-label="Find a place or a metric"><span class="schips" id="schips" hidden></span><ul id="hits" hidden role="listbox" aria-multiselectable="true"></ul></div>
@@ -1114,13 +1183,15 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <div id="notes" hidden></div>
 <div id="hist" hidden></div>
 <div id="tray" class="tray" hidden></div>
+<button id="nerd-bubble" class="fab2" aria-label="Stats for nerds" title="Stats for nerds: regressions, clusters and tests on what you're looking at"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="17" r="1.6"/><circle cx="10" cy="11" r="1.6"/><circle cx="15" cy="13" r="1.6"/><circle cx="19" cy="6" r="1.6"/><path d="M4 20 20 4"/></svg></button>
+<button id="news-bubble" class="fab2" hidden aria-label="News about what you're looking at" title="News about what you're looking at"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 8h3v9a2 2 0 0 1-2 2"/><path d="M7 9h7M7 12h7M7 15h4"/></svg><span class="n"></span></button>
 <button id="cmp-fab" hidden aria-label="Compare the selected places"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5h16"/><path d="M7 16.5v-4M12 16.5V7M17 16.5v-7"/></svg><span class="n"></span></button>
 <div id="cmp" hidden></div>
 <div id="toast" class="toast" hidden></div>
 
 <div id="keybox" hidden>
   <form id="keyform">
-    <h1>ATLAS 0.7.2</h1>
+    <h1>ATLAS 0.8</h1>
     <p>Paste your MapTiler API key to load the Ordnance Survey basemap. Get a free key at cloud.maptiler.com/account/keys.</p>
     <input id="key" type="text" placeholder="MapTiler API key" autocomplete="off">
     <p id="err" hidden></p>
@@ -1143,13 +1214,18 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
+<script src="data/places_poi.js?v=0810"></script>
+<script src="data/context.js"></script>
+<script src="data/money.js?v=0810"></script>
+<script src="data/transport.js?v=0810"></script>
+<script src="data/economy.js?v=0810"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="stats.js?v=0712"></script>
-<script src="psephology.js?v=0712"></script>
-<script src="charts.js?v=0712"></script>
-<script src="engine.js?v=0712"></script>
-<script src="xlsx.js?v=0712"></script>
+<script src="stats.js?v=0810"></script>
+<script src="psephology.js?v=0810"></script>
+<script src="charts.js?v=0810"></script>
+<script src="engine.js?v=0810"></script>
+<script src="xlsx.js?v=0810"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1159,12 +1235,13 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=0712"></script>
-<script src="apps.js?v=0712"></script>
-<script src="views/views.js?v=0712"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=0810"></script>
+<script src="apps.js?v=0810"></script>
+<script src="views/views.js?v=0810"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=0712"></script>
-<script src="devdesign.js?v=0729"></script>
-<script src="app.js?v=0712"></script>
+<script src="windows.js?v=0810"></script>
+<script src="money.js?v=0810"></script>
+<script src="devdesign.js?v=0810"></script>
+<script src="app.js?v=0810"></script>
 </body>
 </html>

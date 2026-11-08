@@ -21,7 +21,7 @@ def main():
         rep.check(page.is_visible(".dd-win"), "with ?dev, Ctrl+Shift+D opens the Design panel")
         n = js("() => document.querySelectorAll('.dd-win [data-tok]').length")
         rep.check(n >= 20, f"Settings lists Atlas's design settings ({n} inputs)")
-        page.fill(".dd-win input[type=text][data-tok='light|--panel']", "rgb(255, 240, 200)"); page.dispatch_event(".dd-win input[type=text][data-tok='light|--panel']", "input"); page.wait_for_timeout(900)   # panels fade colours over 0.6 s
+        page.fill(".dd-win input[type=text][data-tok='light|--panel']", "rgb(255, 240, 200)"); page.dispatch_event(".dd-win input[type=text][data-tok='light|--panel']", "input"); page.wait_for_function("() => getComputedStyle(document.getElementById('dock')).backgroundColor === 'rgb(255, 240, 200)'", timeout=5000)   # panels fade colours over 0.6 s
         rep.check(js("() => getComputedStyle(document.getElementById('dock')).backgroundColor") == "rgb(255, 240, 200)", "changing --panel recolours the boxes live")
         page.click(".dd-win [data-tab=elements]"); page.click(".dd-win [data-pick]"); page.wait_for_timeout(100)
         page.click("#dock .dt"); page.wait_for_timeout(300)

@@ -44,6 +44,47 @@
       if (e.target.closest("[data-hcmp]")) { const reg = ctx.parentOf(c), near = ctx.allCodesAt("council").filter(x => ctx.parentOf(x) === reg).slice(0, 15); ctx.openCmpWith([c, ...near.filter(x => x !== c)]); }
     };
   }
+  // ---------- 0.8: what a public health consultant reads first ----------
+  // Spine chart (as in OHID Fingertips): each indicator's spread across England's councils (worst to best, with the
+  // middle half shaded), England's value in the middle, and the place as a dot: green if clearly better than England,
+  // red if clearly worse (more than 5% either way; Atlas has no confidence intervals, so "clearly" is a simple margin).
+  function spine(ctx, el) {
+    const c = placeOf(ctx), eng = "E92000001";
+    const rows = PROFILE.flatMap(([g, ms]) => ms.filter(([id, b]) => ctx.M[id] && b).map(([id, better]) => ({ g, id, better })));
+    const W = 190;
+    const body = rows.map(({ g, id, better }) => {
+      const m = ctx.M[id], all = valuesAt(ctx, id, "council").map(x => x[1]).sort((a, b) => a - b); if (all.length < 10) return "";
+      const r = m.get(c, ctx.date), e = m.get(eng, ctx.date); if (!e || e.v == null) return "";
+      const q = f => all[Math.min(all.length - 1, Math.floor(f * (all.length - 1)))], lo = all[0], hi = all[all.length - 1];
+      // centre the spine on England: worst at the left, best at the right
+      const span = Math.max(e.v - lo, hi - e.v) || 1, x = v => { const t = (v - e.v) / span * (better > 0 ? 1 : -1); return W / 2 + t * (W / 2 - 4); };
+      const q1 = x(q(0.25)), q3 = x(q(0.75)), mn = x(better > 0 ? lo : hi), mx = x(better > 0 ? hi : lo);
+      const mean = all.reduce((t, v) => t + v, 0) / all.length, sd = Math.sqrt(all.reduce((t, v) => t + (v - mean) ** 2, 0) / all.length) || 1;
+      const pv = r && r.v != null && !r.nm ? r.v : null, d = pv == null ? 0 : (pv - e.v) / sd * better, col = pv == null ? "#999" : d > 0.5 ? "#1b7a3a" : d < -0.5 ? "#b03a2e" : "#e0a020";   // half a standard deviation of the councils' spread
+      return `<tr><th><button class="lnk" data-hmap="${id}">${ctx.esc(m.label)}</button></th><td class="num">${pv != null ? ctx.esc(r.text) : "—"}</td><td class="num">${ctx.esc(e.text)}</td>
+        <td><svg width="${W}" height="16" viewBox="0 0 ${W} 16" aria-hidden="true"><rect x="${Math.min(mn, mx)}" y="5" width="${Math.abs(mx - mn)}" height="6" fill="#e3e6e4"/><rect x="${Math.min(q1, q3)}" y="3" width="${Math.abs(q3 - q1)}" height="10" fill="#c3cac6"/>
+        <line x1="${W / 2}" x2="${W / 2}" y1="0" y2="16" stroke="#1f2a2e" stroke-width="1.5"/>${pv != null ? `<circle cx="${Math.max(4, Math.min(W - 4, x(pv)))}" cy="8" r="5" fill="${col}" stroke="#fff" stroke-width="1.5"/>` : ""}</svg></td></tr>`;
+    }).join("");
+    el.innerHTML = `<h4>${ctx.esc(ctx.nameOf(c))} against England</h4><p class="ap-note">Each bar is the range across England's councils: worst on the left, best on the right, the middle half darker; the line is England. The dot is this place: <b style="color:#1b7a3a">better</b>, <b style="color:#e0a020">similar</b> or <b style="color:#b03a2e">worse</b> than England, judged against how much councils usually differ (more than half a standard deviation either way). Atlas has no confidence intervals, so a small council's figure can swing; treat close calls as similar. Click a council on the map.</p>
+      <div class="tscroll"><table class="cmp htab"><thead><tr><th></th><th>Here</th><th>England</th><th>Worst ← England → best</th></tr></thead><tbody>${body}</tbody></table></div>
+      <p class="ap-note">OHID Fingertips and ONS (OGL). The same layout as Fingertips' spine charts.</p>`;
+    el.onclick = e => { const b = e.target.closest("[data-hmap]"); if (b) { ctx.setLevel("council"); ctx.mapOnly([b.dataset.hmap]); } };
+  }
+  // Inequality: the indicator averaged over councils in each deprivation decile (IMD 2025, England), and the gap
+  // between the most and least deprived tenth: the first chart in most Director of Public Health reports.
+  const INQ = { id: "le_f" };
+  function inequality(ctx, el) {
+    const dm = ctx.M.imd_decile; if (!dm) { el.innerHTML = `<p class="ap-note">The deprivation index isn't loaded (data/economy.js).</p>`; return; }
+    const ids = PROFILE.flatMap(([, ms]) => ms.map(([id]) => id)).filter(id => ctx.M[id] && !id.startsWith("c_"));
+    const m = ctx.M[INQ.id], by = Array.from({ length: 10 }, () => []);
+    ctx.allCodesAt("council").forEach(c => { const d = dm.get(c, ctx.date), r = m.get(c, ctx.date); if (d && d.v && r && r.v != null && !r.nm) by[d.v - 1].push(r.v); });
+    const avg = by.map(a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : null), gap = avg[0] != null && avg[9] != null ? avg[9] - avg[0] : null;
+    el.innerHTML = `<div class="ap-row"><select data-inq>${ids.map(id => `<option value="${id}" ${id === INQ.id ? "selected" : ""}>${ctx.esc(ctx.M[id].label)}</option>`).join("")}</select></div>
+      ${ctx.CH.bars([{ name: m.label, colour: ACC, pts: avg.map((v, i) => [i + 1, v]).filter(p => p[1] != null) }], { w: 460, h: 200, fmt: v => m.fmt ? m.fmt(v) : v.toFixed(1) })}
+      <p>Councils grouped by deprivation decile (1 = the most deprived tenth of England's councils, 10 = the least). ${gap != null ? `Gap between the least and most deprived tenth: <b>${ctx.esc(m.fmt ? m.fmt(Math.abs(gap)) : Math.abs(gap).toFixed(1))}</b>.` : ""}</p>
+      <p class="ap-note">Council averages hide the gaps inside each council; the official slope index of inequality uses neighbourhoods. Deprivation: MHCLG, English Indices of Deprivation 2025. England only.</p>`;
+    el.onchange = e => { if (e.target.matches("[data-inq]")) { INQ.id = e.target.value; inequality(ctx, el); } };
+  }
   const RK = { id: "le_f" };
   function rankings(ctx, el) {
     const ids = ["le_f", "le_m", "hle_f", "hle_m", "u75_all", "u75_prev", "infant_mort", "adult_obese", "y6_obese", "smoking", "inactive", "diabetes", "c_bad_health", "c_disabled"].filter(id => ctx.M[id]);
@@ -67,6 +108,8 @@
   window.AtlasApps && AtlasApps.register({
     id: "health", name: "Atlas Health", perspective: "health", accent: ACC, dataNeeds: ["ATLAS_EXTRA"],
     init(ctx) { ctx.setLevel("council"); ctx.mapOnly(["le_f"]); ctx.openPanel("overview"); },
-    panels: [{ id: "overview", title: "Place profile", live: true, render: overview, min: { w: 440, h: 320 } }, { id: "rankings", title: "Rankings", live: true, render: rankings, min: { w: 380, h: 320 } }, { id: "local", title: "Wards and seats", render: local }],
+    panels: [{ id: "overview", title: "Place profile", live: true, render: overview, min: { w: 440, h: 320 } },
+      { id: "spine", title: "Against England", blurb: "Spine chart: the place against England and every council, Fingertips style", live: true, render: spine, min: { w: 600, h: 400 } },
+      { id: "inequality", title: "Inequality", blurb: "Health by deprivation decile, and the gap between the most and least deprived", render: inequality, min: { w: 500, h: 380 } }, { id: "rankings", title: "Rankings", live: true, render: rankings, min: { w: 380, h: 320 } }, { id: "local", title: "Wards and seats", render: local }],
   });
 })();

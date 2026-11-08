@@ -28,11 +28,12 @@ def main():
         # the menu footer has no Clear button any more
         page.click("#dock [data-open='political']"); page.click("#dock [data-group='Government & control']"); page.wait_for_timeout(200)
         rep.check(js("() => !document.querySelector('#pmenu .pm-foot button')"), "the metric menu's footer has no Clear button")
-        # Transport: not available yet; nothing can be ticked
+        # 0.8: Transport has data now: its metrics can be ticked, and nothing says "not available yet"
         page.click("#dock [data-open='transport']"); page.wait_for_timeout(100)
-        rep.check("not available yet" in js("() => document.querySelector('#dock [data-open=transport]').textContent").lower(), "Transport says “not available yet”")
-        page.click("#dock [data-group='Planned']"); page.wait_for_timeout(150)
-        rep.check(js("() => [...document.querySelectorAll('#pmenu input')].every(i => i.disabled)"), "Transport's planned metrics can't be ticked")
+        rep.check("not available yet" not in js("() => document.querySelector('#dock [data-open=transport]').textContent").lower(), "Transport no longer says “not available yet” (0.8)")
+        page.click("#dock [data-group='Stations, stops and hubs']"); page.wait_for_timeout(150)
+        rep.check(js("() => [...document.querySelectorAll('#pmenu input')].some(i => !i.disabled)"), "Transport's metrics can be ticked")
+        page.keyboard.press("Escape")
         # a metric before its data starts: greyed, "Starts in 1998"
         js("() => AtlasDebug.mapOnly(['control'])"); js("() => AtlasDebug.setDate('1990-06-01')")
         page.click("#dock [data-open='economic']"); page.click("#dock [data-group='Output & growth']"); page.wait_for_timeout(200)
