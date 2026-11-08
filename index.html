@@ -532,6 +532,25 @@ body.wsfull .fab2 { visibility: hidden; }
 .tr-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--rule); margin: 0 0 8px; overflow-x: auto; scrollbar-width: none; }
 .tr-tabs button { border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 12.5px; padding: 6px 10px; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; }
 .tr-tabs button.on { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+/* 0.8: Atlas Social items (the marketplace also opens in Atlas Markets) */
+.so-it { border-bottom: 1px solid var(--rule); padding: 9px 0; font-size: 13px; } .so-it p { margin: 4px 0; line-height: 1.45; }
+.so-meta { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; } .so-meta small { color: var(--ink-3); }
+.so-demo { font: 600 9.5px var(--f); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); border: 1px solid var(--rule); border-radius: 3px; padding: 0 4px; margin-left: auto; }
+.so-badge { font: 600 10px var(--f); background: #222; color: #fff; border-radius: 3px; padding: 1px 5px; }
+.so-media img, .so-media video { width: 100%; max-height: 320px; object-fit: cover; border-radius: 8px; margin: 4px 0; background: #000; }
+.so-acts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; font-size: 12px; } .so-rep { color: var(--ink-3) !important; }
+.so-when { font-size: 12px; color: var(--ink-2); } .so-price b { font-size: 16px; } .so-seller { font-size: 11.5px; color: var(--ink-2); margin-top: 4px; }
+.so-src { font-size: 11px; color: var(--ink-3); margin-top: 10px; }
+textarea[data-sotext], .so-form textarea, .so-form input, .so-f input { width: 100%; box-sizing: border-box; border: 1px solid var(--rule); border-radius: 8px; padding: 7px 9px; font: inherit; font-size: 13px; background: var(--solid); color: var(--ink); margin: 3px 0; }
+.so-where { display: grid; gap: 3px; margin: 8px 0; font-size: 12.5px; } .so-where small { color: var(--ink-3); } .so-file { display: grid; gap: 4px; font-size: 12.5px; margin: 6px 0; }
+.so-f { display: grid; gap: 2px; font-size: 12.5px; margin: 6px 0; } .so-form { border: 1px solid var(--rule); border-radius: 8px; padding: 8px; margin: 6px 0; }
+.so-msgs { display: grid; grid-template-columns: 150px 1fr; gap: 8px; min-height: 260px; } .so-th { list-style: none; margin: 0; padding: 0; border-right: 1px solid var(--rule); }
+.so-th li { padding: 6px; cursor: pointer; font-size: 12px; border-radius: 6px; } .so-th li.on, .so-th li:hover { background: var(--hover); }
+.so-conv { display: grid; grid-template-rows: 1fr auto; gap: 6px; } .so-lines { display: grid; gap: 6px; align-content: start; overflow: auto; max-height: 320px; }
+.so-msg { background: var(--chip); border-radius: 10px; padding: 6px 9px; font-size: 13px; max-width: 80%; } .so-msg.me { background: #fde3c8; justify-self: end; } .so-msg small { display: block; color: var(--ink-3); font-size: 10.5px; }
+:root[data-mode="dark"] .so-msg.me { background: #5a3a1a; }
+.so-mine summary { cursor: pointer; font-size: 12.5px; padding: 4px 0; }
+
 .nw2-why { font-size: 12px; color: var(--ink-2); margin: 0 0 10px; }
 #chart-bubble:hover { transform: scale(1.06); }
 #chart-bubble.open { background: var(--accent); color: var(--on-accent); }
@@ -1065,9 +1084,9 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=0808">
-<script src="theme.js?v=0808"></script>
-<script src="theme-apply.js?v=0808"></script>
+<link rel="stylesheet" href="fonts.css?v=0809">
+<script src="theme.js?v=0809"></script>
+<script src="theme-apply.js?v=0809"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1188,17 +1207,17 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=0808"></script>
+<script src="data/places_poi.js?v=0809"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=0808"></script>
-<script src="data/transport.js?v=0808"></script>
+<script src="data/money.js?v=0809"></script>
+<script src="data/transport.js?v=0809"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="stats.js?v=0808"></script>
-<script src="psephology.js?v=0808"></script>
-<script src="charts.js?v=0808"></script>
-<script src="engine.js?v=0808"></script>
-<script src="xlsx.js?v=0808"></script>
+<script src="stats.js?v=0809"></script>
+<script src="psephology.js?v=0809"></script>
+<script src="charts.js?v=0809"></script>
+<script src="engine.js?v=0809"></script>
+<script src="xlsx.js?v=0809"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1208,13 +1227,13 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=0808"></script>
-<script src="apps.js?v=0808"></script>
-<script src="views/views.js?v=0808"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=0809"></script>
+<script src="apps.js?v=0809"></script>
+<script src="views/views.js?v=0809"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=0808"></script>
-<script src="money.js?v=0808"></script>
-<script src="devdesign.js?v=0808"></script>
-<script src="app.js?v=0808"></script>
+<script src="windows.js?v=0809"></script>
+<script src="money.js?v=0809"></script>
+<script src="devdesign.js?v=0809"></script>
+<script src="app.js?v=0809"></script>
 </body>
 </html>

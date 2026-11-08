@@ -167,6 +167,8 @@
       { id: "overview", title: "Market overview", render: overview, def: () => ({ x: innerWidth - 440 - 16, y: 56, w: 440, h: Math.round(innerHeight * 0.68) }) },
       { id: "companies", title: "Companies & screener", render: companies, min: { w: 420, h: 280 } },
       { id: "places", title: "Places & markets", render: places },
+      // 0.8: buying and selling between people, shared with Atlas Social (views/social/social.js)
+      { id: "marketplace", title: "Marketplace", blurb: "Buy and sell between people near you (with Atlas Social)", render: (ctx, el) => window.AtlasSocial ? AtlasSocial.panel("market")(ctx, el) : (el.innerHTML = "<p class='ap-note'>The marketplace didn't load.</p>"), min: { w: 400, h: 420 } },
     ],
     // 0.7.2: the four calculators live together in one Calculator, with a tab for each
     tools: [{ id: "calc", title: "Calculator", blurb: "DCF, comparables, dividend discount and returns calculators", render: calculator, min: { w: 440, h: 360 } }],

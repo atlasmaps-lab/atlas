@@ -17,9 +17,23 @@
     el.innerHTML = rows.length ? `<p class="ap-note">${ctx.esc(m.desc || "")}, ${ctx.esc((ctx.PLURAL_L[lv] || lv).toLowerCase())}.</p><h4>Growing fastest</h4><table class="cmp">${rows.slice(0, 10).map(li).join("")}</table><h4>Shrinking or growing slowest</h4><table class="cmp">${rows.slice(-10).map(li).join("")}</table>` : `<p class="ap-note">No population change for this boundary set on this date.</p>`;
   }
   function pyramid(ctx, el) { el.innerHTML = `<p><b>Population pyramid: not available yet.</b> It needs the number of people in each age band for each place; Atlas has only the average age. ONS publishes single-year-of-age estimates (Open Government Licence), the source to add next.</p>`; }
+  // 0.8: Atlas Social is a social layer on the map (social.js, store.js); the statistics are kept under Statistics
+  const SP = id => window.AtlasSocial ? AtlasSocial.panel(id) : (ctx, el) => { el.innerHTML = "<p class='ap-note'>Atlas Social didn't load.</p>"; };
+  const dev = !!(window.AtlasTheme && AtlasTheme.dev);
   window.AtlasApps && AtlasApps.register({
     id: "social", name: "Atlas Social", perspective: "social", accent: "#d0701c", dataNeeds: ["ATLAS_SERIES"],
-    init(ctx) { ctx.mapOnly(["population"]); ctx.openPanel("people"); },
-    panels: [{ id: "people", title: "People in a place", live: true, render: people }, { id: "change", title: "Population change", live: true, render: change }, { id: "pyramid", title: "Population pyramid", render: pyramid }],
+    init(ctx) { ctx.openPanel("feed"); },
+    panels: [
+      { id: "feed", title: "Feed", render: SP("feed"), min: { w: 380, h: 420 } },
+      { id: "post", title: "Post", render: SP("post"), min: { w: 360, h: 380 } },
+      { id: "events", title: "Events", render: SP("events"), min: { w: 380, h: 380 } },
+      { id: "market", title: "Marketplace", render: SP("market"), min: { w: 400, h: 420 } },
+      { id: "messages", title: "Messages", render: SP("messages"), min: { w: 420, h: 360 } },
+      { id: "profile", title: "Profile & safety", render: SP("profile"), min: { w: 380, h: 420 } },
+      ...(dev ? [{ id: "moderation", title: "Moderation", blurb: "Developers only: reports waiting for a decision", render: SP("moderation") }] : []),
+      { id: "people", title: "Statistics", blurb: "Population, change, density and age for the place in focus", live: true, render: people },
+      { id: "change", title: "Population change", live: true, render: change },
+    ],
+    tools: [{ id: "pyramid", title: "Population pyramid", render: pyramid }],
   });
 })();
