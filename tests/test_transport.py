@@ -24,9 +24,19 @@ def main():
         page.route("**/valhalla1.openstreetmap.de/route**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(VALHALLA)))
         page.route("**/valhalla1.openstreetmap.de/isochrone**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(ISO)))
         page.route("**/api.transitous.org/**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(TRANSIT)))
-        page.route("**/nominatim.openstreetmap.org/**", lambda r: r.fulfill(status=200, content_type="application/json", body="[]"))
+        nom = []   # 0.8.1.1: every request Atlas makes to Nominatim
+        page.route("**/nominatim.openstreetmap.org/**", lambda r: (nom.append(r.request.url), r.fulfill(status=200, content_type="application/json", body="[]")))
         page.wait_for_timeout(1500)
         rep.check(js("() => [...document.querySelectorAll('.fwin')].some(w => !w.hidden && /Directions/.test(w.textContent))") or page.is_visible("[data-trq=from]"), "Atlas Transport opens on Directions")
+        # Nominatim's usage policy: no search-as-you-type. Typing must not ask it; Enter must.
+        page.type("[data-trq=from]", "10 Downing Str", delay=60); page.wait_for_timeout(1500)
+        rep.check(not nom, f"typing an address doesn't ask Nominatim ({len(nom)} requests)")
+        rep.check(page.is_visible("[data-trhits=from] li[data-traddr]"), "…and offers 'Search addresses' instead")
+        page.press("[data-trq=from]", "Enter"); page.wait_for_timeout(2000)
+        rep.check(len(nom) == 1, f"Enter asks Nominatim once ({len(nom)} requests)")
+        page.press("[data-trq=from]", "Enter"); page.wait_for_timeout(1500)
+        rep.check(len(nom) == 1, f"the same search again is answered from memory ({len(nom)} requests)")
+        page.fill("[data-trq=from]", ""); page.wait_for_timeout(300)
         def choose(which, text):
             page.fill(f"[data-trq={which}]", text); page.wait_for_selector(f"[data-trhits={which}] li[data-trhit]", timeout=15000)
             page.dispatch_event(f"[data-trhits={which}] li[data-trhit]", "mousedown"); page.wait_for_timeout(300)

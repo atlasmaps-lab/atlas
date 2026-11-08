@@ -1,6 +1,11 @@
-# Atlas 0.8 — United Kingdom
+# Atlas 0.8.1.1 — United Kingdom
 
 Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
+
+## What's new in 0.8.1.1
+
+- **Address search follows OpenStreetMap's rules.** In Atlas Transport, the place boxes (From, To and Reach) suggest Atlas's own places (stations, airports, ports, towns and areas) as you type. Street addresses are looked up only when you press **Enter**, or click **Search addresses** at the bottom of the suggestions. Before, Atlas asked Nominatim (OpenStreetMap's address search) on every pause in typing, which its [usage policy](https://operations.osmfoundation.org/policies/nominatim/) forbids; a busy public site doing that can be blocked. Each address search is remembered for the session, so the same search is never sent twice.
+- The version label in the header reads 0.8.1.1 (it still read 0.8 in 0.8.1).
 
 ## What's new in 0.8.1
 

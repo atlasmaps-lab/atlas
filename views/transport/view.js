@@ -6,7 +6,7 @@
  *   Hubs         the busiest stations, airports and ports, with their trends; bus and tram stops at street zoom
  *   Planner data the transport metrics on the map (rail journeys, stations, airports, ports, bus stop coverage)
  * Services (free, no key, used only when you ask): Valhalla on the FOSSGIS servers (openstreetmap.de) for roads,
- * cycling and walking; Transitous (MOTIS) for public transport; Nominatim for addresses. Fair-use limits apply: Atlas
+ * cycling and walking; Transitous (MOTIS) for public transport; Nominatim for addresses (only on Enter, never as you type). Fair-use limits apply: Atlas
  * sends one request per action and waits between address look-ups. Map data © OpenStreetMap contributors.
  */
 (function () {
@@ -54,16 +54,26 @@
   }
 
   // ---------- places: Atlas's own places and hubs first, then addresses (Nominatim) ----------
+  // 0.8.1.1: Nominatim's usage policy forbids search-as-you-type (client-side autocomplete). Atlas's own places are
+  // suggested while you type; addresses are looked up only when you press Enter or click "Search addresses", at most
+  // one request a second, and each query's answer is remembered for the session so it is never asked twice.
   let lastNom = 0;
-  async function findPlaces(ctx, q) {
+  const nomCache = new Map();
+  async function findAddresses(q) {
+    const key = q.toLowerCase();
+    if (nomCache.has(key)) return nomCache.get(key);
+    const wait = 1100 - (Date.now() - lastNom); if (wait > 0) await new Promise(r => setTimeout(r, wait)); lastNom = Date.now();
+    const out = [];
+    try { const r = await fetch(`${NOMINATIM}?format=jsonv2&limit=5&countrycodes=gb&q=${encodeURIComponent(q)}`).then(r => r.json());
+      r.forEach(x => out.push({ label: x.name || x.display_name.split(",")[0], sub: x.display_name.split(",").slice(1, 3).join(",").trim(), lon: +x.lon, lat: +x.lat }));
+      nomCache.set(key, out); } catch (e) {}
+    return out;
+  }
+  async function findPlaces(ctx, q, addresses) {
     const out = [], ql = q.toLowerCase();
     (ctx.POI ? ctx.POI.items : []).filter(i => i.n.toLowerCase().includes(ql)).sort((a, b) => (b.v || 0) - (a.v || 0)).slice(0, 4).forEach(i => out.push({ label: i.n, sub: ({ station: "Station", airport: "Airport", port: "Port", finance: "Financial centre" })[i.k], lon: i.lon, lat: i.lat }));
     ctx.searchNames(ql).filter(c => ctx.P[c].pt).slice(0, 3).forEach(c => out.push({ label: ctx.nameOf(c), sub: ctx.LABEL[ctx.P[c].level], lon: ctx.P[c].pt[0], lat: ctx.P[c].pt[1] }));
-    if (q.length >= 4) {
-      const wait = 1100 - (Date.now() - lastNom); if (wait > 0) await new Promise(r => setTimeout(r, wait)); lastNom = Date.now();
-      try { const r = await fetch(`${NOMINATIM}?format=jsonv2&limit=5&countrycodes=gb&q=${encodeURIComponent(q)}`).then(r => r.json());
-        r.forEach(x => out.push({ label: x.name || x.display_name.split(",")[0], sub: x.display_name.split(",").slice(1, 3).join(",").trim(), lon: +x.lon, lat: +x.lat })); } catch (e) {}
-    }
+    if (addresses && q.length >= 3) out.push(...await findAddresses(q));
     return out;
   }
 
@@ -184,13 +194,31 @@
   let pickFor = null, qT = 0;
   function bind(ctx) {
     if (bind.done) return; bind.done = true;
-    document.addEventListener("input", async e => {
+    // Show suggestions under a place box. While typing (addresses false): Atlas's own places, plus a row offering an
+    // address search. On Enter or a click on that row (addresses true): the same places plus addresses from Nominatim.
+    async function showHits(q, addresses) {
+      const ul = q.parentNode.querySelector(".tr-hits"), v = q.value.trim();
+      if (v.length < 2) { ul.hidden = true; return; }
+      if (addresses) { ul.innerHTML = `<li class="none">Searching addresses…</li>`; ul.hidden = false; }
+      const hits = await findPlaces(ctx, v, addresses);
+      if (q.value.trim() !== v) return;   // the text changed while we waited
+      ul._hits = hits;
+      const rows = hits.map((h, i) => `<li data-trhit="${i}">${ctx.esc(h.label)} <small>${ctx.esc(h.sub || "")}</small></li>`).join("");
+      const more = addresses ? "" : v.length >= 3 ? `<li class="tr-addr" data-traddr>Search addresses for “${ctx.esc(v)}” <small>Enter</small></li>` : "";
+      ul.innerHTML = rows + more || `<li class="none">${addresses ? "No places or addresses found" : "Nothing found"}</li>`; ul.hidden = false;
+    }
+    document.addEventListener("input", e => {
       const q = e.target.closest && e.target.closest("[data-trq]"); if (!q) return;
-      const which = q.dataset.trq, ul = q.parentNode.querySelector(".tr-hits"), v = q.value.trim();
-      clearTimeout(qT); if (v.length < 2) { ul.hidden = true; return; }
-      qT = setTimeout(async () => { const hits = await findPlaces(ctx, v); ul._hits = hits; ul.innerHTML = hits.map((h, i) => `<li data-trhit="${i}">${ctx.esc(h.label)} <small>${ctx.esc(h.sub || "")}</small></li>`).join("") || `<li class="none">Nothing found</li>`; ul.hidden = false; }, 350);
+      clearTimeout(qT); qT = setTimeout(() => showHits(q, false), 200);
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key !== "Enter" || e.isComposing) return;   // not while an input method (e.g. Vietnamese or Chinese) is composing
+      const q = e.target.closest && e.target.closest("[data-trq]"); if (!q) return;
+      e.preventDefault(); clearTimeout(qT); showHits(q, true);
     });
     document.addEventListener("mousedown", e => {
+      const a = e.target.closest && e.target.closest("[data-traddr]");
+      if (a) { e.preventDefault(); const q = a.closest(".tr-pl").querySelector("[data-trq]"); if (q) showHits(q, true); return; }
       const li = e.target.closest && e.target.closest("[data-trhit]"); if (!li) return;
       e.preventDefault(); const ul = li.closest(".tr-hits"), h = ul._hits[+li.dataset.trhit], which = ul.dataset.trhits; ul.hidden = true;
       if (which === "iso") { S.iso.from = h; runIso(ctx); } else { S[which] = h; drawEnds(ctx); if (S.from && S.to) route(ctx); else rerender(ctx); }

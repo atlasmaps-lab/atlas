@@ -4,6 +4,7 @@
 .tr-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--rule); } .tr-dot.from { background: #2e8b57; } .tr-dot.to { background: #c0392b; }
 .tr-hits { position: absolute; left: 16px; right: 52px; top: 100%; z-index: 20; list-style: none; margin: 2px 0 0; padding: 4px 0; background: var(--solid); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); max-height: 260px; overflow: auto; }
 .tr-hits li { padding: 6px 10px; cursor: pointer; font-size: 13px; } .tr-hits li:hover { background: var(--hover); } .tr-hits li small { color: var(--ink-3); } .tr-hits li.none { color: var(--ink-3); cursor: default; }
+.tr-hits li.tr-addr { border-top: 1px solid var(--rule); color: var(--ink-2); font-style: italic; } .tr-hits li.tr-addr small { float: right; font-style: normal; }
 .tr-modes { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
 .tr-modes button { border: 1px solid var(--rule); background: var(--solid); color: var(--ink); border-radius: 16px; padding: 5px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
 .tr-modes button.on { background: var(--c); border-color: var(--c); color: #fff; }

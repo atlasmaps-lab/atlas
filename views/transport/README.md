@@ -4,7 +4,7 @@ Owner: (unassigned)
 
 Getting around the UK, and the data a transport planner works with.
 
-- **Directions**: from A to B by car, bike, on foot, hiking or public transport (rail, Tube, tram, bus, ferry), with alternatives, times, every step, and the route on the map. Places come from Atlas (stations, airports, ports, towns) and addresses from Nominatim.
+- **Directions**: from A to B by car, bike, on foot, hiking or public transport (rail, Tube, tram, bus, ferry), with alternatives, times, every step, and the route on the map. Places come from Atlas (stations, airports, ports, towns), suggested as you type, and addresses from Nominatim, looked up only when you press Enter or click "Search addresses" (Nominatim's usage policy forbids search-as-you-type).
 - **Reach**: everywhere you can reach within 15 to 60 minutes (an isochrone), the councils inside it and their population, and the hubs within reach.
 - **Trails**: hiking and cycling routes as an overlay (Waymarked Trails, from OpenStreetMap); Hike mode prefers paths and accepts hills.
 - **Stations & hubs**: the busiest stations, airports and ports with their trends. Bus, tram and ferry stops appear at street zoom (core), with live arrivals in London (TfL).
