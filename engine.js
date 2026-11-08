@@ -21,7 +21,7 @@
   "use strict";
   const NUMERIC = new Set(["interval", "ratio"]);
   const isNum = m => NUMERIC.has(m.scale);
-  const isCat = m => m.scale === "nominal" && m.nature !== "text" && m.nature !== "event" && m.nature !== "site";
+  const isCat = m => m.scale === "nominal" && m.nature !== "text" && m.nature !== "event" && m.nature !== "site" && m.nature !== "line";
 
   // ---------- describing a set of values ----------
   function profile(values) {
@@ -87,6 +87,7 @@
   // points: one mark per event · heat: density of events · alpha: opacity
   function channels(m) {
     if (m.nature === "text") return [];
+    if (m.nature === "line") return [{ ch: "lines", score: 1, why: "It is a network (railways, roads, routes), so it is drawn as its own lines on top of the map." }];   // 0.8.1
     if (m.nature === "site") return [{ ch: "sites", score: 1, why: "Each one is a fixed place (e.g. a headquarters), so it is a point sized by its value." }];
     if (m.nature === "event") return [{ ch: "points", score: 1, why: "Each event is a dated place, so it is a point that appears and fades with time." }, { ch: "heat", score: 0.8, why: "Many overlapping events read best as a density surface." }];
     if (isCat(m)) return [{ ch: "hue", score: 1, why: "Categories have no order, so they get distinct colours." }, { ch: "badge", score: 0.7, why: "A second category can be a small marker at the centre of each area." }];
@@ -109,7 +110,7 @@
   // one encoding for several metrics; each channel holds at most one metric
   function plan(metrics, prefs) {
     prefs = prefs || {};
-    const P = { hue: null, shade: null, grid: null, diverge: null, badge: null, dots: null, size: null, points: null, heat: null, sites: null, notes: [] };
+    const P = { hue: null, shade: null, grid: null, diverge: null, badge: null, dots: null, size: null, points: null, heat: null, sites: null, lines: [], notes: [] };
     const take = (ch, m, why) => { P[ch] = m; P.notes.push({ id: m.id, ch, why }); };
     const free = ch => !P[ch];
     const want = (m, ch) => prefs[m.id] === ch;
@@ -121,6 +122,7 @@
       if (free("hue")) take("hue", m, `${m.label} is a category, so it sets the fill colour.`);
       else if (free("badge")) take("badge", m, `${m.label} is a second category, so it is a small marker at the centre of each area; where marker and fill differ, the two disagree.`);
     });
+    metrics.filter(m => m.nature === "line").forEach(m => { P.lines.push(m); P.notes.push({ id: m.id, ch: "lines", why: channels(m)[0].why }); });   // any number of networks at once
     metrics.filter(m => m.nature === "site" && !placed(m)).forEach(m => { if (free("sites")) take("sites", m, channels(m)[0].why); });
     evs.filter(m => !placed(m)).forEach(m => { if (free("points")) take("points", m, channels(m)[0].why); else if (free("heat")) take("heat", m, channels(m)[1].why); });
     nums.filter(m => !placed(m)).sort((a, b) => (channels(b)[0] || {}).score - (channels(a)[0] || {}).score).forEach(m => {

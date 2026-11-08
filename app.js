@@ -758,6 +758,18 @@
     def({ id: "bus_stop_density", p: "transport", group: GT, label: "Bus stops per km²", scale: "ratio", nature: "rate", temporal: "static", levels: COUNCIL_LV, nmText: TR_NM, fmt: v => v.toFixed(1) + " per km²", source: TR.sources.stops, desc: "How densely bus stops cover the area",
       get(code) { const n = sumCouncils(code, c => TR.stops[c] ? TR.stops[c][0] : null), a = (INFO[code] || {}).area; return n != null && a && a[0] ? { v: n / a[0], text: (n / a[0]).toFixed(1) + " per km²", yr: TR.built.slice(0, 4) } : { v: null, text: "No figure" }; } });
   }
+  // ---------- 0.8.1: networks drawn as their own lines (railways, roads, power lines, ferry and freight routes) ----------
+  const GN = "Networks (drawn as lines)", NEEDS_BASE = () => plain ? "Needs the basemap: add a MapTiler key (ATLAS menu) to draw it" : null;
+  const LINE_DEFS = [
+    ["inf_rail", "Railways", "Every main and branch line, drawn bold; closer in, every track from the basemap (tunnels dashed)", "OpenStreetMap contributors (national view) and Ordnance Survey OS Open Zoomstack (from zoom 10)", false],
+    ["inf_roads", "Motorways and A roads", "Motorways in blue, A roads and primary routes in green", "Ordnance Survey OS Open Zoomstack and OpenMapTiles/OpenStreetMap", true],
+    ["inf_power", "Electricity transmission lines", "The high-voltage grid (132, 275 and 400 kV), thicker for higher voltages", "OpenStreetMap contributors (ODbL)", false],
+    ["inf_ferry", "Ferry routes", "Passenger and vehicle ferry crossings", "OpenStreetMap contributors (ODbL), data/ferries.js", false],
+    ["inf_freight", "Freight routes from UK ports", "Thin lines from each major port to its trading partners, coloured by world region; moving dots show how much goes each way", "DfT Port freight statistics PORT0499, data/freight.js", false],
+  ];
+  LINE_DEFS.forEach(([id, label, desc, source, base]) => def({ id, p: "transport", group: GN, label, scale: "nominal", nature: "line", temporal: "static", desc, source, how: desc,
+    valid: base ? NEEDS_BASE : null, get() { return { v: null, text: "Drawn as lines on the map" }; } }));
+
   // ---------- 0.8: deprivation (English Indices of Deprivation 2025, by council; data/economy.js) ----------
   const ECON = window.ATLAS_ECONOMY || null, GD = "Deprivation (England, 2025)";
   if (ECON && ECON.imd && Object.keys(ECON.imd).length) {
@@ -1099,7 +1111,7 @@
     map.addLayer({ id: "tool-fill", type: "fill", source: "tool", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#3b78b5", "fill-opacity": 0.12 } });
     map.addLayer({ id: "tool-line", type: "line", source: "tool", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": "#1f2a2e", "line-width": 2, "line-dasharray": [2, 1.5] } });
     map.addLayer({ id: "tool-pts", type: "circle", source: "tool", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5.5, "circle-color": "#ffffff", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2 } });
-    addAreaNames(); addPoi(); addStops();
+    applyMapFonts(); addAreaNames(); addPoi(); addStops(); addNetworks(); addPlacePin();
     applyLook(true); applyLevels(); applyTools();
     const at = document.querySelector(".maplibregl-ctrl-attrib"); if (at) at.classList.remove("maplibregl-compact-show"); // credits folded into the ⓘ button
     map.on("moveend", loadVisibleWards);
@@ -1129,7 +1141,7 @@
       properties: { id: i.id, k: i.k, n: i.n, minz: i.minz, sz: i.sz || 0.8, rank: i.rank || 0, lab: i.k === "station" ? "" : i.n } })) } });
     const layout = { "icon-image": ["concat", "poi-", ["get", "k"]], "icon-size": ["interpolate", ["linear"], ["zoom"], 5, ["*", ["get", "sz"], 0.62], 10, ["*", ["get", "sz"], 0.82], 14, ["*", ["get", "sz"], 1]],
       "icon-allow-overlap": false, "icon-padding": 1, "symbol-sort-key": ["get", "rank"] };
-    if (!plain) Object.assign(layout, { "text-field": ["get", "lab"], "text-font": ["Noto Sans Bold"], "text-size": ["step", ["zoom"], 0, 7.5, 10.5, 11, 12], "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true, "text-max-width": 9 });
+    if (!plain) Object.assign(layout, { "text-field": ["get", "lab"], "text-font": ["PT Serif Bold"], "text-size": ["step", ["zoom"], 0, 7.5, 10.5, 11, 12], "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true, "text-max-width": 9 });
     map.addLayer({ id: "poi-sym", type: "symbol", source: "poi", filter: [">=", ["zoom"], ["get", "minz"]], layout,
       paint: { "text-color": "#2a3236", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.3 } });
     // the basemap's own airport labels, and the old gold dot for the financial districts, said the same thing
@@ -1141,7 +1153,93 @@
   const poiSeries = i => { if (!i.s) return []; const y0 = i.s[0]; return i.s.slice(1).map((v, j) => [y0 + j, v]).filter(p => p[1] != null); };
   function poiHoverHTML(id) { const i = POI_BY[id]; if (!i) return ""; const K = POI_KIND[i.k];
     return `<div class="poi-h"><span class="poi-ic" style="background:${K.col}"></span><b>${esc(i.n)}</b><div class="poi-sub">${esc(K.label)}${i.v ? ` · ${esc(poiFmt(i.k, i.v))} ${esc(i.k === "port" ? "" : POI.units[i.k].split(" a year")[0])} in ${i.k === "station" ? `${i.vy - 1}–${String(i.vy).slice(2)}` : i.vy}` : ""}</div><div class="poi-sub">Click for more</div></div>`; }
+  // ---------- 0.8.1: airport and port cards ----------
+  // Airports: operator, where it is and the time there; live departures and arrivals and the delays now (through the
+  // flights proxy, docs/flights-proxy.md); disruption history from the CAA's monthly punctuality statistics.
+  // Ports: freight (tonnes, freight units a day, where it goes, with routes on the map); for ferry ports, the crossings
+  // (OpenStreetMap) and the next sailings and coach connections (Transitous), and the nearest station.
+  const AIR = window.ATLAS_AIRPORTS || { items: {} };
+  const ukTime = () => new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+  const hm = t => { if (!t) return ""; const m = String(t).match(/(\d\d):(\d\d)/); return m ? m[1] + ":" + m[2] : t; };
+  function airportCardHTML(i) {
+    const A = AIR.items[i.id] || {}, council = i.c && P[i.c] ? i.c : null, H = A.punct || [];
+    const sev = h => h[3] > 25 || h[2] > 5, last = H[H.length - 1];
+    const hist = H.length ? `<h4>Delays and disruption, month by month</h4>
+      ${CH.bars([{ name: "Average delay (minutes)", colour: "#b03a2e", pts: H.map((h, k) => [k, h[3]]) }], { w: 330, h: 110, fmt: v => Math.round(v) + " min" })}
+      <div class="poi-sub">${esc(H[0][0].slice(0, 4))} to ${esc(last[0].slice(0, 4) + "-" + last[0].slice(4))} · ${H.filter(sev).length} month${H.filter(sev).length === 1 ? "" : "s"} of severe disruption (${esc(AIR.rule.replace("Severe disruption: ", "").toLowerCase())})</div>
+      <p class="poi-row"><span>Latest month (${esc(last[0].slice(0, 4) + "-" + last[0].slice(4))}): average delay <b>${last[3]} min</b>, <b>${last[4]}%</b> of flights more than 15 minutes late, <b>${last[2]}%</b> cancelled${sev(last) ? ` · <span class="poi-bad">severe</span>` : ""}</span></p>` : `<p class="ap-note">The CAA doesn't publish punctuality statistics for this airport.</p>`;
+    return `<div class="poi-card"><div class="poi-top"><span class="poi-ic lg" style="background:${POI_KIND.airport.col}"><svg viewBox="0 0 24 24"><path d="${POI_KIND.airport.path}" fill="#fff"/></svg></span>
+      <div><div class="poi-kind">Airport${A.iata ? ` · ${esc(A.iata)}${A.icao ? " / " + esc(A.icao) : ""}` : ""}</div><div class="poi-sub">${A.op ? `Operated by ${esc(A.op)} · ` : ""}${council ? esc(nameOf(council)) + (P[council].parent && P[P[council].parent] ? ", " + esc(nameOf(P[council].parent)) : "") : ""}</div>
+      <div class="poi-sub">Local time <b data-aptime>${ukTime()}</b></div></div></div>
+      <div data-apboard>${C.flightsProxy && A.iata ? `<p class="ap-note">Loading live departures and arrivals…</p>` : `<div class="ap-note pl-live">Live departures and arrivals aren't connected yet: they need the flights proxy (docs/flights-proxy.md). Until then, the history below is the CAA's.</div>`}</div>
+      ${hist}
+      <p class="poi-row"><span>${i.v ? `<b>${esc(poiFmt("airport", i.v))}</b> passengers in ${i.vy}${i.rank ? ` · ${ordinal(i.rank)} busiest UK airport` : ""}` : ""}${i.mv ? ` · ${i.mv.toLocaleString("en-GB")} aircraft movements` : ""}</span></p>
+      <div class="poi-acts">${council ? `<button class="btn sm" data-poigo="${council}">Show ${esc(nameOf(council))}</button>` : ""}<button class="btn sm" data-poizoom="${i.id}">Zoom in</button>${A.site ? `<a class="btn sm" href="${esc(A.site)}" target="_blank" rel="noopener">Airport website</a>` : ""}</div>
+      <div class="poi-src">Punctuality: CAA. Codes and operator: Wikidata. Passengers: CAA. ${C.flightsProxy ? "Live boards: AeroDataBox." : ""}</div></div>`;
+  }
+  function fillAirportLive(w, i) {
+    const A = AIR.items[i.id] || {}, box = w.el.querySelector("[data-apboard]");
+    const tick = setInterval(() => { const t = w.el.querySelector("[data-aptime]"); if (!t || !document.body.contains(t)) return clearInterval(tick); t.textContent = ukTime(); }, 20000);
+    if (!C.flightsProxy || !A.iata || !box) return;
+    const base = C.flightsProxy.replace(/\/$/, "");
+    Promise.all([fetch(`${base}/board?iata=${A.iata}`).then(r => r.json()), A.icao ? fetch(`${base}/delays?icao=${A.icao}`).then(r => r.json()).catch(() => null) : null]).then(([b, d]) => {
+      if (!b || b.error) throw new Error(b && b.error);
+      const mins = x => { const m = String(x || "").match(/(\d+):(\d+):(\d+)/); return m ? +m[1] * 60 + +m[2] : null; };
+      const worst = d ? Math.max(mins(d.dep && d.dep.median) || 0, mins(d.arr && d.arr.median) || 0) : 0, idx = d ? Math.max((d.dep || {}).index || 0, (d.arr || {}).index || 0) : 0;
+      const state = idx >= 3 || worst >= 45 ? ["Severe delays and disruption", "poi-bad"] : idx >= 1.5 || worst >= 20 ? ["Some delays", "poi-warn"] : ["Running normally", "poi-good"];
+      const rows = (xs, dir) => xs.slice(0, 14).map(f => `<tr><td>${esc(hm(f.sched))}${f.est && hm(f.est) !== hm(f.sched) ? ` <small class="poi-warn">${esc(hm(f.est))}</small>` : ""}</td><td><b>${esc(f.n)}</b><br><small>${esc(f.airline)}</small></td><td>${esc(f.place)}</td><td><small>${esc(f.status)}${f.terminal ? " · T" + esc(f.terminal) : ""}${f.gate ? " · gate " + esc(f.gate) : ""}</small></td></tr>`).join("") || `<tr><td colspan="4">None in the next few hours.</td></tr>`;
+      box.innerHTML = `<div class="ap-status ${state[1]}">${state[0]}${worst ? ` · median delay ${worst} min` : ""}</div>
+        <div class="tr-tabs"><button class="on" data-apdir="dep">Departures</button><button data-apdir="arr">Arrivals</button></div>
+        <table class="mo-tab" data-aptab="dep">${rows(b.dep, "dep")}</table><table class="mo-tab" data-aptab="arr" hidden>${rows(b.arr, "arr")}</table>`;
+      box.onclick = e => { const t = e.target.closest("[data-apdir]"); if (!t) return; box.querySelectorAll("[data-apdir]").forEach(x => x.classList.toggle("on", x === t)); box.querySelectorAll("[data-aptab]").forEach(x => { x.hidden = x.dataset.aptab !== t.dataset.apdir; }); };
+    }).catch(() => { box.innerHTML = `<p class="ap-note">Live boards couldn't be loaded just now (the flights proxy didn't answer).</p>`; });
+  }
+  function portCardHTML(i) {
+    const council = i.c && P[i.c] ? i.c : null, ser = poiSeries(i);
+    return `<div class="poi-card"><div class="poi-top"><span class="poi-ic lg" style="background:${POI_KIND.port.col}"><svg viewBox="0 0 24 24"><path d="${POI_KIND.port.path}" fill="#fff"/></svg></span>
+      <div><div class="poi-kind">Port${i.rank ? ` · ${ordinal(i.rank)} busiest major port by tonnage` : ""}</div><div class="poi-sub">${council ? esc(nameOf(council)) : ""}${i.grp ? " · " + esc(i.grp) : ""}</div><div class="poi-sub">Local time <b data-aptime>${ukTime()}</b></div></div></div>
+      <div data-ptfreight><p class="ap-note">Loading freight routes…</p></div>
+      <div data-ptferry></div>
+      ${ser.length > 2 ? `<h4>Tonnage over time</h4><div class="poi-spark">${CH.spark(ser, { w: 300, h: 44, colour: POI_KIND.port.col })}<div class="poi-sub">${ser[0][0]} to ${ser[ser.length - 1][0]}</div></div>` : ""}
+      <div class="poi-acts"><button class="btn sm" data-ptroutes="${i.id}">Show its routes on the map</button>${council ? `<button class="btn sm" data-poigo="${council}">Show ${esc(nameOf(council))}</button>` : ""}<button class="btn sm" data-poizoom="${i.id}">Zoom in</button></div>
+      <div class="poi-src">Freight: ${esc(POI.sources.port)}; routes: DfT PORT0499. Crossings: OpenStreetMap. Sailings: Transitous (operators' open timetables).</div></div>`;
+  }
+  function fillPort(w, i) {
+    const fb = w.el.querySelector("[data-ptfreight]"), fy = w.el.querySelector("[data-ptferry]");
+    loadData("data/freight.js", "ATLAS_FREIGHT").then(F => {
+      const X = F && F.ports[i.id]; if (!X) { fb.innerHTML = `<p class="ap-note">No freight breakdown for this port.</p>`; return; }
+      const regs = Object.entries(X.regions).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+      fb.innerHTML = `<p class="poi-big"><b>${esc(poiFmt("port", X.t))}</b> of freight in ${F.year}${X.u ? ` · about <b>${Math.round(X.u / 365).toLocaleString("en-GB")}</b> lorries, trailers and containers a day` : ""}</p>
+        <div class="pt-bar">${regs.map(([k, v]) => `<i style="flex:${v};background:${F.colours[k] || "#999"}" title="${esc(k)}: ${esc(poiFmt("port", v))}"></i>`).join("")}</div>
+        <div class="cats2 pt-key">${regs.slice(0, 7).map(([k, v]) => `<span><i class="sw" style="background:${F.colours[k] || "#999"}"></i>${esc(k)} ${Math.round(100 * v / X.t)}%</span>`).join("")}</div>
+        ${X.partners.length ? `<h4>Biggest trading partners</h4><table class="mo-tab"><thead><tr><th>Country</th><th class="num">In</th><th class="num">Out</th></tr></thead>${X.partners.slice(0, 8).map(p => `<tr><td>${esc(p[0])} <small>${esc(p[1])}</small></td><td class="num">${esc(poiFmt("port", p[2]))}</td><td class="num">${esc(poiFmt("port", p[3]))}</td></tr>`).join("")}</table>` : ""}`;
+    });
+    // ferries: crossings that start or end within 4 km, and the next sailings from the stops by the port
+    loadData("data/ferries.js", "ATLAS_FERRIES").then(FE => {
+      const near = pt => haversine(pt, [i.lon, i.lat]) < 4;
+      const xs = FE ? FE.routes.features.filter(f => { const c = f.geometry.coordinates; return f.properties.n && (near(c[0]) || near(c[c.length - 1])) && f.properties.km > 1.5; }) : [];
+      const seen = new Set(), routes = xs.filter(f => !seen.has(f.properties.n) && seen.add(f.properties.n)).slice(0, 8);
+      const st = POI.items.filter(x => x.k === "station").map(x => [x, haversine([x.lon, x.lat], [i.lon, i.lat])]).sort((a, b) => a[1] - b[1])[0];
+      if (!routes.length) { fy.innerHTML = ""; return; }
+      fy.innerHTML = `<h4>Crossings from here</h4><ul class="pl-facts">${routes.map(f => { const p = f.properties; return `<li><b>${esc(p.n)}</b>${p.op ? ` <small>${esc(p.op)}</small>` : ""}<br><small>${p.dur ? "about " + esc(p.dur.replace(/^0?(\d+):(\d\d).*/, (m, h, mm) => (+h ? h + " h " : "") + (+mm ? +mm + " min" : ""))) + " · " : ""}${p.km} km · ${[p.foot ? "foot passengers" : "", p.car ? "cars and vehicles" : "", p.bike ? "bicycles" : ""].filter(Boolean).join(", ") || "check with the operator"}</small></li>`; }).join("")}</ul>
+        ${st && st[1] < 6 ? `<p class="poi-row"><span>Nearest station: <button class="linkish" data-plpoi="${st[0].id}">${esc(st[0].n)}</button> (${st[1].toFixed(1)} km)</span></p>` : ""}
+        <div data-ptsail><p class="ap-note">Looking up the next sailings…</p></div>`;
+      const d = 0.03;
+      fetch(`https://api.transitous.org/api/v1/map/stops?min=${i.lat - d},${i.lon - d * 1.6}&max=${i.lat + d},${i.lon + d * 1.6}`).then(r => r.json()).then(async stops => {
+        const fer = stops.filter(s => (s.modes || []).includes("FERRY")).slice(0, 3), coach = stops.filter(s => (s.modes || []).includes("COACH") && /ferry/i.test(s.name)).slice(0, 2);
+        const times = async s => { const j = await fetch(`https://api.transitous.org/api/v5/stoptimes?stopId=${encodeURIComponent(s.stopId)}&n=6`).then(r => r.json()); return (j.stopTimes || []).map(t => ({ t: t.place.departure || t.place.scheduledDeparture, mode: t.mode, line: t.routeShortName || "", agency: t.agencyName || "", head: t.headsign || "" })); };
+        const all = []; for (const s of [...fer, ...coach]) { try { (await times(s)).forEach(x => all.push(x)); } catch (e) {} }
+        const box = w.el.querySelector("[data-ptsail]"); if (!box) return;
+        const up = all.filter(x => x.t && new Date(x.t) > Date.now() - 60000).sort((a, b) => new Date(a.t) - new Date(b.t)).filter((x, k, a) => !k || x.t !== a[k - 1].t || x.head !== a[k - 1].head).slice(0, 10);
+        box.innerHTML = up.length ? `<h4>Next departures</h4><table class="mo-tab">${up.map(x => `<tr><td>${esc(new Date(x.t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }))}</td><td>${x.mode === "FERRY" ? "Ferry" : "Coach (crosses by ferry)"}<br><small>${esc(x.agency)}</small></td><td>${esc(x.head)}</td></tr>`).join("")}</table><p class="ap-note">From the operators' published timetables; check with them before travelling (vehicle bookings, check-in times).</p>`
+          : `<p class="ap-note">No timetabled sailings found for the next few hours in the open timetables; see the operator's website.</p>`;
+      }).catch(() => { const box = w.el.querySelector("[data-ptsail]"); if (box) box.innerHTML = `<p class="ap-note">Sailing times couldn't be loaded just now.</p>`; });
+    });
+    const tick = setInterval(() => { const t = w.el.querySelector("[data-aptime]"); if (!t || !document.body.contains(t)) return clearInterval(tick); t.textContent = ukTime(); }, 20000);
+  }
   function poiCardHTML(id) {
+    if (POI_BY[id].k === "airport") return airportCardHTML(POI_BY[id]);
+    if (POI_BY[id].k === "port") return portCardHTML(POI_BY[id]);
     const i = POI_BY[id], K = POI_KIND[i.k], ser = poiSeries(i), prev = ser.length > 1 ? ser[ser.length - 2][1] : null;
     const pre = ser.find(p => p[0] === (i.k === "station" ? 2020 : 2019));
     const pct = (a, b) => b ? ((a / b - 1) * 100).toFixed(1).replace("-", "−") + "%" : "—";
@@ -1167,10 +1265,13 @@
   function openPoiCard(id) {
     const i = POI_BY[id]; if (!i) return;
     const have = poiCards.get(id); if (have && WM.isOpen(have.el)) { WM.front(have.el); WM.pulse(have.el); return have; }
-    const w = WM.make({ type: "poi", title: i.n, html: poiCardHTML(id), cascade: true, min: { w: 300, h: 220 }, def: () => ({ x: innerWidth - 380 - 76, y: 80, w: 380, h: Math.min(470, innerHeight - 120) }), onClose: () => poiCards.delete(id) });
+    const w = WM.make({ type: "poi", title: i.n, html: poiCardHTML(id), cascade: true, min: { w: 300, h: 220 }, def: () => ({ x: innerWidth - 420 - 76, y: 80, w: 420, h: Math.min(i.k === "airport" || i.k === "port" ? 640 : 470, innerHeight - 120) }), onClose: () => { poiCards.delete(id); if (i.k === "port" && freightFocus === id) { focusFreight(null); freightFocus = null; syncNetworks(); } } });
     w.el.addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return;
-      if (b.dataset.poigo) focus(b.dataset.poigo); else if (b.dataset.poizoom) map.flyTo({ center: [i.lon, i.lat], zoom: Math.max(map.getZoom(), i.k === "airport" || i.k === "port" ? 12.5 : 15), duration: 1200 }); });
-    poiCards.set(id, w); WM.open(w.el); return w;
+      if (b.dataset.poigo) focus(b.dataset.poigo); else if (b.dataset.plpoi) openPoiCard(b.dataset.plpoi); else if (b.dataset.ptroutes) { focusFreight(b.dataset.ptroutes); map.flyTo({ center: [i.lon, i.lat], zoom: 4.8, duration: 1000 }); toast("Showing this port's freight routes. Close the card to hide them."); }
+      else if (b.dataset.poizoom) map.flyTo({ center: [i.lon, i.lat], zoom: Math.max(map.getZoom(), i.k === "airport" || i.k === "port" ? 12.5 : 15), duration: 1200 }); });
+    poiCards.set(id, w); WM.open(w.el);
+    if (i.k === "airport") fillAirportLive(w, i); else if (i.k === "port") fillPort(w, i);
+    return w;
   }
   function searchPoi(q) { if (!POI || q.length < 3) return []; return POI.items.filter(i => i.n.toLowerCase().includes(q)).sort((a, b) => (a.n.toLowerCase().startsWith(q) ? 0 : 1) - (b.n.toLowerCase().startsWith(q) ? 0 : 1) || (b.v || 0) - (a.v || 0)).slice(0, 6); }
 
@@ -1182,7 +1283,7 @@
     map.addSource("stops", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({ id: "stops-pt", type: "circle", source: "stops", minzoom: STOP_Z, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], STOP_Z, 2.5, 17, 5.5], "circle-color": ["match", ["get", "k"], "t", STOP_COL.t, "f", STOP_COL.f, STOP_COL.b],
       "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2, "circle-opacity": ["interpolate", ["linear"], ["zoom"], STOP_Z, 0, STOP_Z + 0.4, 0.95] } }, map.getLayer("poi-sym") ? "poi-sym" : undefined);
-    if (!plain) map.addLayer({ id: "stops-lab", type: "symbol", source: "stops", minzoom: 16.3, layout: { "text-field": ["get", "n"], "text-font": ["Noto Sans Regular"], "text-size": 10.5, "text-offset": [0, 0.9], "text-anchor": "top", "text-optional": true, "text-max-width": 8 },
+    if (!plain) map.addLayer({ id: "stops-lab", type: "symbol", source: "stops", minzoom: 16.3, layout: { "text-field": ["get", "n"], "text-font": ["PT Serif Regular"], "text-size": 10.5, "text-offset": [0, 0.9], "text-anchor": "top", "text-optional": true, "text-max-width": 8 },
       paint: { "text-color": "#3a3f44", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.2 } });
     map.on("moveend", loadVisibleStops); loadVisibleStops();
   }
@@ -1213,6 +1314,139 @@
     }).catch(() => w.setBody(body(`<p class="ap-note">Live arrivals couldn't be loaded (TfL).</p>`)));
   }
 
+  // ---------- 0.8.1: one typeface for every name on the map (PT Serif, the closest the map's font server has to Atlas's text face) ----------
+  function applyMapFonts() {
+    if (plain) return;
+    map.getStyle().layers.forEach(l => { const f = l.layout && l.layout["text-font"]; if (!Array.isArray(f) || typeof f[0] !== "string") return;
+      const w = /Bold/.test(f[0]) ? (/Italic/.test(f[0]) ? "PT Serif Bold Italic" : "PT Serif Bold") : /Italic/.test(f[0]) ? "PT Serif Italic" : "PT Serif Regular";
+      try { map.setLayoutProperty(l.id, "text-font", [w]); } catch (e) {} });
+  }
+
+  // ---------- 0.8.1: names you can click ----------
+  // An area's name (a nation, county, constituency, ward) opens that area, outlined, as clicking its tile does. A place
+  // with no tile of its own (a town, village, suburb, hill, wood or lake from the basemap) opens a place card instead:
+  // what it is, which areas it lies in, a few figures for its council, nearby stations and a Wikipedia summary, with a pin
+  // but no outline. The card stays while you zoom and pan; close it with × or Esc.
+  const PLACE_LABELS = ["capital city names", "city names", "town names", "village and hamlet names", "small settlement names", "suburban area names", "national park names", "landform names", "woodland names", "water names", "greenspace names", "sites names", "omt-place-labels"];
+  const PLACE_KIND = { "capital city names": "Capital city", "city names": "City", "town names": "Town", "village and hamlet names": "Village or hamlet", "small settlement names": "Small settlement", "suburban area names": "Neighbourhood",
+    "national park names": "National park", "landform names": "Hill or landform", "woodland names": "Woodland", "water names": "Water", "greenspace names": "Park or green space", "sites names": "Site", "omt-place-labels": "Place" };
+  function pickName(e) {
+    const areaL = LEVELS.map(l => "names-" + l).filter(id => map.getLayer(id) && map.getLayoutProperty(id, "visibility") !== "none"), placeL = PLACE_LABELS.filter(id => map.getLayer(id) && map.getLayoutProperty(id, "visibility") !== "none");
+    if (!areaL.length && !placeL.length) return null;
+    const f = map.queryRenderedFeatures(pbox(e, 2), { layers: [...areaL, ...placeL] })[0]; if (!f) return null;
+    if (f.layer.id.startsWith("names-")) return { kind: "area", code: f.properties.code };
+    const p = f.properties, name = p.name1 || p["name:en"] || p.name || p.name_en; if (!name) return null;
+    return { kind: "place", name, layer: f.layer.id, lonlat: f.geometry.type === "Point" ? f.geometry.coordinates : [e.lngLat.lng, e.lngLat.lat] };
+  }
+  function addPlacePin() {
+    map.addSource("place-pin", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "place-pin", type: "circle", source: "place-pin", paint: { "circle-radius": 7, "circle-color": "#c0392b", "circle-stroke-color": "#fff", "circle-stroke-width": 2.5 } });
+  }
+  const ptIn = (pt, g) => polysOf(g).some(pl => { const r = pl[0]; let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const [xi, yi] = r[i], [xj, yj] = r[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) c = !c; } return c; });
+  function areaAt(level, pt) {
+    const fc = level === "ward" ? { features: wardFeatures } : G[SRC[level]]; if (!fc) return null;
+    const f = fc.features.find(f => { const b = f._bb || (f._bb = bboxOfGeom(f.geometry)); return pt[0] >= b[0] && pt[0] <= b[2] && pt[1] >= b[1] && pt[1] <= b[3] && ptIn(pt, f.geometry); });
+    return f ? f.properties.code : null;
+  }
+  let placeWin = null;
+  function openPlaceCard(pk) {
+    const pt = pk.lonlat, council = areaAt("council", pt), ward = areaAt("ward", pt), pcon = (G.constituencies ? G.constituencies.features.find(f => !P[f.properties.code].to && (f._bb || (f._bb = bboxOfGeom(f.geometry))) && pt[0] >= f._bb[0] && pt[0] <= f._bb[2] && pt[1] >= f._bb[1] && pt[1] <= f._bb[3] && ptIn(pt, f.geometry)) : null), region = council && P[council] ? P[council].parent : null;
+    const inside = [ward, council, pcon && pcon.properties.code, region, council && P[council].nation].filter(c => c && P[c]);
+    const facts = council ? [M.population, ...planMetrics().filter(m => m.nature !== "line")].filter(Boolean).filter((m, i, a) => a.indexOf(m) === i).slice(0, 5).map(m => { let r; try { r = m.get(council, state.date); } catch (e) {} return r && r.v != null && !r.nm ? `<li><b>${esc(m.label)}:</b> ${esc(r.text)}${r.yr ? ` <small>(${esc(String(r.yr))})</small>` : ""}</li>` : ""; }).join("") : "";
+    const near = POI ? POI.items.filter(i => i.k === "station" || i.k === "airport" || i.k === "port").map(i => [i, haversine([i.lon, i.lat], pt)]).filter(x => x[1] < 8).sort((a, b) => a[1] - b[1]).slice(0, 4) : [];
+    const html = `<div class="poi-card"><div class="poi-kind">${esc(PLACE_KIND[pk.layer] || "Place")}</div>
+      ${inside.length ? `<div class="pl-in">In ${inside.map(c => `<button class="linkish" data-plgo="${c}" title="Show it (outlined)">${esc(nameOf(c))}</button> <small>${esc(LABEL[P[c].level] || "")}</small>`).join(" · ")}</div>` : ""}
+      <div data-plwiki class="pl-wiki"><p class="ap-note">Looking it up on Wikipedia…</p></div>
+      ${facts ? `<h4>${esc(nameOf(council))} in figures</h4><ul class="pl-facts">${facts}</ul>` : ""}
+      ${near.length ? `<h4>Nearby</h4><ul class="pl-facts">${near.map(([i, d]) => `<li><span class="poi-ic" style="background:${POI_KIND[i.k].col}"></span><button class="linkish" data-plpoi="${i.id}">${esc(i.n)}</button> <small>${d.toFixed(1)} km</small></li>`).join("")}</ul>` : ""}
+      <div class="poi-acts"><button class="btn sm" data-plzoom>Zoom in</button>${council ? `<button class="btn sm" data-plgo="${council}">Show ${esc(nameOf(council))}</button>` : ""}</div></div>`;
+    if (placeWin && WM.isOpen(placeWin.el)) { placeWin.setBody(html); placeWin.setTitle && placeWin.setTitle(pk.name); WM.front(placeWin.el); }
+    else {
+      placeWin = WM.make({ type: "place", title: pk.name, html, cascade: true, min: { w: 300, h: 220 }, def: () => ({ x: innerWidth - 380 - 76, y: 90, w: 380, h: Math.min(520, innerHeight - 130) }),
+        onClose: () => { if (map.getSource("place-pin")) map.getSource("place-pin").setData({ type: "FeatureCollection", features: [] }); } });
+      placeWin.el.addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return;
+        if (b.dataset.plgo) focus(b.dataset.plgo); else if (b.dataset.plpoi) openPoiCard(b.dataset.plpoi); else if (b.hasAttribute("data-plzoom")) map.flyTo({ center: placeWin.pt, zoom: Math.max(map.getZoom() + 2, 12), duration: 900 }); });
+      WM.open(placeWin.el);
+    }
+    placeWin.pt = pt; map.getSource("place-pin").setData({ type: "FeatureCollection", features: [{ type: "Feature", geometry: { type: "Point", coordinates: pt }, properties: {} }] });
+    wikiFor(pk.name, pt).then(w => { const el = placeWin.el.querySelector("[data-plwiki]"); if (!el) return;
+      el.innerHTML = w ? `${w.thumb ? `<img src="${esc(w.thumb)}" alt="" class="pl-img">` : ""}<p>${esc(w.extract)}</p><p class="poi-src"><a href="${esc(w.url)}" target="_blank" rel="noopener">Wikipedia: ${esc(w.title)}</a> (CC BY-SA)</p>` : `<p class="ap-note">No Wikipedia article found nearby.</p>`; });
+  }
+  const wikiCache = {};
+  async function wikiFor(name, pt) {   // the Wikipedia article with this name nearest the point (geosearch, then the summary)
+    const k = name + pt.join(","); if (k in wikiCache) return wikiCache[k];
+    try {
+      const g = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${pt[1]}|${pt[0]}&gsradius=10000&gslimit=30&format=json&origin=*`).then(r => r.json());
+      const n = name.toLowerCase(), hit = (g.query && g.query.geosearch || []).find(x => x.title.toLowerCase() === n || x.title.toLowerCase().startsWith(n + ","));
+      if (!hit) return (wikiCache[k] = null);
+      const s = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title.replace(/ /g, "_"))}`).then(r => r.json());
+      return (wikiCache[k] = { title: s.title, extract: (s.extract || "").split(/(?<=\.)\s/).slice(0, 3).join(" "), thumb: s.thumbnail && s.thumbnail.source, url: s.content_urls && s.content_urls.desktop.page });
+    } catch (e) { return (wikiCache[k] = null); }
+  }
+
+  // ---------- 0.8.1: networks as lines (Transport → Networks): railways, roads, power lines, ferry and freight routes ----------
+  const NET_LAYERS = { inf_rail: ["net-rail", "net-rail-tun", "net-rail-omt", "net-osm-rail"], inf_roads: ["net-road-a", "net-road-mw", "net-road-omt"], inf_power: ["net-osm-power"], inf_ferry: ["net-ferry"], inf_freight: ["net-freight", "net-freight-dots"] };
+  const lazy = {};
+  function loadData(file, global) { if (window[global]) return Promise.resolve(window[global]); return lazy[file] || (lazy[file] = new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = file + "?v=" + (window.ATLAS_POI ? ATLAS_POI.built : ""); sc.onload = () => res(window[global]); sc.onerror = rej; document.head.appendChild(sc); })); }
+  const zw = (a, b, c) => ["interpolate", ["linear"], ["zoom"], 5, a, 10, b, 15, c];
+  function addNetworks() {
+    const bf = map.getLayer("names-nation") ? "names-nation" : map.getLayer("pr-heat") ? "pr-heat" : undefined, hide = { visibility: "none", "line-cap": "round", "line-join": "round" };
+    if (!plain && map.getSource("composite")) {
+      map.addLayer({ id: "net-rail", type: "line", source: "composite", "source-layer": "rail", filter: ["match", ["get", "type"], ["Tunnel"], false, true], layout: hide, paint: { "line-color": "#5b2a86", "line-width": zw(1, 2.2, 4) } }, bf);
+      map.addLayer({ id: "net-rail-tun", type: "line", source: "composite", "source-layer": "rail", filter: ["match", ["get", "type"], ["Tunnel"], true, false], layout: hide, paint: { "line-color": "#5b2a86", "line-width": zw(0.8, 1.6, 3), "line-dasharray": [2, 1.5], "line-opacity": 0.8 } }, bf);
+      map.addLayer({ id: "net-road-a", type: "line", source: "composite", "source-layer": "roads", filter: ["all", ["==", ["get", "level"], 0], ["match", ["get", "type"], ["A Road", "Primary"], true, false]], layout: hide, paint: { "line-color": "#2e8b57", "line-width": zw(0.7, 1.8, 4) } }, bf);
+      map.addLayer({ id: "net-road-mw", type: "line", source: "composite", "source-layer": "roads", filter: ["all", ["==", ["get", "level"], 0], ["match", ["get", "type"], ["Motorway"], true, false]], layout: hide, paint: { "line-color": "#1d5590", "line-width": zw(1.3, 2.8, 6) } }, bf);
+    }
+    // national railways (zoomed out; the basemap's detailed lines take over at zoom 10) and the transmission grid, from OSM
+    map.addSource("net-osm", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addSource("net-osm-p", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "net-osm-rail", type: "line", source: "net-osm", maxzoom: plain ? 24 : 10, layout: hide, paint: { "line-color": "#5b2a86", "line-width": ["interpolate", ["linear"], ["zoom"], 5, ["case", ["==", ["get", "u"], "main"], 1.4, 0.8], 10, ["case", ["==", ["get", "u"], "main"], 2.6, 1.8]] } }, bf);
+    map.addLayer({ id: "net-osm-power", type: "line", source: "net-osm-p", layout: hide, paint: { "line-color": "#e08a1e", "line-width": ["interpolate", ["linear"], ["zoom"], 5, ["match", ["get", "v"], 400, 1.3, 275, 1.0, 0.6], 12, ["match", ["get", "v"], 400, 3, 275, 2.4, 1.6]] } }, bf);
+    if (!plain && map.getSource("omt")) {   // Northern Ireland and abroad (OS Zoomstack covers Great Britain only)
+      map.addLayer({ id: "net-rail-omt", type: "line", source: "omt", "source-layer": "transportation", filter: ["==", ["get", "class"], "rail"], layout: hide, paint: { "line-color": "#5b2a86", "line-width": zw(1, 2.2, 4) } }, "gb-mask");
+      map.addLayer({ id: "net-road-omt", type: "line", source: "omt", "source-layer": "transportation", filter: ["match", ["get", "class"], ["motorway", "trunk", "primary"], true, false], layout: hide, paint: { "line-color": ["match", ["get", "class"], "motorway", "#1d5590", "#2e8b57"], "line-width": zw(0.8, 2, 4) } }, "gb-mask");
+    }
+    map.addSource("net-ferry", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "net-ferry", type: "line", source: "net-ferry", layout: hide, paint: { "line-color": "#0f8b8d", "line-width": zw(1, 1.8, 3), "line-dasharray": [3, 2] } }, bf);
+    map.addSource("net-freight", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "net-freight", type: "line", source: "net-freight", layout: hide, paint: { "line-color": ["get", "col"], "line-opacity": ["case", ["boolean", ["feature-state", "dim"], false], 0.06, 0.75],
+      "line-width": ["interpolate", ["linear"], ["get", "t"], 5000, 0.5, 1e6, 0.9, 1e7, 1.5] } }, bf);
+    map.addSource("net-freight-dots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "net-freight-dots", type: "circle", source: "net-freight-dots", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 1.4, 9, 2.4], "circle-color": ["get", "col"], "circle-stroke-color": "#fff", "circle-stroke-width": 0.6 } }, bf);
+  }
+  let freightAnim = null, freightFocus = null;
+  function syncNetworks() {
+    if (!map.getLayer("net-ferry")) return;
+    const on = new Set((curPlan.lines || []).map(m => m.id));
+    if (freightFocus) on.add("inf_freight");
+    Object.entries(NET_LAYERS).forEach(([id, ids]) => ids.forEach(l => { if (map.getLayer(l)) map.setLayoutProperty(l, "visibility", on.has(id) ? "visible" : "none"); }));
+    if (on.has("inf_rail") || on.has("inf_power")) loadData("data/networks.js", "ATLAS_NETWORKS").then(N => { if (N && !syncNetworks.osm) { syncNetworks.osm = 1; map.getSource("net-osm").setData(N.rail); map.getSource("net-osm-p").setData(N.power); } }).catch(() => {});
+    if (on.has("inf_ferry")) loadData("data/ferries.js", "ATLAS_FERRIES").then(F => { if (F && !syncNetworks.ferry) { syncNetworks.ferry = 1; map.getSource("net-ferry").setData(F.routes); } });
+    if (on.has("inf_freight")) loadData("data/freight.js", "ATLAS_FREIGHT").then(F => { if (!F) return; if (!syncNetworks.freight) { syncNetworks.freight = 1; F.routes.features.forEach((f, i) => { f.id = i; }); map.getSource("net-freight").setData(F.routes); } startFreight(F); });
+    else stopFreight();
+  }
+  // moving dots: how much goes each way. Dots per route grow with the tonnage (square root, so big routes don't drown the rest)
+  function startFreight(F) {
+    if (freightAnim) return;
+    const routes = F.routes.features.filter(f => !freightFocus || f.properties.p === freightFocus).map(f => ({ c: f.geometry.coordinates, col: f.properties.col, n: Math.max(1, Math.min(14, Math.round(Math.sqrt(f.properties.t / 2e5)))), out: f.properties.tout >= f.properties.tin }));
+    const t0 = performance.now();
+    const step = () => {
+      if (!freightAnim) return;
+      const t = (performance.now() - t0) / 1000, feats = [];
+      routes.forEach(r => { for (let k = 0; k < r.n; k++) { let f = ((t / 40) + k / r.n) % 1; if (!r.out) f = 1 - f; const x = f * (r.c.length - 1), i = Math.floor(x), u = x - i, a = r.c[i], b = r.c[Math.min(i + 1, r.c.length - 1)];
+        feats.push({ type: "Feature", properties: { col: r.col }, geometry: { type: "Point", coordinates: [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u] } }); } });
+      map.getSource("net-freight-dots").setData({ type: "FeatureCollection", features: feats });
+      freightAnim = setTimeout(() => requestAnimationFrame(step), 66);
+    };
+    freightAnim = 1; step();
+  }
+  function stopFreight() { if (freightAnim && freightAnim !== 1) clearTimeout(freightAnim); freightAnim = null; if (map.getSource("net-freight-dots")) map.getSource("net-freight-dots").setData({ type: "FeatureCollection", features: [] }); }
+  function focusFreight(pid) { // one port's routes, the rest faded
+    freightFocus = pid; stopFreight();
+    loadData("data/freight.js", "ATLAS_FREIGHT").then(F => { if (!syncNetworks.freight) { syncNetworks.freight = 1; F.routes.features.forEach((f, i) => { f.id = i; }); map.getSource("net-freight").setData(F.routes); }
+      F.routes.features.forEach((f, i) => map.setFeatureState({ source: "net-freight", id: i }, { dim: !!pid && f.properties.p !== pid })); syncNetworks(); });
+  }
+
   // ---------- 0.8: area names on the map, shown by size and zoom ----------
   // Each area's name appears once the area is big enough on screen to hold it: a nation from the start, a county as you
   // close in, a small borough or a ward only when you zoom towards it. Where names would collide the bigger area wins.
@@ -1226,11 +1460,11 @@
       return { type: "Feature", geometry: { type: "Point", coordinates: pt }, properties: { code, name: (P[code] && P[code].name) || f.properties.name || code, km: Math.round(km * 10) / 10, minz: level === "nation" ? 0 : nameMinZoom(km) } }; }).filter(Boolean);
   }
   const NAME_STYLE = { // nations and regions in spaced capitals, counties smaller capitals, constituencies and wards in normal case
-    nation: { font: ["Noto Sans Bold"], size: ["interpolate", ["linear"], ["zoom"], 4.5, 13, 7, 18], spacing: 0.32, caps: true },
-    region: { font: ["Noto Sans Bold"], size: ["interpolate", ["linear"], ["zoom"], 5.5, 11, 7.5, 14], spacing: 0.22, caps: true },
-    council: { font: ["Noto Sans Bold"], size: ["interpolate", ["linear"], ["zoom"], 6.5, 9.5, 10, 13], spacing: 0.12, caps: true },
-    constituency: { font: ["Noto Sans Regular"], size: ["interpolate", ["linear"], ["zoom"], 6, 9.5, 11, 13], spacing: 0.03, caps: false },
-    ward: { font: ["Noto Sans Regular"], size: ["interpolate", ["linear"], ["zoom"], 10, 10, 14, 13], spacing: 0.02, caps: false },
+    nation: { font: ["PT Serif Bold"], size: ["interpolate", ["linear"], ["zoom"], 4.5, 13, 7, 18], spacing: 0.32, caps: true },
+    region: { font: ["PT Serif Bold"], size: ["interpolate", ["linear"], ["zoom"], 5.5, 11, 7.5, 14], spacing: 0.22, caps: true },
+    council: { font: ["PT Serif Bold"], size: ["interpolate", ["linear"], ["zoom"], 6.5, 9.5, 10, 13], spacing: 0.12, caps: true },
+    constituency: { font: ["PT Serif Regular"], size: ["interpolate", ["linear"], ["zoom"], 6, 9.5, 11, 13], spacing: 0.03, caps: false },
+    ward: { font: ["PT Serif Regular"], size: ["interpolate", ["linear"], ["zoom"], 10, 10, 14, 13], spacing: 0.02, caps: false },
   };
   function addAreaNames() {
     if (plain) return;   // no basemap means no font server: names stay in the cards
@@ -1261,7 +1495,7 @@
     LEVELS.forEach(l => { setP("names-" + l, "text-color", hyb ? "#ffffff" : dark ? (l === "nation" || l === "region" ? "#c9bfd2" : "#d6d0db") : (l === "nation" || l === "region" ? "#5b4a6a" : "#3f3a45"));
       setP("names-" + l, "text-halo-color", hyb ? "rgba(0,0,0,0.7)" : dark ? "rgba(20,24,27,0.85)" : "rgba(242,239,233,0.85)"); });
   }
-  if (window.AtlasDebug) { Object.assign(window.AtlasDebug, { nameMinZoom, nameFeatures: l => nameFeatures(l, l === "ward" ? { features: wardFeatures } : G[SRC[l]]), paletteKey: () => paletteKey(), openPoiCard: id => openPoiCard(id), POI_BY, contextFor: (m, c, n) => contextFor(m, c, n) }); Object.defineProperty(window.AtlasDebug, "LV", { get: () => LV }); }
+  if (window.AtlasDebug) { Object.assign(window.AtlasDebug, { nameMinZoom, nameFeatures: l => nameFeatures(l, l === "ward" ? { features: wardFeatures } : G[SRC[l]]), paletteKey: () => paletteKey(), openPoiCard: id => openPoiCard(id), POI_BY, openPlaceCard: pk => openPlaceCard(pk), contextFor: (m, c, n) => contextFor(m, c, n) }); Object.defineProperty(window.AtlasDebug, "LV", { get: () => LV }); }
   window.ATLAS_WARDS_LOADED = function (council, fc) {
     if (loadedWards.has(council + ":done")) return; loadedWards.add(council + ":done");
     const pts = fc.features.map(ptFeature); pts.forEach(f => { PT[f.properties.code] = f.geometry.coordinates; });
@@ -1515,7 +1749,7 @@
   function repaint() {
     curPlan = EN.plan(planMetrics(), PS.prefs); syncRange();
     if (state.iso && state.iso.ch !== "nd" && !curPlan[state.iso.ch === "vbl" ? "hue" : state.iso.ch]) state.iso = null;
-    if (map.getSource && map.getSource("councils")) { LEVELS.forEach(paintLevel); syncProtestLayer(); syncCompanyLayer(); syncZones(); }
+    if (map.getSource && map.getSource("councils")) { LEVELS.forEach(paintLevel); syncProtestLayer(); syncCompanyLayer(); syncZones(); syncNetworks(); }
     renderLegend(); renderDock(); renderSup(); renderTNote(); syncFocusColour(); syncNewsSoon();
     if (pmOpen) renderPMenu();
     if (state.focus) { renderMind(); refreshPinned(); }
@@ -1525,7 +1759,7 @@
 
   // ---------- legend ----------
   const legend = $("legend");
-  const CH_NAME = { hue: "colour", shade: "lightness", grid: "colour grid", diverge: "two-sided colour", badge: "centre marker", dots: "dots", size: "circles", points: "points", heat: "heat", sites: "points" };
+  const CH_NAME = { hue: "colour", shade: "lightness", grid: "colour grid", diverge: "two-sided colour", badge: "centre marker", dots: "dots", size: "circles", points: "points", heat: "heat", sites: "points", lines: "lines" };
   function chooser(m) { const chs = EN.channels(m).map(c => c.ch); const cur = Object.keys(CH_NAME).find(ch => curPlan[ch] === m); return chs.length > 1 ? `<select class="as" data-as="${m.id}" aria-label="Show ${esc(m.label)} as">${chs.map(ch => `<option value="${ch}" ${ch === cur ? "selected" : ""}>${CH_NAME[ch]}</option>`).join("")}</select>` : `<small>${CH_NAME[cur] || ""}</small>`; }
   function picker(m) {
     if (m.pick === "party") { const r = resultFor(UKC, state.date) || resultFor(UKC, TODAY); const ps = r ? r.t.list.filter(x => !MINOR(x[0])).slice(0, 14).map(x => x[0]) : ["lab", "con"]; const cur = pickOf(m.id); if (!ps.includes(cur)) ps.unshift(cur);
@@ -1578,6 +1812,11 @@
       const unloc = COS.filter(c => c.lat == null).length;
       parts.push(`<div class="lg">${lhead(PL.sites)}<div class="cats2">${gs.map(g => `<span><i class="sw" style="background:${GRP_COL[g]}"></i>${esc(g)}</span>`).join("")}</div>
         <div class="note">Squares are head offices (protests are circles). Size = market value. Shown from London's council zoom; zoom into a gold district tile to explore it.${unloc ? ` ${unloc} London companies have no exact office location and are listed in the London cards only.` : ""}</div></div>`);
+    }
+    if (PL.lines && PL.lines.length) {
+      const SW = { inf_rail: [["#5b2a86", "Railway"], ["#5b2a86", "In tunnel", 1]], inf_roads: [["#1d5590", "Motorway"], ["#2e8b57", "A road or primary route"]], inf_power: [["#e08a1e", "Transmission line"]], inf_ferry: [["#0f8b8d", "Ferry route", 1]],
+        inf_freight: Object.entries((window.ATLAS_FREIGHT || {}).colours || { EU: "#2b6cb0", "Other Europe & Mediterranean": "#7b4fa6", Americas: "#c0392b", Asia: "#e08a1e", Africa: "#2e8b57", Australasia: "#0f8b8d" }).map(([k, c]) => [c, k]) };
+      PL.lines.forEach(m => parts.push(`<div class="lg">${lhead(m)}<div class="cats2">${(SW[m.id] || []).map(([c, l, dash]) => `<span><i class="sw ln${dash ? " dash" : ""}" style="--c:${c}"></i>${esc(l)}</span>`).join("")}</div>${m.id === "inf_freight" ? `<div class="note">Lines run to each partner country's main port; moving dots show the flow (more dots, more tonnes). ${esc((window.ATLAS_FREIGHT || {}).year || "")}, DfT.</div>` : ""}${plain && m.valid && m.valid() ? `<div class="note">${esc(m.valid())}</div>` : ""}</div>`));
     }
     const ev = PL.points || PL.heat;
     if (ev) {
@@ -2041,7 +2280,7 @@
       ${pinned ? `<div class="acts"><button class="btn primary" data-chartzone>Chart these companies</button><button class="btn" data-zoom>Zoom to</button></div>` : `<div class="hint2">Click to explore this district</div>`}`;
     const items = CORE.map(f => { let v = value(code, f.id); if (past && (f.id === "ruler" || f.id === "party")) v = { text: M[f.id].get(code, d).text, yr: "" }; return `<li><b>${esc(f.label)}:</b> ${f.id === "ruler" ? linkPerson(v.text) : esc(v.text)}${v.yr ? ` <small>(${esc(v.yr)})</small>` : ""}${v.edited ? ` <span class="tag">edited</span>` : ""}</li>`; });
     ((rec && rec.fields) || []).forEach(f => { if (f.label) items.push(`<li><b>${esc(f.label)}:</b> ${esc(f.value || "—")}</li>`); });
-    const onMap = planMetrics(); // everything ticked shows in the card, drawn or not
+    const onMap = planMetrics().filter(m => m.nature !== "line"); // everything ticked shows in the card, drawn or not (networks are lines, not values)
     const mapped = onMap.map(m => { const r = m.get(code, d); return `<li${r && r.nm ? ' class="nm"' : ""}>${swatchOf(m, code)}<span><b>${esc(m.label)}:</b> ${esc(r && (r.v != null || !EN.isNum(m) || r.nm) ? r.text : "No data")}${estTag(r)}${r && r.note ? ` <small>· ${m.id === "control" ? linkPerson(r.note) : esc(r.note)}</small>` : ""}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}${r && r.nm ? "" : sparkFor(m, code)}${pinned && m.how && !(r && r.nm) && PS.detail !== "simple" ? `<small class="how">How this is worked out: ${esc(m.how)}</small>` : ""}${pinned ? infoBtn(m.id) : ""}${pinned && r && r.detail ? `<div class="mdet">${r.detail}</div>` : ""}</span></li>`; });
     if (PS.detail === "simple" && !pinned) {   // short: Westminster results become one line (winner, share, majority); the rest stays
       const wmOn = onMap.some(m => m.group === G4), keep = onMap.map((m, i) => m.group === G4 ? null : mapped[i]).filter(Boolean);
@@ -2230,7 +2469,11 @@
   const hoverMs = () => Math.round(1200 * Math.pow(1 - TOOLS.cursor, 1.5) + 60);
   let cand = null, hov = null, timer = null, lastPt = null;
   function clearHover() { clearTimeout(timer); timer = null; if (hov) setFS(hov, { hover: false }); hov = null; hovCode = null; if (!state.pinned) card.hidden = true; }
+  // 0.8.1: the hand pointer means "you can click this": names, symbols, stops, protests and companies. Over plain map or an
+  // area's colour the pointer stays as it is (an area is still clickable, as before)
+  const CLICKABLE = () => ["poi-sym", "stops-pt", "pr-pts", "pr-cl", "pr-sp-pts", "co-pts", "soc-pts", "soc-cl", ...LEVELS.map(l => "names-" + l), ...PLACE_LABELS].filter(id => map.getLayer(id) && map.getLayoutProperty(id, "visibility") !== "none");
   map.on("mousemove", e => {
+    if (!lasso.active && state.tool !== "measure") { const hit = map.queryRenderedFeatures(pbox(e, 2), { layers: CLICKABLE() }).length; map.getCanvas().style.cursor = hit ? "pointer" : ""; }
     lastPt = e.point; if (lasso.active || state.tool === "measure") return;
     const pp = pickPoi(e);
     const ps = !pp && pickStop(e);
@@ -2264,6 +2507,8 @@
     const pp = pickPoi(e);
     if (pp) { ecard.hidden = true; ecardPinned = false; openPoiCard(pp); return; }
     const ps = pickStop(e); if (ps) { ecard.hidden = true; ecardPinned = false; openStopCard(ps); return; }
+    const nm = !e.originalEvent.shiftKey && state.tool !== "select" && state.tool !== "lasso" && pickName(e);
+    if (nm) { ecard.hidden = true; if (nm.kind === "area") { if (state.focus !== nm.code) focus(nm.code); } else openPlaceCard(nm); return; }
     const pc = pickCompany(e);
     if (pc != null) { ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = companyHTML(pc, true); ecard.hidden = false; place(e.point.x + 10, e.point.y - 40, ecard); bubbleNudge(); return; }
     const cl = map.getLayer("pr-cl") && map.getLayoutProperty("pr-cl", "visibility") !== "none" ? map.queryRenderedFeatures(pbox(e, 2), { layers: ["pr-cl"] })[0] : null;
@@ -3924,7 +4169,9 @@
   window.addEventListener("wheel", e => {
     const now = Date.now(); if (now < swLock) return; if (now - swT > 300) { swx = 0; swy = 0; } swT = now;
     const overBar = !!e.target.closest("#top,#tabs,.ws-bar"), overScroll = e.target.closest(".ws-canvas,.cp-body,.an-main,.tv-wrap,.cmp-main,#legend,.pm-list,table");
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.5 && !overScroll) { swx += e.deltaX; if (Math.abs(swx) > 140) { const o = order(), cur = VIEW.mode === "ws" || VIEW.mode === "split" ? "ws" : activeTab, i = Math.max(0, o.indexOf(cur)); const next = o[clamp(i + (swx > 0 ? 1 : -1), 0, o.length - 1)]; swx = 0; swLock = now + 700; if (next !== cur) goTab(next); } }
+    // 0.8.1: a sideways two-finger swipe no longer switches to the Workspace (it was too easy to trigger while panning);
+    // use the tab bar, or swipe up over the top bar for all tabs
+    if (false) { void overScroll; }
     else if (overBar && e.deltaY < 0) { swy += e.deltaY; if (swy < -120) { swy = 0; swLock = now + 700; openOverview(); } }
   }, { passive: true });
   let touch0 = null;

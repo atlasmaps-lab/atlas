@@ -2,6 +2,37 @@
 
 Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
 
+## What's new in 0.8.1
+
+- **Swiping sideways** with two fingers no longer jumps to the Workspace (use the tab bar).
+- **One typeface on the map:** every name (towns, counties, roads, water) is in PT Serif, the closest match to Atlas's text face that the map's font server has.
+- **Names you can click:**
+  - An area's name (a county, constituency or ward) opens that area, outlined.
+  - A place with no tile of its own (a town, village, suburb, hill, wood or lake) opens a **place card** instead, with a pin and no outline: which ward, council, constituency and region it's in, a Wikipedia summary, its council's figures, and nearby stations, airports and ports.
+
+  The card stays while you zoom and pan.
+- **Pointer:** the hand appears only over something you can click (names, symbols, stops, protests, companies). Elsewhere the pointer stays as it is.
+- **Airport cards** now open with:
+  - the codes, operator and local time
+  - **live departures and arrivals** and the **delays right now**, through a small proxy you set up once (`docs/flights-proxy.md`; until then, a note)
+  - the CAA's **month-by-month delays and disruption**, with severe months marked
+
+  The passenger chart is gone; the figure is in a line at the bottom.
+- **Port cards** show:
+  - freight in tonnes and lorries, trailers and containers a day
+  - where it goes (a bar by world region and the biggest trading partners)
+  - **Show its routes on the map**
+  - for ferry ports: the **crossings** (operator, time, whether they take foot passengers, cars or bikes), the **next sailings** and coach connections (Transitous), and the nearest station
+- **Networks drawn as their real routes** (Transport → Networks):
+  - railways (bold purple; every track closer in, with tunnels dashed)
+  - motorways and A roads
+  - the electricity transmission grid
+  - ferry routes
+  - **freight routes from every major port**: thin lines coloured by world region, with moving dots showing how much goes each way (DfT, 2025)
+
+  They're also in Atlas Transport → Planner data.
+- **Reach by train:** Atlas Transport's Reach has a train and public transport option, alongside car, cycle and walk.
+
 ## What's new in 0.8
 
 **The map**
