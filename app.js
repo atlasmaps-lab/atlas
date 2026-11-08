@@ -875,6 +875,7 @@
     syncMenu(); store.set("atlas-uk-look", look);
     try { applyMapColours(); } catch (e) { /* the style isn't ready yet */ }
   }
+  const RELIEF_OVER = ["interpolate", ["linear"], ["zoom"], 5, 0.08, 8, 0.18, 11, 0.28];
   const RELIEF = { map: ["interpolate", ["linear"], ["zoom"], 5, 0.12, 8, 0.2, 12, 0.3], terrain: ["interpolate", ["linear"], ["zoom"], 5, 0.45, 10, 0.6], satellite: 0, hybrid: 0 };
   function rememberOpacity(id, prop) { if (!(id + prop in origOpacity)) { const v = map.getPaintProperty(id, prop); origOpacity[id + prop] = v == null ? 1 : v; } return origOpacity[id + prop]; }
   function applyType() {
@@ -888,6 +889,8 @@
     else { setP("hillshade", "hillshade-exaggeration", 0); setTimeout(() => { if (!reliefOf(look.type)) try { map.setLayoutProperty("hillshade", "visibility", "none"); } catch (e) {} }, 1000); }
     setP("hillshade", "hillshade-shadow-color", dark ? "#05080a" : "#5a5045"); setP("hillshade", "hillshade-highlight-color", dark ? "#3c444a" : "#ffffff"); setP("hillshade", "hillshade-accent-color", dark ? "#0b1013" : "#6f6252");
     if (sat) setP("satellite", "raster-brightness-max", dark ? 0.82 : 1);
+    if (map.getLayer("relief-over")) { map.setLayoutProperty("relief-over", "visibility", sat ? "none" : "visible"); setP("relief-over", "hillshade-exaggeration", t === "terrain" ? ["interpolate", ["linear"], ["zoom"], 5, 0.15, 10, 0.35] : RELIEF_OVER);
+      setP("relief-over", "hillshade-highlight-color", dark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.18)"); }
     const roads = OS.groups.roads, labels = OS.groups.labels;
     roads.forEach(id => { const l = map.getLayer(id); if (!l || l.type !== "line") return; const o = rememberOpacity(id, "line-opacity"); setP(id, "line-opacity", t === "satellite" ? 0 : t === "hybrid" ? (typeof o === "number" ? o * 0.85 : o) : o); });
     labels.forEach(id => { if (!map.getLayer(id)) return; const o = rememberOpacity(id, "text-opacity"); setP(id, "text-opacity", t === "satellite" ? 0 : o); });
@@ -1012,8 +1015,9 @@
       "circle-radius": ["step", ["get", "point_count"], 14, 5, 17, 15, 21, 40, 25], "circle-color": "rgba(0,0,0,0.01)" } });
     map.addLayer({ id: "pr-pts", type: "circle", source: "protests-cl", filter: ["!", ["has", "point_count"]], layout: { visibility: "none", "circle-sort-key": ["-", 0, ["get", "r"]] }, paint: {
       "circle-radius": PR_R, "circle-color": ["get", "fill"], "circle-stroke-color": ["get", "stroke"], "circle-stroke-width": 1.6, "circle-opacity": ["get", "op"], "circle-stroke-opacity": ["get", "op"] } });
+    // 0.8: zoom must be the outer expression here (before, the ring for new protests never drew)
     map.addLayer({ id: "pr-new", type: "circle", source: "protests-cl", filter: ["all", ["!", ["has", "point_count"]], ["==", ["get", "nw"], 1]], layout: { visibility: "none" }, paint: {
-      "circle-radius": ["+", 5, PR_R], "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": ["get", "col"], "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, ["+", 5, ["*", ["get", "r"], 0.85]], 10, ["+", 5, ["*", ["get", "r"], 1.5]]], "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": ["get", "col"], "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
     map.addLayer({ id: "pr-sp-line", type: "line", source: "pr-spider", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#1f2a2e", "line-width": 1, "line-opacity": 0.6 } });
     map.addLayer({ id: "pr-sp-pts", type: "circle", source: "pr-spider", filter: ["==", ["geometry-type"], "Point"], paint: {
       "circle-radius": ["max", 6, ["*", ["get", "r"], 1.2]], "circle-color": ["get", "fill"], "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.8 } });
@@ -1070,6 +1074,9 @@
   };
   function addAreaNames() {
     if (plain) return;   // no basemap means no font server: names stay in the cards
+    // 0.8: a faint second shading drawn over the data colours, so hills and valleys still read through a coloured map
+    if (map.getSource("terrain")) map.addLayer({ id: "relief-over", type: "hillshade", source: "terrain", paint: { "hillshade-exaggeration": RELIEF_OVER,
+      "hillshade-shadow-color": "rgba(20,16,12,0.55)", "hillshade-highlight-color": "rgba(255,255,255,0.18)", "hillshade-accent-color": "rgba(0,0,0,0)", "hillshade-illumination-direction": 315 } }, map.getLayer("pr-heat") ? "pr-heat" : undefined);
     LEVELS.forEach(l => {
       const fc = l === "ward" ? { features: wardFeatures } : G[SRC[l]];
       map.addSource("names-" + l, { type: "geojson", data: { type: "FeatureCollection", features: nameFeatures(l, fc) } });
@@ -2717,9 +2724,11 @@
   const MAPCOL_DEF = { land: "#f2efe9", water: "#aad3df", lines: "#7d6f86" };
   const mapColNow = k => MAPCOL[k] || MAPCOL_DEF[k];
   const mcOrig = {};
-  const keepOrig = (id, prop) => { const k = id + "|" + prop; if (!(k in mcOrig)) mcOrig[k] = map.getPaintProperty(id, prop); return mcOrig[k]; };
+  const keepOrig0 = (id, prop) => { const k = id + "|" + prop; if (!(k in mcOrig)) mcOrig[k] = map.getPaintProperty(id, prop); return mcOrig[k]; };
   function applyMapColours() {
     if (!map.getStyle || !map.getStyle()) return;
+    const pal = (key && OS.palettes && OS.palettes[paletteKey()]) || {};
+    const keepOrig = (lid, prop) => (pal[lid] && pal[lid][prop]) || keepOrig0(lid, prop);   // 0.8: the current mode's colour, so dark and light both come back right
     map.getStyle().layers.forEach(l => {
       const id = l.id.toLowerCase(), noBase = !key;
       if (l.type === "background") { const want = noBase ? MAPCOL.water : MAPCOL.land, orig = keepOrig(l.id, "background-color"); setP(l.id, "background-color", want || orig); return; }
