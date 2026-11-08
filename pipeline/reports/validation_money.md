@@ -7,7 +7,7 @@ Written by `pipeline/build_money.py` on 2026-11-08.
 - **Local party units placed on the map:** 34,329 of 48,920 donations (70.2%), matched by name to a constituency in use at the date, a council, or a nation or region (Scottish Labour, London). 2,062 more went to national bodies that aren't places (parliamentary parties, trade union liaison), so they count for the party only. Most of the rest are units covering several seats ("Twickenham and Richmond").
 - **Donations to MPs matched to an MP:** 7,007 of 7,237 (96.8%), by name (titles removed) and the dates they held a seat.
 - **Registered interests:** 4,169 items for 588 MPs (current Parliament).
-- **Contracts:** 2,492 supplier awards with a Companies House number; 173 company donors have won at least one.
+- **Contracts:** 18,372 supplier awards with a Companies House number; 363 company donors have won at least one.
 - **Organisation donors located** (postcode, £5,000 or more given): 7,385 of 9,392.
 - FTSE 100 companies with a donor of the same name (a possible link, shown as such): 11.
 - **Ministers' meetings** with outside organisations (GOV.UK quarterly releases since July 2024): 49,616 organisation-meetings read; 3,375 were with an organisation that is also a registered donor (same name); ministers matched to their MP card: 155. Departments publish in different layouts and some quarters are missing or late; Atlas reads what is published.
