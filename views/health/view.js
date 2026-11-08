@@ -51,7 +51,7 @@
   function spine(ctx, el) {
     const c = placeOf(ctx), eng = "E92000001";
     const rows = PROFILE.flatMap(([g, ms]) => ms.filter(([id, b]) => ctx.M[id] && b).map(([id, better]) => ({ g, id, better })));
-    const W = 260;
+    const W = 190;
     const body = rows.map(({ g, id, better }) => {
       const m = ctx.M[id], all = valuesAt(ctx, id, "council").map(x => x[1]).sort((a, b) => a - b); if (all.length < 10) return "";
       const r = m.get(c, ctx.date), e = m.get(eng, ctx.date); if (!e || e.v == null) return "";
@@ -59,12 +59,13 @@
       // centre the spine on England: worst at the left, best at the right
       const span = Math.max(e.v - lo, hi - e.v) || 1, x = v => { const t = (v - e.v) / span * (better > 0 ? 1 : -1); return W / 2 + t * (W / 2 - 4); };
       const q1 = x(q(0.25)), q3 = x(q(0.75)), mn = x(better > 0 ? lo : hi), mx = x(better > 0 ? hi : lo);
-      const pv = r && r.v != null && !r.nm ? r.v : null, d = pv == null ? 0 : (pv - e.v) / Math.abs(e.v) * better, col = pv == null ? "#999" : d > 0.05 ? "#1b7a3a" : d < -0.05 ? "#b03a2e" : "#e0a020";
+      const mean = all.reduce((t, v) => t + v, 0) / all.length, sd = Math.sqrt(all.reduce((t, v) => t + (v - mean) ** 2, 0) / all.length) || 1;
+      const pv = r && r.v != null && !r.nm ? r.v : null, d = pv == null ? 0 : (pv - e.v) / sd * better, col = pv == null ? "#999" : d > 0.5 ? "#1b7a3a" : d < -0.5 ? "#b03a2e" : "#e0a020";   // half a standard deviation of the councils' spread
       return `<tr><th><button class="lnk" data-hmap="${id}">${ctx.esc(m.label)}</button></th><td class="num">${pv != null ? ctx.esc(r.text) : "—"}</td><td class="num">${ctx.esc(e.text)}</td>
         <td><svg width="${W}" height="16" viewBox="0 0 ${W} 16" aria-hidden="true"><rect x="${Math.min(mn, mx)}" y="5" width="${Math.abs(mx - mn)}" height="6" fill="#e3e6e4"/><rect x="${Math.min(q1, q3)}" y="3" width="${Math.abs(q3 - q1)}" height="10" fill="#c3cac6"/>
         <line x1="${W / 2}" x2="${W / 2}" y1="0" y2="16" stroke="#1f2a2e" stroke-width="1.5"/>${pv != null ? `<circle cx="${Math.max(4, Math.min(W - 4, x(pv)))}" cy="8" r="5" fill="${col}" stroke="#fff" stroke-width="1.5"/>` : ""}</svg></td></tr>`;
     }).join("");
-    el.innerHTML = `<h4>${ctx.esc(ctx.nameOf(c))} against England</h4><p class="ap-note">Each bar is the range across England's councils: worst on the left, best on the right, the middle half darker; the line is England. The dot is this place: <b style="color:#1b7a3a">better</b>, <b style="color:#e0a020">similar</b> or <b style="color:#b03a2e">worse</b> than England (by more than 5%; no confidence intervals here, so treat close calls as similar). Click a council on the map.</p>
+    el.innerHTML = `<h4>${ctx.esc(ctx.nameOf(c))} against England</h4><p class="ap-note">Each bar is the range across England's councils: worst on the left, best on the right, the middle half darker; the line is England. The dot is this place: <b style="color:#1b7a3a">better</b>, <b style="color:#e0a020">similar</b> or <b style="color:#b03a2e">worse</b> than England, judged against how much councils usually differ (more than half a standard deviation either way). Atlas has no confidence intervals, so a small council's figure can swing; treat close calls as similar. Click a council on the map.</p>
       <div class="tscroll"><table class="cmp htab"><thead><tr><th></th><th>Here</th><th>England</th><th>Worst ← England → best</th></tr></thead><tbody>${body}</tbody></table></div>
       <p class="ap-note">OHID Fingertips and ONS (OGL). The same layout as Fingertips' spine charts.</p>`;
     el.onclick = e => { const b = e.target.closest("[data-hmap]"); if (b) { ctx.setLevel("council"); ctx.mapOnly([b.dataset.hmap]); } };
@@ -108,7 +109,7 @@
     id: "health", name: "Atlas Health", perspective: "health", accent: ACC, dataNeeds: ["ATLAS_EXTRA"],
     init(ctx) { ctx.setLevel("council"); ctx.mapOnly(["le_f"]); ctx.openPanel("overview"); },
     panels: [{ id: "overview", title: "Place profile", live: true, render: overview, min: { w: 440, h: 320 } },
-      { id: "spine", title: "Against England", blurb: "Spine chart: the place against England and every council, Fingertips style", live: true, render: spine, min: { w: 560, h: 380 } },
+      { id: "spine", title: "Against England", blurb: "Spine chart: the place against England and every council, Fingertips style", live: true, render: spine, min: { w: 600, h: 400 } },
       { id: "inequality", title: "Inequality", blurb: "Health by deprivation decile, and the gap between the most and least deprived", render: inequality, min: { w: 500, h: 380 } }, { id: "rankings", title: "Rankings", live: true, render: rankings, min: { w: 380, h: 320 } }, { id: "local", title: "Wards and seats", render: local }],
   });
 })();
