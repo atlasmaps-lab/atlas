@@ -17,7 +17,7 @@ def main():
         page.click("#brand"); page.wait_for_timeout(200)
         links = js("() => [...document.querySelectorAll('#apps-list a')].map(a => a.getAttribute('href'))")
         rep.check(any("#app=markets" in h for h in links) and any("#app=politics" in h for h in links), f"the ATLAS menu offers the apps ({len(links)})")
-        rep.check("not available yet" in js("() => document.getElementById('apps-list').textContent").lower(), "Transportation shows as not available yet")
+        rep.check(any("#app=transport" in h for h in links) and "not available yet" not in js("() => document.getElementById('apps-list').textContent").lower(), "0.8: every perspective has data now, Transport included, so none says not available yet")
         page.keyboard.press("Escape"); page.click("#dock [data-fold]")
         rep.check(js("() => document.querySelectorAll('#dock .papp').length") >= 4, "each perspective with data has “Open as … ↗” in its row")
         rep.check(not page.errors, "Multi: no console errors" + (f": {page.errors}" if page.errors else ""))
@@ -67,7 +67,7 @@ def main():
             rep.check(not page.errors, f"{app}: every panel opens without console errors" + (f": {page.errors}" if page.errors else ""))
             page.context.close()
         page = open_atlas(b, base, (1440, 900), query="debug#app=transport"); js = page.evaluate; page.wait_for_timeout(800)
-        rep.check("not available yet" in js("() => document.body.textContent").lower(), "#app=transport says not available yet")
+        rep.check("not available yet" not in js("() => document.body.textContent").lower() and js("() => !!document.querySelector('#apphead [data-apanel=directions]')"), "#app=transport opens Atlas Transport (0.8: it has data now)")
         page.context.close()
     rep.done()
 

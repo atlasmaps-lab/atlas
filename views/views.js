@@ -22,8 +22,9 @@
     social:   { owner: "", js: ["view.js"], css: ["view.css"] },
     health:   { owner: "", js: ["view.js"], css: ["view.css"] },
     markets:  { owner: "", js: ["view.js"], css: ["view.css"] },
+    transport: { owner: "", js: ["view.js"], css: ["view.css"] },
   };
-  const V = "0807";   // bump with the ?v= numbers in index.html so browsers fetch fresh copies
+  const V = "0808";   // bump with the ?v= numbers in index.html so browsers fetch fresh copies
 
   window.ATLAS_VIEWS = VIEWS;
   const m = location.hash.match(/app=([a-z]+)/), open = m && VIEWS[m[1]] ? m[1] : null;

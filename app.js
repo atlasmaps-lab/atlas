@@ -259,7 +259,7 @@
     { id: "economic", bar: ["#a4ac86", "#333d29"], name: "Economic", hue: "#13876b", ready: true, ramp: ["#e3f4ee", "#b3e0cf", "#73c2a6", "#33997b", "#0f6b52"], desc: "Output and income, every year since 1998." },
     { id: "social", bar: ["#d69f7e", "#774936"], name: "Social", hue: "#d0701c", ready: true, ramp: ["#fdeedc", "#f9cf9f", "#f2a65c", "#d97a26", "#a3510f"], desc: "Population every year since 1998; age latest only." },
     { id: "health", bar: ["#ff8fa3", "#a4133c"], name: "Health", hue: "#c2364b", ready: false, ramp: ["#fbe9ec", "#f3bcc5", "#e48596", "#c94f66", "#8f2338"], planned: ["Life expectancy", "Healthy life expectancy", "Patients per GP", "Obesity rate"], desc: "Not loaded yet." },
-    { id: "transport", bar: ["#90e0ef", "#023e8a"], name: "Transportation", hue: "#2b6cb0", ready: false, planned: ["Commute time", "Households without a car", "Rail stations", "Bus services"], desc: "Not loaded yet." },
+    { id: "transport", bar: ["#90e0ef", "#023e8a"], name: "Transportation", hue: "#2b6cb0", ready: !!(window.ATLAS_POI || window.ATLAS_TRANSPORT), ramp: ["#e3eef8", "#b5d0ea", "#7aa9d6", "#3f7fbf", "#1d5590"], planned: ["Commute time", "Households without a car", "Road traffic", "Road casualties"], desc: "Railway stations and how busy they are, airports and ports, bus and tram stops; directions and journey planning in Atlas Transport." },
     { id: "analysis", name: "Analysis", hue: "#4a4f55", ready: false, hidden: true, ramp: ["#eef0f1", "#cfd4d8", "#a3abb2", "#6f7880", "#3d444b"], planned: [], desc: "Results you put on the map from the Analyse window: clusters, residuals, component scores, hot spots." },
     { id: "markets", bar: ["#8d99ae", "#2b2d42"], name: "Markets", hue: "#a07a12", ready: !!MK, ramp: ["#fbf3d5", "#f1dc93", "#ddb94f", "#b8902a", "#7d5f12"], planned: ["House prices", "Rents", "Business births", "Broadband speed"], desc: "Test case: FTSE 100 companies headquartered in London, and London's financial districts." },
   ];
@@ -732,6 +732,32 @@
     get(code, d) { const a = (INFO[code] || {}).area; const p = popAt(code, d); if (!a || !a[0] || !p) return null; const v = p / a[0]; return { v, text: this.fmt(v) }; } });
   def({ id: "pop_change", p: "social", label: "Population change (10 years)", scale: "interval", nature: "change", temporal: "annual", mid: 0, fmt: fmtPct, desc: "Growth over the 10 years to the date",
     get(code, d) { const a = serAt("population", code, d); if (!a) return null; const b = serAt("population", code, (a.yr - 10) + "-07-01"); if (!b || b.yr !== a.yr - 10) return null; const v = (a.v / b.v - 1) * 100; return { v, text: this.fmt(v), yr: `${b.yr}–${a.yr}` }; } });
+  // ---------- 0.8: transport (stations, airports and ports from data/places_poi.js; stops from data/transport.js) ----------
+  const TR = window.ATLAS_TRANSPORT || null, POIDATA = window.ATLAS_POI || null, GT = "Stations, stops and hubs";
+  const COUNCIL_LV = ["council", "region", "nation", "country"], TR_NM = { ward: "Counted by council", constituency: "Counted by council (stations and stops are filed under their council)" };
+  const councilsIn = code => P[code].level === "council" ? [code] : (UNDER[code] || []).filter(c => P[c] && P[c].level === "council");
+  const sumCouncils = (code, f) => { let t = 0, any = false; councilsIn(code).forEach(c => { const v = f(c); if (v != null) { t += v; any = true; } }); return any ? t : null; };
+  const poiBy = {}; if (POIDATA) POIDATA.items.forEach(i => { if (i.c) (poiBy[i.c + ":" + i.k] = poiBy[i.c + ":" + i.k] || []).push(i); });
+  const poiYear = (i, y) => { if (!i.s) return null; const k = y - i.s[0] + 1; return k >= 1 && k < i.s.length ? i.s[k] : null; };
+  const TR_MAXY = {}; if (POIDATA) POIDATA.items.forEach(i => { if (i.s) TR_MAXY[i.k] = Math.max(TR_MAXY[i.k] || 0, i.s[0] + i.s.length - 2); });
+  const trYear = (kind, code, d) => { const y = Math.min(+d.slice(0, 4), TR_MAXY[kind] || 9999); return sumCouncils(code, c => { const xs = poiBy[c + ":" + kind]; if (!xs) return null; let t = 0, ok = false; xs.forEach(i => { const v = poiYear(i, y); if (v != null) { t += v; ok = true; } }); return ok ? t : null; }); };
+  if (POIDATA) {
+    def({ id: "rail_usage", p: "transport", group: GT, label: "Rail journeys (entries and exits)", scale: "ratio", nature: "count", temporal: "annual", levels: COUNCIL_LV, nmText: TR_NM, fmt: v => fmtBig(v), span: () => ["2013-01-01", TODAY],
+      source: POIDATA.sources.station, desc: "Entries and exits at the area's railway stations in the year to March", how: "ORR's estimates of station usage, summed over the stations in the area (April to March; the year shown is the one ending in March)",
+      get(code, d) { const v = trYear("station", code, d); const y = Math.min(+d.slice(0, 4), TR_MAXY.station || 9999); return v != null ? { v, text: fmtBig(v), yr: `${y - 1}–${String(y).slice(2)}` } : { v: null, text: "No stations with figures" }; } });
+    def({ id: "rail_stations", p: "transport", group: GT, label: "Railway stations", scale: "ratio", nature: "count", temporal: "static", levels: COUNCIL_LV, nmText: TR_NM, fmt: fmtInt, source: POIDATA.sources.station, desc: "National Rail stations in the area (with ORR usage figures)",
+      get(code) { const v = sumCouncils(code, c => (poiBy[c + ":station"] || []).length || null); return { v: v || 0, text: fmtInt(v || 0) }; } });
+    def({ id: "air_pax", p: "transport", group: GT, label: "Airport passengers", scale: "ratio", nature: "count", temporal: "annual", levels: COUNCIL_LV, nmText: TR_NM, fmt: v => fmtBig(v), span: () => ["2015-01-01", TODAY], source: POIDATA.sources.airport,
+      desc: "Terminal passengers at the area's airports in the year", get(code, d) { const v = trYear("airport", code, d); return v != null ? { v, text: fmtBig(v), yr: String(Math.min(+d.slice(0, 4), TR_MAXY.airport || 9999)) } : { v: null, text: "No airport" }; } });
+    def({ id: "port_freight", p: "transport", group: GT, label: "Port freight (tonnes)", scale: "ratio", nature: "count", temporal: "annual", levels: COUNCIL_LV, nmText: TR_NM, fmt: v => fmtBig(v) + " t", span: () => ["2011-01-01", TODAY], source: POIDATA.sources.port,
+      desc: "Freight handled by the area's major ports in the year", get(code, d) { const v = trYear("port", code, d); return v != null ? { v, text: fmtBig(v) + " t", yr: String(Math.min(+d.slice(0, 4), TR_MAXY.port || 9999)) } : { v: null, text: "No major port" }; } });
+  }
+  if (TR) {
+    def({ id: "bus_stops", p: "transport", group: GT, label: "Bus and coach stops", scale: "ratio", nature: "count", temporal: "static", levels: COUNCIL_LV, nmText: TR_NM, fmt: fmtInt, source: TR.sources.stops, desc: "Active bus and coach stops (NaPTAN)",
+      get(code) { const v = sumCouncils(code, c => TR.stops[c] ? TR.stops[c][0] : null); return v != null ? { v, text: fmtInt(v), yr: TR.built.slice(0, 4) } : { v: null, text: "Not in NaPTAN (Northern Ireland)" }; } });
+    def({ id: "bus_stop_density", p: "transport", group: GT, label: "Bus stops per km²", scale: "ratio", nature: "rate", temporal: "static", levels: COUNCIL_LV, nmText: TR_NM, fmt: v => v.toFixed(1) + " per km²", source: TR.sources.stops, desc: "How densely bus stops cover the area",
+      get(code) { const n = sumCouncils(code, c => TR.stops[c] ? TR.stops[c][0] : null), a = (INFO[code] || {}).area; return n != null && a && a[0] ? { v: n / a[0], text: (n / a[0]).toFixed(1) + " per km²", yr: TR.built.slice(0, 4) } : { v: null, text: "No figure" }; } });
+  }
   def({ id: "average_age", p: "social", label: "Average age", scale: "ratio", nature: "rate", temporal: "static", fmt: v => v.toFixed(1) + " years", desc: "Mean age (latest year only)",
     get(code) { const x = (INFO[code] || {}).average_age; return x ? { v: x[0], text: x[0].toFixed(1) + " years", yr: x[2] } : null; } });
 
@@ -1054,7 +1080,7 @@
     map.addLayer({ id: "tool-fill", type: "fill", source: "tool", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#3b78b5", "fill-opacity": 0.12 } });
     map.addLayer({ id: "tool-line", type: "line", source: "tool", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": "#1f2a2e", "line-width": 2, "line-dasharray": [2, 1.5] } });
     map.addLayer({ id: "tool-pts", type: "circle", source: "tool", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5.5, "circle-color": "#ffffff", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2 } });
-    addAreaNames(); addPoi();
+    addAreaNames(); addPoi(); addStops();
     applyLook(true); applyLevels(); applyTools();
     const at = document.querySelector(".maplibregl-ctrl-attrib"); if (at) at.classList.remove("maplibregl-compact-show"); // credits folded into the ⓘ button
     map.on("moveend", loadVisibleWards);
@@ -1128,6 +1154,45 @@
     poiCards.set(id, w); WM.open(w.el); return w;
   }
   function searchPoi(q) { if (!POI || q.length < 3) return []; return POI.items.filter(i => i.n.toLowerCase().includes(q)).sort((a, b) => (a.n.toLowerCase().startsWith(q) ? 0 : 1) - (b.n.toLowerCase().startsWith(q) ? 0 : 1) || (b.v || 0) - (a.v || 0)).slice(0, 6); }
+
+  // ---------- 0.8: bus, tram and ferry stops at street zoom (NaPTAN, data/stops/<council>.js, loaded as you get there) ----------
+  const STOP_Z = 14.5, STOP_COL = { b: "#d63a2f", t: "#7b4fa6", f: "#0f6b7a" }, STOP_KIND = { b: "Bus stop", t: "Tram or metro stop", f: "Ferry berth" };
+  const stopFeats = [], stopLoaded = new Set();
+  function addStops() {
+    if (!window.ATLAS_TRANSPORT) return;
+    map.addSource("stops", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "stops-pt", type: "circle", source: "stops", minzoom: STOP_Z, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], STOP_Z, 2.5, 17, 5.5], "circle-color": ["match", ["get", "k"], "t", STOP_COL.t, "f", STOP_COL.f, STOP_COL.b],
+      "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2, "circle-opacity": ["interpolate", ["linear"], ["zoom"], STOP_Z, 0, STOP_Z + 0.4, 0.95] } }, map.getLayer("poi-sym") ? "poi-sym" : undefined);
+    if (!plain) map.addLayer({ id: "stops-lab", type: "symbol", source: "stops", minzoom: 16.3, layout: { "text-field": ["get", "n"], "text-font": ["Noto Sans Regular"], "text-size": 10.5, "text-offset": [0, 0.9], "text-anchor": "top", "text-optional": true, "text-max-width": 8 },
+      paint: { "text-color": "#3a3f44", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.2 } });
+    map.on("moveend", loadVisibleStops); loadVisibleStops();
+  }
+  function loadVisibleStops() {
+    if (map.getZoom() < STOP_Z - 0.5) return;
+    const b = map.getBounds(), seen = new Set();
+    map.queryRenderedFeatures({ layers: ["council-fill"] }).forEach(f => seen.add(f.properties.code));
+    Object.entries(P).forEach(([c, p]) => { if (p.level === "council" && p.pt && b.contains(p.pt)) seen.add(c); });
+    if (!seen.size) { const c = map.getCenter(); Object.entries(P).forEach(([k, p]) => { if (p.level === "council" && p.pt && Math.hypot(p.pt[0] - c.lng, p.pt[1] - c.lat) < 0.15) seen.add(k); }); }
+    [...seen].slice(0, 12).forEach(c => { if (stopLoaded.has(c)) return; stopLoaded.add(c); const sc = document.createElement("script"); sc.src = "data/stops/" + c + ".js"; sc.onerror = () => {}; document.body.appendChild(sc); });
+  }
+  window.ATLAS_STOPS_LOADED = (code, stops) => {
+    stops.forEach(s => stopFeats.push({ type: "Feature", geometry: { type: "Point", coordinates: [s[0], s[1]] }, properties: { n: s[2], k: s[3], id: s[4] } }));
+    if (map.getSource("stops")) map.getSource("stops").setData({ type: "FeatureCollection", features: stopFeats });
+  };
+  function pickStop(e) { if (!map.getLayer("stops-pt") || map.getZoom() < STOP_Z) return null; const f = map.queryRenderedFeatures(pbox(e, 4), { layers: ["stops-pt"] })[0]; return f ? f.properties : null; }
+  const stopCards = new Map();
+  function openStopCard(st) {
+    const have = stopCards.get(st.id); if (have && WM.isOpen(have.el)) { WM.front(have.el); return; }
+    const london = /^490/.test(st.id), body = extra => `<div class="poi-card"><div class="poi-top"><span class="poi-ic lg" style="background:${STOP_COL[st.k] || STOP_COL.b}"><svg viewBox="0 0 24 24"><path d="${POI_KIND.station.path}" fill="#fff"/></svg></span><div><div class="poi-kind">${esc(STOP_KIND[st.k] || "Stop")}</div><div class="poi-sub">NaPTAN ${esc(st.id)}</div></div></div>
+      ${extra}<div class="poi-links">${london ? "" : `<a href="https://bustimes.org/stops/${encodeURIComponent(st.id)}" target="_blank" rel="noopener">Departures (bustimes.org)</a> · `}<a href="https://www.traveline.info/" target="_blank" rel="noopener">Traveline</a></div><div class="poi-src">Stop: NaPTAN (DfT).${london ? " Live arrivals: Powered by TfL Open Data." : ""}</div></div>`;
+    const w = WM.make({ type: "stop", title: st.n, html: body(london ? `<p class="ap-note">Loading live arrivals…</p>` : `<p class="ap-note">Live times outside London need a data feed that requires a server (Bus Open Data Service); timetables are in Atlas Transport's journey planner.</p>`), cascade: true, min: { w: 280, h: 200 },
+      def: () => ({ x: innerWidth - 360 - 76, y: 90, w: 360, h: 380 }), onClose: () => stopCards.delete(st.id) });
+    stopCards.set(st.id, w); WM.open(w.el);
+    if (london) fetch("https://api.tfl.gov.uk/StopPoint/" + encodeURIComponent(st.id) + "/Arrivals").then(r => r.json()).then(a => {
+      const xs = (Array.isArray(a) ? a : []).sort((x, y) => x.timeToStation - y.timeToStation).slice(0, 12);
+      w.setBody(body(xs.length ? `<table class="mo-tab">${xs.map(x => `<tr><td><b>${esc(x.lineName)}</b> ${esc(x.destinationName || "")}</td><td class="num">${x.timeToStation < 60 ? "due" : Math.round(x.timeToStation / 60) + " min"}</td></tr>`).join("")}</table>` : `<p class="ap-note">No arrivals expected right now.</p>`));
+    }).catch(() => w.setBody(body(`<p class="ap-note">Live arrivals couldn't be loaded (TfL).</p>`)));
+  }
 
   // ---------- 0.8: area names on the map, shown by size and zoom ----------
   // Each area's name appears once the area is big enough on screen to hold it: a nation from the start, a county as you
@@ -2149,6 +2214,8 @@
   map.on("mousemove", e => {
     lastPt = e.point; if (lasso.active || state.tool === "measure") return;
     const pp = pickPoi(e);
+    const ps = !pp && pickStop(e);
+    if (ps && !ecardPinned) { clearHover(); ecard.className = "card"; ecard.innerHTML = `<div class="poi-h"><b>${esc(ps.n)}</b><div class="poi-sub">${esc(STOP_KIND[ps.k] || "Stop")} · click for ${/^490/.test(ps.id) ? "live arrivals" : "more"}</div></div>`; ecard.hidden = false; place(e.point.x, e.point.y, ecard); map.getCanvas().style.cursor = "pointer"; return; }
     if (pp && !ecardPinned) { clearHover(); ecard.className = "card"; ecard.innerHTML = poiHoverHTML(pp); ecard.hidden = false; place(e.point.x, e.point.y, ecard); map.getCanvas().style.cursor = "pointer"; return; }
     const pc = pickCompany(e);
     if (pc != null && !ecardPinned) { clearHover(); ecard.className = "card"; ecard.innerHTML = companyHTML(pc, false); ecard.hidden = false; place(e.point.x, e.point.y, ecard); return; }
@@ -2177,6 +2244,7 @@
     if (map.getLayer("zone-dot") && marketsInUse() && map.getZoom() < ZONE_Z && map.queryRenderedFeatures([[e.point.x - 5, e.point.y - 5], [e.point.x + 5, e.point.y + 5]], { layers: ["zone-dot"] }).length) { map.flyTo({ center: [-0.1, 51.512], zoom: 11.6, duration: 1200 }); toast("London's financial districts: click a gold tile to explore it."); return; }
     const pp = pickPoi(e);
     if (pp) { ecard.hidden = true; ecardPinned = false; openPoiCard(pp); return; }
+    const ps = pickStop(e); if (ps) { ecard.hidden = true; ecardPinned = false; openStopCard(ps); return; }
     const pc = pickCompany(e);
     if (pc != null) { ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = companyHTML(pc, true); ecard.hidden = false; place(e.point.x + 10, e.point.y - 40, ecard); bubbleNudge(); return; }
     const cl = map.getLayer("pr-cl") && map.getLayoutProperty("pr-cl", "visibility") !== "none" ? map.queryRenderedFeatures(pbox(e, 2), { layers: ["pr-cl"] })[0] : null;
@@ -4147,6 +4215,7 @@
   };
   window.AtlasCtx = CTX;
   CTX.money = window.AtlasMoney || null; CTX.CH = CH; CTX.MK = MK; CTX.LABEL = LABEL;
+  CTX.map = map; CTX.POI = POIDATA; CTX.openPoiCard = id => openPoiCard(id); CTX.plain = plain;   // 0.8: views that draw on the map (Atlas Transport)
   if (window.AtlasMoney) AtlasMoney.init(CTX);
 
   // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------

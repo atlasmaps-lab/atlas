@@ -528,6 +528,10 @@ body.wsfull .fab2 { visibility: hidden; }
 .mo-list { margin: 4px 0; padding-left: 16px; font-size: 12px; display: grid; gap: 3px; } .mo-src { font-size: 11px; color: var(--ink-3); margin-top: 10px; }
 .mo-line { font-size: 12px; margin: 6px 0; color: var(--ink-2); } .mo-cobox { background: #fff7e6; } :root[data-mode="dark"] .mo-cobox { background: #3a2f17; }
 .mo-win h4 { margin: 12px 0 4px; font-size: 13px; } .mo-win details summary { cursor: pointer; font-size: 12.5px; padding: 3px 0; }
+/* 0.8: a small tab strip inside panels (Money, Transport hubs) */
+.tr-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--rule); margin: 0 0 8px; overflow-x: auto; scrollbar-width: none; }
+.tr-tabs button { border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 12.5px; padding: 6px 10px; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; }
+.tr-tabs button.on { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
 .nw2-why { font-size: 12px; color: var(--ink-2); margin: 0 0 10px; }
 #chart-bubble:hover { transform: scale(1.06); }
 #chart-bubble.open { background: var(--accent); color: var(--on-accent); }
@@ -1061,9 +1065,9 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=0807">
-<script src="theme.js?v=0807"></script>
-<script src="theme-apply.js?v=0807"></script>
+<link rel="stylesheet" href="fonts.css?v=0808">
+<script src="theme.js?v=0808"></script>
+<script src="theme-apply.js?v=0808"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1184,16 +1188,17 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=0807"></script>
+<script src="data/places_poi.js?v=0808"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=0807"></script>
+<script src="data/money.js?v=0808"></script>
+<script src="data/transport.js?v=0808"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="stats.js?v=0807"></script>
-<script src="psephology.js?v=0807"></script>
-<script src="charts.js?v=0807"></script>
-<script src="engine.js?v=0807"></script>
-<script src="xlsx.js?v=0807"></script>
+<script src="stats.js?v=0808"></script>
+<script src="psephology.js?v=0808"></script>
+<script src="charts.js?v=0808"></script>
+<script src="engine.js?v=0808"></script>
+<script src="xlsx.js?v=0808"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1203,13 +1208,13 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=0807"></script>
-<script src="apps.js?v=0807"></script>
-<script src="views/views.js?v=0807"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=0808"></script>
+<script src="apps.js?v=0808"></script>
+<script src="views/views.js?v=0808"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=0807"></script>
-<script src="money.js?v=0807"></script>
-<script src="devdesign.js?v=0807"></script>
-<script src="app.js?v=0807"></script>
+<script src="windows.js?v=0808"></script>
+<script src="money.js?v=0808"></script>
+<script src="devdesign.js?v=0808"></script>
+<script src="app.js?v=0808"></script>
 </body>
 </html>
