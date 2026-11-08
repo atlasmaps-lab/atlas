@@ -17,6 +17,21 @@
     el.innerHTML = rows.length ? `<p class="ap-note">${ctx.esc(m.desc || "")}, ${ctx.esc((ctx.PLURAL_L[lv] || lv).toLowerCase())}.</p><h4>Growing fastest</h4><table class="cmp">${rows.slice(0, 10).map(li).join("")}</table><h4>Shrinking or growing slowest</h4><table class="cmp">${rows.slice(-10).map(li).join("")}</table>` : `<p class="ap-note">No population change for this boundary set on this date.</p>`;
   }
   function pyramid(ctx, el) { el.innerHTML = `<p><b>Population pyramid: not available yet.</b> It needs the number of people in each age band for each place; Atlas has only the average age. ONS publishes single-year-of-age estimates (Open Government Licence), the source to add next.</p>`; }
+  // 0.8: what a social policy researcher reads first about a place: deprivation, by domain (IMD 2025, England)
+  function deprivation(ctx, el) {
+    const c = ctx.focused && ctx.P[ctx.focused] && ctx.P[ctx.focused].level === "council" ? ctx.focused : null;
+    const doms = [["imd_income", "Income"], ["imd_employment", "Employment"], ["imd_education", "Education and skills"], ["imd_health", "Health and disability"], ["imd_crime", "Crime"], ["imd_barriers", "Barriers to housing and services"], ["imd_living", "Living environment"]].filter(([id]) => ctx.M[id]);
+    if (!ctx.M.imd_decile) { el.innerHTML = `<p class="ap-note">The deprivation index isn't loaded (data/economy.js).</p>`; return; }
+    if (!c) { el.innerHTML = `<p>Click a council in England on the map to see how deprived it is, overall and on each of the seven domains (English Indices of Deprivation 2025).</p><div class="ap-row"><button class="btn sm" data-sdmap="imd_decile">Deprivation decile on the map</button><button class="btn sm" data-sdmap="imd_share10">Share of neighbourhoods in the most deprived 10%</button></div>`; }
+    else {
+      const d = ctx.M.imd_decile.get(c, ctx.date), sh = ctx.M.imd_share10.get(c, ctx.date), n = 296;
+      el.innerHTML = `<h4>${ctx.esc(ctx.nameOf(c))}</h4>${d && d.v ? `<p>Overall: <b>${ctx.esc(d.text)}</b>${sh && sh.v != null ? ` · ${ctx.esc(sh.text)} of its neighbourhoods are among England's most deprived 10%` : ""}.</p>` : `<p class="ap-note">${ctx.esc((d && d.text) || "Not in the index")}.</p>`}
+        ${d && d.v ? ctx.CH.ranked(doms.map(([id, l]) => { const r = ctx.M[id].get(c, ctx.date); return { name: l, v: r && r.v ? n + 1 - r.v : null }; }).filter(x => x.v), { w: 440, fmt: v => "rank " + (n + 1 - v) }) : ""}
+        <p class="ap-note">Longer bar = more deprived on that domain (rank 1 of ${n} is England's most deprived council). Each domain is on the map under Social → Deprivation.</p>
+        <div class="ap-row"><button class="btn sm" data-sdmap="imd_decile">Deprivation decile on the map</button></div>`;
+    }
+    el.onclick = e => { const b = e.target.closest("[data-sdmap]"); if (b) { ctx.setLevel("council"); ctx.mapOnly([b.dataset.sdmap]); } };
+  }
   // 0.8: Atlas Social is a social layer on the map (social.js, store.js); the statistics are kept under Statistics
   const SP = id => window.AtlasSocial ? AtlasSocial.panel(id) : (ctx, el) => { el.innerHTML = "<p class='ap-note'>Atlas Social didn't load.</p>"; };
   const dev = !!(window.AtlasTheme && AtlasTheme.dev);
@@ -32,6 +47,7 @@
       { id: "profile", title: "Profile & safety", render: SP("profile"), min: { w: 380, h: 420 } },
       ...(dev ? [{ id: "moderation", title: "Moderation", blurb: "Developers only: reports waiting for a decision", render: SP("moderation") }] : []),
       { id: "people", title: "Statistics", blurb: "Population, change, density and age for the place in focus", live: true, render: people },
+      { id: "deprivation", title: "Deprivation", blurb: "English Indices of Deprivation 2025, overall and by domain", live: true, render: deprivation, min: { w: 480, h: 380 } },
       { id: "change", title: "Population change", live: true, render: change },
     ],
     tools: [{ id: "pyramid", title: "Population pyramid", render: pyramid }],

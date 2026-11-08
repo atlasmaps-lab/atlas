@@ -1,0 +1,27 @@
+# Atlas 0.8: refresh the economic indicators, forecasts and deprivation data (data/economy.js) every Thursday.
+name: Economy data
+on:
+  schedule:
+    - cron: "23 7 * * 4"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  economy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python pipeline/fetch_economy.py
+      - name: Commit if changed
+        run: |
+          git config user.name "atlas-data-bot"
+          git config user.email "atlas-data-bot@users.noreply.github.com"
+          git add data/economy.js pipeline/sources/MANIFEST.csv
+          if ! git diff --cached --quiet; then
+            git commit -m "Economy data: $(date -u +%F)"
+            git pull --rebase
+            git push
+          fi

@@ -758,6 +758,25 @@
     def({ id: "bus_stop_density", p: "transport", group: GT, label: "Bus stops per km²", scale: "ratio", nature: "rate", temporal: "static", levels: COUNCIL_LV, nmText: TR_NM, fmt: v => v.toFixed(1) + " per km²", source: TR.sources.stops, desc: "How densely bus stops cover the area",
       get(code) { const n = sumCouncils(code, c => TR.stops[c] ? TR.stops[c][0] : null), a = (INFO[code] || {}).area; return n != null && a && a[0] ? { v: n / a[0], text: (n / a[0]).toFixed(1) + " per km²", yr: TR.built.slice(0, 4) } : { v: null, text: "No figure" }; } });
   }
+  // ---------- 0.8: deprivation (English Indices of Deprivation 2025, by council; data/economy.js) ----------
+  const ECON = window.ATLAS_ECONOMY || null, GD = "Deprivation (England, 2025)";
+  if (ECON && ECON.imd && Object.keys(ECON.imd).length) {
+    const IMD = ECON.imd, nIMD = Object.keys(IMD).length, IMD_NM = { ward: "By council (the index's own neighbourhoods are smaller than wards)", constituency: "By council", region: "By council", nation: "By council", country: "By council" };
+    const imdValid = code => /^E/.test(code) ? null : "England only: Wales, Scotland and Northern Ireland publish their own indices, which can't be compared with England's";
+    const SRC_IMD = "MHCLG, English Indices of Deprivation 2025, file 10 (local authority summaries), Open Government Licence v3.0";
+    def({ id: "imd_score", p: "social", group: GD, label: "Deprivation score (IMD 2025)", scale: "ratio", nature: "rate", temporal: "static", levels: ["council"], nmText: IMD_NM, valid: imdValid, fmt: v => v.toFixed(1), source: SRC_IMD,
+      desc: "Average deprivation score of the area's neighbourhoods (higher = more deprived)", how: "The population-weighted average of the area's neighbourhood (LSOA) scores on the Index of Multiple Deprivation",
+      get(code) { const r = IMD[code] && IMD[code].IMD; return r ? { v: r[0], text: r[0].toFixed(1), yr: "2025" } : { v: null, text: imdValid(code) ? "England only" : "Not in the index" }; } });
+    def({ id: "imd_decile", p: "social", group: GD, label: "Deprivation decile (1 = most deprived)", scale: "ordinal", nature: "rank", temporal: "static", levels: ["council"], nmText: IMD_NM, valid: imdValid, fmt: v => "Decile " + v, source: SRC_IMD,
+      desc: "Where the area ranks among England's local authorities, in tenths (1 = the most deprived tenth)", breaks: [2.5, 4.5, 6.5, 8.5],
+      get(code) { const r = IMD[code] && IMD[code].IMD; if (!r) return { v: null, text: "England only" }; const d = Math.min(10, 1 + Math.floor((r[1] - 1) / (nIMD / 10))); return { v: d, text: `Decile ${d} (rank ${r[1]} of ${nIMD})`, yr: "2025" }; } });
+    def({ id: "imd_share10", p: "social", group: GD, label: "Neighbourhoods in England's most deprived 10%", scale: "ratio", nature: "share", temporal: "static", levels: ["council"], nmText: IMD_NM, valid: imdValid, fmt: v => (100 * v).toFixed(0) + "%", source: SRC_IMD,
+      desc: "Share of the area's neighbourhoods among the most deprived 10% in England",
+      get(code) { const r = IMD[code]; return r && r.share10 != null ? { v: r.share10, text: (100 * r.share10).toFixed(0) + "%", yr: "2025" } : { v: null, text: "England only" }; } });
+    [["Income", "income"], ["Employment", "employment"], ["Education", "education, skills and training"], ["Health", "health and disability"], ["Crime", "crime"], ["Barriers", "barriers to housing and services"], ["Living", "living environment"]].forEach(([k, l]) =>
+      def({ id: "imd_" + k.toLowerCase(), p: "social", group: GD, label: `Deprivation: ${l} (rank)`, scale: "ordinal", nature: "rank", temporal: "static", levels: ["council"], nmText: IMD_NM, valid: imdValid, fmt: v => "Rank " + v, source: SRC_IMD,
+        desc: `Rank on the ${l} domain among England's local authorities (1 = most deprived)`, get(code) { const r = IMD[code] && IMD[code][k]; return r ? { v: r[1], text: `Rank ${r[1]} of ${nIMD}`, yr: "2025" } : { v: null, text: "England only" }; } }));
+  }
   def({ id: "average_age", p: "social", label: "Average age", scale: "ratio", nature: "rate", temporal: "static", fmt: v => v.toFixed(1) + " years", desc: "Mean age (latest year only)",
     get(code) { const x = (INFO[code] || {}).average_age; return x ? { v: x[0], text: x[0].toFixed(1) + " years", yr: x[2] } : null; } });
 

@@ -1,0 +1,36 @@
+# Atlas 0.8: refresh money in politics (data/money.js, data/money_detail.js) every Monday: Electoral Commission
+# donations and loans, MPs' registered interests, ministers' meetings, and new contract awards (Find a Tender).
+name: Money in politics
+on:
+  schedule:
+    - cron: "37 5 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  money:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Restore the contracts cache
+        uses: actions/cache@v4
+        with:
+          path: pipeline/sources/raw/money
+          key: money-raw-${{ github.run_id }}
+          restore-keys: money-raw-
+      - run: python pipeline/fetch_contracts.py --max-minutes 60
+      - run: python pipeline/build_money.py
+      - name: Commit if changed
+        run: |
+          git config user.name "atlas-data-bot"
+          git config user.email "atlas-data-bot@users.noreply.github.com"
+          git add data/money.js data/money_detail.js pipeline/reports/validation_money.md pipeline/sources/MANIFEST.csv
+          if ! git diff --cached --quiet; then
+            git commit -m "Money in politics: $(date -u +%F)"
+            git pull --rebase
+            git push
+          fi

@@ -167,6 +167,11 @@
       { id: "overview", title: "Market overview", render: overview, def: () => ({ x: innerWidth - 440 - 16, y: 56, w: 440, h: Math.round(innerHeight * 0.68) }) },
       { id: "companies", title: "Companies & screener", render: companies, min: { w: 420, h: 280 } },
       { id: "places", title: "Places & markets", render: places },
+      // 0.8: what a markets analyst watches daily: rates, gilts, sterling (shared with Atlas Economic: views/economic/econ.js)
+      { id: "rates", title: "Rates & sterling", blurb: "Bank Rate, SONIA, gilt yields, sterling and mortgage rates", render: (ctx, el) => window.AtlasEcon ? AtlasEcon.rates(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 480, h: 320 } },
+      { id: "money", title: "Political money", blurb: "Company donors, contracts and lobbying (Atlas Politics' money data)", render: (ctx, el) => { const D = ctx.money && ctx.money.data; if (!D) { el.innerHTML = "<p class='ap-note'>Not loaded.</p>"; return; }
+        const ids = Object.keys(D.donors).filter(id => ["c", "l"].includes(D.donors[id][1])).sort((a, b) => D.donors[b][3] - D.donors[a][3]).slice(0, 40);
+        el.innerHTML = `<p class="ap-note">Companies that are registered political donors (Electoral Commission), marked when they've also won public contracts or met ministers. FTSE 100 cards show a possible link by name.</p><table class="mo-tab">${ids.map(id => `<tr><td>${ctx.money.donorBtn(id)}${D.contracts[id] ? ` <span class="mo-badge">contracts</span>` : ""}<br><small>to ${D.donors[id][6].map(k => ctx.esc(ctx.money.partyName(k))).join(", ")}</small></td><td class="num">${ctx.money.gbp(D.donors[id][3])}</td></tr>`).join("")}</table>`; } },
       // 0.8: buying and selling between people, shared with Atlas Social (views/social/social.js)
       { id: "marketplace", title: "Marketplace", blurb: "Buy and sell between people near you (with Atlas Social)", render: (ctx, el) => window.AtlasSocial ? AtlasSocial.panel("market")(ctx, el) : (el.innerHTML = "<p class='ap-note'>The marketplace didn't load.</p>"), min: { w: 400, h: 420 } },
     ],
