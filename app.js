@@ -1031,9 +1031,9 @@
       Object.values(GRP_COL).forEach((col, k) => { const S = 40, cv = document.createElement("canvas"); cv.width = cv.height = S; const x = cv.getContext("2d");
         x.fillStyle = col; x.strokeStyle = "#ffffff"; x.lineWidth = 4; x.beginPath(); x.roundRect ? x.roundRect(4, 4, S - 8, S - 8, 6) : x.rect(4, 4, S - 8, S - 8); x.fill(); x.stroke();
         map.addImage("co-" + k, x.getImageData(0, 0, S, S), { pixelRatio: 2 }); });
-      map.addLayer({ id: "zone-fill", type: "fill", source: "zones", minzoom: ZONE_Z, paint: { "fill-color": "#c9a227",
+      map.addLayer({ id: "zone-fill", type: "fill", source: "zones", minzoom: POI ? 12 : ZONE_Z, paint: { "fill-color": "#c9a227",
         "fill-opacity": ["case", ["boolean", ["feature-state", "sel"], false], 0.32, ["boolean", ["feature-state", "hover"], false], 0.26, 0.1] } });
-      map.addLayer({ id: "zone-line", type: "line", source: "zones", minzoom: ZONE_Z - 0.4, paint: { "line-color": "#a07a12", "line-width": ["interpolate", ["linear"], ["zoom"], ZONE_Z, 1.2, 14, 2.6], "line-dasharray": [3, 2], "line-opacity": ["interpolate", ["linear"], ["zoom"], ZONE_Z - 0.4, 0, ZONE_Z, 0.9] } });
+      map.addLayer({ id: "zone-line", type: "line", source: "zones", minzoom: POI ? 11.6 : ZONE_Z - 0.4, paint: { "line-color": "#a07a12", "line-width": ["interpolate", ["linear"], ["zoom"], ZONE_Z, 1.2, 14, 2.6], "line-dasharray": [3, 2], "line-opacity": ["interpolate", ["linear"], ["zoom"], ZONE_Z - 0.4, 0, ZONE_Z, 0.9] } });
       map.addLayer({ id: "zone-dot", type: "circle", source: "zone-pts", minzoom: 7.5, maxzoom: ZONE_Z, paint: { "circle-radius": 5, "circle-color": "#c9a227", "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.5, "circle-opacity": 0.9 } });
       map.addLayer({ id: "co-pts", type: "symbol", source: "cos", minzoom: 9, layout: { visibility: "none", "symbol-sort-key": ["-", 0, ["get", "r"]], "icon-image": ["concat", "co-", ["to-string", ["get", "g"]]],
         "icon-size": ["interpolate", ["linear"], ["zoom"], 9, ["/", ["get", "r"], 14], 13, ["/", ["get", "r"], 7]], "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": 0.92 } });
@@ -1047,12 +1047,81 @@
     map.addLayer({ id: "tool-fill", type: "fill", source: "tool", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#3b78b5", "fill-opacity": 0.12 } });
     map.addLayer({ id: "tool-line", type: "line", source: "tool", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": "#1f2a2e", "line-width": 2, "line-dasharray": [2, 1.5] } });
     map.addLayer({ id: "tool-pts", type: "circle", source: "tool", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5.5, "circle-color": "#ffffff", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2 } });
-    addAreaNames();
+    addAreaNames(); addPoi();
     applyLook(true); applyLevels(); applyTools();
     const at = document.querySelector(".maplibregl-ctrl-attrib"); if (at) at.classList.remove("maplibregl-compact-show"); // credits folded into the ⓘ button
     map.on("moveend", loadVisibleWards);
     repaint();
   });
+  // ---------- 0.8: places as symbols (airports, ports, railway stations, financial sites) ----------
+  // A symbol says what is there; click it for its card. Bigger places appear first: Heathrow from the opening view, a
+  // small halt only at street zoom. Icons: Material Design icons (Apache 2.0), drawn white on a coloured disc.
+  const POI = window.ATLAS_POI || null;
+  const POI_KIND = {
+    airport: { col: "#2b6cb0", label: "Airport", path: "M2.5 19h19v2h-19v-2zm19.57-9.36c-.21-.8-1.04-1.28-1.84-1.06L14.92 10l-6.9-6.43-1.93.51 4.14 7.17-4.97 1.33-1.97-1.54-1.45.39 2.59 4.49L21 11.49c.81-.23 1.28-1.05 1.07-1.85z" },
+    port: { col: "#0f6b7a", label: "Port", path: "M20 21c-1.39 0-2.78-.47-4-1.32-2.44 1.71-5.56 1.71-8 0C6.78 20.53 5.39 21 4 21H2v2h2c1.38 0 2.74-.35 4-.99 2.52 1.29 5.48 1.29 8 0 1.26.65 2.62.99 4 .99h2v-2h-2zM3.95 19H4c1.6 0 3.02-.88 4-2 .98 1.12 2.4 2 4 2s3.02-.88 4-2c.98 1.12 2.4 2 4 2h.05l1.89-6.68c.08-.26.06-.54-.06-.78s-.34-.42-.6-.5L20 10.62V6c0-1.1-.9-2-2-2h-3V1H9v3H6c-1.1 0-2 .9-2 2v4.62l-1.29.42c-.26.08-.48.26-.6.5s-.15.52-.06.78L3.95 19zM6 6h12v3.97L12 8 6 9.97V6z" },
+    station: { col: "#b03a2e", label: "Railway station", path: "M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h2.23l2-2H14l2 2h2v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4zM7.5 17c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm3.5-7H6V6h5v4zm2 0V6h5v4h-5zm3.5 7c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" },
+    finance: { col: "#a07a12", label: "Financial centre", path: "M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z" },
+  };
+  const POI_BY = POI ? Object.fromEntries(POI.items.map(i => [i.id, i])) : {};
+  function poiImage(k) {
+    const S = 64, cv = document.createElement("canvas"); cv.width = cv.height = S; const x = cv.getContext("2d"), K = POI_KIND[k];
+    x.beginPath(); x.arc(S / 2, S / 2, S / 2 - 3, 0, Math.PI * 2); x.fillStyle = K.col; x.fill(); x.lineWidth = 3.5; x.strokeStyle = "#ffffff"; x.stroke();
+    x.save(); x.translate(S * 0.2, S * 0.2); x.scale(S * 0.6 / 24, S * 0.6 / 24); x.fillStyle = "#ffffff"; x.fill(new Path2D(K.path)); x.restore();
+    return x.getImageData(0, 0, S, S);
+  }
+  function addPoi() {
+    if (!POI) return;
+    Object.keys(POI_KIND).forEach(k => map.addImage("poi-" + k, poiImage(k), { pixelRatio: 2 }));
+    map.addSource("poi", { type: "geojson", data: { type: "FeatureCollection", features: POI.items.map(i => ({ type: "Feature", geometry: { type: "Point", coordinates: [i.lon, i.lat] },
+      properties: { id: i.id, k: i.k, n: i.n, minz: i.minz, sz: i.sz || 0.8, rank: i.rank || 0, lab: i.k === "station" ? "" : i.n } })) } });
+    const layout = { "icon-image": ["concat", "poi-", ["get", "k"]], "icon-size": ["interpolate", ["linear"], ["zoom"], 5, ["*", ["get", "sz"], 0.62], 10, ["*", ["get", "sz"], 0.82], 14, ["*", ["get", "sz"], 1]],
+      "icon-allow-overlap": false, "icon-padding": 1, "symbol-sort-key": ["get", "rank"] };
+    if (!plain) Object.assign(layout, { "text-field": ["get", "lab"], "text-font": ["Noto Sans Bold"], "text-size": ["step", ["zoom"], 0, 7.5, 10.5, 11, 12], "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true, "text-max-width": 9 });
+    map.addLayer({ id: "poi-sym", type: "symbol", source: "poi", filter: [">=", ["zoom"], ["get", "minz"]], layout,
+      paint: { "text-color": "#2a3236", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.3 } });
+    // the basemap's own airport labels, and the old gold dot for the financial districts, said the same thing
+    if (map.getLayer("airports")) map.setLayoutProperty("airports", "visibility", "none");
+    if (map.getLayer("zone-dot")) map.setLayoutProperty("zone-dot", "visibility", "none");
+  }
+  function pickPoi(e) { if (!map.getLayer("poi-sym")) return null; const f = map.queryRenderedFeatures(pbox(e, 3), { layers: ["poi-sym"] })[0]; return f ? f.properties.id : null; }
+  const poiFmt = (k, v) => k === "port" ? (v >= 1e6 ? (v / 1e6).toFixed(1) + " million tonnes" : Math.round(v / 1e3).toLocaleString("en-GB") + " thousand tonnes") : (v >= 1e6 ? (v / 1e6).toFixed(1) + " million" : Math.round(v).toLocaleString("en-GB"));
+  const poiSeries = i => { if (!i.s) return []; const y0 = i.s[0]; return i.s.slice(1).map((v, j) => [y0 + j, v]).filter(p => p[1] != null); };
+  function poiHoverHTML(id) { const i = POI_BY[id]; if (!i) return ""; const K = POI_KIND[i.k];
+    return `<div class="poi-h"><span class="poi-ic" style="background:${K.col}"></span><b>${esc(i.n)}</b><div class="poi-sub">${esc(K.label)}${i.v ? ` · ${esc(poiFmt(i.k, i.v))} ${esc(i.k === "port" ? "" : POI.units[i.k].split(" a year")[0])} in ${i.k === "station" ? `${i.vy - 1}–${String(i.vy).slice(2)}` : i.vy}` : ""}</div><div class="poi-sub">Click for more</div></div>`; }
+  function poiCardHTML(id) {
+    const i = POI_BY[id], K = POI_KIND[i.k], ser = poiSeries(i), prev = ser.length > 1 ? ser[ser.length - 2][1] : null;
+    const pre = ser.find(p => p[0] === (i.k === "station" ? 2020 : 2019));
+    const pct = (a, b) => b ? ((a / b - 1) * 100).toFixed(1).replace("-", "−") + "%" : "—";
+    const yr = y => i.k === "station" ? `April ${y - 1} to March ${y}` : String(y);
+    const yrShort = y => i.k === "station" ? `${y - 1}–${String(y).slice(2)}` : String(y);
+    const council = i.c && P[i.c] ? i.c : null;
+    const rankText = i.rank ? ` · ${ordinal(i.rank)} busiest ${i.k === "port" ? "major port by tonnage" : K.label.toLowerCase()} in the UK` : "";
+    const links = [];
+    if (i.k === "station" && i.crs && /^[A-Z]{3}$/.test(i.crs)) links.push(`<a href="https://www.nationalrail.co.uk/stations/${i.crs.toLowerCase()}/" target="_blank" rel="noopener">National Rail: station page</a>`);
+    if (i.url) links.push(`<a href="${esc(i.url)}" target="_blank" rel="noopener">Official site</a>`);
+    links.push(`<a href="https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(i.n)}" target="_blank" rel="noopener">Wikipedia</a>`);
+    return `<div class="poi-card"><div class="poi-top"><span class="poi-ic lg" style="background:${K.col}"><svg viewBox="0 0 24 24"><path d="${K.path}" fill="#fff"/></svg></span><div><div class="poi-kind">${esc(K.label)}${esc(rankText)}</div>${council ? `<div class="poi-sub">${esc(nameOf(council))}${P[council].parent && P[P[council].parent] ? ", " + esc(nameOf(P[council].parent)) : ""}</div>` : ""}</div></div>
+      ${i.v ? `<div class="poi-big"><b>${esc(poiFmt(i.k, i.v))}</b> ${esc(i.k === "port" ? "of freight" : POI.units[i.k].replace(" a year", "").replace(" (April to March)", ""))}<div class="poi-sub">${esc(yr(i.vy))}${prev ? ` · ${pct(i.v, prev)} on the year before` : ""}${pre ? ` · ${pct(i.v, pre[1])} on ${i.k === "station" ? "2019–20" : "2019"}` : ""}</div></div>` : ""}
+      ${ser.length > 2 ? `<div class="poi-spark">${CH.spark(ser, { w: 300, h: 54, colour: K.col })}<div class="poi-sub">${esc(yrShort(ser[0][0]))} to ${esc(yrShort(ser[ser.length - 1][0]))}</div></div>` : ""}
+      ${i.k === "airport" && (i.mv || i.fr) ? `<div class="poi-row">${i.mv ? `<span><b>${i.mv.toLocaleString("en-GB")}</b> aircraft movements</span>` : ""}${i.fr ? `<span><b>${Math.round(i.fr).toLocaleString("en-GB")}</b> tonnes of air freight</span>` : ""} <small>(${i.vy})</small></div>` : ""}
+      ${i.k === "port" && i.grp ? `<div class="poi-row"><span>Port group: ${esc(i.grp)}</span></div>` : ""}
+      ${i.note ? `<p class="poi-note">${esc(i.note)}</p>` : ""}
+      <div class="poi-acts">${council ? `<button class="btn sm" data-poigo="${council}">Show ${esc(nameOf(council))}</button>` : ""}${i.zone ? `<button class="btn sm" data-poigo="${i.zone}">Open the district</button>` : ""}<button class="btn sm" data-poizoom="${i.id}">Zoom in</button></div>
+      <div class="poi-links">${links.join(" · ")}</div><div class="poi-src">Source: ${esc(POI.sources[i.k])}.</div></div>`;
+  }
+  const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+  const poiCards = new Map();
+  function openPoiCard(id) {
+    const i = POI_BY[id]; if (!i) return;
+    const have = poiCards.get(id); if (have && WM.isOpen(have.el)) { WM.front(have.el); WM.pulse(have.el); return have; }
+    const w = WM.make({ type: "poi", title: i.n, html: poiCardHTML(id), cascade: true, min: { w: 300, h: 220 }, def: () => ({ x: innerWidth - 380 - 76, y: 80, w: 380, h: Math.min(470, innerHeight - 120) }), onClose: () => poiCards.delete(id) });
+    w.el.addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return;
+      if (b.dataset.poigo) focus(b.dataset.poigo); else if (b.dataset.poizoom) map.flyTo({ center: [i.lon, i.lat], zoom: Math.max(map.getZoom(), i.k === "airport" || i.k === "port" ? 12.5 : 15), duration: 1200 }); });
+    poiCards.set(id, w); WM.open(w.el); return w;
+  }
+  function searchPoi(q) { if (!POI || q.length < 3) return []; return POI.items.filter(i => i.n.toLowerCase().includes(q)).sort((a, b) => (a.n.toLowerCase().startsWith(q) ? 0 : 1) - (b.n.toLowerCase().startsWith(q) ? 0 : 1) || (b.v || 0) - (a.v || 0)).slice(0, 6); }
+
   // ---------- 0.8: area names on the map, shown by size and zoom ----------
   // Each area's name appears once the area is big enough on screen to hold it: a nation from the start, a county as you
   // close in, a small borough or a ward only when you zoom towards it. Where names would collide the bigger area wins.
@@ -1101,7 +1170,7 @@
     LEVELS.forEach(l => { setP("names-" + l, "text-color", hyb ? "#ffffff" : dark ? (l === "nation" || l === "region" ? "#c9bfd2" : "#d6d0db") : (l === "nation" || l === "region" ? "#5b4a6a" : "#3f3a45"));
       setP("names-" + l, "text-halo-color", hyb ? "rgba(0,0,0,0.7)" : dark ? "rgba(20,24,27,0.85)" : "rgba(242,239,233,0.85)"); });
   }
-  if (window.AtlasDebug) { Object.assign(window.AtlasDebug, { nameMinZoom, nameFeatures: l => nameFeatures(l, l === "ward" ? { features: wardFeatures } : G[SRC[l]]), paletteKey: () => paletteKey() }); Object.defineProperty(window.AtlasDebug, "LV", { get: () => LV }); }
+  if (window.AtlasDebug) { Object.assign(window.AtlasDebug, { nameMinZoom, nameFeatures: l => nameFeatures(l, l === "ward" ? { features: wardFeatures } : G[SRC[l]]), paletteKey: () => paletteKey(), openPoiCard: id => openPoiCard(id), POI_BY }); Object.defineProperty(window.AtlasDebug, "LV", { get: () => LV }); }
   window.ATLAS_WARDS_LOADED = function (council, fc) {
     if (loadedWards.has(council + ":done")) return; loadedWards.add(council + ":done");
     const pts = fc.features.map(ptFeature); pts.forEach(f => { PT[f.properties.code] = f.geometry.coordinates; });
@@ -2052,6 +2121,8 @@
   function clearHover() { clearTimeout(timer); timer = null; if (hov) setFS(hov, { hover: false }); hov = null; hovCode = null; if (!state.pinned) card.hidden = true; }
   map.on("mousemove", e => {
     lastPt = e.point; if (lasso.active || state.tool === "measure") return;
+    const pp = pickPoi(e);
+    if (pp && !ecardPinned) { clearHover(); ecard.className = "card"; ecard.innerHTML = poiHoverHTML(pp); ecard.hidden = false; place(e.point.x, e.point.y, ecard); map.getCanvas().style.cursor = "pointer"; return; }
     const pc = pickCompany(e);
     if (pc != null && !ecardPinned) { clearHover(); ecard.className = "card"; ecard.innerHTML = companyHTML(pc, false); ecard.hidden = false; place(e.point.x, e.point.y, ecard); return; }
     const pe = pickProtest(e);
@@ -2077,6 +2148,8 @@
     if (lasso.justDone) { lasso.justDone = false; return; }
     if (state.tool === "measure") return measureClick(e);
     if (map.getLayer("zone-dot") && marketsInUse() && map.getZoom() < ZONE_Z && map.queryRenderedFeatures([[e.point.x - 5, e.point.y - 5], [e.point.x + 5, e.point.y + 5]], { layers: ["zone-dot"] }).length) { map.flyTo({ center: [-0.1, 51.512], zoom: 11.6, duration: 1200 }); toast("London's financial districts: click a gold tile to explore it."); return; }
+    const pp = pickPoi(e);
+    if (pp) { ecard.hidden = true; ecardPinned = false; openPoiCard(pp); return; }
     const pc = pickCompany(e);
     if (pc != null) { ecardPinned = true; ecard.className = "card pinned"; ecard.innerHTML = companyHTML(pc, true); ecard.hidden = false; place(e.point.x + 10, e.point.y - 40, ecard); bubbleNudge(); return; }
     const cl = map.getLayer("pr-cl") && map.getLayoutProperty("pr-cl", "visibility") !== "none" ? map.queryRenderedFeatures(pbox(e, 2), { layers: ["pr-cl"] })[0] : null;
@@ -3856,12 +3929,14 @@
   function showHits() {
     const extra = picked.filter(c => !hits.includes(c));
     const body = (extra.length ? `<li class="sec">Ticked</li>${extra.map(c => row(c, -1)).join("")}${hits.length ? `<li class="sec">Results</li>` : ""}` : "") + hits.map(row).join("");
-    const mbody = mhits.length ? `<li class="sec">Metrics <small>click to put one on the map</small></li><li class="smetrics">${mtree("search", mhits, mrow, { all: true, isOn: m => isMapped(m.id) })}</li>` : "";
+    const pbody = phits.length ? `<li class="sec">Airports, ports and stations</li>${phits.map(i => `<li class="poi-hit" data-poi="${i.id}"><span class="poi-ic" style="background:${POI_KIND[i.k].col}"></span>${esc(i.n)} <small>${esc(POI_KIND[i.k].label)}</small></li>`).join("")}` : "";
+    const mbody = pbody + (mhits.length ? `<li class="sec">Metrics <small>click to put one on the map</small></li><li class="smetrics">${mtree("search", mhits, mrow, { all: true, isOn: m => isMapped(m.id) })}</li>` : "");
     hl.innerHTML = (hits.length || extra.length ? (mhits.length && !extra.length ? `<li class="sec">Places</li>` : "") + body : "") + mbody + `<li class="sfoot"><span>${picked.length ? `${picked.length} ticked` : "Tick places to show several together"}</span>${picked.length ? `<button type="button" class="btn" data-sclear>Clear</button>` : ""}<button type="button" class="btn primary" data-ssearch ${picked.length ? "" : "disabled"}>Search${picked.length > 1 ? ` (${picked.length})` : ""}</button></li>`;
-    hl.hidden = !ddOpen || (!hits.length && !picked.length && !mhits.length);
+    hl.hidden = !ddOpen || (!hits.length && !picked.length && !mhits.length && !phits.length);
     tickPill.hidden = !picked.length || !hl.hidden; tickPill.innerHTML = `<button type="button" data-sopen>${picked.length} ticked</button>`;
   }
-  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); mhits = searchMetrics(q); cur = 0; ddOpen = true; showHits(); });
+  let phits = [];
+  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); mhits = searchMetrics(q); phits = searchPoi(q); cur = 0; ddOpen = true; showHits(); });
   si.addEventListener("focus", () => { closeBrowse(); ddOpen = true; showHits(); });
   si.addEventListener("blur", () => { setTimeout(() => { if (document.activeElement !== si) { ddOpen = false; showHits(); } }, 120); });
   function toggleTick(c) { picked = picked.includes(c) ? picked.filter(x => x !== c) : picked.concat(c); showHits(); if (!browse.hidden) renderPFoot(); }
@@ -3884,6 +3959,7 @@
     if (b && b.hasAttribute("data-ssearch")) return searchTicked();
     if (b && b.hasAttribute("data-sclear")) { picked = []; showHits(); return; }
     if (b && b.dataset.sm) { const id = b.dataset.sm; if (!isMapped(id)) toggleMapped(id); else toast(`${M[id].label} is already on the map.`); si.value = ""; hits = []; mhits = []; ddOpen = false; showHits(); si.blur(); return; }
+    const pl = e.target.closest("li[data-poi]"); if (pl) { const i = POI_BY[pl.dataset.poi]; si.value = ""; hits = []; mhits = []; phits = []; ddOpen = false; showHits(); si.blur(); map.flyTo({ center: [i.lon, i.lat], zoom: Math.max(i.minz + 1.5, i.k === "station" ? 13 : 10), duration: 1200 }); openPoiCard(i.id); return; }
     const li = e.target.closest("li[data-c]"); if (li) toggleTick(li.dataset.c);
   });
   tickPill.addEventListener("mousedown", e => { e.preventDefault(); si.focus(); });
