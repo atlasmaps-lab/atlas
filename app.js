@@ -679,6 +679,13 @@
     get(code, d) { const r = compAt(code, d); if (!r) return null; const v = PSE.enp(Object.values(r[2]).map(n => n / r[1])); return v ? { v, text: this.fmt(v), yr: compWhen(r) } : null; } });
   // political: representation (1.7)
   const G8 = "Representation";
+  // 0.8: money in politics (data/money.js). Registered donations to local parties and MPs here, in the five years to the date
+  const MO = window.ATLAS_MONEY, G9 = "Money in politics";
+  if (MO) def({ id: "money_received", p: "political", group: G9, label: "Political donations registered here (5 years)", scale: "ratio", nature: "amount", temporal: "annual", fmt: v => "£" + fmtInt(v),
+    levels: ["constituency", "council"], nmText: { ward: "Registered by constituency and council parties, not wards", region: "Shown for constituencies and councils (the local party units that registered them)", nation: "Shown for constituencies and councils", country: "Shown for constituencies and councils" },
+    source: MO.sources, how: "Donations registered with the Electoral Commission by local party units matched to this place (by name), plus donations registered to the MP for this seat, in the five calendar years to the date. Units covering several seats aren't placed.",
+    desc: "Money registered by local parties and MPs here",
+    get(code, d) { const v = window.AtlasMoney ? AtlasMoney.placeTotal(code, d) : null; return v ? { v, text: "£" + fmtInt(v), yr: `${+d.slice(0, 4) - 4}–${d.slice(0, 4)}` } : { v: null, text: "None registered" }; } });
   function regAt(code) { // 2024 constituencies; regions and nations add up their constituencies (England and Wales: adults by seat)
     const R = LOC.reg; if (!R) return null; const lv = P[code].level;
     if (lv === "constituency") { const r = R[code]; return r ? { reg: r[0], adults: r[1], n: 1 } : null; }
@@ -1966,7 +1973,7 @@
     const era = p.level === "constituency" && p.to ? ` ${p.from.slice(0, 4)}–${p.to.slice(0, 4)}${p.approx ? " (approx. boundary)" : ""}` : "";
     return `${pinned ? `<button class="x" data-close aria-label="Close">×</button>` : ""}<div class="lvl"><span>${esc(LABEL[p.level])}${esc(era)}</span><span>${esc(code.replace(/^P\d\d-/, ""))}</span></div>
       <h3>${esc(nameOf(code))}${rec ? ` <span class="tag">edited</span>` : ""}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}<ul>${items.join("")}</ul>
-      ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${cardContext(onMap, code, pinned)}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
+      ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${cardContext(onMap, code, pinned)}${window.AtlasMoney && (p.level === "constituency" || p.level === "council") ? AtlasMoney.areaLine(code, d, pinned) : ""}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
       ${rec && rec.notes ? `<div class="notes">${esc(rec.notes)}</div>` : ""}
       ${pinned ? `<div class="acts"><button class="btn primary" data-edit>Edit</button><button class="btn" data-chartme>Chart</button><button class="btn" data-wscard title="Send this card to the workspace">Card → workspace</button><button class="btn" data-wstile title="Send this place as a tile (a small map) to the workspace">Tile → workspace</button><button class="btn" data-addcmp>${state.sel.some(s => s.code === code) ? "✓ Selected" : "+ Compare"}</button><button class="btn" data-zoom>Zoom to</button><button class="btn" data-outline title="Turn this place's outline into a shape you can drag over other places, at its real size">Drag outline</button>${PR.events.length ? `<button class="btn" data-prhere title="The protests here ${esc(winLabel())}">Protests here</button>` : ""}</div>` : ""}`;
   }
@@ -2118,7 +2125,7 @@
       <li><b>Market value:</b> ${esc(capTxt)}</li>${c.rev ? `<li><b>Revenue:</b> ${esc((c.rev.cur === "GBP" ? "£" : c.rev.cur === "USD" ? "US$" : "€") + compactNum(c.rev.v))}${c.rev.yr ? ` (${esc(c.rev.yr)})` : ""}</li>` : ""}
       ${c.emp ? `<li><b>Employees:</b> ${esc(c.emp)}</li>` : ""}${c.founded ? `<li><b>Founded:</b> ${esc(c.founded)}</li>` : ""}
       ${!c.px.length ? `<li><b>Share price:</b> <small>not included in this version</small></li>` : ""}<li style="${c.px.length ? "" : "display:none"}"><b>Share price:</b> ${last ? esc(last[1].toLocaleString("en-GB") + (c.cur === "GBp" ? "p" : " " + (c.cur || ""))) + ` <small>(${esc(last[0])})</small>` : "—"}${ch != null ? ` · ${esc(fmtPct(ch))} over 12 months` : ""}</li>
-      ${ctl ? `<li><b>Council:</b> ${esc(nameOf(c.council))} (${esc(partyName(ctl[2]))})</li>` : ""}</ul>
+      ${ctl ? `<li><b>Council:</b> ${esc(nameOf(c.council))} (${esc(partyName(ctl[2]))})</li>` : ""}${window.AtlasMoney ? AtlasMoney.companyBox(i) : ""}</ul>
       <div class="cospark">${CH.spark(pts, { w: 300, h: 50, colour: GRP_COL[c.grp], now: +state.date.slice(0, 4) + (+state.date.slice(5, 7) - 1) / 12 })}</div>
       <div class="acts"><button class="btn primary" data-cochart="${i}">Chart the share price</button>${c.wiki ? `<a class="btn" href="${esc(c.wiki)}" target="_blank" rel="noopener">Wikipedia</a>` : ""}</div>
       <div class="note2">${c.px.length ? `Prices: Yahoo Finance (monthly close). Market value: companiesmarketcap.com, converted to £ at ${MK ? MK.fx.USD_per_GBP : ""} US$ per £ (${MK ? esc(MK.fx.date) : ""}).` : "Share prices and market values are left out of the public version. Run pipeline/build_markets.py to add them on your own computer."}</div>`;
@@ -4139,6 +4146,8 @@
     isMapped: id => isMapped(id), kids: c => (UNDER[c] || []).slice(),
   };
   window.AtlasCtx = CTX;
+  CTX.money = window.AtlasMoney || null; CTX.CH = CH; CTX.MK = MK; CTX.LABEL = LABEL;
+  if (window.AtlasMoney) AtlasMoney.init(CTX);
 
   // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------
   // News shows only when the feed has items for what's on screen: the focused place (or anything inside it), the topics

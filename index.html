@@ -518,6 +518,16 @@ body.wsfull .fab2 { visibility: hidden; }
 .cx-k { font: 600 10px var(--f); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-right: 3px; }
 .cx-x { color: var(--ink-2); font-size: 11.5px; margin-top: 2px; } .cx-h { margin: 12px 0 2px; font-size: 12.5px; } .cx-src { font-size: 11px; color: var(--ink-3); }
 .cx-chart { padding: 4px 6px 8px; }
+/* 0.8: money in politics */
+.mo-head { display: grid; gap: 4px; margin-bottom: 6px; } .mo-kind { font: 600 11px var(--f); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.mo-big b { font: 700 20px var(--num, var(--f)); } .mo-sub { font-size: 12px; color: var(--ink-2); }
+.mo-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; } .mo-tab td { padding: 4px 4px; border-bottom: 1px solid var(--rule); vertical-align: top; } .mo-tab td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mo-badge { font: 600 9.5px var(--f); text-transform: uppercase; letter-spacing: .05em; background: #fdecc8; color: #7a4b00; border-radius: 3px; padding: 1px 4px; }
+.mo-flag { font-size: 12px; background: #fff7e6; border-left: 3px solid #e0a020; padding: 6px 8px; color: #5b4500; }
+:root[data-mode="dark"] .mo-flag { background: #3a2f17; color: #f0d9a6; } :root[data-mode="dark"] .mo-badge { background: #4a3a14; color: #f3d48a; }
+.mo-list { margin: 4px 0; padding-left: 16px; font-size: 12px; display: grid; gap: 3px; } .mo-src { font-size: 11px; color: var(--ink-3); margin-top: 10px; }
+.mo-line { font-size: 12px; margin: 6px 0; color: var(--ink-2); } .mo-cobox { background: #fff7e6; } :root[data-mode="dark"] .mo-cobox { background: #3a2f17; }
+.mo-win h4 { margin: 12px 0 4px; font-size: 13px; } .mo-win details summary { cursor: pointer; font-size: 12.5px; padding: 3px 0; }
 .nw2-why { font-size: 12px; color: var(--ink-2); margin: 0 0 10px; }
 #chart-bubble:hover { transform: scale(1.06); }
 #chart-bubble.open { background: var(--accent); color: var(--on-accent); }
@@ -961,6 +971,8 @@ body.apptab-on #menu { top: 50px; }
 #apphead .ah-more { border: 1px solid var(--rule); background: var(--solid); border-radius: 6px; width: 38px; height: 32px; font-size: 20px; line-height: 1; cursor: pointer; color: var(--ink); }
 #apphead .ah-more:hover { background: rgba(0,0,0,.05); }
 #apphead .ah-nav { max-width: 1240px; margin: 0 auto; padding: 0 20px; border-top: 1px solid var(--rule); }
+#apphead .ah-nav .appbar::-webkit-scrollbar { display: none; }
+#apphead .ah-nav .appbar { scrollbar-width: none; }
 #apphead .ah-nav .appbar { display: flex; gap: 2px; background: none; border: 0; box-shadow: none; padding: 0; max-width: none; border-radius: 0; overflow-x: auto; }
 #apphead .ah-link { border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 8px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
 #apphead .ah-link:hover { color: var(--ink); border-bottom-color: color-mix(in srgb, var(--app) 40%, transparent); }
@@ -1049,9 +1061,9 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=0806">
-<script src="theme.js?v=0806"></script>
-<script src="theme-apply.js?v=0806"></script>
+<link rel="stylesheet" href="fonts.css?v=0807">
+<script src="theme.js?v=0807"></script>
+<script src="theme-apply.js?v=0807"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1172,15 +1184,16 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=0806"></script>
+<script src="data/places_poi.js?v=0807"></script>
 <script src="data/context.js"></script>
+<script src="data/money.js?v=0807"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="stats.js?v=0806"></script>
-<script src="psephology.js?v=0806"></script>
-<script src="charts.js?v=0806"></script>
-<script src="engine.js?v=0806"></script>
-<script src="xlsx.js?v=0806"></script>
+<script src="stats.js?v=0807"></script>
+<script src="psephology.js?v=0807"></script>
+<script src="charts.js?v=0807"></script>
+<script src="engine.js?v=0807"></script>
+<script src="xlsx.js?v=0807"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1190,12 +1203,13 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=0806"></script>
-<script src="apps.js?v=0806"></script>
-<script src="views/views.js?v=0806"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=0807"></script>
+<script src="apps.js?v=0807"></script>
+<script src="views/views.js?v=0807"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=0806"></script>
-<script src="devdesign.js?v=0806"></script>
-<script src="app.js?v=0806"></script>
+<script src="windows.js?v=0807"></script>
+<script src="money.js?v=0807"></script>
+<script src="devdesign.js?v=0807"></script>
+<script src="app.js?v=0807"></script>
 </body>
 </html>
