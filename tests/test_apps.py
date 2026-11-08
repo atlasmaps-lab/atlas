@@ -59,9 +59,9 @@ def main():
         rep.check(not page.errors, "Politics: no console errors" + (f": {page.errors}" if page.errors else ""))
         page.context.close()
 
-        for app, word in (("economic", "GDP per head"), ("social", "Population")):
-            page = open_atlas(b, base, (1440, 900), query="debug#app=" + app); js = page.evaluate; page.wait_for_timeout(1000)
-            rep.check(word in js("() => document.querySelector('.apppanel:not([hidden])').textContent"), f"Atlas {app.title()} opens its place dashboard")
+        for app, word in (("economic", "CPI inflation"), ("social", "Near this view")):   # 0.8: Economic opens on Indicators, Social on its Feed
+            page = open_atlas(b, base, (1440, 900), query="debug#app=" + app); js = page.evaluate; page.wait_for_timeout(1500)
+            rep.check(word in js("() => [...document.querySelectorAll('.apppanel:not([hidden]), .fwin:not([hidden])')].map(e => e.textContent).join(' ')"), f"Atlas {app.title()} opens on its first panel")
             for x in js("() => [...document.querySelectorAll('#appbar [data-apanel]')].map(b => b.dataset.apanel)"):
                 page.click(f"#appbar [data-apanel={x}]"); page.wait_for_timeout(250)
             rep.check(not page.errors, f"{app}: every panel opens without console errors" + (f": {page.errors}" if page.errors else ""))
