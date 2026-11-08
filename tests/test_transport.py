@@ -24,9 +24,21 @@ def main():
         page.route("**/valhalla1.openstreetmap.de/route**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(VALHALLA)))
         page.route("**/valhalla1.openstreetmap.de/isochrone**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(ISO)))
         page.route("**/api.transitous.org/**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(TRANSIT)))
-        page.route("**/nominatim.openstreetmap.org/**", lambda r: r.fulfill(status=200, content_type="application/json", body="[]"))
+        nom, pho = [], []   # 0.8.2.1: every request Atlas makes to Nominatim (should be none) and to Photon
+        page.route("**/nominatim.openstreetmap.org/**", lambda r: (nom.append(r.request.url), r.fulfill(status=200, content_type="application/json", body="[]")))
+        fake = '{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-0.1276,51.5034]},"properties":{"housenumber":"10","street":"Downing Street","city":"London","postcode":"SW1A 2AA","countrycode":"GB"}}]}'
+        page.route("**/photon.komoot.io/**", lambda r: (pho.append(r.request.url), r.fulfill(status=200, content_type="application/json", body=fake)))
         page.wait_for_timeout(1500)
         rep.check(js("() => [...document.querySelectorAll('.fwin')].some(w => !w.hidden && /Directions/.test(w.textContent))") or page.is_visible("[data-trq=from]"), "Atlas Transport opens on Directions")
+        # Addresses fill in as you type (Photon), with one request per pause in typing, not one per letter.
+        page.type("[data-trq=from]", "10 Downing Str", delay=60); page.wait_for_timeout(1500)
+        rep.check(not nom, f"Nominatim is never asked ({len(nom)} requests)")
+        rep.check(1 <= len(pho) <= 2, f"typing an address asks Photon once per pause, not per letter ({len(pho)} requests)")
+        rep.check("countrycode=GB" in (pho[-1] if pho else ""), "address search is limited to the UK")
+        rep.check(js("() => /Downing Street/.test(document.querySelector('[data-trhits=from]').textContent)"), "…and the address appears in the suggestions")
+        n = len(pho); page.press("[data-trq=from]", "Enter"); page.wait_for_timeout(1000)
+        rep.check(len(pho) == n, f"the same search again is answered from memory ({len(pho) - n} new requests)")
+        page.fill("[data-trq=from]", ""); page.wait_for_timeout(300)
         def choose(which, text):
             page.fill(f"[data-trq={which}]", text); page.wait_for_selector(f"[data-trhits={which}] li[data-trhit]", timeout=15000)
             page.dispatch_event(f"[data-trhits={which}] li[data-trhit]", "mousedown"); page.wait_for_timeout(300)
