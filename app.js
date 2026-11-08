@@ -1170,7 +1170,7 @@
     LEVELS.forEach(l => { setP("names-" + l, "text-color", hyb ? "#ffffff" : dark ? (l === "nation" || l === "region" ? "#c9bfd2" : "#d6d0db") : (l === "nation" || l === "region" ? "#5b4a6a" : "#3f3a45"));
       setP("names-" + l, "text-halo-color", hyb ? "rgba(0,0,0,0.7)" : dark ? "rgba(20,24,27,0.85)" : "rgba(242,239,233,0.85)"); });
   }
-  if (window.AtlasDebug) { Object.assign(window.AtlasDebug, { nameMinZoom, nameFeatures: l => nameFeatures(l, l === "ward" ? { features: wardFeatures } : G[SRC[l]]), paletteKey: () => paletteKey(), openPoiCard: id => openPoiCard(id), POI_BY }); Object.defineProperty(window.AtlasDebug, "LV", { get: () => LV }); }
+  if (window.AtlasDebug) { Object.assign(window.AtlasDebug, { nameMinZoom, nameFeatures: l => nameFeatures(l, l === "ward" ? { features: wardFeatures } : G[SRC[l]]), paletteKey: () => paletteKey(), openPoiCard: id => openPoiCard(id), POI_BY, contextFor: (m, c, n) => contextFor(m, c, n) }); Object.defineProperty(window.AtlasDebug, "LV", { get: () => LV }); }
   window.ATLAS_WARDS_LOADED = function (council, fc) {
     if (loadedWards.has(council + ":done")) return; loadedWards.add(council + ":done");
     const pts = fc.features.map(ptFeature); pts.forEach(f => { PT[f.properties.code] = f.geometry.coordinates; });
@@ -1924,6 +1924,26 @@
     const y0 = m.temporal === "annual" ? (SY[0] || 1998) : m.temporal === "event" ? 1976 : 1975;
     return CH.spark(seriesOf(m, code, y0, y1, m.temporal === "event" ? 2 : 1), { w: 80, h: 18, now, colour: PER[m.p].hue });
   }
+  // ---------- 0.8: written context beside the numbers ----------
+  // data/context.js (pipeline/fetch_context.py): official releases, briefings, forecasts and headline figures, each tagged
+  // with the metrics, perspectives and places it is about. A card shows the newest line for each metric on it (for this
+  // place, or the UK, or its region); ⓘ lists more; charts list what was published about the metrics charted.
+  const CX = window.ATLAS_CONTEXT || { items: [], upcoming: [], ind: {} };
+  const ancestorsOf = c => { const out = new Set([c, UKC]); let x = c, n = 0; while (x && n++ < 6) { const p = P[x]; if (!p) break; if (p.nation) out.add(p.nation); x = p.parent; if (x) out.add(x); } (UP[c] || []).forEach(k => out.add(k)); return out; };
+  function contextFor(mid, code, n) {
+    const anc = code ? ancestorsOf(code) : null;
+    const hits = CX.items.filter(it => it.m && it.m.includes(mid) && (!it.pl.length || !anc || it.pl.some(c => anc.has(c))));
+    const here = x => (code && x.pl.includes(code) ? 2 : 0) + (x.k === "indicator" ? 1 : 0);
+    return hits.sort((a, b) => here(b) - here(a) || (b.d > a.d ? 1 : b.d < a.d ? -1 : 0)).slice(0, n || 3);
+  }
+  const contextWider = (p, n) => CX.items.filter(it => it.k === "indicator" && it.pp && it.pp.includes(p)).slice(0, n || 4);
+  const CX_KIND = { indicator: "Latest figure", release: "Published", report: "Briefing", forecast: "Forecast & outlook", upcoming: "Coming up" };
+  const ctxLine = (it, short) => `<span class="cx-k">${esc(CX_KIND[it.k] || "")}</span> ${short ? esc(it.t.length > 120 ? it.t.slice(0, 118) + "…" : it.t) : `<a href="${esc(it.u)}" target="_blank" rel="noopener">${esc(it.t)}</a>`} <small>${esc(it.s)}, ${esc(shortDate(it.d))}</small>`;
+  function cardContext(onMap, code, pinned) {
+    const seen = new Set(), lines = [];
+    onMap.forEach(m => contextFor(m.id, code, pinned ? 2 : 1).forEach(it => { if (!seen.has(it.u + it.t) && lines.length < (pinned ? 4 : 1)) { seen.add(it.u + it.t); lines.push(`<li>${ctxLine(it, !pinned)}</li>`); } }));
+    return lines.length ? `<ul class="cx-list${pinned ? "" : " short"}">${lines.join("")}</ul>` : "";
+  }
   function cardHTML(code, pinned) {
     const p = P[code], rec = E.areas[code], d = state.date, past = !isNow();
     if (p.level === "zone") return `${pinned ? `<button class="x" data-close aria-label="Close">×</button>` : ""}<div class="lvl"><span>${esc(p.kind || "Custom zone")}</span><span>${esc(code)}</span></div><h3>${pinned ? ent(nameOf(code).replace(/ \(.*\)$/, "")) : esc(nameOf(code))}</h3>${zoneBody(code)}
@@ -1936,7 +1956,7 @@
       const wmOn = onMap.some(m => m.group === G4), keep = onMap.map((m, i) => m.group === G4 ? null : mapped[i]).filter(Boolean);
       if (wmOn) { const r = resultFor(code, d); if (r && !(M.ge_winner.get(code, d) || {}).nm) { const w = r.agg ? Object.keys(r.seats).sort((a, b) => r.seats[b] - r.seats[a])[0] : winnerOf(r), mj = r.agg ? null : PSE.majority(r.cl, r.t.total);
         keep.unshift(`<li><i class="sw" style="background:${partyCol(w)}"></i><span><b>${esc(partyName(w))}</b> ${r.agg ? `${r.seats[w]} of ${r.n} seats` : pct1(100 * r.cl[0][2])}${mj ? ` · majority ${pct1(mj.pct)}` : ""} <small>(${esc(r.e.label)})</small></span></li>`); } }
-      return `<div class="lvl"><span>${esc(LABEL[p.level])}</span></div><h3>${esc(nameOf(code))}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}${keep.length ? `<ul class="extra">${keep.join("")}</ul>` : `<div class="hint2">Put a metric on the map to see it here.</div>`}`;
+      return `<div class="lvl"><span>${esc(LABEL[p.level])}</span></div><h3>${esc(nameOf(code))}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}${keep.length ? `<ul class="extra">${keep.join("")}</ul>${cardContext(onMap, code, false)}` : `<div class="hint2">Put a metric on the map to see it here.</div>`}`;
     }
     if (curPlan.grid && curPlan.shade) { const k = LAST.k[code] || {}; if (k.sh != null && k.gr != null) mapped.push(`<li class="bivw"><i class="sw" style="background:${LAST.fc[code]}"></i><span>${esc(bivWords(k.sh, k.gr, PS.biv.n, curPlan.shade, curPlan.grid))}</span></li>`); }
     if (p.level === "constituency" && POLLS && M.proj_winner && !onMap.includes(M.proj_winner)) { const pr = projection(), x = pr && pr.seat.get(code); if (x && isNow()) mapped.push(`<li class="proj"><i class="sw" style="background:${partyCol(x.w)}"></i><span><b>Projection:</b> ${esc(projText(x))} <small>(Atlas, polls to ${esc(POLLS.latest)}; uniform swing, a simple model)</small></span></li>`); }
@@ -1946,7 +1966,7 @@
     const era = p.level === "constituency" && p.to ? ` ${p.from.slice(0, 4)}–${p.to.slice(0, 4)}${p.approx ? " (approx. boundary)" : ""}` : "";
     return `${pinned ? `<button class="x" data-close aria-label="Close">×</button>` : ""}<div class="lvl"><span>${esc(LABEL[p.level])}${esc(era)}</span><span>${esc(code.replace(/^P\d\d-/, ""))}</span></div>
       <h3>${esc(nameOf(code))}${rec ? ` <span class="tag">edited</span>` : ""}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}<ul>${items.join("")}</ul>
-      ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
+      ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${cardContext(onMap, code, pinned)}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
       ${rec && rec.notes ? `<div class="notes">${esc(rec.notes)}</div>` : ""}
       ${pinned ? `<div class="acts"><button class="btn primary" data-edit>Edit</button><button class="btn" data-chartme>Chart</button><button class="btn" data-wscard title="Send this card to the workspace">Card → workspace</button><button class="btn" data-wstile title="Send this place as a tile (a small map) to the workspace">Tile → workspace</button><button class="btn" data-addcmp>${state.sel.some(s => s.code === code) ? "✓ Selected" : "+ Compare"}</button><button class="btn" data-zoom>Zoom to</button><button class="btn" data-outline title="Turn this place's outline into a shape you can drag over other places, at its real size">Drag outline</button>${PR.events.length ? `<button class="btn" data-prhere title="The protests here ${esc(winLabel())}">Protests here</button>` : ""}</div>` : ""}`;
   }
@@ -3083,7 +3103,12 @@
     if (CHART.drawn) renderChartBody();
     addFctl(cpanel);
   }
-  function renderChartBody() { const b = $("cp-body"); if (!b) return; if (!CHART.style) CHART.style = chartStylesFor(specNow()).best; b.innerHTML = drawChart(specNow(), Math.max(280, cpanel.offsetWidth - 30)); }
+  function renderChartBody() { const b = $("cp-body"); if (!b) return; if (!CHART.style) CHART.style = chartStylesFor(specNow()).best; b.innerHTML = drawChart(specNow(), Math.max(280, cpanel.offsetWidth - 30)) + chartContextHTML(); }
+  function chartContextHTML() { // 0.8: what was published about the metrics charted (newest first)
+    const seen = new Set(), its = [];
+    CHART.metrics.forEach(id => contextFor(id, CHART.places.length === 1 ? CHART.places[0] : null, 3).forEach(it => { if (!seen.has(it.u + it.t)) { seen.add(it.u + it.t); its.push(it); } }));
+    return its.length ? `<div class="cx-chart"><h4 class="cx-h">Context</h4><ul class="cx-list">${its.slice(0, 5).map(it => `<li>${ctxLine(it)}</li>`).join("")}</ul></div>` : "";
+  }
   function editSpec(target, ds, el) { // shared by the panel (target = CHART) and tabs
     if (ds.rmm) { target.metrics = target.metrics.filter(x => x !== ds.rmm); target.from = Math.max(target.from, spanFor(target.metrics.map(mOf))); }
     else if (ds.rmp) target.places = target.places.filter(x => x !== ds.rmp);
@@ -3242,6 +3267,8 @@
       ${row("Source", esc(src).replace(/(https?:\/\/[^\s;),]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>') || "—")}
       ${row("Estimated values", esc(est))}${row("Caveats", esc(CAVEAT[m.id] || ""))}
       ${row("Related", rel.map(x => `<button class="linkish" data-info="${x.id}">${esc(x.label)}</button>`).join(" · "))}</table>
+      ${(() => { const cx = contextFor(m.id, null, 6), up = (CX.upcoming || []).filter(u => u.m && u.m.includes(m.id)).slice(0, 3), wide = cx.length < 2 ? contextWider(m.p, 3) : [];
+        return cx.length || up.length || wide.length ? `<h4 class="cx-h">Recent context</h4><ul class="cx-list">${cx.map(it => `<li>${ctxLine(it)}${it.x ? `<div class="cx-x">${esc(it.x)}</div>` : ""}</li>`).join("")}${wide.map(it => `<li>${ctxLine(it)}</li>`).join("")}${up.map(it => `<li>${ctxLine(it)}</li>`).join("")}</ul><p class="cx-src">${esc(CX.sources || "")}</p>` : ""; })()}
       <p class="imore">${helpBtn("honesty", "What measured, estimated, missing and not meaningful mean")} <button class="linkish" data-help="honesty">What “estimated” and “not meaningful” mean</button></p>`;
   }
   const infoWins = new Map();
