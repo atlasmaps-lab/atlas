@@ -89,6 +89,7 @@
     if (m.nature === "text") return [];
     if (m.nature === "line") return [{ ch: "lines", score: 1, why: "It is a network (railways, roads, routes), so it is drawn as its own lines on top of the map." }];   // 0.8.1
     if (m.nature === "site") return [{ ch: "sites", score: 1, why: "Each one is a fixed place (e.g. a headquarters), so it is a point sized by its value." }];
+    if (m.nature === "event" && m.heatOnly) return [{ ch: "heat", score: 1, why: "Crowd sizes add up where protests cluster, so they are a heat surface: warmer = bigger crowds nearby." }];   // 0.8.2
     if (m.nature === "event") return [{ ch: "points", score: 1, why: "Each event is a dated place, so it is a point that appears and fades with time." }, { ch: "heat", score: 0.8, why: "Many overlapping events read best as a density surface." }];
     if (isCat(m)) return [{ ch: "hue", score: 1, why: "Categories have no order, so they get distinct colours." }, { ch: "badge", score: 0.7, why: "A second category can be a small marker at the centre of each area." }];
     if (m.scale === "ordinal") return [{ ch: "shade", score: 1 }, { ch: "dots", score: 0.6 }];
@@ -124,7 +125,8 @@
     });
     metrics.filter(m => m.nature === "line").forEach(m => { P.lines.push(m); P.notes.push({ id: m.id, ch: "lines", why: channels(m)[0].why }); });   // any number of networks at once
     metrics.filter(m => m.nature === "site" && !placed(m)).forEach(m => { if (free("sites")) take("sites", m, channels(m)[0].why); });
-    evs.filter(m => !placed(m)).forEach(m => { if (free("points")) take("points", m, channels(m)[0].why); else if (free("heat")) take("heat", m, channels(m)[1].why); });
+    evs.filter(m => m.heatOnly && !placed(m)).forEach(m => { if (free("heat")) take("heat", m, channels(m)[0].why); else P.notes.push({ id: m.id, ch: null, why: `The heat map is in use, so ${m.label} can't be drawn. Show the other one as points.` }); });
+    evs.filter(m => !m.heatOnly && !placed(m)).forEach(m => { if (free("points")) take("points", m, channels(m)[0].why); else if (free("heat")) take("heat", m, channels(m)[1].why); });
     nums.filter(m => !placed(m)).sort((a, b) => (channels(b)[0] || {}).score - (channels(a)[0] || {}).score).forEach(m => {
       const best = channels(m).map(c => c.ch);
       const fillTaken = P.shade || P.diverge || P.grid;

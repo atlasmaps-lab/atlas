@@ -41,7 +41,7 @@
   const UK = C.homeBounds || [-8.6, 49.9, 1.8, 60.9];
   const HOME = (C.start && C.start.center) || [-3.3, 54.6], HOME_Z = (C.start && C.start.zoom) || 4.9;
   const MAX_SEL = 1000, LONDON = "E12000007", UKC = "K02000001", LIFT = [-3, -6];
-  const CORE = [{ id: "population", label: "Population" }, { id: "gdp", label: "GDP" }, { id: "average_age", label: "Average age" }, { id: "ruler", label: "De facto ruler" }, { id: "party", label: "Party / alignment" }];
+  const CORE = [{ id: "population", label: "Population" }, { id: "gdp", label: "GDP" }, { id: "average_age", label: "Average age" }, { id: "ruler", label: "Leader" }, { id: "party", label: "Party" }];
 
   const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   // 0.7.2: people, events and special places (companies, districts) are blue links to read about them
@@ -281,7 +281,7 @@
       if (m.levels && !m.levels.includes(p.level)) return { v: null, text: (m.nmText && m.nmText[p.level]) || NM_TEXT, nm: true };
       const why = m.valid && m.valid(code); if (why) return { v: null, text: why, nm: true };
       return g.call(this, code, d); }; }
-    M[m.id] = m; METRICS.push(m); };
+    M[m.id] = m; if (!m.offMenu) METRICS.push(m); };   // 0.8.2: offMenu = kept for cards, not a map toggle
   const statusOf = (r, m) => r && r.nm ? "not meaningful" : !r || (r.v == null && !(m && m.nature === "text" && r.text)) ? "missing" : r.est ? "estimated" : "measured";
   const estTag = r => r && r.est ? ` <span class="tag est" title="${esc(r.estWhy || "Estimated, not measured")}">est.</span>` : "";
   const partyCat = { colour: partyCol, catName: partyName, cats: () => Object.keys(PARTY) };
@@ -311,7 +311,7 @@
   def({ id: "turnover", p: "political", group: G1, label: "Changes of control (20 years)", scale: "ratio", nature: "rate", temporal: "state", breaks: [1, 2, 3, 5], desc: "How often control changed in the 20 years to the date",
     fmt: v => (Number.isInteger(v) ? v : v.toFixed(1)) + (v === 1 ? " change" : " changes"),
     get(code, d) { const v = isLocal(code) ? turnoverAt(councilOf(code), d) : aggregateNum(code, c => turnoverAt(c, d)); return v == null ? null : { v, text: this.fmt(v) + (isLocal(code) ? "" : " (average)") }; } });
-  def({ id: "ruler", p: "political", group: G1, label: "De facto ruler", scale: "nominal", nature: "text", temporal: "state", desc: "Leader, mayor, First Minister or Prime Minister",
+  def({ id: "ruler", offMenu: true, p: "political", group: G1, label: "Leader", scale: "nominal", nature: "text", temporal: "state", desc: "Leader, mayor, First Minister or Prime Minister",
     get(code, d) {
       if (isPcon(code)) { const m = mpAt(code, d); return { text: m.mp ? `${m.mp} (MP)` : m.text }; }
       if (d >= POL.now) return { text: value(code, "ruler").text };
@@ -319,7 +319,7 @@
       if (code === LONDON) { const s = seg(POL.gov[LONDON], d); if (s) return { text: `${s[3]} (Mayor of London, ${partyName(s[2])})` }; }
       const g = govAt(nationOf(code), d); return { text: g && g.leader ? `${g.leader} (${g.title})` : g ? g.note : "—" };
     } });
-  def({ id: "party", p: "political", group: G1, label: "Party / alignment", scale: "nominal", nature: "text", temporal: "state", desc: "Governing party, and council control",
+  def({ id: "party", offMenu: true, p: "political", group: G1, label: "Party", scale: "nominal", nature: "text", temporal: "state", desc: "Governing party, and council control",
     get(code, d) {
       if (isPcon(code)) { const m = mpAt(code, d); return { text: m.v ? partyName(m.v) : m.text }; }
       if (d >= POL.now) return { text: value(code, "party").text };
@@ -331,10 +331,11 @@
     get(code, d) { const es = eventsIn(code, d); if (!es.length) return { v: 0, text: `None recorded ${winLabel()}` }; const big = es.filter(e => e.mid).sort((a, b) => b.mid - a.mid)[0]; return { v: es.length, text: `${es.length} ${es.length === 1 ? "protest" : "protests"}${big ? ` · largest: ${big.n} (${fmtBig(big.mid)})` : ""}` }; } });
   def({ id: "protest_count", p: "political", group: G2, label: "Number of protests", scale: "ratio", nature: "count", temporal: "event", desc: "Protests with a site in the area, in the time window",
     fmt: v => fmtInt(v) + (v === 1 ? " protest" : " protests"), get(code, d) { const n = (protestAgg(d).ev[code] || { size: 0 }).size; return { v: n, text: this.fmt(n) + " " + winLabel() }; } });
-  def({ id: "protest_rate", p: "political", group: G2, label: "Protests per 100,000 people", scale: "ratio", nature: "rate", temporal: "event", weight: "population", desc: "Protests in the window, for every 100,000 residents",
-    fmt: v => v.toFixed(v < 10 ? 2 : 1) + " per 100k", get(code, d) { const n = (protestAgg(d).ev[code] || { size: 0 }).size, pop = popAt(code, d); if (!pop) return null; const v = n / pop * 1e5; return { v, text: this.fmt(v) }; } });
-  def({ id: "protest_largest", p: "political", group: G2, label: "Largest crowd", scale: "ratio", nature: "count", temporal: "event", desc: "Biggest crowd estimate among protests in the window",
-    fmt: fmtBig, get(code, d) { const es = eventsIn(code, d).filter(e => e.mid); if (!es.length) return null; const e = es.sort((a, b) => b.mid - a.mid)[0]; return { v: e.mid, text: `${fmtBig(e.mid)} · ${e.n}`, note: e.ns > 1 ? `across ${e.ns} places` : "" }; } });
+  // 0.8.2: crowd size as a heat map (warm = bigger crowds nearby); the key gives the numbers
+  def({ id: "protest_crowd", p: "political", group: G2, label: "Crowd size", scale: "nominal", nature: "event", heatOnly: true, temporal: "event", desc: "Where the big crowds were: a heat map of protest crowd estimates in the window",
+    how: "Each protest with a crowd estimate adds heat in proportion to the order of magnitude of its crowd (100 → none, 1,000 → a quarter, 1 million → full). Nearby protests add up. Protests without an estimate are left out",
+    get(code, d) { const es = eventsIn(code, d).filter(e => e.mid); if (!es.length) return { v: 0, text: "No crowd estimates " + winLabel() }; const e = es.sort((a, b) => b.mid - a.mid)[0], tot = es.reduce((a, x) => a + x.mid, 0);
+      return { v: es.length, text: `largest ${fmtBig(e.mid)} (${e.n}) · ${fmtBig(tot)} in all, ${es.length} with estimates`, note: e.ns > 1 ? `the largest was across ${e.ns} places` : "" }; } });
   def({ id: "protest_people", p: "political", group: G2, label: "People protesting (estimate)", scale: "ratio", nature: "count", temporal: "event", desc: "Sum of crowd estimates; an event in several places is shared equally between them",
     fmt: fmtBig, get(code, d) { const v = protestAgg(d).people[code]; return v ? { v, text: fmtBig(v) + " " + winLabel() } : { v: 0, text: "No crowd estimates " + winLabel() }; } });
   def({ id: "protest_cause", p: "political", group: G2, label: "Main cause", scale: "nominal", nature: "category", temporal: "event", desc: "Most common cause among protests in the window",
@@ -343,8 +344,6 @@
   def({ id: "protest_align", p: "political", group: G2, label: "Organisers' political alignment", scale: "nominal", nature: "category", temporal: "event", desc: "Most common alignment of organisers and parties named (Atlas's editable lookup)",
     colour: a => ALIGN_COL[a] || "#999", catName: a => a, cats: () => Object.keys(ALIGN_COL),
     get(code, d) { const es = eventsIn(code, d); if (!es.length) return null; const n = {}; es.forEach(e => e.al.forEach(a => { n[a] = (n[a] || 0) + 1; })); const top = Object.keys(n).sort((a, b) => n[b] - n[a])[0]; return top ? { v: top, text: `${top} (${n[top]} of ${es.length})`, counts: n } : { v: null, text: "No organisers recorded" }; } });
-  def({ id: "protest_parties", p: "political", group: G2, label: "Parties involved", scale: "nominal", nature: "text", temporal: "event", desc: "Parties named among organisers or participants",
-    get(code, d) { const s = new Set(); eventsIn(code, d).forEach(e => e.pa.forEach(p => s.add(p))); return { text: s.size ? [...s].map(partyName).join(", ") : "None named" }; } });
   // political: derived from data Atlas already has (1.7)
   const COAL = POL.coalitions || {};
   // parties in government on a date: UK (K02000001), Scotland, Wales (coalitions from government_coalitions.csv); NI: power-sharing
@@ -389,22 +388,36 @@
       return { v: same ? "same" : "differ", text: `${partyName(ctl)}: ${same ? "in" : "not in"} the ${govCode === UKC ? "UK Government" : gp.g.title.replace(/^First Minister/, "devolved government")}${gp.parties.length > 1 ? ` (${gp.label})` : ""}`, note: ukNote };
     } });
   const MP_SPAN = () => [Object.values(SPANS).reduce((a, L) => L.length && L[0][0] < a ? L[0][0] : a, TODAY), TODAY];   // MPs: from the first recorded seat (1997)
-  def({ id: "mp_tenure", p: "political", group: G31, span: () => MP_SPAN(), label: "MP's years in the seat", scale: "ratio", nature: "duration", temporal: "state", levels: ["constituency"], breaks: [2, 5, 10, 20],
+  def({ id: "mp_tenure", offMenu: true, p: "political", group: G31, span: () => MP_SPAN(), label: "MP's years in the seat", scale: "ratio", nature: "duration", temporal: "state", levels: ["constituency"], breaks: [2, 5, 10, 20],
     how: "Years since the current MP first won this seat, counting continuous service in this seat only", desc: "How long the sitting MP has held the seat", fmt: v => v.toFixed(1) + " years", source: "UK Parliament Members API (spans in constituencies.js)",
     get(code, d) { const L = (SPANS[code] || []).filter(x => x[0] <= d); const cur = spanAt(code, d); if (!cur) return null; let s = cur[0];
       for (let i = L.length - 1; i >= 0; i--) { const x = L[i]; if (x[3] === cur[3] && (x[1] === s || x[0] === s)) s = x[0]; }
       const v = yearsBetween(s, d); return { v, text: `${this.fmt(v)} (${cur[3]}, since ${s.slice(0, 4)})` }; } });
-  def({ id: "mp_count", p: "political", group: G31, span: () => MP_SPAN(), label: "MPs since 1997", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [2, 3, 4, 5],
-    how: "Distinct MPs for this seat from its first result (1997 at the earliest) to the date, within this boundary set only", desc: "How many different MPs the seat has had", fmt: v => fmtInt(v) + (v === 1 ? " MP" : " MPs"),
-    get(code, d) { const L = (SPANS[code] || []).filter(x => x[0] <= d); if (!L.length) return null; const mps = new Set(L.map(x => x[3]));
-      const by = (RES[code] || []).filter(x => ELX[x[0]].kind === "by" && ELX[x[0]].day <= d).length, defect = L.filter((x, i) => i && x[3] === L[i - 1][3] && x[2] !== L[i - 1][2]).length;
-      return { v: mps.size, text: this.fmt(mps.size), note: `${by} by-election${by === 1 ? "" : "s"}, ${defect} defection${defect === 1 ? "" : "s"} · counted within this boundary set` }; } });
-  def({ id: "seat_flips", p: "political", group: G31, span: () => MP_SPAN(), label: "Seat changed hands", scale: "ratio", nature: "count", temporal: "state", levels: ["constituency"], breaks: [1, 2, 3, 4],
-    how: "Number of times the seat's party changed, at elections, by-elections or by defection, from its first result to the date", desc: "How often the seat has changed party", fmt: v => fmtInt(v) + (v === 1 ? " change" : " changes"),
-    get(code, d) { const L = ownSpans(code).filter(x => x[0] <= d); if (!L.length) return null; let n = 0, def_ = 0; const raw = (SPANS[code] || []).filter(x => x[0] <= d);
-      for (let i = 1; i < L.length; i++) if (L[i][2] !== L[i - 1][2]) n++;
-      for (let i = 1; i < raw.length; i++) if (raw[i][3] === raw[i - 1][3] && raw[i][2] !== raw[i - 1][2]) def_++;
-      return { v: n, text: this.fmt(n), note: def_ ? `${def_} by defection` : "" }; } });
+  // 0.8.2: safe or battleground. How often the seat (and the seat of the same name before a boundary change) has changed
+  // party since 1997, and how close the last result was
+  const SAFE_CATS = ["battle", "marginal", "safe", "vsafe"], SAFE_NAME = { battle: "Battleground", marginal: "Marginal", safe: "Safe", vsafe: "Very safe" }, SAFE_COL = { battle: "#c2410c", marginal: "#f2a541", safe: "#8fb3c9", vsafe: "#3f6680" };
+  const REPD = window.ATLAS_REP || null, PCON_NAMES = {};
+  if (REPD) Object.entries(REPD.at).forEach(([c, a]) => { (PCON_NAMES[a[4]] = PCON_NAMES[a[4]] || []).push(c); });
+  function seatLine(code) { // this seat plus earlier seats of the same name (older boundary sets)
+    const nm = P[code] && P[code].name, out = [code]; if (!nm) return out;
+    (PCON_NAMES[nm] || []).forEach(c => { if (c !== code && !out.includes(c)) out.push(c); }); return out;
+  }
+  function seatHistory(code, d) { // winners in date order (general, by- and notional results), then defections after the last result
+    const rs = []; seatLine(code).forEach(c => (RES[c] || []).forEach(x => { const r = decode(x); if (r.e.day <= d && r.cl.length) rs.push(r); }));
+    rs.sort((a, b) => a.e.day < b.e.day ? -1 : a.e.day > b.e.day ? 1 : (a.e.kind === "notional" ? -1 : 1));
+    const seq = []; rs.forEach(r => { const w = winnerOf(r); if (r.e.kind === "notional" && seq.length) return; seq.push({ p: w, day: r.e.day, r }); });
+    const last = rs[rs.length - 1], sp = (SPANS[code] || []).filter(x => x[0] <= d && (!last || x[0] > last.e.day));
+    sp.forEach(x => { if (seq.length && x[2] !== seq[seq.length - 1].p) seq.push({ p: x[2], day: x[0], defect: true }); });
+    return { seq, last };
+  }
+  def({ id: "seat_safety", p: "political", group: G31, span: () => MP_SPAN(), label: "Safe seat or battleground", scale: "nominal", nature: "category", temporal: "state", levels: ["constituency"],
+    how: "Changes of party since 1997 (elections, by-elections, defections; counting the seat of the same name before a boundary change) and the last majority. Battleground: 3 or more changes, or 2 with a majority under 10%, or a majority under 5%. Marginal: 1 or 2 changes, or a majority under 10%. Very safe: never changed and a majority of 25% or more. Safe: the rest",
+    desc: "How often the seat changes hands, as a colour: battleground to very safe", colour: k => SAFE_COL[k], catName: k => SAFE_NAME[k], cats: () => SAFE_CATS, source: "Election results (House of Commons Library, via elections.js); MPs: UK Parliament Members API",
+    get(code, d) { const { seq, last } = seatHistory(code, d); if (!last) return null;
+      let n = 0; for (let i = 1; i < seq.length; i++) if (seq[i].p !== seq[i - 1].p) n++;
+      const mj = PSE.majority(last.cl, last.t.total).pct, k = n >= 3 || (n >= 2 && mj < 10) || mj < 5 ? "battle" : n >= 1 || mj < 10 ? "marginal" : mj >= 25 ? "vsafe" : "safe";
+      const parties = seq.filter((x, i) => !i || x.p !== seq[i - 1].p).map(x => `${partyName(x.p)} ${x.day.slice(0, 4)}${x.defect ? " (defection)" : ""}`).join(" → ");
+      return { v: k, text: `${SAFE_NAME[k]}: ${n === 0 ? "never changed party" : "changed party " + (n === 1 ? "once" : n === 2 ? "twice" : n + " times")} since ${seq[0].day.slice(0, 4)}, majority ${pct1(mj)} in ${last.e.day.slice(0, 4)}`, note: parties }; } });
   // protests: trend, diversity and opposition (same windows as the other protest metrics)
   const ALIGN_PARTY = { "Labour": "lab", "Conservative": "con", "Liberal Democrat": "ld", "Green": "grn", "Scottish nationalist": "snp", "Welsh nationalist": "pc", "Irish republican": "sf",
     "Irish nationalist (constitutional)": "sdlp", "Unionist / loyalist": "unionist", "Right (Brexit / Reform)": "right", "Labour movement (unions)": "lab" };
@@ -413,18 +426,13 @@
     how: "Protests in the current window minus protests in the window of the same length just before it; % change shown when the earlier window has 5 or more", desc: "More or fewer protests than the window before", fmt: v => (v > 0 ? "+" : "") + fmtInt(v),
     get(code, d) { const now = (protestAgg(d).ev[code] || new Set()).size, before = eventsBetween(code, d, PS.win).length; if (!now && !before) return null; const v = now - before;
       return { v, text: `${this.fmt(v)} (${now} now, ${before} in the window before)${before >= 5 ? ` · ${fmtPct(100 * v / before)}` : ""}` }; } });
-  def({ id: "protest_diversity", p: "political", group: G2, label: "Cause diversity", scale: "ratio", nature: "rate", temporal: "event", breaks: [0.2, 0.4, 0.6, 0.8],
-    how: "Normalised Shannon entropy of causes, H / ln(k), from 0 (one cause) to 1 (evenly spread); missing with fewer than 5 protests", desc: "Whether protests here are about one thing or many", fmt: v => v.toFixed(2),
-    get(code, d) { const es = eventsIn(code, d); if (es.length < 5) return es.length ? { v: null, text: `Only ${es.length} protests: too few to say` } : null;
-      const n = {}; es.forEach(e => { n[e.c] = (n[e.c] || 0) + 1; }); const k = CAUSES.length, H = -Object.values(n).reduce((a, c) => a + (c / es.length) * Math.log(c / es.length), 0), v = H / Math.log(k);
-      return { v, text: `${this.fmt(v)} (${Object.keys(n).length} causes among ${es.length} protests)` }; } });
-  def({ id: "protest_opposition", p: "political", group: G2, label: "Protests against the governing party", scale: "ratio", nature: "share", temporal: "event", breaks: [20, 40, 60, 80],
-    how: "Share of protests whose organisers are a party, or a group aligned with one, that is not in the UK Government on the protest's date. Protests with no party alignment are left out",
-    desc: "How much protest here comes from opposition parties and their allies", fmt: v => v.toFixed(0) + "%",
+  def({ id: "protest_opposition", p: "political", group: G2, label: "Protests against the governing party", scale: "ratio", nature: "count", temporal: "event",
+    how: "Protests whose organisers are a party, or a group aligned with one, that is not in the UK Government on the protest's date (Atlas's editable alignment lookup). Protests with no party alignment are not counted",
+    desc: "How many protests here came from parties outside the government, and their allies", fmt: v => fmtInt(v) + (v === 1 ? " protest" : " protests"),
     get(code, d) { const es = eventsIn(code, d); let used = 0, opp = 0;
       es.forEach(e => { const ps = e.al.map(a => ALIGN_PARTY[a]).filter(Boolean); if (!ps.length) return; used++; const g = govParties(UKC, fromDay(e.t0)); if (g && ps.some(p => !g.parties.includes(p))) opp++; });
-      if (!used) return es.length ? { v: null, text: "No party-aligned organisers among these protests" } : null; const v = 100 * opp / used;
-      return { v, text: `${this.fmt(v)} of ${used} party-aligned protests`, note: `${es.length - used} with no party alignment left out` }; } });
+      if (!used) return es.length ? { v: 0, text: "No party-aligned organisers among these protests" } : null;
+      return { v: opp, text: `${this.fmt(opp)} of ${used} party-aligned (${Math.round(100 * opp / used)}%)`, note: `${es.length - used} with no party alignment not counted` }; } });
 
   // political: Westminster elections (1.7), from data/elections.js; calculations in psephology.js
   const EL = window.ATLAS_EL || null, PSE = window.AtlasPseph, G4 = "Westminster elections";
@@ -686,19 +694,49 @@
     source: MO.sources, how: "Donations registered with the Electoral Commission by local party units matched to this place (by name), plus donations registered to the MP for this seat, in the five calendar years to the date. Units covering several seats aren't placed.",
     desc: "Money registered by local parties and MPs here",
     get(code, d) { const v = window.AtlasMoney ? AtlasMoney.placeTotal(code, d) : null; return v ? { v, text: "£" + fmtInt(v), yr: `${+d.slice(0, 4) - 4}–${d.slice(0, 4)}` } : { v: null, text: "None registered" }; } });
-  function regAt(code) { // 2024 constituencies; regions and nations add up their constituencies (England and Wales: adults by seat)
-    const R = LOC.reg; if (!R) return null; const lv = P[code].level;
-    if (lv === "constituency") { const r = R[code]; return r ? { reg: r[0], adults: r[1], n: 1 } : null; }
-    let reg = 0, adults = 0, n = 0; for (const c in R) { const p = P[c]; if (!p || !R[c][1]) continue; if (lv === "region" && p.parent !== code) continue; if (lv === "nation" && p.nation !== code) continue; reg += R[c][0]; adults += R[c][1]; n++; }
-    return n ? { reg, adults, n } : null;
+  // 0.8.2: who represents whom. MPs' gender (Members API) and ethnic minority MPs (Commons Library, via Wikipedia's list),
+  // against Census 2021. Ethnicity is published only as totals for regions, nations and the UK, never per MP or seat
+  const REP_G = REPD ? REPD.g : {}, REP_EM = new Set(REPD ? REPD.em : []), REP_POP = REPD ? REPD.pop : {};
+  const seatInfo = c => P[c] && P[c].level === "constituency" ? [P[c].parent, P[c].nation] : REPD && REPD.at[c] ? [REPD.at[c][0], REPD.at[c][1]] : null;
+  function mpsIn(code, d) { // the MP for every seat inside the area on the date
+    const lv = lvlOf(code), out = [];
+    for (const c in SPANS) { const x = spanAt(c, d); if (!x) continue; const si = seatInfo(c); if (!si) continue;
+      if (lv === "constituency" ? c !== code : lv === "region" ? si[0] !== code : lv === "nation" ? si[1] !== code : lv !== "country") continue; out.push({ c, name: x[3], party: x[2] }); }
+    return out;
   }
-  def({ id: "registration_ratio", p: "political", group: G8, label: "Electorate as % of adults", scale: "ratio", nature: "share", temporal: "static", fmt: pct1, breaks: [75, 80, 85, 90],
-    levels: ["constituency", "region", "nation"], nmText: { council: "The December 2025 statistics give parliamentary electorates by constituency only", ward: NM_TEXT, country: "England and Wales only: adults aged 18+ by constituency aren't published here for Scotland and Northern Ireland" },
-    valid: code => /^(S|N)/.test(nationOf(code) || "") ? "England and Wales only (adults aged 18+ by constituency come from ONS small-area estimates)" : null, source: LOC.sources && LOC.sources.reg,
-    how: "Parliamentary electoral registrations (1 December 2025) ÷ residents aged 18+ (mid-2024). This is NOT registration completeness: the parliamentary franchise leaves out most EU and other foreign nationals, so areas with many of them score low. The Electoral Commission's completeness studies are the proper measure",
-    desc: "Registered parliamentary electors per 100 adults (2024 constituencies)",
-    get(code, d) { const r = regAt(code); if (!r) return null; if (!r.adults) return { v: null, text: "Adults aged 18+ not available here" }; const v = 100 * r.reg / r.adults;
-      return { v, text: `${pct1(v)} (${fmtInt(r.reg)} electors, ${fmtInt(r.adults)} adults)`, yr: "Dec 2025 electorate, mid-2024 adults", note: "not a measure of registration completeness" }; } });
+  const REP_LV = ["region", "nation", "country"], REP_NM = { constituency: "One MP per seat: see “MP's gender”, or zoom out to a region or nation", council: "MPs sit for constituencies: zoom out to a region or nation", ward: "MPs sit for constituencies: zoom out to a region or nation" };
+  const popFor = code => REP_POP[code] || (code === UKC ? REP_POP.K04000001 : null), popNote = code => code === UKC ? "England and Wales population (Scotland and Northern Ireland have their own censuses)" : "";
+  const GEN_COL = { F: "#8e4fa3", M: "#4f7fa3" }, GEN_NAME = { F: "Woman", M: "Man" };
+  if (REPD) {
+    def({ id: "mp_gender", p: "political", group: G8, label: "MP's gender", scale: "nominal", nature: "category", temporal: "state", levels: ["constituency"], span: () => MP_SPAN(),
+      nmText: { region: "Zoom in to a seat, or see “Women among MPs” for the area", nation: "See “Women among MPs” for the nation", country: "See “Women among MPs”" },
+      desc: "Whether the seat's MP is a woman or a man", how: "The MP holding the seat on the date, with the gender recorded by the UK Parliament Members API", source: REPD.sources.g,
+      colour: k => GEN_COL[k], catName: k => GEN_NAME[k], cats: () => ["F", "M"],
+      get(code, d) { const x = spanAt(code, d); if (!x) return null; const g = REP_G[x[3]]; return g ? { v: g, text: `${GEN_NAME[g]} (${x[3]}, ${partyName(x[2])})` } : { v: null, text: "Not recorded" }; } });
+    def({ id: "rep_women", p: "political", group: G8, label: "Women among MPs", scale: "ratio", nature: "share", temporal: "state", levels: REP_LV, nmText: REP_NM, span: () => MP_SPAN(), fmt: pct1, breaks: [20, 30, 40, 50],
+      desc: "Share of the area's MPs who are women, against the share of residents who are female", how: "Women MPs ÷ all MPs for seats in the area on the date (Members API). Population: Census 2021, residents who are female", source: REPD.sources.g + "; " + REPD.sources.pop,
+      get(code, d) { const L = mpsIn(code, d); if (!L.length) return null; const w = L.filter(x => REP_G[x.name] === "F").length, v = 100 * w / L.length, pp = popFor(code);
+        return { v, text: `${pct1(v)} (${w} of ${L.length} MPs)`, note: pp ? `residents: ${pct1(pp[2])} female` : "", detail: repByParty(L, x => REP_G[x.name] === "F", "women") }; } });
+    def({ id: "rep_women_gap", p: "political", group: G8, label: "Gender representation gap", scale: "interval", nature: "change", temporal: "state", mid: 0, levels: REP_LV, nmText: REP_NM, span: () => MP_SPAN(), fmt: pts,
+      valid: code => /^(S|N)/.test(code === UKC ? "" : nationOf(code) || "") ? "England and Wales only for now (Scotland's and Northern Ireland's censuses are separate)" : null,
+      desc: "Women's share of MPs minus women's share of residents: below zero, women are under-represented", how: "Women among MPs (%) − female residents (%, Census 2021), in percentage points", source: REPD.sources.g + "; " + REPD.sources.pop,
+      get(code, d) { const L = mpsIn(code, d), pp = popFor(code); if (!L.length || !pp) return null; const v = 100 * L.filter(x => REP_G[x.name] === "F").length / L.length - pp[2];
+        return { v, text: `${pts(v)} (${pct1(v + pp[2])} of MPs, ${pct1(pp[2])} of residents)`, note: popNote(code) }; } });
+    def({ id: "rep_em", p: "political", group: G8, label: "Ethnic minority MPs", scale: "ratio", nature: "share", temporal: "state", levels: REP_LV, nmText: REP_NM, span: () => MP_SPAN(), fmt: pct1, breaks: [5, 10, 15, 25],
+      desc: "Share of the area's MPs from ethnic minority backgrounds, against the share of residents", how: "MPs from ethnic minority backgrounds (the House of Commons Library's definition: not from a White ethnic group, as listed on Wikipedia) ÷ all MPs for seats in the area. Population: Census 2021, residents not in a White ethnic group. Totals only: Atlas doesn't label individual MPs or seats",
+      source: REPD.sources.em + "; " + REPD.sources.pop,
+      get(code, d) { const L = mpsIn(code, d); if (!L.length) return null; const n = L.filter(x => REP_EM.has(x.name)).length, v = 100 * n / L.length, pp = popFor(code);
+        return { v, text: `${pct1(v)} (${n} of ${L.length} MPs)`, note: pp ? `residents: ${pct1(100 * pp[1] / pp[0])}${code === UKC ? " (England and Wales)" : ""}` : "", detail: repByParty(L, x => REP_EM.has(x.name), "from ethnic minority backgrounds") }; } });
+    def({ id: "rep_em_gap", p: "political", group: G8, label: "Ethnic minority representation gap", scale: "interval", nature: "change", temporal: "state", mid: 0, levels: REP_LV, nmText: REP_NM, span: () => MP_SPAN(), fmt: pts,
+      valid: code => /^(S|N)/.test(code === UKC ? "" : nationOf(code) || "") ? "England and Wales only for now (Scotland's and Northern Ireland's censuses are separate)" : null,
+      desc: "Ethnic minority share of MPs minus share of residents: below zero, under-represented", how: "Ethnic minority MPs (%) − residents not in a White ethnic group (%, Census 2021), in percentage points", source: REPD.sources.em + "; " + REPD.sources.pop,
+      get(code, d) { const L = mpsIn(code, d), pp = popFor(code); if (!L.length || !pp) return null; const pop = 100 * pp[1] / pp[0], v = 100 * L.filter(x => REP_EM.has(x.name)).length / L.length - pop;
+        return { v, text: `${pts(v)} (${pct1(v + pop)} of MPs, ${pct1(pop)} of residents)`, note: popNote(code) }; } });
+  }
+  function repByParty(L, test, what) { // e.g. "Labour 46% women (190 of 411) · Conservative 24% …"
+    const by = {}; L.forEach(x => { const b = by[x.party] = by[x.party] || [0, 0]; b[1]++; if (test(x)) b[0]++; });
+    return `<small>${Object.entries(by).sort((a, b) => b[1][1] - a[1][1]).slice(0, 6).map(([p, [k, n]]) => `<i class="sw" style="background:${partyCol(p)}"></i>${esc(partyName(p))} ${Math.round(100 * k / n)}% ${esc(what)} (${k} of ${n})`).join(" · ")}</small>`;
+  }
   // markets: FTSE 100 companies headquartered in London (test case)
   const COS = MK ? MK.companies : [], GRP_COL = MK ? Object.fromEntries(MK.groups) : {}, G3 = "FTSE 100 in London (test case)";
   COS.forEach((c, i) => { c.i = i; });
@@ -1589,20 +1627,35 @@
   function protestFeatures() {
     return { type: "FeatureCollection", features: PR.sites.map((s, i) => {
       const e = PR.events[s[0]], col = CAUSE_COL[CAUSES[e.c]] || "#999", r = e.mid ? clamp(3 + 3.1 * Math.log10(e.mid / e.ns / 100 + 1), 3, 15) : 3.4;
-      return { type: "Feature", geometry: { type: "Point", coordinates: [s[2], s[1]] }, properties: { i, e: s[0], t: e.t0, t1: e.end, col, fill: col, stroke: e.mid ? "#ffffff" : "#1a2226", r, lw: e.mid ? Math.log10(e.mid / e.ns + 1) : 0.5 } };
+      return { type: "Feature", geometry: { type: "Point", coordinates: [s[2], s[1]] }, properties: { i, e: s[0], t: e.t0, t1: e.end, col, fill: col, stroke: e.mid ? "#ffffff" : "#1a2226", r, lw: e.mid ? Math.log10(e.mid / e.ns + 1) : 0.5, cr: e.mid ? 1 : 0 } };
     }) };
   }
   function syncCompanyLayer() { if (map.getLayer("co-pts")) map.setLayoutProperty("co-pts", "visibility", curPlan.sites ? "visible" : "none"); }
+  // 0.8.2: crowd size heat. One protest's crowd sets the heat at its centre: 1,000 → a quarter, 10,000 → half,
+  // 100,000 → three quarters, 1 million → full (the key's numbers); nearby protests add up
+  const CROWD_HEAT = [[0.25, "#f6dfa8"], [0.5, "#f1a85c"], [0.75, "#d9543f"], [1, "#7a1f3d"]], CROWD_TICKS = ["1k", "10k", "100k", "1m+"];
+  function heatPaint(crowd) {
+    if (!map.getLayer("pr-heat")) return;
+    if (crowd) {
+      map.setPaintProperty("pr-heat", "heatmap-weight", ["interpolate", ["linear"], ["get", "lw"], 2, 0, 6, 1]);
+      map.setPaintProperty("pr-heat", "heatmap-intensity", 2.5);   // MapLibre's kernel peaks at about 0.4 × weight, so 2.5 makes one protest's heat match the key
+      map.setPaintProperty("pr-heat", "heatmap-color", ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(246,223,168,0)", 0.08, "rgba(246,223,168,0.5)"].concat(...CROWD_HEAT));
+    } else {
+      map.setPaintProperty("pr-heat", "heatmap-weight", ["interpolate", ["linear"], ["get", "lw"], 0, 0.15, 6, 1]);
+      map.setPaintProperty("pr-heat", "heatmap-intensity", ["interpolate", ["linear"], ["zoom"], 4, 0.8, 10, 2.2]);
+      map.setPaintProperty("pr-heat", "heatmap-color", ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(91,58,140,0)", 0.2, "#d2bde6", 0.45, "#ad8fd0", 0.7, "#8560b5", 1, "#3b1f63"]);
+    }
+  }
   function syncProtestLayer() {
     if (!map.getLayer("pr-pts")) return;
-    const on = curPlan.points || curPlan.heat, mode = curPlan.heat ? "heat" : "points";
-    const D = dayNum(state.date), W = PS.win, lo = D - W;
-    map.setFilter("pr-heat", ["all", ["<=", ["get", "t"], D], [">", ["get", "t1"], lo]]);
-    const pts = on && mode === "points", key = pts ? state.date + "|" + W : "";
+    const D = dayNum(state.date), W = PS.win, lo = D - W, crowd = curPlan.heat && curPlan.heat.id === "protest_crowd";
+    map.setFilter("pr-heat", ["all", ["<=", ["get", "t"], D], [">", ["get", "t1"], lo]].concat(crowd ? [["==", ["get", "cr"], 1]] : []));
+    if (syncProtestLayer.crowd !== crowd) { syncProtestLayer.crowd = crowd; heatPaint(crowd); }
+    const pts = !!curPlan.points, key = pts ? state.date + "|" + W : "";
     if (pts && key !== syncProtestLayer.key) { map.getSource("protests-cl").setData(protestWindowFeatures()); unspider(); }
     syncProtestLayer.key = key;
     ["pr-pts", "pr-new", "pr-cl"].forEach(id => map.setLayoutProperty(id, "visibility", pts ? "visible" : "none"));
-    map.setLayoutProperty("pr-heat", "visibility", on && mode === "heat" ? "visible" : "none");
+    map.setLayoutProperty("pr-heat", "visibility", curPlan.heat ? "visible" : "none");
     if (!pts) { unspider(); clusterMarkers(true); } else requestAnimationFrame(() => clusterMarkers());
     if (!$("prlist") || !prList || prList.el.hidden) return; renderProtestList();
   }
@@ -1703,7 +1756,7 @@
     (LAST.present[level] && LAST.present[level].has("__nm") ? `<div class="ndkey"><span><i class="sw" style="background:transparent;border:1px dashed var(--ink-3)"></i>Unfilled: not meaningful at this level</span></div>` : "") +
     (LAST.present[level] && LAST.present[level].has("__est") ? `<div class="ndkey"><span><i class="sw hatchsw"></i>Hatched: estimated (e.g. notional results on new boundaries)</span></div>` : "");
   let curPlan = { notes: [] };
-  function planMetrics() { return onPersps().flatMap(p => (PS.mapped[p] || []).filter(id => M[id] && PS.active[id] && M[id].nature !== "text").map(id => M[id])); }
+  function planMetrics() { return onPersps().flatMap(p => (PS.mapped[p] || []).filter(id => M[id] && !M[id].offMenu && PS.active[id] && M[id].nature !== "text").map(id => M[id])); }
   function isoMatch(iso, k) {
     switch (iso.ch) {
       case "hue": return k.hue === iso.v; case "vbl": return k.hue === iso.v[0] && k.sh === iso.v[1];
@@ -1721,6 +1774,7 @@
     const val = (m, c) => { if (!m) return null; const r = rOf(m, c); return r && r.v != null ? r.v : null; };
     const fillMs = [PL.hue, PL.shade, PL.grid, PL.diverge].filter(Boolean), hatch = PS.hatch !== false;
     let smax = 0; const sv = PL.size ? codes.map(c => { const v = val(PL.size, c); if (v > smax) smax = v; return v; }) : null;
+    (LAST.smax = LAST.smax || {})[level] = smax;   // 0.8.2: the key labels its circles with real values
     const present = new Set(), presentB = new Set(), isoS = state.iso;
     codes.forEach((c, i) => {
       const hv = val(PL.hue, c), shv = val(PL.shade, c), grv = val(PL.grid, c), dvv = val(PL.diverge, c), dtv = val(PL.dots, c), bgv = val(PL.badge, c);
@@ -1780,6 +1834,45 @@
   }
   const mpNote = m => m.id === "control" && CONTROL_HOW[state.level] ? `<div class="note" style="margin:-2px 0 4px">${esc(PLURAL_L[state.level] || "Areas")} show ${esc(CONTROL_HOW[state.level])}.</div>` : "";
   const PLURAL_L = { nation: "Nations", region: "Regions", council: "Councils", constituency: "Constituencies", ward: "Wards" };
+  // 0.8.2: numbers for the colours. Each party's vote share (and seats) in the area in focus, or the UK; click a party to map it
+  function shareKey(m) {
+    if (m.id === "council_seat_share") {
+      const sc = state.focus && P[state.focus] && isLocal(state.focus) ? state.focus : null; if (!sc) return `<div class="vsk-h">Seats by party</div><div class="note">Click a council to see each party's seats there.</div>`;
+      const r = compAt(sc, state.date); if (!r) return ""; const cur = pickOf(m.id);
+      return `<div class="vsk"><div class="vsk-h">Council seats, ${esc(nameOf(councilOf(sc)))} · ${esc(compWhen(r))}</div>${Object.entries(r[2]).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([p, n]) => vskRow(m, p, n / r[1], `${n} of ${r[1]} seats`, cur, `${n}`)).join("")}</div>`;
+    }
+    const sc = state.focus && P[state.focus] && WM_LEVELS.includes(lvlOf(state.focus)) ? state.focus : UKC;
+    const r = resultFor(sc, state.date); if (!r) return "";
+    const cur = m.pick === "party" ? pickOf(m.id) : null, L = r.t.list.filter(x => x[1] > 0).slice(0, 8);
+    return `<div class="vsk"><div class="vsk-h">Vote share, ${esc(nameOf(sc))} · ${esc(r.e.label)}${r.agg ? ` <small>seats</small>` : ""}</div>${L.map(([p, v, sh]) => vskRow(m, p, sh, `${fmtInt(v)} votes${r.agg ? `, ${r.seats[p] || 0} seats` : ""}`, cur, r.agg ? String(r.seats[p] || 0) : "")).join("")}
+      ${state.focus ? "" : `<div class="note">The whole UK. Click an area to see its own numbers.</div>`}</div>`;
+  }
+  const vskRow = (m, p, sh, tip, cur, extra) => `<button class="vsk-r${p === cur ? " on" : ""}"${m.pick === "party" ? ` data-vskpick="${m.id}" data-p="${esc(p)}"` : ""} title="${esc(partyName(p))}: ${esc(tip)}${m.pick === "party" ? " · click to map this party" : ""}"><i class="sw" style="background:${partyCol(p)}"></i><span class="vsk-n">${esc(partyName(p))}</span><span class="vsk-bar"><i style="width:${(100 * sh).toFixed(1)}%;background:${partyCol(p)}"></i></span><b>${pct1(100 * sh)}</b>${extra ? `<small>${esc(extra)}</small>` : ""}</button>`;
+  // 0.8.2: money is a story of who gave to whom. The key lists the biggest registered donations behind the circles
+  const moneyCache = {};
+  function moneyKey() {
+    const AM = window.AtlasMoney; if (!AM) return "";
+    const det = AM.detail; if (!det) { if (!moneyKey.loading) { moneyKey.loading = true; AM.loadDetail().then(() => renderLegend()).catch(() => {}); } return `<div class="mok"><div class="vsk-h">Who gave to whom</div><div class="note">Loading every registered donation…</div></div>`; }
+    const code = state.focus && P[state.focus] && ["constituency", "council"].includes(lvlOf(state.focus)) ? state.focus : null, Y = +state.date.slice(0, 4), lo = (Y - 4) + "-01-01", hi = state.date, ck = (code || "") + "|" + hi;
+    if (!moneyCache[ck]) {
+      const mps = code ? AM.seatMPs(code) : [], isMP = r => mps.some(x => x.mid === r[3] && x.s <= r[0] && (!x.e || r[0] < x.e));
+      const rows = det.rows.filter(r => r[0] >= lo && r[0] <= hi && (code ? r[6] === code || (r[2] === "M" && isMP(r)) : r[6] || r[2] === "M")).sort((a, b) => b[1] - a[1]);
+      const to = {}; rows.forEach(r => { const k = r[2] === "M" ? "mp:" + r[3] : r[3]; to[k] = (to[k] || 0) + r[1]; });
+      moneyCache[ck] = { top: rows.slice(0, 6), tot: rows.reduce((a, r) => a + r[1], 0), n: rows.length, to: Object.entries(to).sort((a, b) => b[1] - a[1]).slice(0, 4) };
+    }
+    const c = moneyCache[ck], mx = c.top.length ? c.top[0][1] : 1, who = r => r[2] === "M" ? AM.mpBtn(r[3]) : `<i class="sw" style="background:${AM.partyCol(r[3])}"></i>${esc(AM.partyName(r[3]))}${r[5] ? ` <small>${esc(r[5])}</small>` : ""}`;
+    return `<div class="mok"><div class="vsk-h">Who gave to whom${code ? ", " + esc(nameOf(code)) : ""} · ${Y - 4}–${Y}</div>
+      <div class="mok-sum"><b>${AM.gbp(c.tot)}</b> in ${fmtInt(c.n)} donations${code ? "" : " to local parties and MPs"}${c.to.length ? ` · most to ${c.to.map(([k, v]) => `${esc(AM.partyName(k))} ${AM.gbp(v)}`).join(", ")}` : ""}</div>
+      ${c.top.map(r => `<div class="mok-r"><span class="mok-w">${AM.donorBtn(r[4])} → ${who(r)}</span><span class="mok-bar"><i style="width:${(100 * r[1] / mx).toFixed(1)}%"></i></span><b>${AM.gbp(r[1])}</b><small>${esc(r[0].slice(0, 7))}</small></div>`).join("") || `<div class="note">None registered in these years.</div>`}
+      <div class="note">${code ? "Click a name for its card." : "The biggest across Britain. Click an area for its own."} “met ministers”: the donor also had registered meetings with ministers (lobbying). Electoral Commission.</div></div>`;
+  }
+  function crowdTop() {
+    const D = dayNum(state.date), seen = new Set(), es = [];
+    const inFocus = state.focus && P[state.focus] ? new Set(eventsIn(state.focus, state.date)) : null;
+    PR.sites.forEach(x => { const e = PR.events[x[0]]; if (seen.has(x[0]) || !e.mid || !(e.t0 <= D && e.end > D - PS.win)) return; if (inFocus && !inFocus.has(e)) return; seen.add(x[0]); es.push([x[0], e]); });
+    es.sort((a, b) => b[1].mid - a[1].mid);
+    return es.length ? `<div class="lg-top"><b>Biggest crowds${inFocus ? " in " + esc(nameOf(state.focus)) : ""}</b>${es.slice(0, 5).map(([i, e]) => `<button class="lg-row" data-prcard="${i}"><span>${esc(e.n)}</span><b>${fmtBig(e.mid)}</b></button>`).join("")}</div>` : "";
+  }
   function renderLegend() {
     const PL = curPlan, level = state.level, parts = [];
     const cats = (m, set) => [...(set || [])].filter(x => x !== "__nd" && x !== "__est" && x !== "__nm").sort((a, b) => m.cats().indexOf(a) - m.cats().indexOf(b));
@@ -1806,7 +1899,8 @@
     if (PL.diverge) parts.push(`<div class="lg">${lhead(PL.diverge)}<div class="ramp">${DIV.map((c, i) => `<i ${isoAttr("diverge", i)} style="background:${c}"></i>`).join("")}</div>${ticks(PL.diverge, level, 5)}<div class="note">Red below ${esc(PL.diverge.fmt(PL.diverge.mid))}, blue above.</div></div>`);
     if (PL.badge) { const ks = cats(PL.badge, LAST.presentB[level]); parts.push(`<div class="lg">${lhead(PL.badge)}<div class="cats2">${ks.map(k => `<span ${isoAttr("badge", k)}><i class="sw dot" style="background:${PL.badge.colour(k)}"></i>${esc(PL.badge.catName(k))}</span>`).join("")}</div><div class="note">Marker at each area's centre. Where it differs from the fill, the two disagree.</div></div>`); }
     if (PL.dots) parts.push(`<div class="lg">${lhead(PL.dots)}<div class="dotsw">${[0, 1, 2, 3, 4].map(k => `<span ${isoAttr("dots", k)}><canvas data-k="${k}" width="44" height="28"></canvas></span>`).join("")}</div>${ticks(PL.dots, level, 5)}</div>`);
-    if (PL.size) parts.push(`<div class="lg">${lhead(PL.size)}<div class="dots" style="--c:${PER[PL.size.p].hue}">${[6, 12, 20].map((r, i) => `<span><i style="width:${r * 1.4}px;height:${r * 1.4}px"></i>${["small", "", "large"][i]}</span>`).join("")}<span style="margin-left:auto">area of circle = value</span></div></div>`);
+    if (PL.size) { const sm = (LAST.smax || {})[level] || 0, f = PL.size.fmt || fmtInt, cmp = v => { const t = String(f(v)), pre = t.startsWith("£") ? "£" : ""; return v >= 1e6 ? pre + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + "m" : v >= 1e4 ? pre + Math.round(v / 1e3) + "k" : t; };
+      parts.push(`<div class="lg">${lhead(PL.size)}<div class="dots" style="--c:${PER[PL.size.p].hue}">${sm > 0 ? [sm / 16, sm / 4, sm].map(v => { const r = 3 + 19 * Math.sqrt(v / sm); return `<span><i style="width:${r * 2}px;height:${r * 2}px"></i>${esc(cmp(v))}</span>`; }).join("") : [6, 12, 20].map((r, i) => `<span><i style="width:${r * 1.4}px;height:${r * 1.4}px"></i>${["small", "", "large"][i]}</span>`).join("")}<span style="margin-left:auto">area of circle = value</span></div>${PL.size.id === "money_received" ? moneyKey() : ""}</div>`); }
     if (PL.sites) {
       const gs = [...new Set(COS.map(c => c.grp))].sort((a, b) => Object.keys(GRP_COL).indexOf(a) - Object.keys(GRP_COL).indexOf(b));
       const unloc = COS.filter(c => c.lat == null).length;
@@ -1818,7 +1912,12 @@
         inf_freight: Object.entries((window.ATLAS_FREIGHT || {}).colours || { EU: "#2b6cb0", "Other Europe & Mediterranean": "#7b4fa6", Americas: "#c0392b", Asia: "#e08a1e", Africa: "#2e8b57", Australasia: "#0f8b8d" }).map(([k, c]) => [c, k]) };
       PL.lines.forEach(m => parts.push(`<div class="lg">${lhead(m)}<div class="cats2">${(SW[m.id] || []).map(([c, l, dash]) => `<span><i class="sw ln${dash ? " dash" : ""}" style="--c:${c}"></i>${esc(l)}</span>`).join("")}</div>${m.id === "inf_freight" ? `<div class="note">Lines run to each partner country's main port; moving dots show the flow (more dots, more tonnes). ${esc((window.ATLAS_FREIGHT || {}).year || "")}, DfT.</div>` : ""}${plain && m.valid && m.valid() ? `<div class="note">${esc(m.valid())}</div>` : ""}</div>`));
     }
-    const ev = PL.points || PL.heat;
+    if (PL.heat && PL.heat.id === "protest_crowd") {   // 0.8.2: crowd size heat, with the numbers
+      parts.push(`<div class="lg">${lhead(PL.heat)}<div class="seg sm" role="group" aria-label="Time window">${[[365, "1y"], [1826, "5y"], [3652, "10y"], [99999, "All"]].map(([w, l]) => `<button data-win="${w}" class="${PS.win === w ? "on" : ""}">${l}</button>`).join("")}</div>
+        <div class="crowdramp"><div class="cr-bar" style="background:linear-gradient(90deg,rgba(246,223,168,.35),${CROWD_HEAT.map(c => c[1]).join(",")})"></div><div class="cr-ticks">${CROWD_TICKS.map(t => `<span>${t}</span>`).join("")}</div></div>
+        <div class="note">People in one protest at the warmest point; protests close together add up. ${esc(winLabel())}. Protests without a crowd estimate are left out.</div>${crowdTop()}</div>`);
+    }
+    const ev = PL.points || (PL.heat && PL.heat.id !== "protest_crowd" ? PL.heat : null);
     if (ev) {
       const present = new Set(); PR.sites.forEach(s => { const e = PR.events[s[0]], D = dayNum(state.date); if (e.t0 <= D && e.end > D - PS.win) present.add(e.c); });
       parts.push(`<div class="lg">${lhead(ev)}<div class="seg sm" role="group" aria-label="Time window">${[[365, "1y"], [1826, "5y"], [3652, "10y"], [99999, "All"]].map(([w, l]) => `<button data-win="${w}" class="${PS.win === w ? "on" : ""}">${l}</button>`).join("")}</div><button class="btn sm prl-open" data-prlist title="List the protests in this window, for the area in focus or the visible map">List</button>
@@ -1826,6 +1925,8 @@
         <div class="dots" style="--c:#8560b5">${[1000, 20000, 500000].map(v => { const r = clamp(3 + 3.1 * Math.log10(v / 100 + 1), 3, 15) * 1.3; return `<span><i style="width:${r * 2}px;height:${r * 2}px;background:#888"></i>${fmtBig(v)}</span>`; }).join("")}<span><i style="width:8px;height:8px;background:#888;border:1.6px solid #1a2226"></i>size unknown</span></div>
         <div class="note">Colour = cause, size = crowd; numbered rings are groups (click to zoom). Click a point for its card.</div>` : `<div class="note">Darker = more people protesting nearby, ${esc(winLabel())}.</div>`}</div>`);
     }
+    { const vm = planMetrics().find(m => m.group === G4 || m.id === "council_seat_share"); const vk = vm ? shareKey(vm) : ""; if (vk) parts.push(`<div class="lg lg-vsk">${vk}</div>`); }   // 0.8.2
+    if (!PL.size && planMetrics().some(m => m.id === "money_received")) parts.push(`<div class="lg">${moneyKey()}</div>`);
     const nd = noDataKey(level); if (nd && parts.length) parts[0] = parts[0].replace(/<\/div>$/, nd + "</div>");
     const unplaced = curPlan.notes.filter(n => !n.ch);
     if (unplaced.length) parts.push(`<div class="lg warn">${unplaced.map(n => esc(n.why)).join("<br>")}</div>`);
@@ -1909,6 +2010,8 @@
 
   legend.addEventListener("toggle", e => { if (e.target.classList.contains("why")) legendWhyOpen = e.target.open; }, true);
   legend.addEventListener("click", e => {
+    const vp = e.target.closest("[data-vskpick]"); if (vp) { PS.pick[vp.dataset.vskpick] = vp.dataset.p; for (const k in qCache) if (k.startsWith(vp.dataset.vskpick + "|")) delete qCache[k]; repaint(); return; }
+    const pc = e.target.closest("[data-prcard]"); if (pc) { openProtestCard(+pc.dataset.prcard); return; }
     const i = e.target.closest("[data-iso]");
     if (i) { const v = JSON.parse(i.dataset.iso); state.iso = state.iso && JSON.stringify(state.iso) === JSON.stringify(v) ? null : v; LEVELS.forEach(paintLevel); renderLegend(); toast(state.iso ? "Showing only those areas. Click again to show all." : "Showing all areas."); return; }
     const rm = e.target.closest("[data-lrm]"); if (rm) { const m = M[rm.dataset.lrm]; if (m && isMapped(m.id)) { toggleMapped(m.id); toast(`${m.label} taken off the map.`); } return; }
@@ -2280,6 +2383,7 @@
     if (p.level === "zone") return `${pinned ? `<button class="x" data-close aria-label="Close">×</button>` : ""}<div class="lvl"><span>${esc(p.kind || "Custom zone")}</span><span>${esc(code)}</span></div><h3>${pinned ? ent(nameOf(code).replace(/ \(.*\)$/, "")) : esc(nameOf(code))}</h3>${zoneBody(code)}
       ${pinned ? `<div class="acts"><button class="btn primary" data-chartzone>Chart these companies</button><button class="btn" data-zoom>Zoom to</button></div>` : `<div class="hint2">Click to explore this district</div>`}`;
     const items = CORE.map(f => { let v = value(code, f.id); if (past && (f.id === "ruler" || f.id === "party")) v = { text: M[f.id].get(code, d).text, yr: "" }; return `<li><b>${esc(f.label)}:</b> ${f.id === "ruler" ? linkPerson(v.text) : esc(v.text)}${v.yr ? ` <small>(${esc(v.yr)})</small>` : ""}${v.edited ? ` <span class="tag">edited</span>` : ""}</li>`; });
+    if (p.level === "constituency") { const t = M.mp_tenure.get(code, d); if (t && t.v != null) items.splice(CORE.findIndex(f => f.id === "ruler") + 1, 0, `<li><b>In the seat:</b> ${esc(t.text.replace(/ \(.*?, since/, " (since"))}</li>`); }   // 0.8.2: off the menus, kept here
     ((rec && rec.fields) || []).forEach(f => { if (f.label) items.push(`<li><b>${esc(f.label)}:</b> ${esc(f.value || "—")}</li>`); });
     const onMap = planMetrics().filter(m => m.nature !== "line"); // everything ticked shows in the card, drawn or not (networks are lines, not values)
     const mapped = onMap.map(m => { const r = m.get(code, d); return `<li${r && r.nm ? ' class="nm"' : ""}>${swatchOf(m, code)}<span><b>${esc(m.label)}:</b> ${esc(r && (r.v != null || !EN.isNum(m) || r.nm) ? r.text : "No data")}${estTag(r)}${r && r.note ? ` <small>· ${m.id === "control" ? linkPerson(r.note) : esc(r.note)}</small>` : ""}${r && r.yr ? ` <small>(${esc(r.yr)})</small>` : ""}${r && r.nm ? "" : sparkFor(m, code)}${pinned && m.how && !(r && r.nm) && PS.detail !== "simple" ? `<small class="how">How this is worked out: ${esc(m.how)}</small>` : ""}${pinned ? infoBtn(m.id) : ""}${pinned && r && r.detail ? `<div class="mdet">${r.detail}</div>` : ""}</span></li>`; });
@@ -2630,7 +2734,7 @@
     syncFocusColour(); veil.classList.add("on"); document.body.classList.add("focused");
     card.className = "card pinned"; card.innerHTML = cardHTML(code, true); card.hidden = false; hist.hidden = true;
     if (!(opts && opts.noFly)) flyTo(code, 0, true);
-    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList(); notifyApps(); syncNewsSoon();
+    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList(); notifyApps(); syncNewsSoon(); renderLegend();   // 0.8.2: the key's numbers follow the focus
   }
   function unfocus() {
     if (!state.focus && !state.pinned) return;
@@ -2638,7 +2742,7 @@
     veil.classList.remove("on"); document.body.classList.remove("focused"); veil.style.clipPath = ""; veil.style.webkitClipPath = ""; mind.innerHTML = ""; card.hidden = true; hist.hidden = true;
     setP("focus-lift", "fill-opacity", 0); setP("focus-edge", "line-opacity", 0); setP("focus-shadow", "line-opacity", 0);
     setTimeout(() => { if (!state.focus && map.getSource("focus")) map.getSource("focus").setData({ type: "FeatureCollection", features: [] }); }, 320);
-    renderTray(); renderProtestList(); notifyApps(); syncNewsSoon();
+    renderTray(); renderProtestList(); notifyApps(); syncNewsSoon(); renderLegend();
   }
   function syncFocusColour() { if (!FX) return; const c = LAST.fc[FX.code]; setP("focus-lift", "fill-color", c || "#ffffff"); }
   function updateOverlay() {
@@ -3584,12 +3688,11 @@
   const CAVEAT = {
     gdp: "Output is counted where it is produced, so places where many people commute in to work (the City of London, Westminster) look far bigger than their residents' incomes.",
     gdp_per_head: "Commuting: GDP is counted where people work but divided by the people who live there, so city centres look very rich and commuter towns poorer than their residents are. GDHI (household income) is the better measure of living standards; it isn't loaded yet.",
-    registration_ratio: "Not a measure of registration completeness: the electorate includes some people who aren't adults resident in the seat (e.g. overseas electors), and some residents can't register (non-qualifying nationals).",
     protest_events: "Only notable protests with a Wikipedia article, checked to be in the UK: most protests never get one, so absence on the map isn't absence of protest.",
     density: "Area includes land that nobody lives on (moors, lakes), so rural councils look emptier than their towns are.",
     control: "Means different things at each level: the government for nations, the mayor or the UK Government for regions, council control for councils and wards, the MP's party for constituencies.",
   };
-  ["protest_count", "protest_rate", "protest_largest", "protest_people", "protest_cause", "protest_align", "protest_trend", "protest_diversity", "protest_opposition"].forEach(k => { CAVEAT[k] = CAVEAT.protest_events; });
+  ["protest_count", "protest_crowd", "protest_people", "protest_cause", "protest_align", "protest_trend", "protest_opposition"].forEach(k => { CAVEAT[k] = CAVEAT.protest_events; });
   const infoBtn = (id, what) => `<button type="button" class="ib-i" data-info="${id}" title="About ${esc(what || (M[id] ? M[id].label : id))}" aria-label="About ${esc(what || (M[id] ? M[id].label : id))}">ⓘ</button>`;
   const helpBtn = (sec, what) => `<button type="button" class="ib-i hq" data-help="${sec}" title="${esc(what || "Help")}" aria-label="${esc(what || "Help")}">?</button>`;
   function sampleValue(m) { for (const c of [UKC, "E92000001", "E12000007", "E06000023", "E08000025"]) { try { const r = m.get(c, state.date) || m.get(c, TODAY); if (r && r.v != null && !r.nm) return r; } catch (e) {} } return null; }

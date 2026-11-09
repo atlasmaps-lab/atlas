@@ -133,7 +133,7 @@
   function searchDonors(q) { q = q.toLowerCase(); return Object.entries(MO.donors).filter(([, d]) => d[0].toLowerCase().includes(q)).sort((a, b) => b[1][3] - a[1][3]).slice(0, 8).map(([id]) => id); }
 
   window.AtlasMoney = {
-    init(c) { ctx = c; document.addEventListener("click", e => { if (e.target.closest("#card, #ecard, .ap-body, .fwin")) onClick(e); }); },
+    init(c) { ctx = c; document.addEventListener("click", e => { if (e.target.closest("#card, #ecard, .ap-body, .fwin, #legend")) onClick(e); }); },
     data: MO, loadDetail, get detail() { return detail; }, gbp, day, areaLine, placeTotal, companyBox, openMP, openParty, openDonor, openPlace, searchDonors, seatMPs, partyName, partyCol, donorBtn, mpBtn,
   };
 })();
