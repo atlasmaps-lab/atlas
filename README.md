@@ -1,6 +1,33 @@
-# Atlas 0.8.2.1 — United Kingdom
+# Atlas 0.8.3 — United Kingdom
 
 Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
+
+## What's new in 0.8.3
+
+**A new perspective: Environmental.** Sixteen metrics in five categories, under Perspectives → Environmental. They work like every other metric: tick one to put it on the map, follow it over time with the time bar, compare places, chart and export it.
+
+| Category | Metrics | Areas | Years | Source |
+|---|---|---|---|---|
+| Greenhouse gas emissions | Emissions per person; total emissions; change since 2005; transport and home emissions per person; land use and forestry (net, per km²) | UK councils, regions, nations, UK | 2005–2023 | DESNZ (Department for Energy Security and Net Zero), local authority greenhouse gas emissions |
+| Renewable electricity | Renewable capacity; solar capacity; renewable electricity per household; installations per 1,000 homes | UK councils, regions, nations, UK | 2014–2025 | DESNZ, Regional Renewable Statistics |
+| Waste and recycling | Household waste recycled (%); rubbish per household | England: councils (2010-11 on), regions and England (2000-01 on) | to 2024-25 | Defra (Department for Environment, Food & Rural Affairs), local authority collected waste |
+| Air quality | Fine particle pollution (PM2.5); deaths linked to particle pollution | England: councils, regions, England | 2018–2024 | OHID (Office for Health Improvement and Disparities) Fingertips |
+| Electric vehicles | Public EV chargers; chargers per 100,000 people | UK councils, regions, nations, UK; chargers also for constituencies | 1 July 2026 | DfT (Department for Transport), EV charging infrastructure statistics (from Zapmap) |
+
+- **Regions, nations and the UK:** emissions and renewables are added up from the councils, so they always match; recycling, air quality and EV chargers use the publishers' own regional and national figures.
+- **England-only sources** (recycling, air quality) show Scotland, Wales and Northern Ireland as grey "No data".
+- **Financial years:** waste figures for 2024-25 sit at 2024 on the time bar (the year they start).
+- **Councils merged since** (e.g. Allerdale into Cumberland in 2023) have no figures before the merger: nothing is shared out between old and new boundaries.
+- Checked against the publishers' own totals: UK public EV chargers on 1 July 2026 (121,171), England's recycling rate in 2024-25 (42.0%).
+
+Rebuild the data with:
+
+```
+python3 pipeline/fetch_environment.py     # downloads into pipeline/sources/raw/environment/ and records each file in MANIFEST.csv
+python3 pipeline/build_environment.py     # writes data/environment.js
+```
+
+`data/environment.js` uses the same format as `data/extra.js`, so `app.js` reads both with the same code. The version label in the header reads 0.8.3.
 
 ## What's new in 0.8.2.1
 
@@ -684,4 +711,4 @@ pipeline/                        fetch_*.py, build*.py, import_acled.py, xlsx_re
 
 ## Credits
 
-Contains OS data © Crown copyright and database right 2026. © OpenStreetMap contributors. Tiles and imagery © MapTiler. ONS data and boundaries: Open Government Licence v3.0. Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Health indicators: Office for Health Improvement and Disparities (Fingertips), Open Government Licence v3.0. House prices: HM Land Registry data © Crown copyright and database right 2026, Open Government Licence v3.0 (UK HPI includes Registers of Scotland and Land & Property Services Northern Ireland data). Census 2021, rents, affordability, public sector finances: ONS, Open Government Licence v3.0. Dwelling stock and council finance: MHCLG, Open Government Licence v3.0. Political and protest information: Wikipedia (CC BY-SA 4.0) and Wikidata (CC0). Map engine: MapLibre GL JS.
+Contains OS data © Crown copyright and database right 2026. © OpenStreetMap contributors. Tiles and imagery © MapTiler. ONS data and boundaries: Open Government Licence v3.0. Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Health indicators: Office for Health Improvement and Disparities (Fingertips), Open Government Licence v3.0. House prices: HM Land Registry data © Crown copyright and database right 2026, Open Government Licence v3.0 (UK HPI includes Registers of Scotland and Land & Property Services Northern Ireland data). Census 2021, rents, affordability, public sector finances: ONS, Open Government Licence v3.0. Environmental perspective: greenhouse gas emissions and renewable electricity, DESNZ; household waste, Defra; air pollution, OHID Fingertips; public EV chargers, DfT (from Zapmap); all Open Government Licence v3.0. Dwelling stock and council finance: MHCLG, Open Government Licence v3.0. Political and protest information: Wikipedia (CC BY-SA 4.0) and Wikidata (CC0). Map engine: MapLibre GL JS.
