@@ -1,6 +1,13 @@
-# Atlas 0.9.1 — United Kingdom
+# Atlas 0.9.2 — United Kingdom
 
 Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
+
+## What's new in 0.9.2
+
+- **Header tabs work as tabs, in every view.** Clicking one opens its panel in place of the last one, so windows no longer pile up, and puts what the tab is about on the map. For example, Health → Causes of death maps early deaths, Economic → Regions maps GDP per head by region, Politics → Referendums maps the EU Leave vote, and Markets → Places & markets flies to the City with the FTSE 100 head offices. Tabs that are calculators or feeds (DCF, News, Feed, Directions…) leave the map as it is.
+- **Atlas Environment:** Floods, Coast, Heat and Conservation each show only their own layer; Timeline brings back the layers you ticked there. Coast moves the timeline to today, since erosion is a forecast.
+- **The Environment timeline slider can be dragged** (before, it only moved by clicking, because the panel redrew it on every step).
+- For view owners: a panel's `map` is either `{ level, metrics: [...], view: [[lon, lat], zoom] }` or a function `ctx => …`; see `openFromBar` in `app.js`. Each view's tabs are listed in `tests/test_tabs.py`.
 
 ## What's new in 0.9.1
 

@@ -340,13 +340,13 @@
     panels: [
       { id: "election", title: "Election", live: true, render: election, onOpen: electionOpen, min: { w: 400, h: 300 } },
       { id: "seat", title: "Seat explorer", render: seat, onOpen: seatOpen, min: { w: 420, h: 320 } },
-      { id: "councils", title: "Councils", render: councils, min: { w: 460, h: 360 } },
-      { id: "projection", title: "Projection", render: projection, min: { w: 420, h: 320 } },
+      { id: "councils", map: {"level": "council", "metrics": ["control"]}, title: "Councils", render: councils, min: { w: 460, h: 360 } },
+      { id: "projection", map: {"level": "constituency", "metrics": ["proj_winner"]}, title: "Projection", render: projection, min: { w: 420, h: 320 } },
       { id: "news", title: "News", render: news, min: { w: 420, h: 320 } },
-      { id: "money", title: "Money", blurb: "Donations, loans, MPs' interests and donors with public contracts", render: moneyPanel, min: { w: 460, h: 380 } },
-      { id: "referendums", title: "Referendums", render: referendums },
-      { id: "protests", title: "Protests", render: protests },
+      { id: "money", map: {"level": "constituency", "metrics": ["money_received"]}, title: "Money", blurb: "Donations, loans, MPs' interests and donors with public contracts", render: moneyPanel, min: { w: 460, h: 380 } },
+      { id: "referendums", map: {"level": "council", "metrics": ["eu_leave"]}, title: "Referendums", render: referendums },
+      { id: "protests", map: {"level": "council", "metrics": ["control", "protest_events"]}, title: "Protests", render: protests },
     ],
-    tools: [{ id: "swing", title: "Swingometer", blurb: "What if national shares changed? See which seats would change hands (uniform national swing)", render: swing, min: { w: 400, h: 380 } }],
+    tools: [{ id: "swing", map: {"level": "constituency", "metrics": ["uns_winner"]}, title: "Swingometer", blurb: "What if national shares changed? See which seats would change hands (uniform national swing)", render: swing, min: { w: 400, h: 380 } }],
   });
 })();
