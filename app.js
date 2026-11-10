@@ -2065,7 +2065,7 @@
   }
   function mapOnly(ids) { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.filter(id => M[id]).forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); }
   // ---------- 1.8: perspective apps ----------
-  const APP_FOR = { political: "politics", economic: "economic", social: "social", markets: "markets", health: "health", transport: "transport" };
+  const APP_FOR = { political: "politics", economic: "economic", social: "social", markets: "markets", health: "health", transport: "transport", environment: "environment" };
   const appHref = pid => location.pathname + "#app=" + (APP_FOR[pid] || pid);
   const appName = pid => { const d = window.AtlasApps && AtlasApps.get(APP_FOR[pid]); return d ? d.name : "Atlas " + PER[pid].name; };
   const APP = (() => { // the open app: its module if there is one, otherwise just the perspective on its own
@@ -4676,7 +4676,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.8.3</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.8.4</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));

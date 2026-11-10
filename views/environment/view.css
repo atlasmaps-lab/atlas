@@ -1,0 +1,35 @@
+/* Atlas Environment: styles for this view only */
+.env-tl { margin-bottom: 8px; }
+.env-when { display: flex; align-items: baseline; gap: 10px; }
+.env-play { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--rule); background: var(--solid); color: var(--ink); cursor: pointer; font-size: 12px; align-self: center; }
+.env-year { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.env-mode { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); }
+.env-range { width: 100%; margin: 8px 0 2px; accent-color: #4f772d; }
+.env-ticks { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-3); }
+.env-future, .env-heat { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 8px; font-size: 12px; }
+.env-future > span, .env-heat > span { color: var(--ink-3); margin-right: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.env-future button, .env-heat button, .apppanel .ap-row button { border: 1px solid var(--rule); background: var(--solid); color: var(--ink); border-radius: 14px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.env-future button.on { background: #c0392b; border-color: #c0392b; color: #fff; }
+.env-heat button.on { background: #e8592b; border-color: #e8592b; color: #fff; }
+.apppanel .ap-row button.on { background: #c0392b; border-color: #c0392b; color: #fff; }
+.env-heat .ap-note { flex-basis: 100%; }
+.env-layers { display: grid; gap: 3px; margin: 10px 0 6px; font-size: 12.5px; }
+.env-layers label { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+.env-layers i { width: 10px; height: 10px; border-radius: 2px; background: var(--c); flex: none; }
+.env-layers small { color: var(--ink-3); }
+.env-sum p { font-size: 12.5px; margin: 4px 0; }
+.env-key { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--ink-2); margin-top: 6px; }
+.env-key i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.env-bars { width: 100%; height: 104px; color: var(--ink-3); display: block; margin: 4px 0 8px; }
+.env-list { margin: 4px 0 8px; padding-left: 20px; font-size: 12.5px; display: grid; gap: 3px; }
+.env-list button { border: 0; background: none; padding: 0; color: var(--ink); font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 2px; }
+.env-list small { color: var(--ink-3); }
+.env-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 6px 0; }
+.env-tab th { text-align: left; font-size: 11px; color: var(--ink-3); font-weight: 600; padding: 3px 4px; }
+.env-tab td { padding: 3px 4px; border-top: 1px solid var(--rule); vertical-align: top; }
+.env-tab tr.on td { font-weight: 700; }
+.env-tab button { border: 0; background: none; padding: 0; color: var(--ink); font: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: var(--rule); }
+.env-cov td.gap { color: var(--ink-3); text-align: center; }
+.env-bar { display: inline-block; height: 8px; border-radius: 2px; background: #e8592b; min-width: 2px; }
+.env-pop .maplibregl-popup-content { font-size: 12.5px; line-height: 1.4; }
+.env-mini { border-collapse: collapse; margin: 4px 0; font-size: 12px; } .env-mini td { padding: 1px 8px 1px 0; } .env-mini tr.on td { font-weight: 700; }
