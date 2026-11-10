@@ -49,6 +49,7 @@
       { id: "people", title: "Statistics", blurb: "Population, change, density and age for the place in focus", live: true, render: people },
       { id: "deprivation", title: "Deprivation", blurb: "English Indices of Deprivation 2025, overall and by domain", live: true, render: deprivation, min: { w: 480, h: 380 } },
       { id: "change", title: "Population change", live: true, render: change },
+      { id: "census", title: "Census profile", blurb: "Every Census 2021 category for the place in focus, against its region and England and Wales", live: true, render: (ctx, el) => window.AtlasProfile ? AtlasProfile.panel(["cen_ethnic", "cen_religion", "cen_birth", "cen_language", "cen_english", "cen_age", "cen_nssec", "cen_occupation", "cen_activity", "cen_quals", "cen_tenure", "cen_households"], { what: "Category" })(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 560, h: 420 } },
     ],
     tools: [{ id: "pyramid", title: "Population pyramid", render: pyramid }],
   });

@@ -1,0 +1,31 @@
+# Atlas 0.9: refresh trade in goods (HMRC publishes each month's figures around the middle of the next month but one),
+# services, FDI and income flows (ONS, DBT). Runs on the 20th of each month.
+name: Trade and investment data
+on:
+  schedule:
+    - cron: "17 6 20 * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python pipeline/trade_fetch.py
+      - run: python pipeline/build_trade.py
+      - run: python pipeline/fetch_investment.py
+      - name: Commit if changed
+        run: |
+          git config user.name "atlas-data-bot"
+          git config user.email "atlas-data-bot@users.noreply.github.com"
+          git add data/trade.js data/trade_detail.js data/trade_firms.js data/investment.js pipeline/sources/MANIFEST.csv pipeline/reports/validation_trade.md pipeline/reports/validation_investment.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Trade and investment data: $(date -u +%F)"
+            git pull --rebase
+            git push
+          fi

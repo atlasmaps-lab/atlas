@@ -16,6 +16,11 @@ OPL = "Open Parliament Licence v3.0"
 
 def sha256(path):
     h = hashlib.sha256()
+    if os.path.isdir(path):   # a folder of downloads: hash the names and sizes of what's in it
+        for n in sorted(os.listdir(path)):
+            f = os.path.join(path, n)
+            if os.path.isfile(f): h.update(f"{n}\t{os.path.getsize(f)}\n".encode())
+        return h.hexdigest()
     with open(path, "rb") as fh:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             h.update(chunk)

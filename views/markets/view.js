@@ -160,10 +160,19 @@
     const body = el.querySelector(".calc-body"); cur.render(ctx, body);
     el.querySelector(".calc-tabs").onclick = e => { const b = e.target.closest("[data-calc]"); if (b) { calculator.at = b.dataset.calc; calculator(ctx, el); } };
   }
+  const TR = id => (ctx, el) => window.AtlasTrade ? AtlasTrade[id](ctx, el) : (el.innerHTML = "<p class='ap-note'>The trade data didn't load.</p>");
   window.AtlasApps && AtlasApps.register({
     id: "markets", name: "Atlas Markets", perspective: "markets", accent: "#a07a12", dataNeeds: ["ATLAS_MARKETS"],
-    init(ctx) { ctx.mapOnly(["market_sites", "market_count"]); ctx.setLevel("council"); ctx.view([-0.11, 51.513], 10.6); ctx.openPanel("overview"); },
+    // 0.9: trade first (what the UK sells and buys, with whom, through where), then companies and markets
+    init(ctx) { if (window.AtlasTrade && ctx.trade && ctx.trade.data) { ctx.mapOnly(["trade_routes_exp"]); ctx.view([12, 38], 1.7); ctx.openPanel("trade"); } else { ctx.mapOnly(["market_sites", "market_count"]); ctx.setLevel("council"); ctx.view([-0.11, 51.513], 10.6); ctx.openPanel("overview"); } },
     panels: [
+      { id: "trade", title: "Trade", blurb: "Exports, imports and the balance; top products and partners; what changed; where the UK depends on one supplier", render: TR("overview"), min: { w: 460, h: 420 } },
+      { id: "products", title: "Products", blurb: "Every product the UK trades, from 97 chapters down to 9,000 product codes, with buyers, sellers, ports and tariffs", render: TR("products"), min: { w: 480, h: 420 } },
+      { id: "partners", title: "Partners", blurb: "Every country: what the UK sells them and buys from them, over time", render: TR("partners"), min: { w: 440, h: 380 } },
+      { id: "ports", title: "Ports & routes", blurb: "UK gateways by value and mode, with routes on the map", render: TR("ports"), min: { w: 440, h: 360 } },
+      { id: "investment", title: "Investment", blurb: "Foreign direct investment both ways: who owns what, by country and industry; new investment projects and jobs by region", render: TR("investment"), min: { w: 460, h: 420 } },
+      { id: "income", title: "Income flows", blurb: "Profits sent home and kept, dividends both ways, all income and transfers across the border", render: TR("income"), min: { w: 460, h: 420 } },
+      { id: "traders", title: "Traders near you", blurb: "Businesses HMRC lists as exporting or importing, in the council in focus", live: true, render: TR("firms"), min: { w: 440, h: 360 } },
       { id: "overview", title: "Market overview", render: overview, def: () => ({ x: innerWidth - 440 - 16, y: 56, w: 440, h: Math.round(innerHeight * 0.68) }) },
       { id: "companies", title: "Companies & screener", render: companies, min: { w: 420, h: 280 } },
       { id: "places", title: "Places & markets", render: places },

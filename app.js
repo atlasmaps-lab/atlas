@@ -482,7 +482,70 @@
     return `<div class="compbar">${L.map(([p, v]) => `<i style="width:${(100 * v / tot).toFixed(2)}%;background:${partyCol(p)}" title="${esc(partyName(p))}: ${r.agg ? v + " seats" : fmtInt(v) + " votes"}"></i>`).join("")}</div><small>${L.slice(0, 5).map(([p, v]) => `${esc(partyName(p))} ${r.agg ? v : pct1(100 * v / tot)}`).join(" · ")}</small>`; };
   const wm = o => def(Object.assign({ p: "political", group: G4, temporal: "election", levels: WM_LEVELS, nmText: WM_NM, source: WM_SRC }, o));
   const PS_PICK_DEF = { council_seat_share: "lab", ge_share: "lab", ge_swing_butler: "con-lab", ge_swing_steed: "con-lab" };
-  const pickOf = id => (PS.pick && PS.pick[id]) || PS_PICK_DEF[id];
+  const pickOf = id => { const m = M[id], k = (m && m.pickKey) || id; return (PS.pick && PS.pick[k]) || PS_PICK_DEF[k] || (BD[k] ? BD[k].defPick || BD[k].cats()[0] : undefined); };
+  const pickKeyOf = m => m.pickKey || m.id;
+  // ---------- 0.9: breakdowns ----------
+  // A breakdown is one total split into categories (exports by product, jobs by industry, residents by ethnic group…).
+  // Each perspective lists its breakdowns in window.ATLAS_BREAKDOWNS (data/bd_*.js), as plain specs:
+  //   { id, p, group, label, unit ("people", "£", "jobs"…), cats(), name(k), colour(k), of(code, d, H) -> {cat: value} | null,
+  //     levels?, valid?, sumUp? (regions, nations and the UK add up their councils), temporal?, span?, source, how, desc, defPick? }
+  // and Atlas makes three metrics from each: "<label>: share (choose)", "<label>: largest" and "<label>: specialisation
+  // (choose)" (the share here ÷ the share in the UK). The key lists every category with its number; click one to map it.
+  const BD = {}, bdCache = {};
+  const BD_H = { P: id => P[id], UKC: () => UKC, level: c => P[c] && P[c].level };
+  const bdTotal = r => { let t = 0; for (const k in r) t += r[k] || 0; return t; };
+  function bdOf(o, code, d) {
+    const ck = o.id + "|" + code + "|" + d.slice(0, 7); if (ck in bdCache) return bdCache[ck];
+    let r = o.of(code, d, BD_H) || null; const lv = P[code] && P[code].level;
+    if (!r && o.sumUp && (lv === "region" || lv === "nation" || lv === "country")) {
+      const acc = {}; let n = 0;
+      for (const c in P) { const p = P[c]; if (p.level !== "council" || p.to) continue; if (lv === "region" ? p.parent !== code : lv === "nation" ? p.nation !== code : false) continue;
+        const x = o.of(c, d, BD_H); if (!x) continue; n++; for (const k in x) acc[k] = (acc[k] || 0) + (x[k] || 0); }
+      r = n ? acc : null;
+    }
+    if (Object.keys(bdCache).length > 5000) for (const k in bdCache) delete bdCache[k];
+    return (bdCache[ck] = r);
+  }
+  const bdFmt = (o, v) => o.fmtV ? o.fmtV(v) : o.unit === "£" ? fmtGBP(v) : fmtInt(v) + (o.unit ? " " + o.unit : "");
+  const fmtGBP = v => { const a = Math.abs(v); return (v < 0 ? "−" : "") + "£" + (a >= 1e9 ? (a / 1e9).toFixed(a >= 1e10 ? 0 : 1) + "bn" : a >= 1e6 ? (a / 1e6).toFixed(a >= 1e7 ? 0 : 1) + "m" : a >= 1e4 ? Math.round(a / 1e3) + "k" : fmtInt(a)); };
+  function bdBar(o, r, n) { // a stacked bar and the top few, for cards
+    const t = bdTotal(r); if (!t) return ""; const L = Object.entries(r).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+    return `<div class="compbar">${L.slice(0, 24).map(([k, v]) => `<i style="width:${(100 * v / t).toFixed(2)}%;background:${o.colour(k)}" title="${esc(o.name(k))}: ${esc(bdFmt(o, v))} (${pct1(100 * v / t)})"></i>`).join("")}</div><small>${L.slice(0, n || 5).map(([k, v]) => `${esc(o.name(k))} ${pct1(100 * v / t)}`).join(" · ")}</small>`;
+  }
+  function defBreakdown(o) {
+    if (BD[o.id]) return; BD[o.id] = o;
+    const base = { p: o.p, group: o.group, levels: o.levels, nmText: o.nmText, valid: o.valid, source: o.source, temporal: o.temporal || "static", span: o.span, bd: o.id, pickKey: o.id };
+    const nm = k => o.name(k);
+    def(Object.assign({}, base, { id: o.id + "_share", label: `${o.label}: share (choose)`, scale: "ratio", nature: "share", fmt: pct1, pick: "bd", desc: `The chosen category's share of ${o.label.toLowerCase()}; choose it in the key`,
+      how: (o.how ? o.how + ". " : "") + "Share = the category ÷ the total for the area",
+      get(code, d) { const r = bdOf(o, code, d); if (!r) return null; const t = bdTotal(r); if (!t) return null; const k = pickOf(this.id), v = 100 * (r[k] || 0) / t;
+        return { v, text: `${pct1(v)} ${nm(k)} (${bdFmt(o, r[k] || 0)} of ${bdFmt(o, t)})`, detail: bdBar(o, r), yr: o.yr ? o.yr(code, d) : undefined }; } }));
+    def(Object.assign({}, base, { id: o.id + "_top", label: `${o.label}: largest`, scale: "nominal", nature: "category", desc: `The biggest category of ${o.label.toLowerCase()} in each area`,
+      colour: k => o.colour(k), catName: nm, cats: () => o.cats(),
+      get(code, d) { const r = bdOf(o, code, d); if (!r) return null; const t = bdTotal(r); if (!t) return null; const k = Object.keys(r).sort((a, b) => (r[b] || 0) - (r[a] || 0))[0];
+        return { v: k, text: `${nm(k)}: ${bdFmt(o, r[k])} (${pct1(100 * r[k] / t)})`, counts: r, detail: bdBar(o, r), yr: o.yr ? o.yr(code, d) : undefined }; } }));
+    def(Object.assign({}, base, { id: o.id + "_lq", label: `${o.label}: specialisation (choose)`, scale: "interval", nature: "rate", mid: 1, pick: "bd", fmt: v => v.toFixed(2) + "×",
+      desc: `How concentrated the chosen category is here compared with the UK: above 1, more than the UK's share`, how: "Location quotient: the category's share here ÷ its share in the UK (or the widest area with data)",
+      get(code, d) { const r = bdOf(o, code, d), u = bdOf(o, o.base ? o.base(code) : UKC, d); if (!r || !u) return null; const k = pickOf(this.id), t = bdTotal(r), tu = bdTotal(u); if (!t || !tu || !u[k]) return null;
+        const sh = (r[k] || 0) / t, su = u[k] / tu, v = sh / su; return { v, text: `${v.toFixed(2)}× the ${o.baseName || "UK"} share (${pct1(100 * sh)} here, ${pct1(100 * su)} ${o.baseName || "UK"}) · ${nm(k)}` }; } }));
+  }
+  function breakdownKey(m) { // every category with its number, for the area in focus or the UK; click one to map it
+    const o = BD[m.bd]; if (!o) return "";
+    const sc = state.focus && P[state.focus] && bdOf(o, state.focus, state.date) ? state.focus : UKC, r = bdOf(o, sc, state.date); if (!r) return "";
+    const t = bdTotal(r), cur = pickOf(m.id), q = (BDK.q[o.id] || "").toLowerCase(), all = BDK.all[o.id];
+    let L = Object.entries(r).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]); const n = L.length;
+    if (q) L = L.filter(([k]) => nm0(o, k).toLowerCase().includes(q) || String(k).toLowerCase().startsWith(q));
+    const shown = all || q ? L.slice(0, 200) : L.slice(0, 12);
+    return `<div class="vsk bdk"><div class="vsk-h">${esc(o.label)}, ${esc((o.scopeName && o.scopeName(sc)) || nameOf(sc))} · ${esc(bdFmt(o, t))}${o.yr ? ` <small>${esc(o.yr(sc, state.date) || "")}</small>` : ""}</div>
+      ${n > 14 ? `<input class="bdk-q" data-bdq="${o.id}" placeholder="Find a category (${n})" value="${esc(BDK.q[o.id] || "")}">` : ""}
+      ${shown.map(([k, v]) => `<button class="vsk-r${k === cur ? " on" : ""}" data-bdpick="${o.id}" data-k="${esc(k)}" title="${esc(nm0(o, k))}: ${esc(bdFmt(o, v))} · click to map its share"><i class="sw" style="background:${o.colour(k)}"></i><span class="vsk-n">${esc(nm0(o, k))}</span><span class="vsk-bar"><i style="width:${(100 * v / L[0][1] * (L[0][1] / t)).toFixed(1)}%;background:${o.colour(k)}"></i></span><b>${pct1(100 * v / t)}</b><small>${esc(bdShort(o, v))}</small></button>`).join("")}
+      ${!q && n > 12 ? `<button class="lnk" data-bdall="${o.id}">${all ? "Show the top 12" : `Show all ${n}`}</button>` : ""}
+      ${state.focus && sc === UKC ? `<div class="note">No figures for ${esc(nameOf(state.focus))}: showing the UK.</div>` : !state.focus ? `<div class="note">${esc(nameOf(sc))}. Click an area to see its own.</div>` : ""}</div>`;
+  }
+  const nm0 = (o, k) => o.name(k), BDK = { q: {}, all: {} };
+  // a breakdown whose data arrives later (e.g. wards loaded on demand) calls this to redraw
+  window.AtlasRepaint = () => { for (const k in bdCache) delete bdCache[k]; for (const k in qCache) delete qCache[k]; for (const k in availCache) delete availCache[k]; clearTimeout(window.AtlasRepaint.t); window.AtlasRepaint.t = setTimeout(() => repaint(), 60); };
+  const bdShort = (o, v) => { const s = bdFmt(o, v); return s.length > 9 ? s.replace(/ [a-z]+$/, "") : s; };
   wm({ id: "ge_winner", label: "Winning party", scale: "nominal", nature: "category", desc: "Who won the seat; for a region, nation or the UK, the party with most seats", pairShare: "ge_win_share",
     how: "Seat: the candidate with most votes (the Speaker shown as Speaker). Region, nation, UK: the party that won most seats there", ...partyCat,
     get(code, d) { const r = resultFor(code, d); if (!r) return null; const top = r.agg ? Object.keys(r.seats).sort((a, b) => r.seats[b] - r.seats[a] || (r.t.by[b] || 0) - (r.t.by[a] || 0))[0] : winnerOf(r);
@@ -739,6 +802,8 @@
     const by = {}; L.forEach(x => { const b = by[x.party] = by[x.party] || [0, 0]; b[1]++; if (test(x)) b[0]++; });
     return `<small>${Object.entries(by).sort((a, b) => b[1][1] - a[1][1]).slice(0, 6).map(([p, [k, n]]) => `<i class="sw" style="background:${partyCol(p)}"></i>${esc(partyName(p))} ${Math.round(100 * k / n)}% ${esc(what)} (${k} of ${n})`).join(" · ")}</small>`;
   }
+  // 0.9: breakdowns listed by data/bd_*.js (trade, industries, Census profiles, health)
+  (window.ATLAS_BREAKDOWNS || []).forEach(o => { try { defBreakdown(o); } catch (e) { console.warn("breakdown", o && o.id, e); } });
   // markets: FTSE 100 companies headquartered in London (test case)
   const COS = MK ? MK.companies : [], GRP_COL = MK ? Object.fromEntries(MK.groups) : {}, G3 = "FTSE 100 in London (test case)";
   COS.forEach((c, i) => { c.i = i; });
@@ -810,6 +875,101 @@
   LINE_DEFS.forEach(([id, label, desc, source, base]) => def({ id, p: "transport", group: GN, label, scale: "nominal", nature: "line", temporal: "static", desc, source, how: desc,
     valid: base ? NEEDS_BASE : null, get() { return { v: null, text: "Drawn as lines on the map" }; } }));
 
+  // ---------- 0.9: trade in goods (data/trade.js: HMRC, the latest 12 months; regions and smaller areas, 2024) ----------
+  const TRD = window.ATLAS_TRADE || null, GTR = "Trade in goods", GTL = "Trade (drawn as lines)";
+  const TRR = TRD ? TRD.regions || {} : {}, ITL1 = TRR.itl1 || {}, ITL3 = TRR.itl3 || {}, C2ITL3 = TRR.council || {};
+  const TRADE = { code: null, flow: "exp" };   // the product the trade lines show (null: everything), set from Atlas Markets
+  function tradeAt(code, f) { // {v, est, why} for a place: UK (HMRC, 12 months), regions and nations (2024), councils (their ITL3 area, shared by population)
+    if (!TRD) return null; const lv = lvlOf(code);
+    if (code === UKC) return { v: TRD.tot[f], yr: `12 months to ${TRD.period[1].replace(/^(\d\d)(\d\d)$/, (m, y, mo) => new Date(2000 + +y, +mo - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" }))}` };
+    if (lv === "region" || (lv === "nation" && ITL1[code])) { const o = ITL1[code]; return o ? { v: o[f], n: o["n" + f], yr: String(TRR.year) } : null; }
+    if (lv === "nation") { let t = 0, any = false; for (const k in ITL1) if (P[k] && P[k].level === "region" && P[k].parent === code || (P[k] && P[k].nation === code)) { t += ITL1[k][f]; any = true; } return any ? { v: t, yr: String(TRR.year) } : null; }
+    if (lv === "council" || lv === "ward") {
+      const c = lv === "ward" ? P[code].parent : code, a = C2ITL3[c]; if (!a) return null; const o = ITL3[a], cs = o.c || [c];
+      if (cs.length === 1) return { v: o[f], n: o["n" + f], yr: String(TRR.year), area: a };
+      const pops = cs.map(x => popAt(x, "2024-07-01") || 0), tp = pops.reduce((x, y) => x + y, 0), sh = tp ? pops[cs.indexOf(c)] / tp : 1 / cs.length;
+      return { v: o[f] * sh, yr: String(TRR.year), est: true, estWhy: `HMRC publishes this for the area “${a}” (${cs.map(nameOf).join(", ")}); Atlas shares it out by population`, area: a };
+    }
+    return null;
+  }
+  if (TRD) {
+    const TLV = ["council", "region", "nation", "country"], TNM = { ward: "Published for councils (smaller areas) and regions", constituency: "Published for councils and regions, not constituencies" };
+    const tsrc = "HMRC overseas trade statistics (UK, latest 12 months) and regional trade in goods by smaller geographical areas, 2024. OGL v3.0";
+    const tm = (id, f, label, desc) => def({ id, p: "markets", group: GTR, label, scale: "ratio", nature: "amount", temporal: "static", levels: TLV, nmText: TNM, source: tsrc, fmt: fmtGBP, desc,
+      how: "Statistical value of goods leaving (exports) or entering (imports) the UK, assigned to the area where the trading business is based (HMRC). Councils inside a larger published area get a share by population (marked est.)",
+      get(code) { const r = tradeAt(code, f); return r ? { v: r.v, text: fmtGBP(r.v) + (r.n ? ` · ${fmtInt(r.n)} businesses` : ""), yr: r.yr, est: r.est, estWhy: r.estWhy } : null; } });
+    tm("trade_exp", "exp", "Goods exports", "Goods sold abroad by businesses based here (£ a year)");
+    tm("trade_imp", "imp", "Goods imports", "Goods bought from abroad by businesses based here (£ a year)");
+    def({ id: "trade_exp_ph", p: "markets", group: GTR, label: "Goods exports per head", scale: "ratio", nature: "rate", temporal: "static", levels: TLV, nmText: TNM, source: tsrc, weight: "population", fmt: v => "£" + fmtInt(v),
+      desc: "Goods exports ÷ residents", how: "Goods exports (as above) ÷ mid-year population", breaks: [2000, 4000, 7000, 12000],
+      get(code) { const r = tradeAt(code, "exp"), p = popAt(code, "2024-07-01"); return r && p ? { v: r.v / p, text: "£" + fmtInt(r.v / p) + " a person", yr: r.yr, est: r.est, estWhy: r.estWhy } : null; } });
+    def({ id: "trade_balance", p: "markets", group: GTR, label: "Goods trade balance", scale: "interval", nature: "change", temporal: "static", mid: 0, levels: TLV, nmText: TNM, source: tsrc, fmt: fmtGBP,
+      desc: "Exports minus imports: above zero, the area sells abroad more goods than it buys", how: "Goods exports − goods imports",
+      get(code) { const a = tradeAt(code, "exp"), b = tradeAt(code, "imp"); return a && b ? { v: a.v - b.v, text: `${fmtGBP(a.v - b.v)} (exports ${fmtGBP(a.v)}, imports ${fmtGBP(b.v)})`, yr: a.yr, est: a.est, estWhy: a.estWhy } : null; } });
+    if (TRD.firms) def({ id: "trade_firms", p: "markets", group: GTR, label: "Businesses trading goods abroad", scale: "ratio", nature: "count", temporal: "static", levels: ["council", "region", "nation", "country"], source: "HMRC registers of exporters and importers (" + (TRD.firms_month || "latest month") + "); postcodes.io", fmt: fmtInt,
+      desc: "Businesses on HMRC's published lists of exporters or importers in the month", how: "Businesses HMRC lists as exporting or importing in the month, placed by postcode (a business with several sites counts once, at its listed address)",
+      get(code) { const f = c => { const x = TRD.firms[c]; return x ? x[0] + x[1] : null; }; const lv = lvlOf(code); const v = lv === "council" ? f(code) : sumCouncils(code, f); return v != null ? { v, text: `${fmtInt(v)} businesses` + (lv === "council" && TRD.firms[code] ? ` (${fmtInt(TRD.firms[code][0])} exporting, ${fmtInt(TRD.firms[code][1])} importing)` : "") } : null; } });
+    [["trade_routes_exp", "Exports: where goods go", "Lines from UK ports to the countries buying, thicker for more; dots move outwards. Choose a product in Atlas Markets to see only that"],
+     ["trade_routes_imp", "Imports: where goods come from", "Lines from the countries selling to the UK ports they arrive at; dots move inwards. Choose a product in Atlas Markets to see only that"]].forEach(([id, label, desc]) =>
+      def({ id, p: "markets", group: GTL, label, scale: "nominal", nature: "line", temporal: "static", desc, how: desc + ". For one product, each port's share and each country's share are combined (HMRC doesn't publish port by country for a single product)", source: tsrc, get() { return { v: null, text: "Drawn as lines on the map" }; } }));
+    // breakdowns for regions and nations (2024): product groups (SITC sections) and partner countries
+    const SITC = { "0": "Food and live animals", "1": "Beverages and tobacco", "2": "Crude materials", "3": "Mineral fuels", "4": "Animal and vegetable oils", "5": "Chemicals", "6": "Manufactured goods (by material)", "7": "Machinery and transport", "8": "Miscellaneous manufactures", "9": "Other goods" };
+    const SITC_COL = { "0": "#7cb342", "1": "#8d6e63", "2": "#a1887f", "3": "#455a64", "4": "#c0ca33", "5": "#8e24aa", "6": "#fb8c00", "7": "#1e88e5", "8": "#e53935", "9": "#9e9e9e" };
+    const itl2Of = code => Object.keys(TRR.itl2 || {}).filter(k => TRR.itl2[k].r === code || (P[code] && P[code].level === "nation" && P[TRR.itl2[k].r] && (P[TRR.itl2[k].r].parent === code || TRR.itl2[k].r === code)) || code === UKC);
+    const sumItl2 = (tab, f, code) => { const ks = itl2Of(code); if (!ks.length) return null; const o = {}; ks.forEach(k => { const x = (tab[k] || {})[f] || {}; for (const c in x) o[c] = (o[c] || 0) + x[c]; }); return Object.keys(o).length ? o : null; };
+    const RLV = ["region", "nation", "country"], RNM = { council: "Published for regions (ITL1 and ITL2) only", ward: "Published for regions (ITL1 and ITL2) only", constituency: "Published for regions only" };
+    let pcols = {}; const PALETTE = ["#1e88e5", "#e53935", "#43a047", "#fb8c00", "#8e24aa", "#00897b", "#6d4c41", "#3949ab", "#c0ca33", "#d81b60", "#546e7a", "#f4511e"];
+    const pcol = k => pcols[k] || (pcols[k] = PALETTE[Object.keys(pcols).length % PALETTE.length]);
+    [["exp", "Exports"], ["imp", "Imports"]].forEach(([f, F]) => {
+      defBreakdown({ id: "trd_sitc_" + f, p: "markets", group: GTR, label: `${F} by product group`, unit: "£", levels: RLV, nmText: RNM, cats: () => Object.keys(SITC), name: k => SITC[k] || "Section " + k, colour: k => SITC_COL[k] || "#999",
+        of: code => sumItl2(TRR.sitc || {}, f, code), yr: () => String(TRR.year), source: TRR.source, how: "HMRC regional trade in goods, by SITC section, " + TRR.year, desc: `What the area's businesses ${f === "exp" ? "sell abroad" : "buy from abroad"}, by product group` });
+      defBreakdown({ id: "trd_ptn_" + f, p: "markets", group: GTR, label: `${F} by partner country`, unit: "£", levels: RLV, nmText: RNM, cats: () => [...new Set(Object.values(TRR.partners || {}).flatMap(x => Object.keys(x[f] || {})))], name: k => k, colour: pcol,
+        of: code => sumItl2(TRR.partners || {}, f, code), yr: () => String(TRR.year), source: TRR.source, how: "HMRC regional trade in goods with the main partner countries (the rest grouped by HMRC), " + TRR.year, desc: `Where the area's goods ${f === "exp" ? "go" : "come from"}` });
+    });
+  }
+
+  // ---------- 0.9: commuting (Census 2021, ODWP01EW; data/industry.js) ----------
+  const IND = window.ATLAS_INDUSTRY || null, CM = IND && IND.commute && IND.commute.out ? IND.commute : null, GCM = "Commuting (Census 2021)";
+  if (CM) {
+    const cv = code => /^(S|N)/.test(code) ? "England and Wales only (the 2021 Census there)" : null, csrc = IND.sources.commute + " (OGL v3.0). Census day was 21 March 2021, during lockdown: more people than usual worked from home";
+    const workers = c => (CM.within[c] || 0) + ((CM.out[c] || {}).n || 0) + (CM.home[c] || 0);
+    const cm = (id, label, desc, how, get, o) => def(Object.assign({ id, p: "economic", group: GCM, label, scale: "ratio", nature: "count", temporal: "static", levels: ["council", "region", "nation", "country"], valid: cv, source: csrc, desc, how, fmt: fmtInt, get }, o || {}));
+    cm("commute_out", "Residents working in another council", "Working residents whose workplace is in another council", "Residents in work whose main workplace (on Census day) was in another council",
+      function (code) { const f = c => CM.out[c] ? CM.out[c].n : null, lv = lvlOf(code), v = lv === "council" ? f(code) : sumCouncils(code, f); if (v == null) return null; const w = lv === "council" ? workers(code) : sumCouncils(code, workers);
+        return { v, text: `${fmtInt(v)} people${w ? ` (${pct1(100 * v / w)} of working residents)` : ""}` + (lv === "council" && CM.out[code] ? ` · most to ${nameOf(CM.out[code].top[0][0])}` : ""), yr: "2021" }; });
+    cm("commute_in", "Workers coming in from other councils", "People who live elsewhere and work here", "Workers whose main workplace is here but who live in another council",
+      function (code) { const f = c => CM.in[c] ? CM.in[c].n : null, lv = lvlOf(code), v = lv === "council" ? f(code) : sumCouncils(code, f); if (v == null) return null;
+        return { v, text: `${fmtInt(v)} people` + (lv === "council" && CM.in[code] ? ` · most from ${nameOf(CM.in[code].top[0][0])}` : ""), yr: "2021" }; });
+    cm("commute_net", "Net commuting (in minus out)", "Above zero: more people come in to work than leave; below: a commuter area", "Workers coming in − residents working elsewhere",
+      function (code) { if (lvlOf(code) !== "council") return null; const a = (CM.in[code] || {}).n || 0, b = (CM.out[code] || {}).n || 0; if (!a && !b) return null; return { v: a - b, text: `${a - b > 0 ? "+" : ""}${fmtInt(a - b)} (${fmtInt(a)} in, ${fmtInt(b)} out)`, yr: "2021" }; },
+      { scale: "interval", nature: "change", mid: 0, levels: ["council"], nmText: { region: "A council-to-council measure", nation: "A council-to-council measure", country: "A council-to-council measure", ward: "Published for councils" } });
+    cm("commute_home", "Working mainly from home (2021)", "Share of working residents working mainly at or from home on Census day (during lockdown)", "Working mainly at or from home ÷ working residents",
+      function (code) { const lv = lvlOf(code), h = lv === "council" ? CM.home[code] : sumCouncils(code, c => CM.home[c] || null), w = lv === "council" ? workers(code) : sumCouncils(code, workers); return h && w ? { v: 100 * h / w, text: `${pct1(100 * h / w)} (${fmtInt(h)} people)`, yr: "2021" } : null; },
+      { nature: "share", fmt: pct1, breaks: [20, 25, 30, 40] });
+    def({ id: "commute_lines", p: "economic", group: GCM, label: "Commuting flows (lines)", scale: "nominal", nature: "line", temporal: "static", valid: () => null, source: csrc,
+      desc: "Where people travel to work: from the council in focus (out in green, in in purple), or the biggest flows in England and Wales", how: "Census 2021 origin–destination: residents by council of workplace", get() { return { v: null, text: "Drawn as lines on the map" }; } });
+  }
+  function commuteFeatures() {
+    if (!CM) return [];
+    const f = state.focus && P[state.focus] && P[state.focus].level === "council" ? state.focus : null, out = [];
+    const line = (a, b, n, dir) => { const A = PT[a], B = PT[b]; if (A && B) out.push({ type: "Feature", properties: { n, dir, a, b }, geometry: { type: "LineString", coordinates: [A, B] } }); };
+    if (f) { ((CM.out[f] || {}).top || []).forEach(([w, n]) => line(f, w, n, "out")); ((CM.in[f] || {}).top || []).forEach(([o, n]) => line(o, f, n, "in")); }
+    else { const all = []; for (const o in CM.out) CM.out[o].top.slice(0, 4).forEach(([w, n]) => all.push([o, w, n])); all.sort((a, b) => b[2] - a[2]).slice(0, 500).forEach(([o, w, n]) => line(o, w, n, "out")); }
+    return out;
+  }
+
+  // ---------- 0.9: inward investment by region (DBT inward investment results; data/investment.js) ----------
+  const INV = window.ATLAS_INVEST || null, GINV = "Investment";
+  if (INV && INV.dbt && INV.dbt.region) {
+    const DR = INV.dbt.region, FY = "2025-26", ILV = ["region", "nation"], INM = { council: "Published for regions and nations (DBT)", ward: "Published for regions and nations (DBT)", constituency: "Published for regions and nations (DBT)", country: "See the UK total in Atlas Markets → Investment" };
+    const isrc = "Department for Business and Trade, inward investment results 2025 to 2026 (OGL v3.0). Projects recorded by DBT; projects across several regions are listed separately";
+    const im = (id, k, label, desc, fmt) => def({ id, p: "markets", group: GINV, label, scale: "ratio", nature: "count", temporal: "static", levels: ILV, nmText: INM, source: isrc, fmt, desc,
+      how: "Foreign direct investment projects that DBT recorded as landing in the region in the financial year, and the new jobs they expect to create",
+      get(code) { const o = DR[code]; if (!o || !o[k]) return null; const v = o[k][FY]; if (v == null) return { v: null, text: "Not published (confidential)" }; const prev = o[k]["2024-25"];
+        return { v, text: fmt(v) + (prev != null ? ` (${fmt(prev)} the year before)` : ""), yr: FY }; } });
+    im("inv_projects", "proj", "Foreign investment projects", "New foreign direct investment projects landing here, in the year", v => fmtInt(v) + " projects");
+    im("inv_jobs", "jobs", "New jobs from foreign investment", "Jobs expected from those projects", v => fmtInt(v) + " jobs");
+  }
   // ---------- 0.8: deprivation (English Indices of Deprivation 2025, by council; data/economy.js) ----------
   const ECON = window.ATLAS_ECONOMY || null, GD = "Deprivation (England, 2025)";
   if (ECON && ECON.imd && Object.keys(ECON.imd).length) {
@@ -867,7 +1027,7 @@
   }
   if (EX) {
     PER.health.ready = true; PER.health.planned = null; PER.health.desc = "Life expectancy, causes of death, weight and lifestyle, conditions (England), and Census 2021 health and care for every ward and constituency in England and Wales.";
-    PER.markets.ready = true; PER.markets.desc = "House prices and rents across the UK, homes and tenure (Census 2021, every ward and constituency in England and Wales), empty homes and housing need" + (MK ? ", plus FTSE 100 head offices in London (test case)." : ".");
+    PER.markets.ready = true; PER.markets.desc = (TRD ? "Trade in goods (what the UK sells and buys, with whom and through which ports, product by product), foreign investment and new investment jobs; " : "") + "house prices and rents across the UK, homes and tenure (Census 2021, every ward and constituency in England and Wales), empty homes and housing need" + (MK ? ", plus FTSE 100 head offices in London (test case)." : ".");
     PER.economic.desc = "Output and income since 1998; national debt, and councils' borrowing in England.";
     EX.metrics.forEach(x => {
       const ys = EX.y0 + (x.ys || 0), fmt = exFmt(x), src = x.src, census = x.census;
@@ -920,7 +1080,7 @@
   const map = new maplibregl.Map({ container: "map", style: key ? osStyle(key) : plainStyle(), center: HOME, zoom: HOME_Z, minZoom: C.minZoom || 4.6, maxZoom: 17,
     dragRotate: false, pitchWithRotate: false, attributionControl: false, preserveDrawingBuffer: true });
   window.atlasMap = map;
-  if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { M, P, METRICS, resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint(),   // for checks only (index.html?debug)
+  if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { M, P, METRICS, BD, bdOf: (id, c, d) => bdOf(BD[id], c, d || state.date), resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint(),   // for checks only (index.html?debug)
     get TB() { return TB; }, setDate: d => setDate(d), metricSpan: id => metricSpan(M[id]), openCmp: () => openCmp(), openAnalyse: o => openAnalyse(o), openChart: o => openChart(o),
     select: codes => codes.forEach(c => P[c] && addCompare({ code: c, level: P[c].level })),
     focus: c => focus(c), unfocus: () => unfocus(), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); if (!on) setLevelOn("auto", true); },
@@ -1431,7 +1591,7 @@
   }
 
   // ---------- 0.8.1: networks as lines (Transport → Networks): railways, roads, power lines, ferry and freight routes ----------
-  const NET_LAYERS = { inf_rail: ["net-rail", "net-rail-tun", "net-rail-omt", "net-osm-rail"], inf_roads: ["net-road-a", "net-road-mw", "net-road-omt"], inf_power: ["net-osm-power"], inf_ferry: ["net-ferry"], inf_freight: ["net-freight", "net-freight-dots"] };
+  const NET_LAYERS = { inf_rail: ["net-rail", "net-rail-tun", "net-rail-omt", "net-osm-rail"], inf_roads: ["net-road-a", "net-road-mw", "net-road-omt"], inf_power: ["net-osm-power"], inf_ferry: ["net-ferry"], inf_freight: ["net-freight", "net-freight-dots"], trade_routes_exp: ["trade-exp"], trade_routes_imp: ["trade-imp"], commute_lines: ["commute-lines"] };
   const lazy = {};
   function loadData(file, global) { if (window[global]) return Promise.resolve(window[global]); return lazy[file] || (lazy[file] = new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = file + "?v=" + (window.ATLAS_POI ? ATLAS_POI.built : ""); sc.onload = () => res(window[global]); sc.onerror = rej; document.head.appendChild(sc); })); }
   const zw = (a, b, c) => ["interpolate", ["linear"], ["zoom"], 5, a, 10, b, 15, c];
@@ -1459,7 +1619,66 @@
       "line-width": ["interpolate", ["linear"], ["get", "t"], 5000, 0.5, 1e6, 0.9, 1e7, 1.5] } }, bf);
     map.addSource("net-freight-dots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({ id: "net-freight-dots", type: "circle", source: "net-freight-dots", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 1.4, 9, 2.4], "circle-color": ["get", "col"], "circle-stroke-color": "#fff", "circle-stroke-width": 0.6 } }, bf);
+    // 0.9: trade routes (exports out, imports in) with moving dots, and UK gateways sized by trade
+    map.addSource("trade-lines", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    const tw = ["interpolate", ["linear"], ["get", "v"], 1e7, 0.35, 3e8, 0.9, 3e9, 1.8, 2e10, 3.4];
+    map.addLayer({ id: "trade-exp", type: "line", source: "trade-lines", filter: ["==", ["get", "f"], "exp"], layout: hide, paint: { "line-color": ["get", "col"], "line-opacity": 0.72, "line-width": tw } }, bf);
+    map.addLayer({ id: "trade-imp", type: "line", source: "trade-lines", filter: ["==", ["get", "f"], "imp"], layout: hide, paint: { "line-color": ["get", "col"], "line-opacity": 0.6, "line-width": tw, "line-dasharray": [2.2, 1.2] } }, bf);
+    map.addSource("trade-dots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "trade-dots", type: "circle", source: "trade-dots", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 1.3, 9, 2.4], "circle-color": ["get", "col"], "circle-stroke-color": "#ffffff", "circle-stroke-width": 0.6 } }, bf);
+    map.addSource("commute-lines", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "commute-lines", type: "line", source: "commute-lines", layout: hide, paint: { "line-color": ["match", ["get", "dir"], "in", "#7b4fa6", "#13876b"], "line-opacity": 0.65,
+      "line-width": ["interpolate", ["linear"], ["get", "n"], 200, 0.4, 2000, 1.2, 20000, 3.5, 80000, 7] } }, bf);
+    map.addSource("trade-ports", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "trade-ports", type: "circle", source: "trade-ports", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["get", "v"], 1e8, 3, 1e10, 8, 1e11, 16], "circle-color": "#1f2a2e", "circle-opacity": 0.78, "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2 } }, bf);
   }
+  const TR_COL = { EU: "#2b6cb0", "Other Europe": "#7b4fa6", "North America": "#c0392b", "Latin America": "#e67e22", Asia: "#d4a017", Africa: "#2e8b57", Oceania: "#0f8b8d", Other: "#888888" };
+  function arc(a, b, n) { // great circle from a to b ([lon, lat]), n segments
+    const r = Math.PI / 180, [l1, p1] = [a[0] * r, a[1] * r], [l2, p2] = [b[0] * r, b[1] * r];
+    const d = 2 * Math.asin(Math.sqrt(Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin((l2 - l1) / 2) ** 2)); if (!d) return [a, b];
+    const out = []; for (let i = 0; i <= n; i++) { const f = i / n, A = Math.sin((1 - f) * d) / Math.sin(d), B = Math.sin(f * d) / Math.sin(d);
+      const x = A * Math.cos(p1) * Math.cos(l1) + B * Math.cos(p2) * Math.cos(l2), y = A * Math.cos(p1) * Math.sin(l1) + B * Math.cos(p2) * Math.sin(l2), z = A * Math.sin(p1) + B * Math.sin(p2);
+      out.push([+(Math.atan2(y, x) / r).toFixed(3), +(Math.atan2(z, Math.sqrt(x * x + y * y)) / r).toFixed(3)]); }
+    for (let i = 1; i < out.length; i++) { while (out[i][0] - out[i - 1][0] > 180) out[i][0] -= 360; while (out[i][0] - out[i - 1][0] < -180) out[i][0] += 360; }
+    return out;
+  }
+  function tradeNode(code) { // what the lines show: everything, a chapter (trade.js) or a heading, HS6 or CN8 code (trade_detail.js)
+    if (!TRD) return null; if (!code) return null;
+    if (code.length === 2) return TRD.ch[code] ? Object.assign({ ct: TRD.ch[code].ct, po: TRD.ch[code].po }, TRD.ch[code]) : null;
+    const D = window.ATLAS_TRADE_DETAIL; if (!D) return null; return (D[code.length === 4 ? "h4" : code.length === 6 ? "h6" : "c8"] || {})[code] || null;
+  }
+  function tradeRoutes(flows) { // [{f, p, c, v}] port -> country, for the flows on the map
+    const out = [];
+    flows.forEach(f => {
+      if (!TRADE.code) Object.entries(TRD.ports).forEach(([p, o]) => { if (!o.ll) return; (o.ct[f] || []).forEach(([c, v]) => out.push({ f, p, c, v })); });
+      else { const n = tradeNode(TRADE.code); if (!n) return; const T = n[f] || 0, ps = (n.po[f] || []).filter(([p]) => TRD.ports[p] && TRD.ports[p].ll), tp = ps.reduce((a, x) => a + x[1], 0);
+        if (!T || !tp) return; (n.ct[f] || []).forEach(([c, vc]) => ps.forEach(([p, vp]) => out.push({ f, p, c, v: vc * vp / tp }))); }
+    });
+    return out.filter(r => r.v > 0 && TRD.cty[r.c] && TRD.cty[r.c].ll);
+  }
+  let tradeAnim = null, tradeKey = "";
+  function syncTrade(on) {
+    const flows = ["exp", "imp"].filter(f => on.has("trade_routes_" + f));
+    ["trade-ports", "trade-dots"].forEach(l => map.getLayer(l) && map.setLayoutProperty(l, "visibility", flows.length ? "visible" : "none"));
+    if (!flows.length || !TRD) { if (tradeAnim) { clearTimeout(tradeAnim); tradeAnim = null; } tradeKey = ""; return; }
+    const need = TRADE.code && TRADE.code.length > 2 && !window.ATLAS_TRADE_DETAIL;
+    if (need) { loadData("data/trade_detail.js", "ATLAS_TRADE_DETAIL").then(() => syncNetworks()); return; }
+    const key = flows.join() + "|" + (TRADE.code || ""); if (key === tradeKey) return; tradeKey = key;
+    const R = tradeRoutes(flows), feats = R.map(r => { const a = TRD.ports[r.p].ll, b = TRD.cty[r.c].ll, g = r.f === "exp" ? arc(a, b, 36) : arc(b, a, 36);
+      return { type: "Feature", properties: { f: r.f, v: r.v, col: TR_COL[TRD.cty[r.c].rg] || TR_COL.Other, p: r.p, c: r.c }, geometry: { type: "LineString", coordinates: g } }; });
+    map.getSource("trade-lines").setData({ type: "FeatureCollection", features: feats });
+    const pv = {}; R.forEach(r => { pv[r.p] = (pv[r.p] || 0) + r.v; });
+    map.getSource("trade-ports").setData({ type: "FeatureCollection", features: Object.entries(pv).map(([p, v]) => ({ type: "Feature", properties: { p, v, n: TRD.ports[p].n }, geometry: { type: "Point", coordinates: TRD.ports[p].ll } })) });
+    if (tradeAnim) clearTimeout(tradeAnim);
+    const big = feats.slice().sort((a, b) => b.properties.v - a.properties.v).slice(0, 160).map(f => ({ c: f.geometry.coordinates, col: f.properties.col, n: Math.max(1, Math.min(10, Math.round(Math.sqrt(f.properties.v / 2e8)))) })), t0 = performance.now();
+    const step = () => { const t = (performance.now() - t0) / 1000, pts = [];
+      big.forEach(r => { for (let k = 0; k < r.n; k++) { const f = ((t / 30) + k / r.n) % 1, x = f * (r.c.length - 1), i = Math.floor(x), u = x - i, a = r.c[i], b = r.c[Math.min(i + 1, r.c.length - 1)];
+        pts.push({ type: "Feature", properties: { col: r.col }, geometry: { type: "Point", coordinates: [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u] } }); } });
+      if (map.getSource("trade-dots")) map.getSource("trade-dots").setData({ type: "FeatureCollection", features: pts });
+      tradeAnim = setTimeout(() => requestAnimationFrame(step), 80); };
+    step();
+  }
+  const setTradeProduct = (code, flow) => { TRADE.code = code || null; if (flow) TRADE.flow = flow; tradeKey = ""; syncNetworks(); renderLegend(); };
   let freightAnim = null, freightFocus = null;
   function syncNetworks() {
     if (!map.getLayer("net-ferry")) return;
@@ -1467,6 +1686,8 @@
     if (freightFocus) on.add("inf_freight");
     Object.entries(NET_LAYERS).forEach(([id, ids]) => ids.forEach(l => { if (map.getLayer(l)) map.setLayoutProperty(l, "visibility", on.has(id) ? "visible" : "none"); }));
     if (on.has("inf_rail") || on.has("inf_power")) loadData("data/networks.js", "ATLAS_NETWORKS").then(N => { if (N && !syncNetworks.osm) { syncNetworks.osm = 1; map.getSource("net-osm").setData(N.rail); map.getSource("net-osm-p").setData(N.power); } }).catch(() => {});
+    syncTrade(on);   // 0.9
+    if (on.has("commute_lines")) { const k = state.focus || ""; if (syncNetworks.cm !== k) { syncNetworks.cm = k; map.getSource("commute-lines").setData({ type: "FeatureCollection", features: commuteFeatures() }); } }
     if (on.has("inf_ferry")) loadData("data/ferries.js", "ATLAS_FERRIES").then(F => { if (F && !syncNetworks.ferry) { syncNetworks.ferry = 1; map.getSource("net-ferry").setData(F.routes); } });
     if (on.has("inf_freight")) loadData("data/freight.js", "ATLAS_FREIGHT").then(F => { if (!F) return; if (!syncNetworks.freight) { syncNetworks.freight = 1; F.routes.features.forEach((f, i) => { f.id = i; }); map.getSource("net-freight").setData(F.routes); } startFreight(F); });
     else stopFreight();
@@ -1874,6 +2095,26 @@
       ${c.top.map(r => `<div class="mok-r"><span class="mok-w">${AM.donorBtn(r[4])} → ${who(r)}</span><span class="mok-bar"><i style="width:${(100 * r[1] / mx).toFixed(1)}%"></i></span><b>${AM.gbp(r[1])}</b><small>${esc(r[0].slice(0, 7))}</small></div>`).join("") || `<div class="note">None registered in these years.</div>`}
       <div class="note">${code ? "Click a name for its card." : "The biggest across Britain. Click an area for its own."} “met ministers”: the donor also had registered meetings with ministers (lobbying). Electoral Commission.</div></div>`;
   }
+  function bdPick(id, k) { // choose a category; if only "largest" is on the map, show the chosen category's share instead
+    PS.pick[id] = k; for (const q in qCache) delete qCache[q];
+    const on = planMetrics().filter(m => m.bd === id);
+    if (on.length && !on.some(m => m.pick) && M[id + "_share"]) { const top = on.find(m => m.id === id + "_top"); if (top) toggleMapped(top.id); toggleMapped(id + "_share"); return; }
+    repaint();
+  }
+  function tradeLegend(m) { // the product shown, and the biggest partners and gateways with their values
+    if (!TRD) return ""; const f = m.id.endsWith("exp") ? "exp" : "imp", n = TRADE.code ? tradeNode(TRADE.code) : null;
+    const ct = n ? n.ct[f] : Object.entries(TRD.cty).map(([c, o]) => [c, o[f]]).sort((a, b) => b[1] - a[1]).slice(0, 8), tot = n ? n[f] : TRD.tot[f];
+    const po = n ? n.po[f] : Object.entries(TRD.ports).map(([p, o]) => [p, o[f]]).sort((a, b) => b[1] - a[1]).slice(0, 4), mx = ct.length ? ct[0][1] : 1;
+    return `<div class="trk"><div class="vsk-h">${TRADE.code ? `${esc(TRADE.code)} ${esc((n || {}).n || "")}` : "All goods"} · ${f === "exp" ? "exports" : "imports"} ${fmtGBP(tot || 0)} a year${TRADE.code ? ` <button class="lnk" data-trclear>show all goods</button>` : ""}</div>
+      ${(ct || []).slice(0, 6).map(([c, v]) => `<div class="mok-r"><span class="mok-w"><i class="sw" style="background:${TR_COL[(TRD.cty[c] || {}).rg] || "#888"}"></i>${esc((TRD.cty[c] || {}).n || c)}</span><span class="mok-bar"><i style="width:${(100 * v / mx).toFixed(1)}%;background:${TR_COL[(TRD.cty[c] || {}).rg] || "#888"}"></i></span><b>${fmtGBP(v)}</b><small>${tot ? pct1(100 * v / tot) : ""}</small></div>`).join("")}
+      <div class="note">Through ${(po || []).slice(0, 4).map(([p, v]) => `${esc((TRD.ports[p] || {}).n || p)} ${fmtGBP(v)}`).join(", ")}. ${esc(TRD.period ? "12 months to " + TRD.period[1].slice(2) + "/20" + TRD.period[1].slice(0, 2) : "")}, HMRC. Choose a product in Atlas Markets.</div></div>`;
+  }
+  function commuteLegend() {
+    const f = state.focus && P[state.focus] && P[state.focus].level === "council" && CM ? state.focus : null;
+    if (!f) return `<div class="note">The 500 biggest flows between councils. Click a council for its own: where its people work, and where its workers come from.</div>`;
+    const L = (x, w) => (x || []).slice(0, 5).map(([c, n]) => `${esc(nameOf(c))} ${fmtInt(n)}`).join(", ");
+    return `<div class="note"><b>${esc(nameOf(f))}</b> · out to ${L((CM.out[f] || {}).top)}; in from ${L((CM.in[f] || {}).top)}. Census 2021.</div>`;
+  }
   function crowdTop() {
     const D = dayNum(state.date), seen = new Set(), es = [];
     const inFocus = state.focus && P[state.focus] ? new Set(eventsIn(state.focus, state.date)) : null;
@@ -1917,8 +2158,10 @@
     }
     if (PL.lines && PL.lines.length) {
       const SW = { inf_rail: [["#5b2a86", "Railway"], ["#5b2a86", "In tunnel", 1]], inf_roads: [["#1d5590", "Motorway"], ["#2e8b57", "A road or primary route"]], inf_power: [["#e08a1e", "Transmission line"]], inf_ferry: [["#0f8b8d", "Ferry route", 1]],
+        commute_lines: [["#13876b", "Going out to work"], ["#7b4fa6", "Coming in to work"]],
+        trade_routes_exp: Object.entries(TR_COL).filter(([k]) => k !== "Other").map(([k, c]) => [c, k]), trade_routes_imp: Object.entries(TR_COL).filter(([k]) => k !== "Other").map(([k, c]) => [c, k, 1]),
         inf_freight: Object.entries((window.ATLAS_FREIGHT || {}).colours || { EU: "#2b6cb0", "Other Europe & Mediterranean": "#7b4fa6", Americas: "#c0392b", Asia: "#e08a1e", Africa: "#2e8b57", Australasia: "#0f8b8d" }).map(([k, c]) => [c, k]) };
-      PL.lines.forEach(m => parts.push(`<div class="lg">${lhead(m)}<div class="cats2">${(SW[m.id] || []).map(([c, l, dash]) => `<span><i class="sw ln${dash ? " dash" : ""}" style="--c:${c}"></i>${esc(l)}</span>`).join("")}</div>${m.id === "inf_freight" ? `<div class="note">Lines run to each partner country's main port; moving dots show the flow (more dots, more tonnes). ${esc((window.ATLAS_FREIGHT || {}).year || "")}, DfT.</div>` : ""}${plain && m.valid && m.valid() ? `<div class="note">${esc(m.valid())}</div>` : ""}</div>`));
+      PL.lines.forEach(m => parts.push(`<div class="lg">${lhead(m)}<div class="cats2">${(SW[m.id] || []).map(([c, l, dash]) => `<span><i class="sw ln${dash ? " dash" : ""}" style="--c:${c}"></i>${esc(l)}</span>`).join("")}</div>${m.id.startsWith("trade_routes_") ? tradeLegend(m) : ""}${m.id === "commute_lines" ? commuteLegend() : ""}${m.id === "inf_freight" ? `<div class="note">Lines run to each partner country's main port; moving dots show the flow (more dots, more tonnes). ${esc((window.ATLAS_FREIGHT || {}).year || "")}, DfT.</div>` : ""}${plain && m.valid && m.valid() ? `<div class="note">${esc(m.valid())}</div>` : ""}</div>`));
     }
     if (PL.heat && PL.heat.id === "protest_crowd") {   // 0.8.2: crowd size heat, with the numbers
       parts.push(`<div class="lg">${lhead(PL.heat)}<div class="seg sm" role="group" aria-label="Time window">${[[365, "1y"], [1826, "5y"], [3652, "10y"], [99999, "All"]].map(([w, l]) => `<button data-win="${w}" class="${PS.win === w ? "on" : ""}">${l}</button>`).join("")}</div>
@@ -1934,6 +2177,7 @@
         <div class="note">Colour = cause, size = crowd; numbered rings are groups (click to zoom). Click a point for its card.</div>` : `<div class="note">Darker = more people protesting nearby, ${esc(winLabel())}.</div>`}</div>`);
     }
     { const vm = planMetrics().find(m => m.group === G4 || m.id === "council_seat_share"); const vk = vm ? shareKey(vm) : ""; if (vk) parts.push(`<div class="lg lg-vsk">${vk}</div>`); }   // 0.8.2
+    [...new Set(planMetrics().filter(m => m.bd).map(m => m.bd))].forEach(id => { const m = planMetrics().find(x => x.bd === id); const k = breakdownKey(m); if (k) parts.push(`<div class="lg lg-vsk">${k}</div>`); });   // 0.9
     if (!PL.size && planMetrics().some(m => m.id === "money_received")) parts.push(`<div class="lg">${moneyKey()}</div>`);
     const nd = noDataKey(level); if (nd && parts.length) parts[0] = parts[0].replace(/<\/div>$/, nd + "</div>");
     const unplaced = curPlan.notes.filter(n => !n.ch);
@@ -2018,7 +2262,10 @@
 
   legend.addEventListener("toggle", e => { if (e.target.classList.contains("why")) legendWhyOpen = e.target.open; }, true);
   legend.addEventListener("click", e => {
+    const bp = e.target.closest("[data-bdpick]"); if (bp) { bdPick(bp.dataset.bdpick, bp.dataset.k); return; }
+    const ba = e.target.closest("[data-bdall]"); if (ba) { BDK.all[ba.dataset.bdall] = !BDK.all[ba.dataset.bdall]; renderLegend(); return; }
     const vp = e.target.closest("[data-vskpick]"); if (vp) { PS.pick[vp.dataset.vskpick] = vp.dataset.p; for (const k in qCache) if (k.startsWith(vp.dataset.vskpick + "|")) delete qCache[k]; repaint(); return; }
+    if (e.target.closest("[data-trclear]")) { setTradeProduct(null); return; }
     const pc = e.target.closest("[data-prcard]"); if (pc) { openProtestCard(+pc.dataset.prcard); return; }
     const i = e.target.closest("[data-iso]");
     if (i) { const v = JSON.parse(i.dataset.iso); state.iso = state.iso && JSON.stringify(state.iso) === JSON.stringify(v) ? null : v; LEVELS.forEach(paintLevel); renderLegend(); toast(state.iso ? "Showing only those areas. Click again to show all." : "Showing all areas."); return; }
@@ -2029,11 +2276,15 @@
     if (e.target.closest("[data-bivswap]")) { const a = curPlan.shade, b = curPlan.grid; if (a && b) { PS.prefs[a.id] = "grid"; PS.prefs[b.id] = "shade"; repaint(); toast("Axes swapped."); } return; }
     const w = e.target.closest("[data-win]"); if (w) { PS.win = +w.dataset.win; for (const k in qCache) if (k.includes("|") && /protest/.test(k)) delete qCache[k]; repaint(); }
   });
+  legend.addEventListener("input", e => {   // 0.9: find a category in a long breakdown
+    const q = e.target.closest("[data-bdq]"); if (!q) return; BDK.q[q.dataset.bdq] = q.value; const pos = q.selectionStart;
+    clearTimeout(legend._bdq); legend._bdq = setTimeout(() => { renderLegend(); const n = legend.querySelector(`[data-bdq="${q.dataset.bdq}"]`); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 180);
+  });
   legend.addEventListener("change", e => {
     const t = e.target;
     if (t.dataset.mcol) { PS.mcol = PS.mcol || {}; PS.mcol[t.dataset.mcol] = t.value; savePS(); repaint(); return; }
     if (t.dataset.as) { PS.prefs[t.dataset.as] = t.value; repaint(); }
-    else if (t.dataset.pick) { PS.pick[t.dataset.pick] = t.value; for (const k in qCache) if (k.startsWith(t.dataset.pick + "|")) delete qCache[k]; repaint(); }
+    else if (t.dataset.pick) { const m = M[t.dataset.pick]; PS.pick[m ? pickKeyOf(m) : t.dataset.pick] = t.value; for (const k in qCache) delete qCache[k]; repaint(); }
     else if (t.hasAttribute("data-bivpal")) { PS.biv.pal = t.value; repaint(); }
     else if (t.hasAttribute("data-bivn")) { PS.biv.n = +t.value; repaint(); }
     else if (t.dataset.bivc != null) { PS.biv.cust = (PS.biv.cust || BIV_CUSTOM_DEF).slice(); PS.biv.cust[+t.dataset.bivc] = t.value; repaint(); }
@@ -2113,7 +2364,7 @@
     d = d || state.date;
     if (m.nature === "text") return { ok: true };
     if (m.nature === "line") { const why = m.valid && m.valid(); return why ? { ok: false, why } : { ok: true }; }   // 0.8.1: networks are lines, not values per area: always available (unless they need the basemap)
-    const key = m.id + "|" + level + "|" + d.slice(0, 4) + "|" + (m.temporal === "event" ? PS.win : "") + (m.pick ? "|" + pickOf(m.id) : ""); if (key in availCache) return availCache[key];
+    const key = m.id + "|" + level + "|" + d.slice(0, 4) + "|" + (m.temporal === "event" ? PS.win : "") + (m.pick ? "|" + pickOf(m.id) : ""); if (key in availCache) return availCache[key];   // pickOf follows a shared pick key (breakdowns)
     const pl = (PLURAL_L[level] || "these areas").toLowerCase();
     if (m.levels && !m.levels.includes(level)) return (availCache[key] = { ok: false, nm: true, why: (m.nmText && m.nmText[level]) || `Not meaningful for ${pl}` });
     const sample = sampleAt(level);
@@ -2742,7 +2993,7 @@
     syncFocusColour(); veil.classList.add("on"); document.body.classList.add("focused");
     card.className = "card pinned"; card.innerHTML = cardHTML(code, true); card.hidden = false; hist.hidden = true;
     if (!(opts && opts.noFly)) flyTo(code, 0, true);
-    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList(); notifyApps(); syncNewsSoon(); renderLegend();   // 0.8.2: the key's numbers follow the focus
+    renderMind(); updateOverlay(); bubbleNudge(); renderProtestList(); notifyApps(); syncNewsSoon(); renderLegend(); syncNetworks();   // 0.8.2: the key's numbers follow the focus
   }
   function unfocus() {
     if (!state.focus && !state.pinned) return;
@@ -2750,7 +3001,7 @@
     veil.classList.remove("on"); document.body.classList.remove("focused"); veil.style.clipPath = ""; veil.style.webkitClipPath = ""; mind.innerHTML = ""; card.hidden = true; hist.hidden = true;
     setP("focus-lift", "fill-opacity", 0); setP("focus-edge", "line-opacity", 0); setP("focus-shadow", "line-opacity", 0);
     setTimeout(() => { if (!state.focus && map.getSource("focus")) map.getSource("focus").setData({ type: "FeatureCollection", features: [] }); }, 320);
-    renderTray(); renderProtestList(); notifyApps(); syncNewsSoon(); renderLegend();
+    renderTray(); renderProtestList(); notifyApps(); syncNewsSoon(); renderLegend(); syncNetworks();
   }
   function syncFocusColour() { if (!FX) return; const c = LAST.fc[FX.code]; setP("focus-lift", "fill-color", c || "#ffffff"); }
   function updateOverlay() {
@@ -4579,11 +4830,14 @@
   const CTX = {
     get app() { return APP; }, M, METRICS, P, PER, PARTY, POL, PR, MK, EL: window.ATLAS_EL || null, LOC: window.ATLAS_LOCAL || null, SPANS, CH, EN, ST, XL, WM,
     esc, fmtInt, fmtBig, fmtPct, longDate, shortDate, dmy, nameOf, partyName, partyCol, LABEL, PLURAL_L, UKC, today: TODAY,
+    trade: { get data() { return TRD; }, detail: () => loadData("data/trade_detail.js", "ATLAS_TRADE_DETAIL"), firms: () => loadData("data/trade_firms.js", "ATLAS_TRADE_FIRMS"), setProduct: (c, f) => setTradeProduct(c, f), get product() { return TRADE.code; }, at: (code, f) => tradeAt(code, f), colours: TR_COL },   // 0.9
+    bd: { of: (id, code, d) => BD[id] ? bdOf(BD[id], code, d || state.date) : null, spec: id => BD[id], ids: () => Object.keys(BD), bar: (id, r, n) => bdBar(BD[id], r, n), fmt: (id, v) => bdFmt(BD[id], v), pick: (id, k) => bdPick(id, k) }, fmtGBP,   // 0.9
     get date() { return state.date; }, get level() { return state.level; }, get focused() { return state.focus; }, get sel() { return state.sel.map(x => x.code); },
     setDate: d => setDate(d), mapOnly, setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); },
     focus: c => focus(c), view: (center, zoom) => map.flyTo({ center, zoom, duration: 1000 }), allCodesAt, popAt, seriesOf, resultFor, resultsOf: code => (RES[code] || []).map(decode), areaOf: c => AREA[c] || null, previousFor, ELX, GE_DAYS, metricSpan: id => metricSpan(M[id]),
     openChart: o => openChart(o), openCmp: () => openCmp(), openProtestList: () => openProtestList(), openProtestCard: i => openProtestCard(i), openInfo: id => openMetricInfo(id),
     sendToWS: it => sendToWS(it), toast, copy, download, searchNames, onDate: f => appListeners.push(f), openPanel: id => openAppPanel(id), store,
+    mapped: () => planMetrics().map(m => m.id),   // 0.9
     defineMetric: m => { if (!M[m.id]) def(m); PS.active[m.id] = true; }, repaint: () => repaint(),
     // 0.7.1
     projection: () => projection(), POLLS, ent, linkPerson, get NEWS() { return window.ATLAS_NEWS || null; }, parentOf: c => parentOf(c), value: (id, c, d) => { const m = M[id]; if (!m) return null; try { return m.get(c, d || state.date); } catch (e) { return null; } },
@@ -4595,6 +4849,7 @@
   CTX.money = window.AtlasMoney || null; CTX.CH = CH; CTX.MK = MK; CTX.LABEL = LABEL;
   CTX.map = map; CTX.POI = POIDATA; CTX.openPoiCard = id => openPoiCard(id); CTX.plain = plain;   // 0.8: views that draw on the map (Atlas Transport)
   if (window.AtlasMoney) AtlasMoney.init(CTX);
+  if (window.AtlasTrade) AtlasTrade.init(CTX);   // 0.9
 
   // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------
   // News shows only when the feed has items for what's on screen: the focused place (or anything inside it), the topics
