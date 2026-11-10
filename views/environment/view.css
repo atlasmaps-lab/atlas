@@ -33,3 +33,5 @@
 .env-bar { display: inline-block; height: 8px; border-radius: 2px; background: #e8592b; min-width: 2px; }
 .env-pop .maplibregl-popup-content { font-size: 12.5px; line-height: 1.4; }
 .env-mini { border-collapse: collapse; margin: 4px 0; font-size: 12px; } .env-mini td { padding: 1px 8px 1px 0; } .env-mini tr.on td { font-weight: 700; }
+/* 0.9.1: the view has its own timeline (Timeline tab), so the main time bar is hidden while it is open */
+#timebar { display: none !important; }

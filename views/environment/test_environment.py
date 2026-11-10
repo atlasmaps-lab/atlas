@@ -16,10 +16,11 @@ def main():
         page = open_atlas(b, base, (1440, 900), query="debug#app=environment"); js = page.evaluate
         tabs = js("() => [...document.querySelectorAll('.ah-nav [data-apanel]')].map(b => b.textContent.trim())")
         rep.check(tabs[:6] == ["Timeline", "Floods", "Coast", "Heat", "Conservation", "Sources"], f"header tabs: {tabs}")
-        page.wait_for_function("() => AtlasCtx.map.getSource('env-floods') && AtlasCtx.map.getSource('env-cons')", timeout=60000)
+        page.wait_for_function("() => AtlasCtx.map.getSource('env-floods') && AtlasCtx.map.getSource('env-cons') && AtlasCtx.map.getSource('env-coast')", timeout=60000)
         rep.check(js("() => AtlasDebug.mapped ? AtlasDebug.mapped().length === 0 : true"), "no area metrics on the map: the zones are their own view")
         count = lambda: js("() => AtlasCtx.map.querySourceFeatures('env-floods-pt').length")
         n = js("() => AtlasCtx.map.getSource('env-floods')._data.features.length")
+        rep.check(js("() => AtlasCtx.map.getLayoutProperty('env-coast-fill', 'visibility')") == "visible", "coast under threat shows today")
         rep.check(n > 2500, f"recorded floods for England and Wales are loaded ({n} flood events, each one shape)")
         txt = lambda: js("() => document.querySelector('.env-sum').textContent")
         today = txt()
@@ -29,6 +30,7 @@ def main():
         a, z = [int(s.split(" floods")[0].replace(",", "")) for s in (txt(), today)]
         rep.check(0 < a < z, f"fewer floods recorded by 1960 than today ({a} < {z})")
         rep.check(js("() => AtlasCtx.map.getLayoutProperty('env-coast-fill', 'visibility')") in (None, "none"), "coastal erosion is hidden in the past")
+        rep.check(not page.is_visible("#timebar"), "the main time bar is hidden: the view has its own timeline")
         page.click("[data-envfut='2105']"); page.wait_for_timeout(800)
         rep.check(js("() => AtlasCtx.map.getLayoutProperty('env-coast-fill', 'visibility')") == "visible", "By 2105 shows coastal erosion")
         rep.check(js("() => AtlasCtx.map.getSource('env-coast')._data.features.length") > 1000, "…with the English and Welsh erosion zones")

@@ -9,9 +9,9 @@ Built on Mo's 0.9.
 **Atlas Environment**, a new view (Environmental perspective → ↗, or `index.html#app=environment`). It shows zones where the environment is changing, and where it is protected, on a timeline that runs from recorded history into official forecasts. The zones are the view's own layers, separate from councils, constituencies and the other boundary sets.
 
 - **Header tabs:** Timeline · Floods · Coast · Heat · Conservation · Sources.
-- **Timeline:** a year slider from 1945 to today (▶ plays the years), then **Future** (by 2055, by 2105). Every layer follows it.
+- **Timeline:** a year slider from 1945 to today (▶ plays the years), then **Future** (by 2055, by 2105). Every layer follows it. The main time bar is hidden while the view is open.
 - **Floods (recorded), England and Wales:** every outline the Environment Agency and Natural Resources Wales have recorded, about 3,200 flood events. Zoomed out, they build up as hot zones as the years pass; zoomed in, each outline shows, coloured by source (river, sea, surface water, groundwater).
-- **Coastal erosion (forecast), England and Wales:** the national coastal erosion risk maps (NCERM) for 2055 and 2105, assuming the shoreline management plans are delivered and sea level rises along the higher central allowance.
+- **Coastal erosion (forecast), England and Wales:** shown today as the coast under threat, and under Future: the national coastal erosion risk maps (NCERM) for 2055 and 2105, assuming the shoreline management plans are delivered and sea level rises along the higher central allowance.
 - **Hot summer days, whole UK:** days above 30 °C a year on a 12 km grid (Met Office, UKCP18), for 1981–2000, 2001–2020 and +1.5 to +4 °C of global warming. Warming levels are steps, not dates, because the Met Office doesn't tie them to years.
 - **Wildfire, Scotland:** burnt areas seen by satellite in summer 2026 (SEPA).
 - **Conservation, all four nations:** National Parks and Ramsar wetlands, each appearing in the year it was designated. Ramsar sites without a published date show dashed, as "protected today".

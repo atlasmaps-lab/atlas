@@ -9,7 +9,7 @@ Where the environment is changing, and where it is protected, on a timeline that
 
 | Tab | What it shows |
 |---|---|
-| **Timeline** | The year slider (1945 to today, with ▶ to play the years), **Future** buttons (by 2055, by 2105) and the layers to show. When you move the slider, every layer follows: floods recorded up to that year, protected areas designated by then, and heat for that period. |
+| **Timeline** | The year slider (1945 to today, with ▶ to play the years), **Future** buttons (by 2055, by 2105) and the layers to show. When you move the slider, every layer follows: floods recorded up to that year, protected areas designated by then, and heat for that period. The main time bar is hidden while this view is open, so there is only one timeline. |
 | **Floods** | Floods recorded each year, and the largest floods up to the chosen year (click one to go there). |
 | **Coast** | How much coast is forecast to erode by 2055 and 2105, and the stretches with the greatest retreat. |
 | **Heat** | Days above 30 °C a year, at each step from 1981–2000 to +4 °C of global warming, and the hottest squares. |
@@ -21,7 +21,7 @@ Where the environment is changing, and where it is protected, on a timeline that
 | Layer | Coverage | Timeline | Source (all Open Government Licence v3.0) |
 |---|---|---|---|
 | Floods (recorded) | England, Wales | Up to the chosen year. Zoomed out they show as hot zones; zoomed in, as outlines coloured by source (river, sea, surface water, groundwater) | Environment Agency, Recorded Flood Outlines; Natural Resources Wales, Historic Flood Map |
-| Coastal erosion (forecast) | England, Wales | Under **Future**: by 2055 in red, 2055–2105 in orange | Environment Agency, NCERM 2024; Natural Resources Wales, NCERM. Both assume the shoreline management plans are delivered, with the higher central sea level allowance |
+| Coastal erosion (forecast) | England, Wales | **Today** (the coast under threat) and under **Future**: by 2055 in red, 2055–2105 in orange. Hidden in past years, since it is a forecast | Environment Agency, NCERM 2024; Natural Resources Wales, NCERM. Both assume the shoreline management plans are delivered, with the higher central sea level allowance |
 | Hot summer days | UK (12 km squares) | 1981–2000 up to 2000, 2001–2020 after; or pick a warming level (+1.5 to +4 °C) | Met Office Climate Data Portal (UKCP18, RCP8.5 ensemble median) |
 | Wildfire (satellite) | Scotland | Summer 2026 | SEPA, Copernicus Emergency Management Service |
 | National Parks and Ramsar wetlands | All four nations (NI has no National Parks) | From the year designated. Ramsar sites without a published date show dashed, as "protected today" | Natural England, Natural Resources Wales, Scottish Government, NatureScot, DAERA |

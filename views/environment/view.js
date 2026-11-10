@@ -87,7 +87,7 @@
     bindClicks(key);
   }
   const LAYERS = { floods: ["floods-heat", "floods-fill", "floods-line"], coast: ["coast-fill", "coast-line"], heat: ["heat-fill"], cons: ["cons-fill", "cons-line"], fire: ["fire-fill", "fire-pt"] };
-  function shown(key) { return S.on[key] && (key === "coast" ? !!S.fut : key === "fire" ? Y() >= 2026 : true); }
+  function shown(key) { return S.on[key] && (key === "coast" ? (!!S.fut || S.year >= TODAY_Y) : key === "fire" ? Y() >= 2026 : true); }   // coast: today ("under threat") and the future
   function apply() {
     const m = CTX && CTX.map; if (!m) return;
     Object.keys(LAYERS).forEach(key => {
@@ -99,7 +99,7 @@
     const past = ["<=", ["get", "y"], y];
     ["floods-heat", "floods-fill", "floods-line"].forEach(id => m.getLayer(P + id) && m.setFilter(P + id, past));
     if (m.getLayer(P + "floods-fill")) m.setPaintProperty(P + "floods-fill", "fill-opacity", ["interpolate", ["linear"], ["-", y, ["get", "y"]], 0, 0.8, 5, 0.55, 25, 0.3]);
-    if (m.getLayer(P + "coast-fill")) ["coast-fill", "coast-line"].forEach(id => m.setFilter(P + id, ["<=", ["get", "e"], S.fut || 0]));
+    if (m.getLayer(P + "coast-fill")) ["coast-fill", "coast-line"].forEach(id => m.setFilter(P + id, ["<=", ["get", "e"], S.fut || 2105]));   // today: every stretch under threat
     if (m.getLayer(P + "heat-fill")) m.setPaintProperty(P + "heat-fill", "fill-color", ["interpolate", ["linear"], ["coalesce", ["at", heatIdx(), ["get", "v"]], 0], ...HEAT_RAMP]);
     const cons = ["any", ["==", ["get", "y"], null], ["<=", ["get", "y"], y]];
     ["cons-fill", "cons-line"].forEach(id => m.getLayer(P + id) && m.setFilter(P + id, cons));
@@ -167,7 +167,7 @@
         <p class="ap-note">The last five are levels of global warming above 1850–1900, not dates: the Met Office doesn't tie them to years. Current international policies point to about 2.4–2.8 °C. ${S.heatPicked ? `<a href="#" data-envheatauto>Follow the timeline</a>` : "Following the timeline (pick a level to fix it)."}</p></div>` : ""}
       <div class="env-sum">
         ${S.on.floods ? `<p><b>${fmt(upTo.length)}</b> floods recorded up to ${y}${S.fut ? "" : `, <b>${fmt(inYear.length)}</b> in ${y}`}; <b>${fmt(recent.length)}</b> in the ten years to ${y}.</p>` : ""}
-        ${S.on.coast ? `<p>${S.fut ? `Coastline forecast to erode by <b>${S.fut}</b>${S.fut === 2105 ? " (red: by 2055, orange: 2055–2105)" : ""}.` : "Coastal erosion forecasts show under <b>Future</b>."}</p>` : ""}
+        ${S.on.coast ? `<p>${S.fut ? `Coastline forecast to erode by <b>${S.fut}</b>${S.fut === 2105 ? " (red: by 2055, orange: 2055–2105)" : ""}.` : y >= TODAY_Y ? "Coast under threat today: land forecast to erode by 2055 (red) and by 2105 (orange)." : "Coastal erosion shows from <b>today</b> on (it is a forecast, so not in past years)."}</p>` : ""}
         ${S.on.cons ? `<p><b>${cons.filter(f => f.properties.k === "np").length}</b> National Parks and <b>${cons.filter(f => f.properties.k === "ramsar").length}</b> dated Ramsar wetlands designated by ${y}; other Ramsar sites are dashed (protected today, date not in the open data).</p>` : ""}
         ${S.on.heat ? `<p>Heat: <b>${e(heatKey()[1])}</b>${D.heat ? `, UK average ${fmt(avgHeat(heatIdx()))} days above 30 °C a year` : ""}.</p>` : ""}
       </div>
