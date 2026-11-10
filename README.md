@@ -1,6 +1,23 @@
-# Atlas 0.9 — United Kingdom
+# Atlas 0.9.1 — United Kingdom
 
 Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
+
+## What's new in 0.9.1
+
+Built on Mo's 0.9.
+
+**Atlas Environment**, a new view (Environmental perspective → ↗, or `index.html#app=environment`). It shows zones where the environment is changing, and where it is protected, on a timeline that runs from recorded history into official forecasts. The zones are the view's own layers, separate from councils, constituencies and the other boundary sets.
+
+- **Header tabs:** Timeline · Floods · Coast · Heat · Conservation · Sources.
+- **Timeline:** a year slider from 1945 to today (▶ plays the years), then **Future** (by 2055, by 2105). Every layer follows it. The main time bar is hidden while the view is open.
+- **Floods (recorded), England and Wales:** every outline the Environment Agency and Natural Resources Wales have recorded, about 3,200 flood events. Zoomed out, they build up as hot zones as the years pass; zoomed in, each outline shows, coloured by source (river, sea, surface water, groundwater).
+- **Coastal erosion (forecast), England and Wales:** shown today as the coast under threat, and under Future: the national coastal erosion risk maps (NCERM) for 2055 and 2105, assuming the shoreline management plans are delivered and sea level rises along the higher central allowance.
+- **Hot summer days, whole UK:** days above 30 °C a year on a 12 km grid (Met Office, UKCP18), for 1981–2000, 2001–2020 and +1.5 to +4 °C of global warming. Warming levels are steps, not dates, because the Met Office doesn't tie them to years.
+- **Wildfire, Scotland:** burnt areas seen by satellite in summer 2026 (SEPA).
+- **Conservation, all four nations:** National Parks and Ramsar wetlands, each appearing in the year it was designated. Ramsar sites without a published date show dashed, as "protected today".
+- **Gaps** are shown as gaps ("no open national data"): recorded floods for Scotland and Northern Ireland, and coastal erosion for Scotland (published only region by region) and Northern Ireland. See the view's Sources tab and `views/environment/README.md`.
+
+Rebuild with `python3 pipeline/fetch_envzones.py` (about 1 GB, not committed) and `python3 pipeline/build_envzones.py` (writes `data/envzones/`, about 8 MB, loaded tab by tab). The version label reads 0.9.1.
 
 ## What's new in 0.9
 
@@ -743,4 +760,4 @@ pipeline/                        fetch_*.py, build*.py, import_acled.py, xlsx_re
 
 ## Credits
 
-Contains OS data © Crown copyright and database right 2026. © OpenStreetMap contributors. Tiles and imagery © MapTiler. ONS data and boundaries: Open Government Licence v3.0. Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Health indicators: Office for Health Improvement and Disparities (Fingertips), Open Government Licence v3.0. House prices: HM Land Registry data © Crown copyright and database right 2026, Open Government Licence v3.0 (UK HPI includes Registers of Scotland and Land & Property Services Northern Ireland data). Census 2021, rents, affordability, public sector finances: ONS, Open Government Licence v3.0. Environmental perspective: greenhouse gas emissions and renewable electricity, DESNZ; household waste, Defra; air pollution, OHID Fingertips; public EV chargers, DfT (from Zapmap); all Open Government Licence v3.0. Dwelling stock and council finance: MHCLG, Open Government Licence v3.0. Political and protest information: Wikipedia (CC BY-SA 4.0) and Wikidata (CC0). Map engine: MapLibre GL JS.
+Contains OS data © Crown copyright and database right 2026. © OpenStreetMap contributors. Tiles and imagery © MapTiler. ONS data and boundaries: Open Government Licence v3.0. Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Health indicators: Office for Health Improvement and Disparities (Fingertips), Open Government Licence v3.0. House prices: HM Land Registry data © Crown copyright and database right 2026, Open Government Licence v3.0 (UK HPI includes Registers of Scotland and Land & Property Services Northern Ireland data). Census 2021, rents, affordability, public sector finances: ONS, Open Government Licence v3.0. Environmental perspective: greenhouse gas emissions and renewable electricity, DESNZ; household waste, Defra; air pollution, OHID Fingertips; public EV chargers, DfT (from Zapmap); all Open Government Licence v3.0. Atlas Environment: recorded floods and coastal erosion, Environment Agency and Natural Resources Wales; hot summer days, Met Office (UKCP18); wildfire, SEPA (Copernicus Emergency Management Service); National Parks and Ramsar sites, Natural England, Natural Resources Wales, Scottish Government, NatureScot and DAERA; all Open Government Licence v3.0. Dwelling stock and council finance: MHCLG, Open Government Licence v3.0. Political and protest information: Wikipedia (CC BY-SA 4.0) and Wikidata (CC0). Map engine: MapLibre GL JS.
