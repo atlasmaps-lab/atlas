@@ -1,0 +1,22 @@
+# Investment build (2026-11-10)
+
+- Inward FDI countries: 43; outward: 55
+- inward position, Foreign companies’ share of UK companies’ share capital and reserves at end period: 2024 £2,020.3bn
+- inward position, Net amounts due to foreign parents on the inter-company account at end period: 2024 £94.5bn
+- inward position, Amounts due to foreign parents on the inter-company account at end period: 2024 £184.3bn
+- inward position, Amounts due from foreign parents on the inter-company account at end period: 2024 £89.9bn
+- inward position, Net amounts due to foreign parents on the branch head-office account at end period: 2024 £12.8bn
+- inward position, Amounts due to foreign parents on the branch head-office account at end period: 2024 £33.0bn
+- inward position, Amounts due from foreign parents on the branch head-office account at end period: 2024 £20.2bn
+- inward position, Total foreign direct investment international investment position in the UK at end period: 2024 £2,127.6bn
+- outward position, UK companies’ share of foreign companies’ share capital and reserves at end period: 2024 £1,891.8bn
+- outward position, Net amounts due to UK parents on the inter-company account at end period: 2024 £-80.3bn
+- outward position, Amounts due to UK parents on the inter-company account at end period: 2024 £196.3bn
+- outward position, Amounts due from UK parents on the inter-company account at end period: 2024 £276.6bn
+- outward position, Net amounts due to UK parents on the branch head-office account at end period: 2024 £44.6bn
+- outward position, Amounts due to UK parents on the branch head-office account at end period: 2024 £78.0bn
+- outward position, Amounts due from UK parents on the branch head-office account at end period: 2024 £33.4bn
+- outward position, Total foreign direct investment international investment position abroad at end period: 2024 £1,856.1bn
+- Unmatched FDI countries: Gulf Arabian Countries, UK Offshore Islands, UK Offshore Islands
+- Services partners 83 (2025); current account partners 84 (2025)
+- DBT regions 13, markets 30
