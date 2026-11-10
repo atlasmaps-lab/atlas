@@ -1,6 +1,38 @@
-# Atlas 0.8 — United Kingdom
+# Atlas 0.9 — United Kingdom
 
 Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
+
+## What's new in 0.9
+
+**Trade, investment and money flows (Atlas Markets)**
+- **Trade:** UK goods exports and imports (HMRC, the latest 12 months and monthly since 2016), the top products and partners, the year's biggest changes, and imports that depend on one supplier.
+- **Products:** every product, from 98 chapters down to 9,459 eight-digit codes, with:
+  - buyers and sellers
+  - UK ports
+  - the trend
+  - the value per kg
+  - the live UK Trade Tariff for any partner
+- **Partners:** a card for every country with goods both ways, services by type, FDI and profits both ways, the current account and any trade agreement.
+- **Ports & routes:** export and import routes drawn from UK gateways, with moving dots, for all goods or for one product.
+- **Investment:** FDI positions both ways by country and industry, and DBT's new projects and jobs by region.
+- **Income flows:** profits sent home or kept, dividends both ways, all primary income, and transfers.
+- **Traders near you:** HMRC's published exporters and importers in the council in focus.
+- **Map metrics:** goods exports, imports, balance and exports per head for councils and regions, exports by product group and by partner for regions, and investment projects and jobs.
+
+**The same depth elsewhere: breakdowns**
+A breakdown is one total split into every category. The key lists each category with its number, and a profile panel compares the place with its region and the country. Click a category to map it.
+- **Economic:** output by industry and its growth, jobs by 88 industries, commuting (with flow lines)
+- **Social:** 12 Census 2021 topics, for councils and wards
+- **Health:** deaths by cause (about 230 causes) and by age
+
+**Pipelines:**
+- `pipeline/trade_fetch.py` and `build_trade.py`
+- `fetch_investment.py`
+- `fetch_industry.py`
+- `fetch_census_profiles.py`
+- `fetch_health.py`
+
+The monthly job is `.github/workflows/trade.yml`.
 
 ## What's new in 0.8.1
 

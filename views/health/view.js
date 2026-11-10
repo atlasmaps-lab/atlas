@@ -109,6 +109,7 @@
     id: "health", name: "Atlas Health", perspective: "health", accent: ACC, dataNeeds: ["ATLAS_EXTRA"],
     init(ctx) { ctx.setLevel("council"); ctx.mapOnly(["le_f"]); ctx.openPanel("overview"); },
     panels: [{ id: "overview", title: "Place profile", live: true, render: overview, min: { w: 440, h: 320 } },
+      { id: "deaths", title: "Causes of death", blurb: "What people die of here, in about 230 causes and by age, against England and Wales", live: true, render: (ctx, el) => window.AtlasProfile ? AtlasProfile.panel(["hd_cause", "hd_detail", "hd_age"], { what: "Cause" })(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 560, h: 420 } },
       { id: "spine", title: "Against England", blurb: "Spine chart: the place against England and every council, Fingertips style", live: true, render: spine, min: { w: 600, h: 400 } },
       { id: "inequality", title: "Inequality", blurb: "Health by deprivation decile, and the gap between the most and least deprived", render: inequality, min: { w: 500, h: 380 } }, { id: "rankings", title: "Rankings", live: true, render: rankings, min: { w: 380, h: 320 } }, { id: "local", title: "Wards and seats", render: local }],
   });
