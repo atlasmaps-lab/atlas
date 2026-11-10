@@ -11,7 +11,7 @@ Atlas Multi (all perspectives together) stays the default. Any perspective can a
   AtlasApps.register({
     id: "markets", name: "Atlas Markets", perspective: "markets", accent: "#a07a12",
     dataNeeds: ["ATLAS_MARKETS", "ATLAS_EXTRA"],       // what has to be loaded; if missing, the app is "Not available yet"
-    panels: [{ id, title, render(ctx) }],               // its own windows (opened from the app bar)
+    panels: [{ id, title, render(ctx), map }],          // its own windows, opened from the header tabs; map (0.9.2): what a tab puts on the map, { level, metrics: [ids], view: [[lon, lat], zoom] } or ctx => ...
     tools: [{ id, title, render(ctx) }],                // calculators and other tools
     cards: { company: render },                          // extra card types
     init(ctx) { ... },                                   // default layout: what's on the map, which boundaries, the date

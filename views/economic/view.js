@@ -43,19 +43,19 @@
     init(ctx) { ctx.mapOnly(["gdp_per_head"]); ctx.openPanel("indicators"); },
     panels: [
       // 0.9: what the economy here is made of, industry by industry, and where people commute
-      { id: "industries", title: "Industries", blurb: "Output and jobs by industry, against the region and the UK; the fastest-growing industries", live: true, render: (ctx, el) => window.AtlasProfile ? AtlasProfile.panel(["eco_gva", "eco_jobs", "eco_gva_grow"], { what: "Industry" })(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 560, h: 420 } },
-      { id: "commuting", title: "Commuting", blurb: "Where people here work, and where workers here live (Census 2021)", live: true, render: (ctx, el) => { const on = ctx.mapped ? ctx.mapped() : []; if (!on.includes("commute_lines")) ctx.mapOnly(on.concat(["commute_lines"])); const c = ctx.focused; const I = window.ATLAS_INDUSTRY, CM = I && I.commute; if (!CM) { el.innerHTML = "<p class='ap-note'>Not loaded.</p>"; return; }
+      { id: "industries", map: {"level": "council", "metrics": ["eco_gva_top"]}, title: "Industries", blurb: "Output and jobs by industry, against the region and the UK; the fastest-growing industries", live: true, render: (ctx, el) => window.AtlasProfile ? AtlasProfile.panel(["eco_gva", "eco_jobs", "eco_gva_grow"], { what: "Industry" })(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 560, h: 420 } },
+      { id: "commuting", map: {"level": "council", "metrics": ["commute_net"]}, title: "Commuting", blurb: "Where people here work, and where workers here live (Census 2021)", live: true, render: (ctx, el) => { const on = ctx.mapped ? ctx.mapped() : []; if (!on.includes("commute_lines")) ctx.mapOnly(on.concat(["commute_lines"])); const c = ctx.focused; const I = window.ATLAS_INDUSTRY, CM = I && I.commute; if (!CM) { el.innerHTML = "<p class='ap-note'>Not loaded.</p>"; return; }
         if (!c || !CM.out[c]) { el.innerHTML = "<p class='ap-note'>Click a council in England or Wales: its commuting flows draw on the map and list here.</p>"; return; }
         const t = (L, d) => `<table class="tr-t"><thead><tr><th>${d}</th><th class="num">People</th></tr></thead><tbody>${L.map(([k, n]) => `<tr><td class="tr-n">${ctx.esc(ctx.nameOf(k))}</td><td class="num">${n.toLocaleString("en-GB")}</td></tr>`).join("")}</tbody></table>`;
         el.innerHTML = `<h4>${ctx.esc(ctx.nameOf(c))}</h4><p class="ap-note">${(CM.within[c] || 0).toLocaleString("en-GB")} live and work here; ${(CM.out[c].n).toLocaleString("en-GB")} go out to work; ${((CM.in[c] || {}).n || 0).toLocaleString("en-GB")} come in; ${(CM.home[c] || 0).toLocaleString("en-GB")} worked mainly from home (Census day 2021, in lockdown).</p><div class="tr-two"><div>${t(CM.out[c].top, "Works in")}</div><div>${t((CM.in[c] || {}).top || [], "Lives in")}</div></div>`; }, min: { w: 460, h: 360 } },
-      { id: "indicators", title: "Indicators", blurb: "GDP, inflation, jobs, pay, public finances and trade: latest, trend and next release", render: EC("indicators"), min: { w: 520, h: 420 } },
+      { id: "indicators", map: {"level": "council", "metrics": ["gdp_per_head"]}, title: "Indicators", blurb: "GDP, inflation, jobs, pay, public finances and trade: latest, trend and next release", render: EC("indicators"), min: { w: 520, h: 420 } },
       { id: "forecasts", title: "Forecasts vs outturn", blurb: "Independent forecasters and the OBR, against what was published", render: EC("forecasts"), min: { w: 520, h: 380 } },
-      { id: "regions", title: "Regions", blurb: "GVA per head and growth by region", render: EC("regions"), min: { w: 480, h: 380 } },
+      { id: "regions", map: {"level": "region", "metrics": ["gdp_per_head"]}, title: "Regions", blurb: "GVA per head and growth by region", render: EC("regions"), min: { w: 480, h: 380 } },
       { id: "calendar", title: "Release calendar", render: EC("calendar"), min: { w: 440, h: 360 } },
       { id: "rates", title: "Rates & sterling", render: EC("rates"), min: { w: 480, h: 320 } },
-      { id: "dashboard", title: "Place dashboard", live: true, render: dashboard },
-      { id: "rankings", title: "Rankings", live: true, render: rankings },
+      { id: "dashboard", map: {"level": "council", "metrics": ["gdp_per_head"]}, title: "Place dashboard", live: true, render: dashboard },
+      { id: "rankings", map: {"level": "council", "metrics": ["gdp_per_head"]}, title: "Rankings", live: true, render: rankings },
     ],
-    tools: [{ id: "decomp", title: "Growth decomposition", live: true, render: decomp }, { id: "missing", title: "Not available yet", render: missing }],
+    tools: [{ id: "decomp", map: {"level": "council", "metrics": ["gdp_growth"]}, title: "Growth decomposition", live: true, render: decomp }, { id: "missing", title: "Not available yet", render: missing }],
   });
 })();

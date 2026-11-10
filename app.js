@@ -4898,6 +4898,26 @@
     const draw = () => { if (!w.el.hidden) { try { x.render(CTX, w.body); } catch (e) { console.error(e); w.body.innerHTML = `<p class="aempty">Couldn't draw this: ${esc(e.message)}</p>`; } } };
     draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
   }
+  // 0.9.2: the header links work as tabs. Opening one closes the other panels, and puts what that tab is about on the
+  // map: a panel's `map` is either a function (ctx => ...) or { level, metrics: [ids], view: [[lon, lat], zoom] }.
+  // Metrics that aren't loaded are skipped; a panel without `map` leaves the map as it is.
+  function applyPanelMap(x) {
+    const m = x.map; if (!m) return;
+    try {
+      if (typeof m === "function") { m(CTX); return; }
+      if (m.level) CTX.setLevel(m.level);
+      const ids = (m.metrics || []).filter(id => M[id]);
+      if (ids.length) mapOnly(ids);
+      if (m.view) CTX.view(m.view[0], m.view[1]);
+    } catch (e) { console.error(e); }
+  }
+  function openFromBar(id) {
+    const x = [...APP.panels, ...APP.tools].find(p => p.id === id); if (!x) return;
+    if (!APP.tools.includes(x)) Object.entries(appWins).forEach(([k, o]) => { if (k !== id && WM.isOpen(o.el) && !APP.tools.find(t => t.id === k)) WM.close(o.el); });
+    applyPanelMap(x);
+    openAppPanel(id);
+    markLinks();
+  }
   function markLinks() { document.querySelectorAll("#appbar [data-apanel]").forEach(b => { const o = appWins[b.dataset.apanel]; b.classList.toggle("on", !!o && WM.isOpen(o.el)); }); }
   function renderAppsMenu() {
     const el = $("apps-list"); if (!el) return;
@@ -4931,7 +4951,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.9.1</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.9.2</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));
@@ -4965,7 +4985,7 @@
       WM.open(w.el); return;
     }
     bar.innerHTML = [...APP.panels, ...APP.tools].map(x => `<button class="ah-link${APP.tools.includes(x) ? " tool" : ""}" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("");
-    bar.hidden = false; bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) openAppPanel(b.dataset.apanel); });
+    bar.hidden = false; bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) openFromBar(b.dataset.apanel); });
     requestAnimationFrame(() => { const h = $("apphead").offsetHeight; document.documentElement.style.setProperty("--ahh", h + "px"); WM.setTop(h + 8); map.resize(); });
     dockOpenP = APP.perspective; setFold(false);
     if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) map.loaded() ? APP.init(CTX) : map.once("load", () => APP.init(CTX)); }

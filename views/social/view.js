@@ -46,11 +46,11 @@
       { id: "messages", title: "Messages", render: SP("messages"), min: { w: 420, h: 360 } },
       { id: "profile", title: "Profile & safety", render: SP("profile"), min: { w: 380, h: 420 } },
       ...(dev ? [{ id: "moderation", title: "Moderation", blurb: "Developers only: reports waiting for a decision", render: SP("moderation") }] : []),
-      { id: "people", title: "Statistics", blurb: "Population, change, density and age for the place in focus", live: true, render: people },
-      { id: "deprivation", title: "Deprivation", blurb: "English Indices of Deprivation 2025, overall and by domain", live: true, render: deprivation, min: { w: 480, h: 380 } },
-      { id: "change", title: "Population change", live: true, render: change },
-      { id: "census", title: "Census profile", blurb: "Every Census 2021 category for the place in focus, against its region and England and Wales", live: true, render: (ctx, el) => window.AtlasProfile ? AtlasProfile.panel(["cen_ethnic", "cen_religion", "cen_birth", "cen_language", "cen_english", "cen_age", "cen_nssec", "cen_occupation", "cen_activity", "cen_quals", "cen_tenure", "cen_households"], { what: "Category" })(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 560, h: 420 } },
+      { id: "people", map: {"level": "council", "metrics": ["density"]}, title: "Statistics", blurb: "Population, change, density and age for the place in focus", live: true, render: people },
+      { id: "deprivation", map: {"level": "council", "metrics": ["imd_decile"]}, title: "Deprivation", blurb: "English Indices of Deprivation 2025, overall and by domain", live: true, render: deprivation, min: { w: 480, h: 380 } },
+      { id: "change", map: {"level": "council", "metrics": ["pop_change"]}, title: "Population change", live: true, render: change },
+      { id: "census", map: {"level": "council", "metrics": ["cen_ethnic_top"]}, title: "Census profile", blurb: "Every Census 2021 category for the place in focus, against its region and England and Wales", live: true, render: (ctx, el) => window.AtlasProfile ? AtlasProfile.panel(["cen_ethnic", "cen_religion", "cen_birth", "cen_language", "cen_english", "cen_age", "cen_nssec", "cen_occupation", "cen_activity", "cen_quals", "cen_tenure", "cen_households"], { what: "Category" })(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 560, h: 420 } },
     ],
-    tools: [{ id: "pyramid", title: "Population pyramid", render: pyramid }],
+    tools: [{ id: "pyramid", map: {"level": "council", "metrics": ["average_age"]}, title: "Population pyramid", render: pyramid }],
   });
 })();

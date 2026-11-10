@@ -7,6 +7,8 @@ Where the environment is changing, and where it is protected, on a timeline that
 
 ## Header tabs
 
+Each tab works as a tab (it replaces the window before it). Floods, Coast, Heat and Conservation show only their own layer on the map; Timeline shows the layers you ticked.
+
 | Tab | What it shows |
 |---|---|
 | **Timeline** | The year slider (1945 to today, with ▶ to play the years), **Future** buttons (by 2055, by 2105) and the layers to show. When you move the slider, every layer follows: floods recorded up to that year, protected areas designated by then, and heat for that period. The main time bar is hidden while this view is open, so there is only one timeline. |

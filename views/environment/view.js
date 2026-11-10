@@ -6,14 +6,14 @@
  */
 (function () {
   "use strict";
-  const V = "0910", P = "env-";
+  const V = "0920", P = "env-";
   const FILE = { floods: "floods", coast: "coast", heat: "heat", cons: "conservation", fire: "fire" };
   const D = {}, WAIT = {};
   const SRC_COL = { river: "#1f6fb4", sea: "#11888f", surface: "#7b4fa6", ground: "#8a6a3b", other: "#6b7480" };
   const SRC_NAME = { river: "River", sea: "Sea", surface: "Surface water and drains", ground: "Groundwater", other: "Other or unknown" };
   const NAT = { E: "England", W: "Wales", S: "Scotland", NI: "Northern Ireland" };
   const HEAT_RAMP = [0, "rgba(255,240,200,0)", 0.5, "#fff1c1", 2, "#fdd17f", 5, "#f99d4b", 10, "#e8592b", 20, "#b8202b", 40, "#6b0f2a"];
-  const S = { year: null, fut: null, heat: "b01", heatPicked: false, on: { floods: true, coast: true, heat: false, cons: true, fire: true }, playing: null };
+  const S = { mine: null, year: null, fut: null, heat: "b01", heatPicked: false, on: { floods: true, coast: true, heat: false, cons: true, fire: true }, playing: null };
   let CTX = null, TODAY_Y = 2026, ELS = {};
 
   // ---------- data: each theme loads once, when first needed ----------
@@ -148,19 +148,45 @@
     renderAll();
   }
 
+  // The timeline is a fixed frame (the slider is never redrawn, so it can be dragged) and a body that updates.
   function timeline(ctx, el) {
-    ELS.timeline = el; const e = ctx.esc, y = Y(), hs = D.heat ? D.heat.steps : [["b81", "1981–2000"], ["b01", "2001–2020"], ["g15", "+1.5 °C"], ["g20", "+2 °C"], ["g25", "+2.5 °C"], ["g30", "+3 °C"], ["g40", "+4 °C"]];
+    ELS.timeline = el;
+    if (!el.querySelector(".env-tl")) {
+      el.innerHTML = `
+      <div class="env-tl">
+        <div class="env-when"><button class="env-play" data-envplay></button><b class="env-year"></b><span class="env-mode"></span></div>
+        <input type="range" class="env-range" data-envyear min="1945" max="${TODAY_Y}" step="1" aria-label="Year">
+        <div class="env-ticks"><span>1945</span><span>1970</span><span>2000</span><span>Today</span></div>
+        <div class="env-future"><span>Future</span>${[2055, 2105].map(f => `<button data-envfut="${f}">By ${f}</button>`).join("")}</div>
+      </div><div class="env-tl-body"></div>`;
+      let raf = 0;
+      el.oninput = ev => { if (!ev.target.matches("[data-envyear]")) return; stopPlay(); S.fut = null; S.year = +ev.target.value;
+        cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { apply(); timelineBody(ctx, el); Object.keys(ELS).forEach(k => k !== "timeline" && ELS[k] && ELS[k].isConnected && PANELS[k](ctx, ELS[k])); }); };
+      el.onclick = ev => {
+        const t = ev.target;
+        if (t.closest("[data-envplay]")) play();
+        const f = t.closest("[data-envfut]"); if (f) setFut(S.fut === +f.dataset.envfut ? null : +f.dataset.envfut);
+        const h = t.closest("[data-envheat]"); if (h) { S.heat = h.dataset.envheat; S.heatPicked = true; apply(); renderAll(); }
+        if (t.closest("[data-envheatauto]")) { ev.preventDefault(); S.heatPicked = false; apply(); renderAll(); }
+        if (t.closest("[data-envsources]")) { ev.preventDefault(); ctx.openPanel("sources"); }
+      };
+      el.onchange = ev => { const c = ev.target.closest("[data-envon]"); if (c) { S.on[c.dataset.envon] = c.checked; S.mine = Object.assign({}, S.on); apply(); renderAll(); } };
+    }
+    const y = Y(), r = el.querySelector(".env-range");
+    el.querySelector(".env-play").textContent = S.playing ? "❚❚" : "▶"; el.querySelector(".env-play").title = S.playing ? "Pause" : "Play the years";
+    el.querySelector(".env-year").textContent = S.fut ? "By " + S.fut : y;
+    el.querySelector(".env-mode").textContent = S.fut ? "forecast" : y === TODAY_Y ? "today" : "recorded";
+    if (document.activeElement !== r || S.playing) r.value = y;
+    r.style.opacity = S.fut ? ".45" : "";
+    el.querySelectorAll("[data-envfut]").forEach(b => b.classList.toggle("on", S.fut === +b.dataset.envfut));
+    timelineBody(ctx, el);
+  }
+  function timelineBody(ctx, el) {
+    const e = ctx.esc, y = Y(), hs = D.heat ? D.heat.steps : [["b81", "1981–2000"], ["b01", "2001–2020"], ["g15", "+1.5 °C"], ["g20", "+2 °C"], ["g25", "+2.5 °C"], ["g30", "+3 °C"], ["g40", "+4 °C"]];
     const fl = D.floods, upTo = fl ? fl.events.filter(x => +x.d.slice(0, 4) <= y) : [], inYear = fl ? fl.events.filter(x => +x.d.slice(0, 4) === y) : [];
     const recent = fl ? fl.events.filter(x => { const yy = +x.d.slice(0, 4); return yy <= y && yy > y - 10; }) : [];
     const cons = D.cons ? D.cons.features.filter(f => f.properties.y && f.properties.y <= y) : [];
-    el.innerHTML = `
-      <div class="env-tl">
-        <div class="env-when"><button class="env-play" data-envplay title="${S.playing ? "Pause" : "Play the years"}">${S.playing ? "❚❚" : "▶"}</button>
-          <b class="env-year">${S.fut ? "By " + S.fut : y}</b><span class="env-mode">${S.fut ? "forecast" : y === TODAY_Y ? "today" : "recorded"}</span></div>
-        <input type="range" class="env-range" data-envyear min="1945" max="${TODAY_Y}" step="1" value="${y}" aria-label="Year" ${S.fut ? 'style="opacity:.45"' : ""}>
-        <div class="env-ticks"><span>1945</span><span>1970</span><span>2000</span><span>Today</span></div>
-        <div class="env-future"><span>Future</span>${[2055, 2105].map(f => `<button class="${S.fut === f ? "on" : ""}" data-envfut="${f}">By ${f}</button>`).join("")}</div>
-      </div>
+    el.querySelector(".env-tl-body").innerHTML = `
       <div class="env-layers">${[["floods", "Floods (recorded)", "#1f6fb4"], ["coast", "Coastal erosion (forecast)", "#c0392b"], ["heat", "Hot summer days", "#e8592b"], ["cons", "National Parks and Ramsar wetlands", "#4f772d"], ["fire", "Wildfire (satellite, 2026)", "#e85d04"]]
         .map(([k, l, c]) => `<label style="--c:${c}"><input type="checkbox" data-envon="${k}" ${S.on[k] ? "checked" : ""}><i></i>${l}${S.on[k] && !D[k] ? " <small>loading…</small>" : ""}</label>`).join("")}</div>
       ${S.on.heat ? `<div class="env-heat"><span>Heat at</span>${hs.map((s, i) => `<button class="${i === heatIdx() ? "on" : ""}" data-envheat="${s[0]}">${e(s[1])}</button>`).join("")}
@@ -173,16 +199,6 @@
       </div>
       ${S.on.floods ? `<div class="env-key">${Object.keys(SRC_COL).map(k => `<span><i style="background:${SRC_COL[k]}"></i>${SRC_NAME[k]}</span>`).join("")}</div><p class="ap-note">Zoomed out, recorded floods show as hot zones (darker = more and larger floods); zoom in for each outline. Brighter outlines are more recent.</p>` : ""}
       <p class="ap-note">Coverage: floods for England and Wales; coastal erosion for England and Wales; heat for the whole UK; protected areas for all four nations. See <a href="#" data-envsources>Sources</a>.</p>`;
-    el.oninput = ev => { if (ev.target.matches("[data-envyear]")) { stopPlay(); setYear(+ev.target.value); } };
-    el.onclick = ev => {
-      const t = ev.target;
-      if (t.closest("[data-envplay]")) play();
-      const f = t.closest("[data-envfut]"); if (f) setFut(S.fut === +f.dataset.envfut ? null : +f.dataset.envfut);
-      const h = t.closest("[data-envheat]"); if (h) { S.heat = h.dataset.envheat; S.heatPicked = true; apply(); renderAll(); }
-      if (t.closest("[data-envheatauto]")) { ev.preventDefault(); S.heatPicked = false; apply(); renderAll(); }
-      if (t.closest("[data-envsources]")) { ev.preventDefault(); ctx.openPanel("sources"); }
-    };
-    el.onchange = ev => { const c = ev.target.closest("[data-envon]"); if (c) { S.on[c.dataset.envon] = c.checked; apply(); renderAll(); } };
   }
   function avgHeat(i) { const v = D.heat.features.map(f => f.properties.v[i]).filter(x => x != null); return v.reduce((a, b) => a + b, 0) / (v.length || 1); }
 
@@ -281,6 +297,15 @@
       <p class="ap-note">Planned: Scotland's coastal erosion (Dynamic Coast), future flood risk with climate change, SSSIs, and coastal realignment projects (OMReg, once ABPmer agrees to reuse).</p>`;
   }
 
+  // 0.9.2: header tabs. Floods, Coast, Heat and Conservation each show only their own layer; Timeline shows your choice.
+  function only(ctx, key) {
+    bind(ctx); if (!S.mine) S.mine = Object.assign({}, S.on);
+    Object.keys(S.on).forEach(k => { S.on[k] = k === key; });
+    if (key === "coast" && !S.fut) S.year = TODAY_Y;   // erosion is a forecast: show it from today
+    stopPlay(); apply(); renderAll();
+  }
+  function mine(ctx) { bind(ctx); if (S.mine) Object.assign(S.on, S.mine); apply(); renderAll(); }
+
   const PANELS = { timeline, floods, coast, heat, conservation, sources };
   function bind(ctx) {
     if (CTX) return; CTX = ctx;
@@ -293,11 +318,11 @@
     id: "environment", name: "Atlas Environment", perspective: "environment", accent: "#4f772d", dataNeeds: [],
     init(ctx) { bind(ctx); ctx.mapOnly([]); ctx.view([-3.2, 54.6], 5.3); apply(); ctx.openPanel("timeline"); },
     panels: [
-      { id: "timeline", title: "Timeline", blurb: "Zones on a timeline, from recorded history into official forecasts", render: (ctx, el) => { bind(ctx); timeline(ctx, el); }, min: { w: 380, h: 440 } },
-      { id: "floods", title: "Floods", blurb: "Every recorded flood in England and Wales", render: (ctx, el) => { bind(ctx); floods(ctx, el); }, min: { w: 360, h: 380 } },
-      { id: "coast", title: "Coast", blurb: "Coastal erosion forecast to 2055 and 2105", render: (ctx, el) => { bind(ctx); coast(ctx, el); }, min: { w: 360, h: 380 } },
-      { id: "heat", title: "Heat", blurb: "Hot summer days, today and as the world warms", render: (ctx, el) => { bind(ctx); heat(ctx, el); }, min: { w: 360, h: 380 } },
-      { id: "conservation", title: "Conservation", blurb: "National Parks and Ramsar wetlands by year designated", render: (ctx, el) => { bind(ctx); conservation(ctx, el); }, min: { w: 360, h: 380 } },
+      { id: "timeline", map: ctx => mine(ctx), title: "Timeline", blurb: "Zones on a timeline, from recorded history into official forecasts", render: (ctx, el) => { bind(ctx); timeline(ctx, el); }, min: { w: 380, h: 440 } },
+      { id: "floods", map: ctx => only(ctx, "floods"), title: "Floods", blurb: "Every recorded flood in England and Wales", render: (ctx, el) => { bind(ctx); floods(ctx, el); }, min: { w: 360, h: 380 } },
+      { id: "coast", map: ctx => only(ctx, "coast"), title: "Coast", blurb: "Coastal erosion forecast to 2055 and 2105", render: (ctx, el) => { bind(ctx); coast(ctx, el); }, min: { w: 360, h: 380 } },
+      { id: "heat", map: ctx => only(ctx, "heat"), title: "Heat", blurb: "Hot summer days, today and as the world warms", render: (ctx, el) => { bind(ctx); heat(ctx, el); }, min: { w: 360, h: 380 } },
+      { id: "conservation", map: ctx => only(ctx, "cons"), title: "Conservation", blurb: "National Parks and Ramsar wetlands by year designated", render: (ctx, el) => { bind(ctx); conservation(ctx, el); }, min: { w: 360, h: 380 } },
       { id: "sources", title: "Sources", blurb: "Where the zones come from, nation by nation", render: (ctx, el) => { bind(ctx); sources(ctx, el); }, min: { w: 420, h: 300 } },
     ],
     tools: [],
