@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atlas 0.8 · UK</title>
+<title>Atlas 0.9 · UK</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
 <style>
 /* Layout: the map is the whole window.
@@ -1120,6 +1120,41 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
   .mok-bar i { background: #7b4fa6; }
   .mok-r b { text-align: right; font-variant-numeric: tabular-nums; }
   .mok-r small { color: var(--ink-3); text-align: right; }
+  .bdk-q { width: 100%; box-sizing: border-box; font: inherit; font-size: 11.5px; padding: 4px 7px; margin: 2px 0 4px; border: 1px solid var(--rule); border-radius: 6px; background: var(--solid); color: var(--ink); }
+  .bdk .lnk { font-size: 11px; justify-self: start; margin-top: 2px; }
+  /* 0.9: trade */
+  .tr-head { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 6px; }
+  .tr-head > div { background: var(--chip); border-radius: 8px; padding: 6px 9px; display: grid; }
+  .tr-k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+  .tr-head b { font-size: 18px; font-variant-numeric: tabular-nums; }
+  .neg { color: #b03a2e; } .pos { color: #1e7b4a; }
+  .tr-t { width: 100%; border-collapse: collapse; font-size: 12px; margin: 2px 0 6px; }
+  .tr-t td, .tr-t th { padding: 3px 4px; border-bottom: 1px solid var(--rule); text-align: left; }
+  .tr-t th { font-size: 10.5px; color: var(--ink-3); font-weight: 600; }
+  .tr-t tr[data-trprod], .tr-t tr[data-trcty], .tr-t tr[data-trport] { cursor: pointer; }
+  .tr-t tr[data-trprod]:hover, .tr-t tr[data-trcty]:hover, .tr-t tr[data-trport]:hover { background: var(--hover); }
+  .tr-n { max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tr-n .sw { width: 9px; height: 9px; display: inline-block; border-radius: 2px; margin-right: 5px; }
+  .tr-b { width: 32%; } .tr-b i { display: block; height: 7px; border-radius: 3px; opacity: .85; }
+  .tr-t .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tr-x { color: var(--ink-3); font-size: 11px; }
+  .tr-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } @media (max-width: 560px) { .tr-two { grid-template-columns: 1fr; } }
+  .tr-chart { overflow: hidden; }
+  .tr-title { margin: 2px 0 6px; font-size: 16px; line-height: 1.25; }
+  .tr-crumb { font-size: 11px; color: var(--ink-3); margin-bottom: 2px; }
+  .tr-q { flex: 1; min-width: 160px; font: inherit; font-size: 12.5px; padding: 5px 8px; border: 1px solid var(--rule); border-radius: 7px; background: var(--solid); color: var(--ink); }
+  .tr-tree, .tr-tree ul { list-style: none; margin: 0; padding: 0; }
+  .tr-tree li { padding-left: calc(var(--d, 0) * 14px); }
+  .tr-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 4px; align-items: center; padding: 2px 0; border-bottom: 1px solid var(--rule); font-size: 12px; }
+  .tr-tree li > .tr-row:has(.tr-lv) { grid-template-columns: 70px minmax(0, 1fr) auto; }
+  .tr-lv { font-size: 10px; color: var(--ink-3); text-transform: uppercase; }
+  .tr-tog { border: 0; background: none; cursor: pointer; color: var(--ink-2); font-size: 12px; padding: 0; }
+  .tr-pn { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tr-tariff label { font-size: 12px; } .tr-tariff select { max-width: 220px; }
+  .trk { margin-top: 4px; display: grid; gap: 2px; }
+  .pf-bar { margin: 4px 0 6px; } .pf-t td { padding: 2px 4px; } .pf-t tr[data-pfk] { cursor: pointer; } .pf-t tr[data-pfk]:hover { background: var(--hover); }
+  .pf-lq { white-space: nowrap; } .pf-lqbar { position: relative; display: inline-block; width: 60px; height: 7px; background: var(--chip); border-radius: 3px; vertical-align: middle; margin-right: 4px; }
+  .pf-lqbar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; } .pf-lq small { color: var(--ink-3); font-variant-numeric: tabular-nums; }
   .crowdramp { margin: 6px 0 2px; }
   .cr-bar { height: 10px; border-radius: 5px; }
   .cr-ticks { display: grid; grid-template-columns: repeat(4, 1fr); font-size: 10.5px; color: var(--ink-2); margin-top: 2px; }
@@ -1135,9 +1170,9 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=0840">
-<script src="theme.js?v=0840"></script>
-<script src="theme-apply.js?v=0840"></script>
+<link rel="stylesheet" href="fonts.css?v=0910">
+<script src="theme.js?v=0910"></script>
+<script src="theme-apply.js?v=0910"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1145,7 +1180,7 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <svg id="mind" aria-hidden="false"></svg>
 
 <div id="top">
-  <button class="brand" id="brand" aria-expanded="false" aria-controls="menu" title="Settings, comparison and export"><b>ATLAS<sup id="sup"></sup></b><span>0.8 · United Kingdom ▾</span></button>
+  <button class="brand" id="brand" aria-expanded="false" aria-controls="menu" title="Settings, comparison and export"><b>ATLAS<sup id="sup"></sup></b><span>0.9 · United Kingdom ▾</span></button>
   <div class="finder">
     <button id="browse-btn" aria-expanded="false" aria-controls="browse" title="Choose which boundaries show, or browse places"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span id="browse-lv" class="vh">Areas</span></button>
     <div class="search"><input id="search" type="search" placeholder="Find a place or a metric…" autocomplete="off" aria-label="Find a place or a metric"><span class="schips" id="schips" hidden></span><ul id="hits" hidden role="listbox" aria-multiselectable="true"></ul></div>
@@ -1258,21 +1293,29 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=0840"></script>
+<script src="data/places_poi.js?v=0910"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=0840"></script>
-<script src="data/representation.js?v=0840"></script>
-<script src="data/transport.js?v=0840"></script>
-<script src="data/economy.js?v=0840"></script>
-<script src="data/airports.js?v=0840"></script>
+<script src="data/money.js?v=0910"></script>
+<script src="data/representation.js?v=0910"></script>
+<script src="data/trade.js?v=0910"></script>
+<script src="data/investment.js?v=0910"></script>
+<script src="data/industry.js?v=0910"></script>
+<script src="data/census.js?v=0910"></script>
+<script src="data/health_deaths.js?v=0910"></script>
+<script src="data/bd_economy.js?v=0910"></script>
+<script src="data/bd_census.js?v=0910"></script>
+<script src="data/bd_health.js?v=0910"></script>
+<script src="data/transport.js?v=0910"></script>
+<script src="data/economy.js?v=0910"></script>
+<script src="data/airports.js?v=0910"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="data/environment.js?v=0840"></script>
-<script src="stats.js?v=0840"></script>
-<script src="psephology.js?v=0840"></script>
-<script src="charts.js?v=0840"></script>
-<script src="engine.js?v=0840"></script>
-<script src="xlsx.js?v=0840"></script>
+<script src="data/environment.js?v=0910"></script>
+<script src="stats.js?v=0910"></script>
+<script src="psephology.js?v=0910"></script>
+<script src="charts.js?v=0910"></script>
+<script src="engine.js?v=0910"></script>
+<script src="xlsx.js?v=0910"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1282,13 +1325,15 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=0840"></script>
-<script src="apps.js?v=0840"></script>
-<script src="views/views.js?v=0840"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=0910"></script>
+<script src="apps.js?v=0910"></script>
+<script src="views/views.js?v=0910"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=0840"></script>
-<script src="money.js?v=0840"></script>
-<script src="devdesign.js?v=0840"></script>
-<script src="app.js?v=0840"></script>
+<script src="windows.js?v=0910"></script>
+<script src="money.js?v=0910"></script>
+<script src="trade.js?v=0910"></script>
+<script src="profile.js?v=0910"></script>
+<script src="devdesign.js?v=0910"></script>
+<script src="app.js?v=0910"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 """
-Atlas 0.8.4: Atlas Environment.   python views/environment/test_environment.py   (tests/run_all.py runs it too)
+Atlas 0.9.1: Atlas Environment.   python views/environment/test_environment.py   (tests/run_all.py runs it too)
 
 The view opens with its own header tabs and timeline; recorded floods load and follow the year; the future buttons show
 coastal erosion; heat changes with the warming level; protected areas follow the year they were designated; the other

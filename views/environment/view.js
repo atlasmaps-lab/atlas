@@ -1,4 +1,4 @@
-/* Atlas Environment (0.8.4): zones where the environment is changing, on a timeline from the past into official
+/* Atlas Environment (0.9.1): zones where the environment is changing, on a timeline from the past into official
  * projections. Its own layers on the map (not the area boundaries or metrics): recorded floods, coastal erosion
  * forecasts, hot summer days, wildfire burnt areas, and National Parks and Ramsar wetlands by the year they were
  * designated. Data: data/envzones/*.js (pipeline/build_envzones.py), each loaded the first time it is needed.
@@ -6,7 +6,7 @@
  */
 (function () {
   "use strict";
-  const V = "0840", P = "env-";
+  const V = "0910", P = "env-";
   const FILE = { floods: "floods", coast: "coast", heat: "heat", cons: "conservation", fire: "fire" };
   const D = {}, WAIT = {};
   const SRC_COL = { river: "#1f6fb4", sea: "#11888f", surface: "#7b4fa6", ground: "#8a6a3b", other: "#6b7480" };

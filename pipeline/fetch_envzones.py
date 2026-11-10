@@ -1,5 +1,5 @@
 """
-Atlas 0.8.4: download the zones for Atlas Environment (views/environment).
+Atlas 0.9.1: download the zones for Atlas Environment (views/environment).
     python3 pipeline/fetch_envzones.py        then    python3 pipeline/build_envzones.py
 
 Everything lands in pipeline/sources/raw/envzones/ (about 1 GB unpacked; not committed, see .gitignore) and is listed
