@@ -480,7 +480,68 @@
     return `<div class="compbar">${L.map(([p, v]) => `<i style="width:${(100 * v / tot).toFixed(2)}%;background:${partyCol(p)}" title="${esc(partyName(p))}: ${r.agg ? v + " seats" : fmtInt(v) + " votes"}"></i>`).join("")}</div><small>${L.slice(0, 5).map(([p, v]) => `${esc(partyName(p))} ${r.agg ? v : pct1(100 * v / tot)}`).join(" · ")}</small>`; };
   const wm = o => def(Object.assign({ p: "political", group: G4, temporal: "election", levels: WM_LEVELS, nmText: WM_NM, source: WM_SRC }, o));
   const PS_PICK_DEF = { council_seat_share: "lab", ge_share: "lab", ge_swing_butler: "con-lab", ge_swing_steed: "con-lab" };
-  const pickOf = id => (PS.pick && PS.pick[id]) || PS_PICK_DEF[id];
+  const pickOf = id => { const m = M[id], k = (m && m.pickKey) || id; return (PS.pick && PS.pick[k]) || PS_PICK_DEF[k] || (BD[k] ? BD[k].defPick || BD[k].cats()[0] : undefined); };
+  const pickKeyOf = m => m.pickKey || m.id;
+  // ---------- 0.9: breakdowns ----------
+  // A breakdown is one total split into categories (exports by product, jobs by industry, residents by ethnic group…).
+  // Each perspective lists its breakdowns in window.ATLAS_BREAKDOWNS (data/bd_*.js), as plain specs:
+  //   { id, p, group, label, unit ("people", "£", "jobs"…), cats(), name(k), colour(k), of(code, d, H) -> {cat: value} | null,
+  //     levels?, valid?, sumUp? (regions, nations and the UK add up their councils), temporal?, span?, source, how, desc, defPick? }
+  // and Atlas makes three metrics from each: "<label>: share (choose)", "<label>: largest" and "<label>: specialisation
+  // (choose)" (the share here ÷ the share in the UK). The key lists every category with its number; click one to map it.
+  const BD = {}, bdCache = {};
+  const BD_H = { P: id => P[id], UKC: () => UKC, level: c => P[c] && P[c].level };
+  const bdTotal = r => { let t = 0; for (const k in r) t += r[k] || 0; return t; };
+  function bdOf(o, code, d) {
+    const ck = o.id + "|" + code + "|" + d.slice(0, 7); if (ck in bdCache) return bdCache[ck];
+    let r = o.of(code, d, BD_H) || null; const lv = P[code] && P[code].level;
+    if (!r && o.sumUp && (lv === "region" || lv === "nation" || lv === "country")) {
+      const acc = {}; let n = 0;
+      for (const c in P) { const p = P[c]; if (p.level !== "council" || p.to) continue; if (lv === "region" ? p.parent !== code : lv === "nation" ? p.nation !== code : false) continue;
+        const x = o.of(c, d, BD_H); if (!x) continue; n++; for (const k in x) acc[k] = (acc[k] || 0) + (x[k] || 0); }
+      r = n ? acc : null;
+    }
+    if (Object.keys(bdCache).length > 5000) for (const k in bdCache) delete bdCache[k];
+    return (bdCache[ck] = r);
+  }
+  const bdFmt = (o, v) => o.fmtV ? o.fmtV(v) : o.unit === "£" ? fmtGBP(v) : fmtInt(v) + (o.unit ? " " + o.unit : "");
+  const fmtGBP = v => { const a = Math.abs(v); return (v < 0 ? "−" : "") + "£" + (a >= 1e9 ? (a / 1e9).toFixed(a >= 1e10 ? 0 : 1) + "bn" : a >= 1e6 ? (a / 1e6).toFixed(a >= 1e7 ? 0 : 1) + "m" : a >= 1e4 ? Math.round(a / 1e3) + "k" : fmtInt(a)); };
+  function bdBar(o, r, n) { // a stacked bar and the top few, for cards
+    const t = bdTotal(r); if (!t) return ""; const L = Object.entries(r).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+    return `<div class="compbar">${L.slice(0, 24).map(([k, v]) => `<i style="width:${(100 * v / t).toFixed(2)}%;background:${o.colour(k)}" title="${esc(o.name(k))}: ${esc(bdFmt(o, v))} (${pct1(100 * v / t)})"></i>`).join("")}</div><small>${L.slice(0, n || 5).map(([k, v]) => `${esc(o.name(k))} ${pct1(100 * v / t)}`).join(" · ")}</small>`;
+  }
+  function defBreakdown(o) {
+    if (BD[o.id]) return; BD[o.id] = o;
+    const base = { p: o.p, group: o.group, levels: o.levels, nmText: o.nmText, valid: o.valid, source: o.source, temporal: o.temporal || "static", span: o.span, bd: o.id, pickKey: o.id };
+    const nm = k => o.name(k);
+    def(Object.assign({}, base, { id: o.id + "_share", label: `${o.label}: share (choose)`, scale: "ratio", nature: "share", fmt: pct1, pick: "bd", desc: `The chosen category's share of ${o.label.toLowerCase()}; choose it in the key`,
+      how: (o.how ? o.how + ". " : "") + "Share = the category ÷ the total for the area",
+      get(code, d) { const r = bdOf(o, code, d); if (!r) return null; const t = bdTotal(r); if (!t) return null; const k = pickOf(this.id), v = 100 * (r[k] || 0) / t;
+        return { v, text: `${pct1(v)} ${nm(k)} (${bdFmt(o, r[k] || 0)} of ${bdFmt(o, t)})`, detail: bdBar(o, r), yr: o.yr ? o.yr(code, d) : undefined }; } }));
+    def(Object.assign({}, base, { id: o.id + "_top", label: `${o.label}: largest`, scale: "nominal", nature: "category", desc: `The biggest category of ${o.label.toLowerCase()} in each area`,
+      colour: k => o.colour(k), catName: nm, cats: () => o.cats(),
+      get(code, d) { const r = bdOf(o, code, d); if (!r) return null; const t = bdTotal(r); if (!t) return null; const k = Object.keys(r).sort((a, b) => (r[b] || 0) - (r[a] || 0))[0];
+        return { v: k, text: `${nm(k)}: ${bdFmt(o, r[k])} (${pct1(100 * r[k] / t)})`, counts: r, detail: bdBar(o, r), yr: o.yr ? o.yr(code, d) : undefined }; } }));
+    def(Object.assign({}, base, { id: o.id + "_lq", label: `${o.label}: specialisation (choose)`, scale: "interval", nature: "rate", mid: 1, pick: "bd", fmt: v => v.toFixed(2) + "×",
+      desc: `How concentrated the chosen category is here compared with the UK: above 1, more than the UK's share`, how: "Location quotient: the category's share here ÷ its share in the UK (or the widest area with data)",
+      get(code, d) { const r = bdOf(o, code, d), u = bdOf(o, o.base ? o.base(code) : UKC, d); if (!r || !u) return null; const k = pickOf(this.id), t = bdTotal(r), tu = bdTotal(u); if (!t || !tu || !u[k]) return null;
+        const sh = (r[k] || 0) / t, su = u[k] / tu, v = sh / su; return { v, text: `${v.toFixed(2)}× the ${o.baseName || "UK"} share (${pct1(100 * sh)} here, ${pct1(100 * su)} ${o.baseName || "UK"}) · ${nm(k)}` }; } }));
+  }
+  function breakdownKey(m) { // every category with its number, for the area in focus or the UK; click one to map it
+    const o = BD[m.bd]; if (!o) return "";
+    const sc = state.focus && P[state.focus] && bdOf(o, state.focus, state.date) ? state.focus : UKC, r = bdOf(o, sc, state.date); if (!r) return "";
+    const t = bdTotal(r), cur = pickOf(m.id), q = (BDK.q[o.id] || "").toLowerCase(), all = BDK.all[o.id];
+    let L = Object.entries(r).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]); const n = L.length;
+    if (q) L = L.filter(([k]) => nm0(o, k).toLowerCase().includes(q) || String(k).toLowerCase().startsWith(q));
+    const shown = all || q ? L.slice(0, 200) : L.slice(0, 12);
+    return `<div class="vsk bdk"><div class="vsk-h">${esc(o.label)}, ${esc(nameOf(sc))} · ${esc(bdFmt(o, t))}${o.yr ? ` <small>${esc(o.yr(sc, state.date) || "")}</small>` : ""}</div>
+      ${n > 14 ? `<input class="bdk-q" data-bdq="${o.id}" placeholder="Find a category (${n})" value="${esc(BDK.q[o.id] || "")}">` : ""}
+      ${shown.map(([k, v]) => `<button class="vsk-r${k === cur ? " on" : ""}" data-bdpick="${o.id}" data-k="${esc(k)}" title="${esc(nm0(o, k))}: ${esc(bdFmt(o, v))} · click to map its share"><i class="sw" style="background:${o.colour(k)}"></i><span class="vsk-n">${esc(nm0(o, k))}</span><span class="vsk-bar"><i style="width:${(100 * v / L[0][1] * (L[0][1] / t)).toFixed(1)}%;background:${o.colour(k)}"></i></span><b>${pct1(100 * v / t)}</b><small>${esc(bdShort(o, v))}</small></button>`).join("")}
+      ${!q && n > 12 ? `<button class="lnk" data-bdall="${o.id}">${all ? "Show the top 12" : `Show all ${n}`}</button>` : ""}
+      ${state.focus && sc === UKC ? `<div class="note">No figures for ${esc(nameOf(state.focus))}: showing the UK.</div>` : !state.focus ? `<div class="note">${esc(nameOf(sc))}. Click an area to see its own.</div>` : ""}</div>`;
+  }
+  const nm0 = (o, k) => o.name(k), BDK = { q: {}, all: {} };
+  const bdShort = (o, v) => { const s = bdFmt(o, v); return s.length > 9 ? s.replace(/ [a-z]+$/, "") : s; };
   wm({ id: "ge_winner", label: "Winning party", scale: "nominal", nature: "category", desc: "Who won the seat; for a region, nation or the UK, the party with most seats", pairShare: "ge_win_share",
     how: "Seat: the candidate with most votes (the Speaker shown as Speaker). Region, nation, UK: the party that won most seats there", ...partyCat,
     get(code, d) { const r = resultFor(code, d); if (!r) return null; const top = r.agg ? Object.keys(r.seats).sort((a, b) => r.seats[b] - r.seats[a] || (r.t.by[b] || 0) - (r.t.by[a] || 0))[0] : winnerOf(r);
@@ -737,6 +798,8 @@
     const by = {}; L.forEach(x => { const b = by[x.party] = by[x.party] || [0, 0]; b[1]++; if (test(x)) b[0]++; });
     return `<small>${Object.entries(by).sort((a, b) => b[1][1] - a[1][1]).slice(0, 6).map(([p, [k, n]]) => `<i class="sw" style="background:${partyCol(p)}"></i>${esc(partyName(p))} ${Math.round(100 * k / n)}% ${esc(what)} (${k} of ${n})`).join(" · ")}</small>`;
   }
+  // 0.9: breakdowns listed by data/bd_*.js (trade, industries, Census profiles, health)
+  (window.ATLAS_BREAKDOWNS || []).forEach(o => { try { defBreakdown(o); } catch (e) { console.warn("breakdown", o && o.id, e); } });
   // markets: FTSE 100 companies headquartered in London (test case)
   const COS = MK ? MK.companies : [], GRP_COL = MK ? Object.fromEntries(MK.groups) : {}, G3 = "FTSE 100 in London (test case)";
   COS.forEach((c, i) => { c.i = i; });
@@ -912,7 +975,7 @@
   const map = new maplibregl.Map({ container: "map", style: key ? osStyle(key) : plainStyle(), center: HOME, zoom: HOME_Z, minZoom: C.minZoom || 4.6, maxZoom: 17,
     dragRotate: false, pitchWithRotate: false, attributionControl: false, preserveDrawingBuffer: true });
   window.atlasMap = map;
-  if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { M, P, METRICS, resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint(),   // for checks only (index.html?debug)
+  if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { M, P, METRICS, BD, bdOf: (id, c, d) => bdOf(BD[id], c, d || state.date), resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint(),   // for checks only (index.html?debug)
     get TB() { return TB; }, setDate: d => setDate(d), metricSpan: id => metricSpan(M[id]), openCmp: () => openCmp(), openAnalyse: o => openAnalyse(o), openChart: o => openChart(o),
     select: codes => codes.forEach(c => P[c] && addCompare({ code: c, level: P[c].level })),
     focus: c => focus(c), unfocus: () => unfocus(), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); if (!on) setLevelOn("auto", true); },
@@ -1866,6 +1929,12 @@
       ${c.top.map(r => `<div class="mok-r"><span class="mok-w">${AM.donorBtn(r[4])} → ${who(r)}</span><span class="mok-bar"><i style="width:${(100 * r[1] / mx).toFixed(1)}%"></i></span><b>${AM.gbp(r[1])}</b><small>${esc(r[0].slice(0, 7))}</small></div>`).join("") || `<div class="note">None registered in these years.</div>`}
       <div class="note">${code ? "Click a name for its card." : "The biggest across Britain. Click an area for its own."} “met ministers”: the donor also had registered meetings with ministers (lobbying). Electoral Commission.</div></div>`;
   }
+  function bdPick(id, k) { // choose a category; if only "largest" is on the map, show the chosen category's share instead
+    PS.pick[id] = k; for (const q in qCache) delete qCache[q];
+    const on = planMetrics().filter(m => m.bd === id);
+    if (on.length && !on.some(m => m.pick) && M[id + "_share"]) { const top = on.find(m => m.id === id + "_top"); if (top) toggleMapped(top.id); toggleMapped(id + "_share"); return; }
+    repaint();
+  }
   function crowdTop() {
     const D = dayNum(state.date), seen = new Set(), es = [];
     const inFocus = state.focus && P[state.focus] ? new Set(eventsIn(state.focus, state.date)) : null;
@@ -1926,6 +1995,7 @@
         <div class="note">Colour = cause, size = crowd; numbered rings are groups (click to zoom). Click a point for its card.</div>` : `<div class="note">Darker = more people protesting nearby, ${esc(winLabel())}.</div>`}</div>`);
     }
     { const vm = planMetrics().find(m => m.group === G4 || m.id === "council_seat_share"); const vk = vm ? shareKey(vm) : ""; if (vk) parts.push(`<div class="lg lg-vsk">${vk}</div>`); }   // 0.8.2
+    [...new Set(planMetrics().filter(m => m.bd).map(m => m.bd))].forEach(id => { const m = planMetrics().find(x => x.bd === id); const k = breakdownKey(m); if (k) parts.push(`<div class="lg lg-vsk">${k}</div>`); });   // 0.9
     if (!PL.size && planMetrics().some(m => m.id === "money_received")) parts.push(`<div class="lg">${moneyKey()}</div>`);
     const nd = noDataKey(level); if (nd && parts.length) parts[0] = parts[0].replace(/<\/div>$/, nd + "</div>");
     const unplaced = curPlan.notes.filter(n => !n.ch);
@@ -2010,6 +2080,8 @@
 
   legend.addEventListener("toggle", e => { if (e.target.classList.contains("why")) legendWhyOpen = e.target.open; }, true);
   legend.addEventListener("click", e => {
+    const bp = e.target.closest("[data-bdpick]"); if (bp) { bdPick(bp.dataset.bdpick, bp.dataset.k); return; }
+    const ba = e.target.closest("[data-bdall]"); if (ba) { BDK.all[ba.dataset.bdall] = !BDK.all[ba.dataset.bdall]; renderLegend(); return; }
     const vp = e.target.closest("[data-vskpick]"); if (vp) { PS.pick[vp.dataset.vskpick] = vp.dataset.p; for (const k in qCache) if (k.startsWith(vp.dataset.vskpick + "|")) delete qCache[k]; repaint(); return; }
     const pc = e.target.closest("[data-prcard]"); if (pc) { openProtestCard(+pc.dataset.prcard); return; }
     const i = e.target.closest("[data-iso]");
@@ -2021,11 +2093,15 @@
     if (e.target.closest("[data-bivswap]")) { const a = curPlan.shade, b = curPlan.grid; if (a && b) { PS.prefs[a.id] = "grid"; PS.prefs[b.id] = "shade"; repaint(); toast("Axes swapped."); } return; }
     const w = e.target.closest("[data-win]"); if (w) { PS.win = +w.dataset.win; for (const k in qCache) if (k.includes("|") && /protest/.test(k)) delete qCache[k]; repaint(); }
   });
+  legend.addEventListener("input", e => {   // 0.9: find a category in a long breakdown
+    const q = e.target.closest("[data-bdq]"); if (!q) return; BDK.q[q.dataset.bdq] = q.value; const pos = q.selectionStart;
+    clearTimeout(legend._bdq); legend._bdq = setTimeout(() => { renderLegend(); const n = legend.querySelector(`[data-bdq="${q.dataset.bdq}"]`); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 180);
+  });
   legend.addEventListener("change", e => {
     const t = e.target;
     if (t.dataset.mcol) { PS.mcol = PS.mcol || {}; PS.mcol[t.dataset.mcol] = t.value; savePS(); repaint(); return; }
     if (t.dataset.as) { PS.prefs[t.dataset.as] = t.value; repaint(); }
-    else if (t.dataset.pick) { PS.pick[t.dataset.pick] = t.value; for (const k in qCache) if (k.startsWith(t.dataset.pick + "|")) delete qCache[k]; repaint(); }
+    else if (t.dataset.pick) { const m = M[t.dataset.pick]; PS.pick[m ? pickKeyOf(m) : t.dataset.pick] = t.value; for (const k in qCache) delete qCache[k]; repaint(); }
     else if (t.hasAttribute("data-bivpal")) { PS.biv.pal = t.value; repaint(); }
     else if (t.hasAttribute("data-bivn")) { PS.biv.n = +t.value; repaint(); }
     else if (t.dataset.bivc != null) { PS.biv.cust = (PS.biv.cust || BIV_CUSTOM_DEF).slice(); PS.biv.cust[+t.dataset.bivc] = t.value; repaint(); }
@@ -2105,7 +2181,7 @@
     d = d || state.date;
     if (m.nature === "text") return { ok: true };
     if (m.nature === "line") { const why = m.valid && m.valid(); return why ? { ok: false, why } : { ok: true }; }   // 0.8.1: networks are lines, not values per area: always available (unless they need the basemap)
-    const key = m.id + "|" + level + "|" + d.slice(0, 4) + "|" + (m.temporal === "event" ? PS.win : "") + (m.pick ? "|" + pickOf(m.id) : ""); if (key in availCache) return availCache[key];
+    const key = m.id + "|" + level + "|" + d.slice(0, 4) + "|" + (m.temporal === "event" ? PS.win : "") + (m.pick ? "|" + pickOf(m.id) : ""); if (key in availCache) return availCache[key];   // pickOf follows a shared pick key (breakdowns)
     const pl = (PLURAL_L[level] || "these areas").toLowerCase();
     if (m.levels && !m.levels.includes(level)) return (availCache[key] = { ok: false, nm: true, why: (m.nmText && m.nmText[level]) || `Not meaningful for ${pl}` });
     const sample = sampleAt(level);
@@ -4571,6 +4647,7 @@
   const CTX = {
     get app() { return APP; }, M, METRICS, P, PER, PARTY, POL, PR, MK, EL: window.ATLAS_EL || null, LOC: window.ATLAS_LOCAL || null, SPANS, CH, EN, ST, XL, WM,
     esc, fmtInt, fmtBig, fmtPct, longDate, shortDate, dmy, nameOf, partyName, partyCol, LABEL, PLURAL_L, UKC, today: TODAY,
+    bd: { of: (id, code, d) => BD[id] ? bdOf(BD[id], code, d || state.date) : null, spec: id => BD[id], ids: () => Object.keys(BD), bar: (id, r, n) => bdBar(BD[id], r, n), fmt: (id, v) => bdFmt(BD[id], v), pick: (id, k) => bdPick(id, k) }, fmtGBP,   // 0.9
     get date() { return state.date; }, get level() { return state.level; }, get focused() { return state.focus; }, get sel() { return state.sel.map(x => x.code); },
     setDate: d => setDate(d), mapOnly, setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); },
     focus: c => focus(c), view: (center, zoom) => map.flyTo({ center, zoom, duration: 1000 }), allCodesAt, popAt, seriesOf, resultFor, resultsOf: code => (RES[code] || []).map(decode), areaOf: c => AREA[c] || null, previousFor, ELX, GE_DAYS, metricSpan: id => metricSpan(M[id]),
