@@ -203,6 +203,7 @@
     health: '<path d="M12 20s-7.5-4.6-7.5-10.2A4.1 4.1 0 0 1 12 7.4a4.1 4.1 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z"/><path d="M9 12h2l1-2 1.5 4 1-2H16"/>',
     transport: '<rect x="6" y="3" width="12" height="13" rx="3"/><path d="M6 10h12M9 13.2h.01M15 13.2h.01M8.5 16 6.5 20M15.5 16l2 4"/>',
     analysis: '<path d="M4 19l5-6 4 3 7-9"/><circle cx="4" cy="19" r="1.4"/><circle cx="9" cy="13" r="1.4"/><circle cx="13" cy="16" r="1.4"/><circle cx="20" cy="7" r="1.4"/>',
+    environment: '<path d="M5 19c0-8 5.5-13.5 15-14-0.5 9.5-6 15-14 15"/><path d="M5 19c3-4 6.5-7 10-9"/>',
     markets: '<path d="M4 8h16l-1.6 10.5a1.6 1.6 0 0 1-1.6 1.5H7.2a1.6 1.6 0 0 1-1.6-1.5z"/><path d="M8.5 8 10 4M15.5 8 14 4M9 12.5v4M12 12.5v4M15 12.5v4"/>',
   };
   const svgIcon = (id, cls) => `<svg class="ico${cls ? " " + cls : ""}" viewBox="0 0 24 24" aria-hidden="true">${ICON[id] || ""}</svg>`;
@@ -260,6 +261,7 @@
     { id: "social", bar: ["#d69f7e", "#774936"], name: "Social", hue: "#d0701c", ready: true, ramp: ["#fdeedc", "#f9cf9f", "#f2a65c", "#d97a26", "#a3510f"], desc: "Population every year since 1998; age latest only." },
     { id: "health", bar: ["#ff8fa3", "#a4133c"], name: "Health", hue: "#c2364b", ready: false, ramp: ["#fbe9ec", "#f3bcc5", "#e48596", "#c94f66", "#8f2338"], planned: ["Life expectancy", "Healthy life expectancy", "Patients per GP", "Obesity rate"], desc: "Not loaded yet." },
     { id: "transport", bar: ["#90e0ef", "#023e8a"], name: "Transportation", hue: "#2b6cb0", ready: !!(window.ATLAS_POI || window.ATLAS_TRANSPORT), ramp: ["#e3eef8", "#b5d0ea", "#7aa9d6", "#3f7fbf", "#1d5590"], planned: ["Commute time", "Households without a car", "Road traffic", "Road casualties"], desc: "Railway stations and how busy they are, airports and ports, bus and tram stops; directions and journey planning in Atlas Transport." },
+    { id: "environment", bar: ["#b5d99c", "#31572c"], name: "Environmental", hue: "#4f772d", ready: !!window.ATLAS_ENV, ramp: ["#f1f7e8", "#d3e8b5", "#a9cf7d", "#73a843", "#4a7a22"], planned: window.ATLAS_ENV ? null : ["Greenhouse gas emissions", "Renewable electricity", "Recycling", "Air pollution", "EV chargers"], desc: "Greenhouse gas emissions since 2005, renewable electricity, household recycling (England), fine particle air pollution (England) and public EV chargers." },
     { id: "analysis", name: "Analysis", hue: "#4a4f55", ready: false, hidden: true, ramp: ["#eef0f1", "#cfd4d8", "#a3abb2", "#6f7880", "#3d444b"], planned: [], desc: "Results you put on the map from the Analyse window: clusters, residuals, component scores, hot spots." },
     { id: "markets", bar: ["#8d99ae", "#2b2d42"], name: "Markets", hue: "#a07a12", ready: !!MK, ramp: ["#fbf3d5", "#f1dc93", "#ddb94f", "#b8902a", "#7d5f12"], planned: ["House prices", "Rents", "Business births", "Broadband speed"], desc: "Test case: FTSE 100 companies headquartered in London, and London's financial districts." },
   ];
@@ -993,7 +995,13 @@
   // ---------- extra metrics: Health, Housing (Markets) and Government debt (Economic), from pipeline/build_extra.py ----------
   // data/extra.js holds councils, constituencies, regions, nations and the UK; data/extra_wards.js holds wards.
   // A number is a single-date figure (Census 2021); an array is one value per year from the metric's first year.
-  const EX = window.ATLAS_EXTRA || null, EXW = window.ATLAS_EXTRA_W || null;
+  // 0.8.3: data/environment.js (pipeline/build_environment.py) has the same format, so its metrics join these.
+  const EX = (() => {
+    const a = window.ATLAS_EXTRA || null, b = window.ATLAS_ENV || null;
+    if (!a || !b) return a || b;
+    if (a.y0 !== b.y0) { console.warn("Atlas: data/environment.js starts in a different year from data/extra.js, so it is not loaded"); return a; }
+    return { y0: a.y0, metrics: a.metrics.concat(b.metrics), v: Object.assign({}, a.v, b.v) };
+  })(), EXW = window.ATLAS_EXTRA_W || null;
   const EXW_AT = EXW ? Object.fromEntries(EXW.codes.map((c, i) => [c, i])) : {};
   const fmtMoney = v => Math.abs(v) >= 1e6 ? (v < 0 ? "−" : "") + fmtGDP(Math.abs(v)) : (v < 0 ? "−£" : "£") + fmtInt(Math.abs(v));
   function exFmt(m) {
@@ -4923,7 +4931,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.8</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.8.3</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));

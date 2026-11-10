@@ -6,12 +6,12 @@
  *   Hubs         the busiest stations, airports and ports, with their trends; bus and tram stops at street zoom
  *   Planner data the transport metrics on the map (rail journeys, stations, airports, ports, bus stop coverage)
  * Services (free, no key, used only when you ask): Valhalla on the FOSSGIS servers (openstreetmap.de) for roads,
- * cycling and walking; Transitous (MOTIS) for public transport; Nominatim for addresses. Fair-use limits apply: Atlas
- * sends one request per action and waits between address look-ups. Map data © OpenStreetMap contributors.
+ * cycling and walking; Transitous (MOTIS) for public transport; Photon (komoot) for addresses, suggested as you type. Fair-use limits apply: Atlas
+ * sends one request per action and only the newest address search. Map data © OpenStreetMap contributors.
  */
 (function () {
   "use strict";
-  const VALHALLA = "https://valhalla1.openstreetmap.de", TRANSITOUS = "https://api.transitous.org/api/v5/plan", NOMINATIM = "https://nominatim.openstreetmap.org/search";
+  const VALHALLA = "https://valhalla1.openstreetmap.de", TRANSITOUS = "https://api.transitous.org/api/v5/plan", PHOTON = "https://photon.komoot.io/api/";
   const MODES = [["auto", "Drive", "#1d5590"], ["bicycle", "Cycle", "#2e8b57"], ["pedestrian", "Walk", "#7b4fa6"], ["hike", "Hike", "#8a5a1d"], ["transit", "Public transport", "#d63a2f"]];
   const S = { from: null, to: null, mode: "transit", when: "", res: null, sel: 0, busy: false, err: "", iso: { from: null, mode: "pedestrian", mins: 30 }, trails: { hiking: false, cycling: false } };
   const fmtDur = s => { s = Math.round(s / 60); return s < 60 ? s + " min" : Math.floor(s / 60) + " h " + (s % 60 ? (s % 60) + " min" : ""); };
@@ -53,17 +53,37 @@
     if (b[0] < 180) ctx.map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: { top: 120, bottom: 120, left: 80, right: 520 }, duration: 900, maxZoom: 15 });
   }
 
-  // ---------- places: Atlas's own places and hubs first, then addresses (Nominatim) ----------
-  let lastNom = 0;
-  async function findPlaces(ctx, q) {
+  // ---------- places: Atlas's own places and hubs first, then addresses (Photon) ----------
+  // 0.8.2.1: addresses come from Photon (photon.komoot.io), an OpenStreetMap geocoder built for search-as-you-type.
+  // Nominatim's usage policy forbids that, so it is no longer used. To stay within Photon's fair use: suggestions wait
+  // until typing pauses, only the newest search is kept (older ones are cancelled), results are limited to the UK, and
+  // each search's answer is remembered for the session so it is never asked twice.
+  const addrCache = new Map();
+  let addrCtl = null;
+  async function findAddresses(q) {
+    const key = q.toLowerCase();
+    if (addrCache.has(key)) return addrCache.get(key);
+    if (addrCtl) addrCtl.abort();
+    const ctl = addrCtl = new AbortController(), out = [];
+    try {
+      const r = await fetch(`${PHOTON}?q=${encodeURIComponent(q)}&limit=5&lang=en&countrycode=GB`, { signal: ctl.signal }).then(r => r.json());
+      (r.features || []).forEach(f => {
+        const p = f.properties || {}, [lon, lat] = f.geometry.coordinates;
+        const street = [p.housenumber, p.street].filter(Boolean).join(" ");
+        const label = p.name || street || p.city || p.postcode || q;
+        const sub = [p.name && street, p.district || p.city || p.county, p.postcode].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i && x !== label).join(", ");
+        out.push({ label, sub, lon, lat });
+      });
+      addrCache.set(key, out);
+    } catch (e) { if (ctl.signal.aborted) return null; }   // null: a newer search replaced this one
+    if (addrCtl === ctl) addrCtl = null;
+    return out;
+  }
+  async function findPlaces(ctx, q, addresses) {
     const out = [], ql = q.toLowerCase();
     (ctx.POI ? ctx.POI.items : []).filter(i => i.n.toLowerCase().includes(ql)).sort((a, b) => (b.v || 0) - (a.v || 0)).slice(0, 4).forEach(i => out.push({ label: i.n, sub: ({ station: "Station", airport: "Airport", port: "Port", finance: "Financial centre" })[i.k], lon: i.lon, lat: i.lat }));
     ctx.searchNames(ql).filter(c => ctx.P[c].pt).slice(0, 3).forEach(c => out.push({ label: ctx.nameOf(c), sub: ctx.LABEL[ctx.P[c].level], lon: ctx.P[c].pt[0], lat: ctx.P[c].pt[1] }));
-    if (q.length >= 4) {
-      const wait = 1100 - (Date.now() - lastNom); if (wait > 0) await new Promise(r => setTimeout(r, wait)); lastNom = Date.now();
-      try { const r = await fetch(`${NOMINATIM}?format=jsonv2&limit=5&countrycodes=gb&q=${encodeURIComponent(q)}`).then(r => r.json());
-        r.forEach(x => out.push({ label: x.name || x.display_name.split(",")[0], sub: x.display_name.split(",").slice(1, 3).join(",").trim(), lon: +x.lon, lat: +x.lat })); } catch (e) {}
-    }
+    if (addresses && q.length >= 3) out.push(...await findAddresses(q));
     return out;
   }
 
@@ -184,11 +204,32 @@
   let pickFor = null, qT = 0;
   function bind(ctx) {
     if (bind.done) return; bind.done = true;
-    document.addEventListener("input", async e => {
+    // Show suggestions under a place box: Atlas's own places straight away, then addresses (from 3 letters) once
+    // typing pauses. Enter searches at once instead of waiting for the pause.
+    async function showHits(q) {
+      const ul = q.parentNode.querySelector(".tr-hits"), v = q.value.trim();
+      if (v.length < 2) { ul.hidden = true; return; }
+      const draw = (hits, busy) => {
+        ul._hits = hits;
+        const rows = hits.map((h, i) => `<li data-trhit="${i}">${ctx.esc(h.label)} <small>${ctx.esc(h.sub || "")}</small></li>`).join("");
+        ul.innerHTML = rows + (busy ? `<li class="none">Looking up addresses…</li>` : "") || `<li class="none">Nothing found</li>`; ul.hidden = false;
+      };
+      const own = await findPlaces(ctx, v, false);
+      if (q.value.trim() !== v) return;
+      if (v.length < 3) { draw(own); return; }
+      draw(own, true);
+      const addr = await findAddresses(v);
+      if (addr === null || q.value.trim() !== v) return;   // replaced by a newer search, or the text changed while we waited
+      draw(own.concat(addr));
+    }
+    document.addEventListener("input", e => {
       const q = e.target.closest && e.target.closest("[data-trq]"); if (!q) return;
-      const which = q.dataset.trq, ul = q.parentNode.querySelector(".tr-hits"), v = q.value.trim();
-      clearTimeout(qT); if (v.length < 2) { ul.hidden = true; return; }
-      qT = setTimeout(async () => { const hits = await findPlaces(ctx, v); ul._hits = hits; ul.innerHTML = hits.map((h, i) => `<li data-trhit="${i}">${ctx.esc(h.label)} <small>${ctx.esc(h.sub || "")}</small></li>`).join("") || `<li class="none">Nothing found</li>`; ul.hidden = false; }, 350);
+      clearTimeout(qT); qT = setTimeout(() => showHits(q), 300);
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key !== "Enter" || e.isComposing) return;   // not while an input method (e.g. Vietnamese or Chinese) is composing
+      const q = e.target.closest && e.target.closest("[data-trq]"); if (!q) return;
+      e.preventDefault(); clearTimeout(qT); showHits(q);
     });
     document.addEventListener("mousedown", e => {
       const li = e.target.closest && e.target.closest("[data-trhit]"); if (!li) return;
