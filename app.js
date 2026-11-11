@@ -1736,6 +1736,10 @@
     map.addSource("commute-lines", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({ id: "commute-lines", type: "line", source: "commute-lines", layout: hide, paint: { "line-color": ["match", ["get", "dir"], "in", "#7b4fa6", "#13876b"], "line-opacity": 0.65,
       "line-width": ["interpolate", ["linear"], ["get", "n"], 200, 0.4, 2000, 1.2, 20000, 3.5, 80000, 7] } }, bf);
+    // 0.10.1: moving dots along the commuting lines, travelling in the net direction (more go one way than the other)
+    map.addSource("commute-dots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "commute-dots", type: "circle", source: "commute-dots", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 1.5, 9, 2.6, 12, 3.4],
+      "circle-color": ["match", ["get", "dir"], "in", "#7b4fa6", "#0f6e55"], "circle-stroke-color": "#fff", "circle-stroke-width": 0.6, "circle-opacity": 0.95 } }, bf);
     map.addSource("trade-ports", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({ id: "trade-ports", type: "circle", source: "trade-ports", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["get", "v"], 1e8, 3, 1e10, 8, 1e11, 16], "circle-color": "#1f2a2e", "circle-opacity": 0.78, "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2 } }, bf);
   }
@@ -1794,10 +1798,45 @@
     Object.entries(NET_LAYERS).forEach(([id, ids]) => ids.forEach(l => { if (map.getLayer(l)) map.setLayoutProperty(l, "visibility", on.has(id) ? "visible" : "none"); }));
     if (on.has("inf_rail") || on.has("inf_power")) loadData("data/networks.js", "ATLAS_NETWORKS").then(N => { if (N && !syncNetworks.osm) { syncNetworks.osm = 1; map.getSource("net-osm").setData(N.rail); map.getSource("net-osm-p").setData(N.power); } }).catch(() => {});
     syncTrade(on);   // 0.9
-    if (on.has("commute_lines")) { const k = state.focus || ""; if (syncNetworks.cm !== k) { syncNetworks.cm = k; map.getSource("commute-lines").setData({ type: "FeatureCollection", features: commuteFeatures() }); } }
+    if (on.has("commute_lines")) { const k = state.focus || ""; if (syncNetworks.cm !== k) { syncNetworks.cm = k; const fs = commuteFeatures(); map.getSource("commute-lines").setData({ type: "FeatureCollection", features: fs }); startCommute(fs); } }
+    else if (syncNetworks.cm !== undefined) { syncNetworks.cm = undefined; stopCommute(); }
     if (on.has("inf_ferry")) loadData("data/ferries.js", "ATLAS_FERRIES").then(F => { if (F && !syncNetworks.ferry) { syncNetworks.ferry = 1; map.getSource("net-ferry").setData(F.routes); } });
     if (on.has("inf_freight")) loadData("data/freight.js", "ATLAS_FREIGHT").then(F => { if (!F) return; if (!syncNetworks.freight) { syncNetworks.freight = 1; F.routes.features.forEach((f, i) => { f.id = i; }); map.getSource("net-freight").setData(F.routes); } startFreight(F); });
     else stopFreight();
+  }
+  // 0.10.1: commuting dots. Each pair of councils gets one stream of dots, moving the way more people go (net); the
+  // number of dots grows with how many commute between them either way (square root, so the biggest don't drown the rest).
+  // Only the largest flows are in Atlas (each council's top destinations), so the net is between those listed flows.
+  let commuteAnim = null;
+  function commutePairs(fs) {
+    const pair = {};
+    fs.forEach(f => { const { a, b, n, dir } = f.properties, k = a < b ? a + "|" + b : b + "|" + a, p = pair[k] = pair[k] || { lo: a < b ? a : b, hi: a < b ? b : a, fwd: 0, back: 0, dir, c: null };
+      if (a === p.lo) p.fwd = Math.max(p.fwd, n); else p.back = Math.max(p.back, n); });
+    const rev = (o, w) => { const t = CM && CM.out[o] && CM.out[o].top; const x = t && t.find(r => r[0] === w); return x ? x[1] : 0; };
+    return Object.values(pair).map(p => {
+      if (!p.fwd) p.fwd = rev(p.lo, p.hi); if (!p.back) p.back = rev(p.hi, p.lo);
+      const A = PT[p.lo], B = PT[p.hi], net = p.fwd - p.back; if (!A || !B || !net) return null;
+      const from = net > 0 ? A : B, to = net > 0 ? B : A, gross = p.fwd + p.back;
+      return { from, to, n: Math.max(1, Math.min(12, Math.round(Math.sqrt(gross / 400)))), dir: p.dir, net: Math.abs(net), gross };
+    }).filter(Boolean);
+  }
+  function startCommute(fs) {
+    stopCommute(); const pairs = commutePairs(fs); if (!pairs.length) return;
+    map.setLayoutProperty("commute-dots", "visibility", "visible");
+    const t0 = performance.now();
+    const step = () => {
+      if (!commuteAnim) return;
+      const t = (performance.now() - t0) / 1000, feats = [];
+      pairs.forEach((r, j) => { for (let k = 0; k < r.n; k++) { const f = ((t / 9) + k / r.n + j * 0.137) % 1;
+        feats.push({ type: "Feature", properties: { dir: r.dir }, geometry: { type: "Point", coordinates: [r.from[0] + (r.to[0] - r.from[0]) * f, r.from[1] + (r.to[1] - r.from[1]) * f] } }); } });
+      if (map.getSource("commute-dots")) map.getSource("commute-dots").setData({ type: "FeatureCollection", features: feats });
+      commuteAnim = setTimeout(() => requestAnimationFrame(step), 66);
+    };
+    commuteAnim = 1; step();
+  }
+  function stopCommute() {
+    if (commuteAnim && commuteAnim !== 1) clearTimeout(commuteAnim); commuteAnim = null;
+    if (map.getSource("commute-dots")) { map.getSource("commute-dots").setData({ type: "FeatureCollection", features: [] }); map.setLayoutProperty("commute-dots", "visibility", "none"); }
   }
   // moving dots: how much goes each way. Dots per route grow with the tonnage (square root, so big routes don't drown the rest)
   function startFreight(F) {
@@ -2218,7 +2257,7 @@
   }
   function commuteLegend() {
     const f = state.focus && P[state.focus] && P[state.focus].level === "council" && CM ? state.focus : null;
-    if (!f) return `<div class="note">The 500 biggest flows between councils. Click a council for its own: where its people work, and where its workers come from.</div>`;
+    if (!f) return `<div class="note">The 500 biggest flows between councils. Moving dots travel the way more people commute (the net direction); more dots means more commuters either way. Click a council for its own: where its people work, and where its workers come from.</div>`;
     const L = (x, w) => (x || []).slice(0, 5).map(([c, n]) => `${esc(nameOf(c))} ${fmtInt(n)}`).join(", ");
     return `<div class="note"><b>${esc(nameOf(f))}</b> · out to ${L((CM.out[f] || {}).top)}; in from ${L((CM.in[f] || {}).top)}. Census 2021.</div>`;
   }
