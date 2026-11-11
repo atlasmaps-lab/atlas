@@ -4452,6 +4452,7 @@
   // outliers; Pearson shown too). p-values are corrected for testing many metrics at once (Benjamini-Hochberg). Near-copies
   // of the outcome are flagged and set aside. For the strongest, a partial correlation holds density and deprivation fixed.
   const EXPL = {};
+  const EXF = { p: null, raw: false };   // 0.10.1: the table's significance filter (corrected p unless raw)
   function explainKey(cfg) { return [cfg.metrics[0], cfg.level, cfg.within, (cfg.custom || []).join(","), cfg.date].join("|"); }
   function explainRun(cfg) {
     const k = explainKey(cfg); if (EXPL[k]) return EXPL[k];
@@ -4484,14 +4485,18 @@
     const lab = m => m.bd && BD[m.bd] ? `${BD[m.bd].label}: ${BD[m.bd].name(pickOf(m.id))}` : m.label;   // breakdowns name the chosen category
     const o = M[cfg.metrics[0]], st = explainRun(cfg), unit = (LEVEL_OPTS().find(x => x[0] === cfg.level) || [0, "places"])[1].toLowerCase();
     const same = r => r.m.p === o.p && r.m.group === o.group;   // other measures of the same thing (e.g. other life expectancies)
-    const real = st.rows.filter(r => !r.dup && !same(r)), kin = st.rows.filter(r => !r.dup && same(r)), dup = st.rows.filter(r => r.dup), top = real.slice(0, 10), say = r => {
+    const real = st.rows.filter(r => !r.dup && !same(r)), kin = st.rows.filter(r => !r.dup && same(r)), dup = st.rows.filter(r => r.dup), pOf = r => EXF.raw ? r.p : (r.q != null ? r.q : r.p), top = real.filter(r => EXF.p == null || (pOf(r) != null && pOf(r) < EXF.p)), say = r => {
       const a = esc(lab(r.m).toLowerCase()), b = esc(lab(o).toLowerCase());
       return r.r > 0 ? `Places with higher ${a} tend to have higher ${b}` : `Places with higher ${a} tend to have lower ${b}`; };
     return `<details class="ex" open><summary><b>What in Atlas's data goes with ${esc(o.label)}</b> <small>${st.done ? `${st.tested} metrics tested across ${st.n} ${esc(unit)}` : `looking through the metrics… ${st.tested} so far`}</small></summary>
-      ${top.length ? `<table class="ex-t"><thead><tr><th>Metric</th><th>Link (Spearman)</th><th class="num">r</th><th class="num">Pearson</th><th title="Holding population density and deprivation fixed">Holding density and deprivation fixed</th><th class="num">places</th></tr></thead><tbody>
+      <div class="ex-filter" role="group" aria-label="Show only statistically significant links"><span>Show</span>${[[null, "All"], [0.10, "p < 0.10"], [0.05, "p < 0.05"], [0.01, "p < 0.01"], [0.001, "p < 0.001"]].map(([v, l]) => `<button type="button" class="${EXF.p === v ? "on" : ""}" data-exsig="${v == null ? "" : v}">${l}</button>`).join("")}
+        <label title="Benjamini-Hochberg: allows for testing many metrics at once. Untick for the plain p-value of each test"><input type="checkbox" data-exraw ${EXF.raw ? "" : "checked"}> corrected for many tests</label>
+        <small>${st.done ? `${top.length} of ${real.length} links shown` : ""}</small></div>
+      ${top.length ? `<div class="ex-scroll"><table class="ex-t"><thead><tr><th>Metric</th><th>Link (Spearman)</th><th class="num">r</th><th class="num">Pearson</th><th class="num" title="${EXF.raw ? "Plain p-value of each test" : "Corrected for testing many metrics at once (Benjamini-Hochberg)"}">p${EXF.raw ? "" : " (corr.)"}</th><th title="Holding population density and deprivation fixed">Holding density and deprivation fixed</th><th class="num">places</th></tr></thead><tbody>
         ${top.length ? "" : ""}${top.map(r => `<tr data-exm="${r.m.id}" title="${esc(say(r))}. Click to plot it against ${esc(o.label)}"><td class="ex-n"><i class="sw" style="background:${PER[r.m.p].hue}"></i>${esc(lab(r.m))}<small>${esc(say(r))}</small></td>
           <td><span class="ex-bar"><i style="${r.r >= 0 ? `left:50%;width:${(50 * r.r).toFixed(1)}%;background:#2b6cb0` : `right:50%;width:${(-50 * r.r).toFixed(1)}%;background:#c0392b`}"></i></span><small>${esc(ST.strength(r.r))}${r.q != null && r.q >= 0.05 ? " · could be chance" : ""}</small></td>
-          <td class="num">${r.r.toFixed(2)}</td><td class="num">${r.pr != null ? r.pr.toFixed(2) : "—"}</td><td class="num">${r.partial != null ? `${r.partial.toFixed(2)}${Math.abs(r.partial) < Math.abs(r.r) / 2 ? " <small>(mostly explained by them)</small>" : ""}` : ""}</td><td class="num">${r.n}</td></tr>`).join("")}</tbody></table>` : st.done ? `<p class="aempty">Not enough places with both values to say anything.</p>` : ""}
+          <td class="num">${r.r.toFixed(2)}</td><td class="num">${r.pr != null ? r.pr.toFixed(2) : "—"}${r.pr != null && Math.abs(r.r - r.pr) > 0.3 ? `<small class="ex-div" title="Spearman ranks the places; Pearson uses the values. When they differ this much, the link is curved, or a few extreme places pull Pearson up or down: plot it to see">differ</small>` : ""}</td>
+          <td class="num">${(v => v == null ? "—" : v < 0.001 ? "<0.001" : v.toFixed(3))(pOf(r))}</td><td class="num">${r.partial != null ? `${r.partial.toFixed(2)}${Math.abs(r.partial) < Math.abs(r.r) / 2 ? " <small>(mostly explained by them)</small>" : ""}` : ""}</td><td class="num">${r.n}</td></tr>`).join("")}</tbody></table></div>` : st.done ? (real.length ? `<p class="aempty">No link passes p < ${EXF.p}${EXF.raw ? "" : " after correcting for many tests"}.</p>` : `<p class="aempty">Not enough places with both values to say anything.</p>`) : ""}
       ${kin.length ? `<p class="ex-dup"><b>Other measures in the same group</b> (${esc(o.group || PER[o.p].name)}), which move with it as you'd expect: ${kin.slice(0, 6).map(r => `<button class="linkish" data-exm="${r.m.id}">${esc(r.m.label)}</button> ${r.r.toFixed(2)}`).join(", ")}.</p>` : ""}
       ${dup.length ? `<p class="ex-dup">Set aside as near-copies of ${esc(o.label)} (built from the same numbers, or almost identical): ${dup.slice(0, 6).map(r => esc(r.m.label)).join(", ")}.</p>` : ""}
       <div class="ex-warn"><b>Read with care.</b><ul>
@@ -4531,6 +4536,8 @@
   WM.register(anEl, { type: "analyse", title: "Analyse", handle: ".an-head", min: { w: 360, h: 260 }, onResize: renderAnalyse, close: closeAnalyse });
   anEl.addEventListener("click", e => {
     const a = e.target.closest("[data-go]"); if (a) { focus(a.dataset.go); return; }
+    const sg = e.target.closest("[data-exsig]"); if (sg) { EXF.p = sg.dataset.exsig === "" ? null : +sg.dataset.exsig; explainPaint(); return; }   // 0.10.1
+    const rw = e.target.closest("[data-exraw]"); if (rw) { EXF.raw = !rw.checked; explainPaint(); return; }
     const ex = e.target.closest("[data-exm]"); if (ex) { AN.metrics = [AN.metrics[0], ex.dataset.exm]; AN.method = "rel"; saveAN(); renderAnalyse(); return; }   // 0.10: plot the pair
     const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
     if (b.hasAttribute("data-anx")) { closeAnalyse(); return; }
