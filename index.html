@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atlas 0.9 · UK</title>
+<title>Atlas 0.10 · UK</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
 <style>
 /* Layout: the map is the whole window.
@@ -1168,6 +1168,28 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
   .ex-t td small { color: var(--ink-3); font-size: 11px; }
   .ex-dup { font-size: 11.5px; color: var(--ink-3); }
   .ex-warn { font-size: 11.5px; color: var(--ink-2); background: rgba(217,164,65,.12); border-radius: 8px; padding: 6px 10px; } .ex-warn ul { margin: 4px 0 0; padding-left: 16px; } .ex-warn li { margin: 2px 0; }
+  /* 0.10: editorial panels */
+  .apppanel .wm-body.ed { padding: 14px 18px 18px; }
+  .ed-head { margin: 0 0 8px; }
+  .ed-kick { font-size: 10.5px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--app, var(--ink-3)); }
+  .apppanel .ed-h, .apppanel .ed-dek { text-transform: none; }
+  .ed-h { font-family: var(--f-serif, "PT Serif", Georgia, serif); font-size: 19px; line-height: 1.28; font-weight: 700; margin: 4px 0 2px; color: var(--ink); letter-spacing: -.005em; }
+  .ed-dek { font-family: var(--f-serif, "PT Serif", Georgia, serif); font-size: 15px; line-height: 1.4; color: var(--ink-2); margin: 4px 0 2px; }
+  .ed .ed-story { margin: 0 0 10px; } .ed .ed-story .nv-story { font-size: 14px; line-height: 1.55; }
+  .ed .ed-story .nv-means, .ed .ed-story .nv-trust { font-size: 12.5px; }
+  .ed .tr-head.ed-figs { display: flex; flex-wrap: wrap; gap: 0; margin: 4px 0 12px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .ed .tr-head.ed-figs > div { background: none; border-radius: 0; padding: 10px 14px 10px 0; margin-right: 14px; flex: 1 1 100px; border-right: 1px solid var(--rule); }
+  .ed .tr-head.ed-figs > div:last-child { border-right: 0; }
+  .ed .tr-head.ed-figs b { font-family: var(--f-serif, "PT Serif", Georgia, serif); font-size: 24px; font-weight: 700; display: block; line-height: 1.1; }
+  .ed .tr-head.ed-figs .tr-k { order: 2; font-size: 10px; letter-spacing: .08em; }
+  .ed h4 { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin: 16px 0 6px; padding-top: 10px; border-top: 1px solid var(--rule); }
+  .ed h4 small { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--ink-3); }
+  .ed .tr-t td, .ed .tr-t th { border-bottom-color: color-mix(in srgb, var(--rule) 60%, transparent); }
+  .ed .tr-b i { height: 6px; }
+  .ed .ap-row { margin: 12px 0 4px; }
+  .ed details.ed-notes { margin-top: 16px; border-top: 1px solid var(--rule); padding-top: 8px; font-size: 11.5px; color: var(--ink-3); }
+  .ed details.ed-notes summary { cursor: pointer; font-weight: 600; color: var(--ink-2); }
+  .ed table.itab th { font-weight: 600; color: var(--ink-2); }
   /* 0.10: narratives */
   .nv p { margin: 0 0 7px; line-height: 1.5; }
   .nv-story { font-family: var(--f-serif, "PT Serif", Georgia, serif); font-size: 13.5px; color: var(--ink); }
@@ -1192,9 +1214,9 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=1000">
-<script src="theme.js?v=1000"></script>
-<script src="theme-apply.js?v=1000"></script>
+<link rel="stylesheet" href="fonts.css?v=1004">
+<script src="theme.js?v=1004"></script>
+<script src="theme-apply.js?v=1004"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1202,7 +1224,7 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <svg id="mind" aria-hidden="false"></svg>
 
 <div id="top">
-  <button class="brand" id="brand" aria-expanded="false" aria-controls="menu" title="Settings, comparison and export"><b>ATLAS<sup id="sup"></sup></b><span>0.9 · United Kingdom ▾</span></button>
+  <button class="brand" id="brand" aria-expanded="false" aria-controls="menu" title="Settings, comparison and export"><b>ATLAS<sup id="sup"></sup></b><span>0.10 · United Kingdom ▾</span></button>
   <div class="finder">
     <button id="browse-btn" aria-expanded="false" aria-controls="browse" title="Choose which boundaries show, or browse places"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span id="browse-lv" class="vh">Areas</span></button>
     <div class="search"><input id="search" type="search" placeholder="Find a place or a metric…" autocomplete="off" aria-label="Find a place or a metric"><span class="schips" id="schips" hidden></span><ul id="hits" hidden role="listbox" aria-multiselectable="true"></ul></div>
@@ -1315,33 +1337,33 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=1000"></script>
+<script src="data/places_poi.js?v=1004"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=1000"></script>
-<script src="data/representation.js?v=1000"></script>
-<script src="data/trade.js?v=1000"></script>
-<script src="data/investment.js?v=1000"></script>
-<script src="data/industry.js?v=1000"></script>
-<script src="data/census.js?v=1000"></script>
-<script src="data/health_deaths.js?v=1000"></script>
-<script src="data/bd_economy.js?v=1000"></script>
-<script src="data/bd_census.js?v=1000"></script>
-<script src="data/spending.js?v=1000"></script>
-<script src="data/bd_health.js?v=1000"></script>
-<script src="data/people.js?v=1000"></script>
-<script src="data/bd_spending.js?v=1000"></script>
-<script src="data/bd_people.js?v=1000"></script>
-<script src="data/transport.js?v=1000"></script>
-<script src="data/economy.js?v=1000"></script>
-<script src="data/airports.js?v=1000"></script>
+<script src="data/money.js?v=1004"></script>
+<script src="data/representation.js?v=1004"></script>
+<script src="data/trade.js?v=1004"></script>
+<script src="data/investment.js?v=1004"></script>
+<script src="data/industry.js?v=1004"></script>
+<script src="data/census.js?v=1004"></script>
+<script src="data/health_deaths.js?v=1004"></script>
+<script src="data/bd_economy.js?v=1004"></script>
+<script src="data/bd_census.js?v=1004"></script>
+<script src="data/spending.js?v=1004"></script>
+<script src="data/bd_health.js?v=1004"></script>
+<script src="data/people.js?v=1004"></script>
+<script src="data/bd_spending.js?v=1004"></script>
+<script src="data/bd_people.js?v=1004"></script>
+<script src="data/transport.js?v=1004"></script>
+<script src="data/economy.js?v=1004"></script>
+<script src="data/airports.js?v=1004"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="data/environment.js?v=1000"></script>
-<script src="stats.js?v=1000"></script>
-<script src="psephology.js?v=1000"></script>
-<script src="charts.js?v=1000"></script>
-<script src="engine.js?v=1000"></script>
-<script src="xlsx.js?v=1000"></script>
+<script src="data/environment.js?v=1004"></script>
+<script src="stats.js?v=1004"></script>
+<script src="psephology.js?v=1004"></script>
+<script src="charts.js?v=1004"></script>
+<script src="engine.js?v=1004"></script>
+<script src="xlsx.js?v=1004"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1351,16 +1373,17 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=1000"></script>
-<script src="apps.js?v=1000"></script>
-<script src="views/views.js?v=1000"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=1004"></script>
+<script src="apps.js?v=1004"></script>
+<script src="views/views.js?v=1004"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=1000"></script>
-<script src="money.js?v=1000"></script>
-<script src="trade.js?v=1000"></script>
-<script src="narrative.js?v=1000"></script>
-<script src="profile.js?v=1000"></script>
-<script src="devdesign.js?v=1000"></script>
-<script src="app.js?v=1000"></script>
+<script src="windows.js?v=1004"></script>
+<script src="money.js?v=1004"></script>
+<script src="trade.js?v=1004"></script>
+<script src="narrative.js?v=1004"></script>
+<script src="panel.js?v=1004"></script>
+<script src="profile.js?v=1004"></script>
+<script src="devdesign.js?v=1004"></script>
+<script src="app.js?v=1004"></script>
 </body>
 </html>

@@ -14,7 +14,7 @@
   let ctx = null;
   const T = () => window.ATLAS_TRADE;
   const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const gbp = v => { if (v == null || !isFinite(v)) return "—"; const a = Math.abs(v); return (v < 0 ? "−" : "") + "£" + (a >= 1e9 ? (a / 1e9).toFixed(a >= 1e10 ? 0 : 1) + "bn" : a >= 1e6 ? (a / 1e6).toFixed(a >= 1e7 ? 0 : 1) + "m" : a >= 1e4 ? Math.round(a / 1e3) + "k" : Math.round(a).toLocaleString("en-GB")); };
+  const gbp = v => { if (v == null || !isFinite(v)) return "—"; const a = Math.abs(v); return (v < 0 ? "−" : "") + "£" + (a >= 1e9 ? (a / 1e9).toLocaleString("en-GB", { maximumFractionDigits: a >= 1e10 ? 0 : 1 }) + "bn" : a >= 1e6 ? (a / 1e6).toFixed(a >= 1e7 ? 0 : 1) + "m" : a >= 1e4 ? Math.round(a / 1e3) + "k" : Math.round(a).toLocaleString("en-GB")); };
   const pct = (a, b) => b ? (100 * a / b).toFixed(1) + "%" : "—";
   const chg = (a, b) => b ? ((a / b - 1) * 100 >= 0 ? "+" : "") + ((a / b - 1) * 100).toFixed(0) + "%" : "new";
   const FL = { exp: "Exports", imp: "Imports" }, FLC = { exp: "#1e6fb8", imp: "#c0392b" };
@@ -46,8 +46,15 @@
     const chs = Object.entries(t.ch).map(([k, c]) => [k, c[f]]).sort((a, b) => b[1] - a[1]).slice(0, 10);
     const cts = Object.entries(t.cty).map(([k, c]) => [k, c[f], gbp(c[f] - c[o]).replace(/^(?!−)/, f === "exp" ? "+" : "")]).sort((a, b) => b[1] - a[1]).slice(0, 10);
     const mv = (t.movers[f] || []).slice(0, 8);
-    el.innerHTML = `<div class="tr-head"><div><span class="tr-k">Exports</span><b>${gbp(t.tot.exp)}</b></div><div><span class="tr-k">Imports</span><b>${gbp(t.tot.imp)}</b></div><div><span class="tr-k">Balance</span><b class="${bal < 0 ? "neg" : "pos"}">${gbp(bal)}</b></div></div>
-      <p class="ap-note">Goods, the 12 months to ${esc(mname(t.period[1]))} (HMRC, including precious metals). Monthly since 2016:</p><div class="tr-chart">${trend(mser, 440, 150)}</div>
+    const yr = k => { const y = {}; t.months[k].forEach(([m, v]) => { const Y = 2000 + +m.slice(0, 2); y[Y] = (y[Y] || 0) + v; }); return y; }, ye = yr("exp"), y0 = Object.keys(ye).sort()[0], full = Object.keys(ye).filter(y => t.months.exp.filter(([m]) => 2000 + +m.slice(0, 2) === +y).length === 12).sort();
+    const fy = full[full.length - 1], tc = Object.entries(t.cty).sort((a, b) => b[1].exp - a[1].exp)[0], ti = Object.entries(t.cty).sort((a, b) => b[1].imp - a[1].imp)[0], tch = Object.entries(t.ch).sort((a, b) => b[1].exp - a[1].exp)[0];
+    const story = `The UK ${bal < 0 ? "buys" : "sells"} <b>${gbp(Math.abs(bal))}</b> more goods ${bal < 0 ? "than it sells" : "than it buys"} a year. In the 12 months to ${esc(mname(t.period[1]))} it exported ${gbp(t.tot.exp)} of goods and imported ${gbp(t.tot.imp)}.
+      ${fy && ye[y0] ? `Exports in ${fy} were ${gbp(ye[fy])}, ${window.AtlasNarrative ? AtlasNarrative.change(ye[y0], ye[fy]) : ""} on ${y0} in cash terms (before inflation).` : ""}
+      The biggest buyer was ${esc(tc[1].n)} (${gbp(tc[1].exp)}), the biggest seller ${esc(ti[1].n)} (${gbp(ti[1].imp)}); the largest export group was ${esc(tch[1].n.split(";")[0].toLowerCase())} (${gbp(tch[1].exp)}).`;
+    el.innerHTML = `<div class="nv"><p class="nv-story">${story}</p><p class="nv-means"><b>What it tells us.</b> What the UK sells to and buys from the rest of the world in physical goods, product by product and country by country.</p>
+        <p class="nv-trust"><b>How far to trust it.</b> HMRC's customs and survey records, revised for months. Goods only: the UK earns most abroad from services, so a goods deficit isn't the whole picture (Partners shows services too). Precious metals moving through London swing the totals; imports are by country of origin.</p></div>
+      <div class="tr-head"><div><span class="tr-k">Exports</span><b>${gbp(t.tot.exp)}</b></div><div><span class="tr-k">Imports</span><b>${gbp(t.tot.imp)}</b></div><div><span class="tr-k">Balance</span><b class="${bal < 0 ? "neg" : "pos"}">${gbp(bal)}</b></div></div>
+      <p class="ap-note">Monthly since 2016:</p><div class="tr-chart">${trend(mser, 440, 150)}</div>
       <div class="seg sm" role="group">${["exp", "imp"].map(k => `<button data-trf="${k}" class="${k === f ? "on" : ""}">${FL[k]}</button>`).join("")}</div>
       <h4>Top products (chapters)</h4>${bars(chs, f, k => `${esc(k)} ${esc(short(t.ch[k].n))}`, "trprod")}
       <h4>Top partners <small>(value, and the UK's balance with them)</small></h4>${bars(cts, f, k => esc(cty(k)), "trcty")}
@@ -255,7 +262,12 @@
     const ind = side => Object.entries((I.fdi[side].ind || {})[y] || {}).filter(([k]) => k !== "Total").sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => [k, v * 1e6]);
     const D = I.dbt || {}, rg = Object.entries(D.region || {}).map(([k, o]) => [k, (o.proj || {})["2025-26"] || 0, (o.jobs || {})["2025-26"] || 0]).sort((a, b) => b[2] - a[2]);
     const nm = (c, side) => esc(T() && T().cty[c] ? T().cty[c].n : (I.fdi[side].cty[c] || {}).n || c);
-    el.innerHTML = `<div class="tr-head"><div><span class="tr-k">Foreign-owned in UK</span><b>${m6(pin[y])}</b></div><div><span class="tr-k">UK-owned abroad</span><b>${m6(pout[y])}</b></div><div><span class="tr-k">Net</span><b class="${pout[y] - pin[y] < 0 ? "neg" : "pos"}">${m6(pout[y] - pin[y])}</b></div></div>
+    const topIn = top("in", y)[0], topOut = top("out", y)[0], y0 = yrs(pin)[0];
+    const story = `Foreign companies owned <b>${m6(pin[y])}</b> of UK businesses at the end of ${y}, while UK companies owned ${m6(pout[y])} abroad, so the UK is a net recipient of ${m6(Math.abs(pout[y] - pin[y]))}.
+      Foreign ownership was ${window.AtlasNarrative ? AtlasNarrative.change(pin[y0], pin[y]) : ""} on ${y0}. The largest owner was ${esc(nm(topIn[0], "in"))} (${m6(topIn[1] / 1e6)}); UK firms owned most in ${esc(nm(topOut[0], "out"))} (${m6(topOut[1] / 1e6)}).`;
+    el.innerHTML = `<div class="nv"><p class="nv-story">${story}</p><p class="nv-means"><b>What it tells us.</b> Lasting ownership across borders: a company holding 10% or more of a business in another country, valued at book value.</p>
+        <p class="nv-trust"><b>How far to trust it.</b> Survey-based and revised; holding companies and financial centres (the Netherlands, Luxembourg, Jersey) stand in for the ultimate owners, so country rankings show where money is routed as much as who owns it.</p></div>
+      <div class="tr-head"><div><span class="tr-k">Foreign-owned in UK</span><b>${m6(pin[y])}</b></div><div><span class="tr-k">UK-owned abroad</span><b>${m6(pout[y])}</b></div><div><span class="tr-k">Net</span><b class="${pout[y] - pin[y] < 0 ? "neg" : "pos"}">${m6(pout[y] - pin[y])}</b></div></div>
       <p class="ap-note">Foreign direct investment positions (the stock owned, at book value) at the end of ${y}: companies owning 10% or more of a business in another country. ONS, directional basis.</p><div class="tr-chart">${trend(ser, 440, 150)}</div>
       <div class="tr-two"><div><h4>Who owns most in the UK</h4>${bars(top("in", y).map(([c, v]) => [c, v]), "imp", c => nm(c, "in"), "trcty").replace(/#c0392b/g, FDIC.in)}</div><div><h4>Where UK firms own most</h4>${bars(top("out", y).map(([c, v]) => [c, v]), "exp", c => nm(c, "out"), "trcty").replace(/#1e6fb8/g, FDIC.out)}</div></div>
       <div class="tr-two"><div><h4>Foreign-owned, by industry</h4>${bars(ind("in"), "imp", k => esc(short(k, 30)), null).replace(/#c0392b/g, FDIC.in)}</div><div><h4>UK-owned abroad, by industry</h4>${bars(ind("out"), "exp", k => esc(short(k, 30)), null).replace(/#1e6fb8/g, FDIC.out)}</div></div>
@@ -277,7 +289,11 @@
     const ser2 = [{ name: "Investment income earned abroad", colour: FDIC.out, pts: inc.filter(x => x[1] != null).map(([k, v]) => [+k, v * 1e6]) }, { name: "Paid to foreign investors", colour: FDIC.in, pts: dec.filter(x => x[1] != null).map(([k, v]) => [+k, v * 1e6]) }];
     const byC = side => Object.entries(I.fdi[side].cty).map(([c, o]) => [c, ((o.div || {})[y] || 0) * 1e6]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 10);
     const SI = I.pb.secondary || {}, sy = lastY(SI.cr), hh = (o, re) => val(((o || {})[sy]) || {}, re);
-    el.innerHTML = `<h4>Profits of foreign-owned businesses in the UK, ${y}</h4>
+    const story = `In ${y}, foreign owners took <b>${m6(di[y])}</b> out of the UK in dividends from businesses they own here, ${ri[y] >= 0 ? `and left ${m6(ri[y])} of profits in those businesses` : `${m6(Math.abs(ri[y]))} more than those businesses earned that year (paying out earlier profits)`}. UK owners brought home ${m6(dout[y])} in dividends from abroad.
+      ${pbRows.length ? `Across all kinds of income, the UK ${(val(cr, /^Total$/) || 0) >= (val(db, /^Total$/) || 0) ? "earned" : "paid out"} ${m6(Math.abs((val(cr, /^Total$/) || 0) - (val(db, /^Total$/) || 0)))} more than it ${(val(cr, /^Total$/) || 0) >= (val(db, /^Total$/) || 0) ? "paid" : "earned"} in ${py}.` : ""}`;
+    el.innerHTML = `<div class="nv"><p class="nv-story">${story}</p><p class="nv-means"><b>What it tells us.</b> How much profit leaves and enters the country: dividends paid to owners, profits kept and reinvested, and all other income across the border.</p>
+        <p class="nv-trust"><b>How far to trust it.</b> Survey-based and revised for years; reinvested profits are estimates, and a few large companies can swing a year.</p></div>
+      <h4>Profits of foreign-owned businesses in the UK, ${y}</h4>
       <div class="tr-head"><div><span class="tr-k">Profits</span><b>${m6(pi[y])}</b></div><div><span class="tr-k">Sent abroad (dividends)</span><b>${m6(di[y])}</b></div><div><span class="tr-k">Kept in the UK</span><b>${m6(ri[y])}</b></div></div>
       <h4>Profits of UK-owned businesses abroad, ${y}</h4>
       <div class="tr-head"><div><span class="tr-k">Profits</span><b>${m6(po[y])}</b></div><div><span class="tr-k">Brought home (dividends)</span><b>${m6(dout[y])}</b></div><div><span class="tr-k">Kept abroad</span><b>${m6(ro[y])}</b></div></div>

@@ -99,7 +99,7 @@
     if (pts.length >= 2) {
       const [y0, v0] = pts[0], [yN, vN] = pts[pts.length - 1], yrs = yN - y0;
       const c = change(m, v0, vN), cagr = (m.nature === "amount" || m.nature === "count") && v0 > 0 && vN > 0 && yrs >= 5 ? (Math.pow(vN / v0, 1 / yrs) - 1) * 100 : null;
-      out.push(`In ${y0}, ${esc(low(m.label))} in ${esc(where)} was <b>${esc(f(v0))}</b>. By ${yN} it was <b>${esc(f(vN))}</b>${c ? `, ${c}` : ""}${cagr != null ? ` (about ${Math.abs(cagr).toFixed(1)}% a year)` : ""}.`);
+      out.push(`In ${yN}, ${esc(low(m.label))} in ${esc(where)} was <b>${esc(f(vN))}</b>${c ? `, ${c} on ${y0}` : ""}${cagr != null ? ` (about ${Math.abs(cagr).toFixed(1)}% a year)` : ""}. In ${y0} it had been ${esc(f(v0))}.`);
       let hi = pts[0], lo = pts[0]; pts.forEach(p => { if (p[1] > hi[1]) hi = p; if (p[1] < lo[1]) lo = p; });
       const peak = hi[0] !== yN && hi[0] !== y0, trough = lo[0] !== y0 && lo[0] !== yN;
       if (peak || trough) out.push([peak ? `It peaked at ${esc(f(hi[1]))} in ${hi[0]}` : "", trough ? `${peak ? " and" : "It"} was lowest in ${lo[0]} (${esc(f(lo[1]))})` : ""].join("") + ".");

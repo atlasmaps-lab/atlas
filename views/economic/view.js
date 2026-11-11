@@ -7,7 +7,7 @@
   const placeOf = ctx => ctx.focused || ctx.sel[0] || ctx.UKC;
   function dashboard(ctx, el) {
     const c = placeOf(ctx), ids = ["gdp", "gdp_per_head", "gdp_growth", "population"].filter(id => ctx.M[id]);
-    el.innerHTML = `<h4>${ctx.esc(ctx.nameOf(c))}</h4><p class="ap-note">Click an area on the map to change place. Values on ${ctx.esc(ctx.longDate(ctx.date))}.</p>
+    el.innerHTML = `${ctx.story ? ctx.story("gdp_per_head", c) : ""}<h4>${ctx.esc(ctx.nameOf(c))}</h4><p class="ap-note">Click an area on the map to change place. Values on ${ctx.esc(ctx.longDate(ctx.date))}.</p>
       <table class="itab">${ids.map(id => { const m = ctx.M[id], r = m.get(c, ctx.date), pts = ctx.seriesOf(m, c, 1998, +ctx.today.slice(0, 4)); return `<tr><th>${ctx.esc(m.label)}</th><td>${r && r.v != null ? ctx.esc(r.text) : "No data"}${r && r.yr ? ` <small>(${ctx.esc(r.yr)})</small>` : ""}<br>${ctx.CH.spark(pts, { w: 160, h: 22, colour: "#13876b" })}</td></tr>`; }).join("")}</table>
       <div class="ap-row"><button class="btn sm" data-echart>Chart GDP per head over time</button><button class="btn sm" data-eopen="decomp">Growth decomposition</button></div>`;
     el.onclick = e => { if (e.target.closest("[data-echart]")) ctx.openChart({ metrics: ["gdp_per_head"], places: [c] }); const o = e.target.closest("[data-eopen]"); if (o) ctx.openPanel(o.dataset.eopen); };

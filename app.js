@@ -5062,6 +5062,8 @@
     const last = open.sort((a, b) => b.y - a.y)[0], top = WM.TOPNOW ? WM.TOPNOW() : 100;
     WM.place(w.el, last ? { x: last.x, y: last.y + 44, w: last.w, h: ph } : { x: innerWidth - pw - 16, y: top, w: pw, h: ph });
     markLinks();
+    const isTool = APP.tools.includes(x);
+    if (window.AtlasPanel && !isTool && x.editorial !== false) AtlasPanel.watch(w.body, { app: APP.name.replace(/^Atlas /, ""), title: x.title, blurb: x.blurb || "", editorial: x.editorial });   // 0.10: editorial layout
     const draw = () => { if (!w.el.hidden) { try { x.render(CTX, w.body); } catch (e) { console.error(e); w.body.innerHTML = `<p class="aempty">Couldn't draw this: ${esc(e.message)}</p>`; } } };
     draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
   }
@@ -5118,7 +5120,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.9.2</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.10</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));
