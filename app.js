@@ -1836,7 +1836,9 @@
     const t0 = performance.now();
     const step = () => {
       if (!commuteAnim) return;
-      const t = (performance.now() - t0) / 1000, feats = [];
+      // a tab in the background doesn't animate (it only costs battery); with reduced motion the dots stand still
+      if (document.hidden) { commuteAnim = setTimeout(() => requestAnimationFrame(step), 500); return; }
+      const t = (matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : performance.now() - t0) / 1000, feats = [];
       pairs.forEach((r, j) => { for (let k = 0; k < r.n; k++) { const f = ((t / 9) + k / r.n + j * 0.137) % 1;
         feats.push({ type: "Feature", properties: { dir: r.dir }, geometry: { type: "Point", coordinates: [r.from[0] + (r.to[0] - r.from[0]) * f, r.from[1] + (r.to[1] - r.from[1]) * f] } }); } });
       if (map.getSource("commute-dots")) map.getSource("commute-dots").setData({ type: "FeatureCollection", features: feats });
@@ -5153,7 +5155,7 @@
   // 0.10.1: a header link whose panel has tabs of its own (Money's Parties/Donors/…, the calculators, Stations/Airports/
   // Ports) opens a menu of them as soon as the pointer is on it; picking one opens the panel at that tab, story on top.
   const tabsOf = x => { try { const t = typeof x.tabs === "function" ? x.tabs(CTX) : x.tabs; return Array.isArray(t) && t.length > 1 ? t : null; } catch (e) { return null; } };
-  function openTab(id, k) {
+  function openPanelTab(id, k) {
     const x = [...APP.panels, ...APP.tools].find(p => p.id === id); if (!x) return;
     try { x.setTab && x.setTab(k); } catch (e) { console.error(e); }
     const was = appWins[id] && WM.isOpen(appWins[id].el);
@@ -5170,7 +5172,7 @@
       tabMenu = document.createElement("div"); tabMenu.id = "ah-tabmenu"; tabMenu.setAttribute("role", "menu"); document.body.appendChild(tabMenu);
       tabMenu.addEventListener("mouseenter", () => clearTimeout(tabMenuT));
       tabMenu.addEventListener("mouseleave", () => { tabMenuT = setTimeout(hideTabMenu, 220); });
-      tabMenu.addEventListener("click", e => { const i = e.target.closest("[data-ahtab]"); if (i) openTab(tabMenu.dataset.for, i.dataset.ahtab); });
+      tabMenu.addEventListener("click", e => { const i = e.target.closest("[data-ahtab]"); if (i) openPanelTab(tabMenu.dataset.for, i.dataset.ahtab); });
     }
     if (tabMenuFor !== id) {
       tabMenu.dataset.for = id;
@@ -5212,7 +5214,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.10</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.10.1</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));

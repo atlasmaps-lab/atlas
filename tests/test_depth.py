@@ -35,6 +35,7 @@ def main():
         js(f"() => {{ AtlasDebug.mapOnly(['commute_lines']); AtlasDebug.focus('{BHAM}'); }}"); page.wait_for_timeout(1500)
         r = js("() => { const f = atlasMap.getSource('commute-lines')._data.features; return [f.length, [...new Set(f.map(x => x.properties.dir))].sort()]; }")
         rep.check(r[0] >= 10 and r[1] == ["in", "out"], f"commuting lines for the council in focus, in and out ({r})")
+        js("() => AtlasDebug.mapOnly([])")   # 0.10.1: stop the moving commuting dots, which slow the software-drawn test browser
         # profile panels in each view
         for app, panel, phrase in [("economic", "industries", "industry"), ("social", "census", "category"), ("health", "deaths", "cause")]:
             p2 = open_atlas(b, base, (1440, 900), query="debug#app=" + app); p2.wait_for_timeout(800)
