@@ -182,7 +182,7 @@
         const ids = Object.keys(D.donors).filter(id => ["c", "l"].includes(D.donors[id][1])).sort((a, b) => D.donors[b][3] - D.donors[a][3]).slice(0, 40);
         el.innerHTML = `<p class="ap-note">Companies that are registered political donors (Electoral Commission), marked when they've also won public contracts or met ministers. FTSE 100 cards show a possible link by name.</p><table class="mo-tab">${ids.map(id => `<tr><td>${ctx.money.donorBtn(id)}${D.contracts[id] ? ` <span class="mo-badge">contracts</span>` : ""}<br><small>to ${D.donors[id][6].map(k => ctx.esc(ctx.money.partyName(k))).join(", ")}</small></td><td class="num">${ctx.money.gbp(D.donors[id][3])}</td></tr>`).join("")}</table>`; } },
       // 0.8: buying and selling between people, shared with Atlas Social (views/social/social.js)
-      { id: "marketplace", title: "Marketplace", blurb: "Buy and sell between people near you (with Atlas Social)", render: (ctx, el) => window.AtlasSocial ? AtlasSocial.panel("market")(ctx, el) : (el.innerHTML = "<p class='ap-note'>The marketplace didn't load.</p>"), min: { w: 400, h: 420 } },
+      { id: "marketplace", editorial: false, title: "Marketplace", blurb: "Buy and sell between people near you (with Atlas Social)", render: (ctx, el) => window.AtlasSocial ? AtlasSocial.panel("market")(ctx, el) : (el.innerHTML = "<p class='ap-note'>The marketplace didn't load.</p>"), min: { w: 400, h: 420 } },
     ],
     // 0.7.2: the four calculators live together in one Calculator, with a tab for each
     tools: [{ id: "calc", title: "Calculator", blurb: "DCF, comparables, dividend discount and returns calculators", render: calculator, min: { w: 440, h: 360 } }],

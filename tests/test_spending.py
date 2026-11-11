@@ -24,7 +24,7 @@ def main():
         r = js("() => ['spd_fn', 'spd_sub', 'spd_dept', 'spd_council'].map(id => Object.keys(AtlasDebug.bdOf(id, id === 'spd_council' ? 'E08000025' : 'E12000007') || {}).length)")
         rep.check(r[0] == 10 and r[1] > 30 and r[2] >= 10 and r[3] >= 8, f"breakdowns: by function, in detail, by department, council by service ({r})")
         page.click("#appbar [data-apanel=spending]"); page.wait_for_selector(".apppanel:not([hidden]) .nv-story")
-        s = js("() => document.querySelector('.apppanel:not([hidden]) .nv-story').innerText")
+        s = js("() => { const b = [...document.querySelectorAll('.apppanel:not([hidden]) .wm-body')].pop(); return ((b.querySelector('.ed-h') || {}).innerText || '') + ' ' + ((b.querySelector('.nv-story') || {}).innerText || ''); }")
         rep.check("£1,360bn" in s and "Social protection" in s and "per head" in s, f"the panel opens with the story ({s[:140]})")
         js("() => document.querySelector('[data-spf=\"Social protection\"]').click()"); page.wait_for_timeout(400)
         rep.check(js("() => document.querySelectorAll('.sp-sub').length") >= 5, "clicking a function shows its sub-functions (old age, family, sickness…)")

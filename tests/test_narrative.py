@@ -24,7 +24,7 @@ def main():
     with server() as base, browser() as b:
         page = open_atlas(b, base, (1440, 900), query="debug"); js = page.evaluate
         t = js(TEST_M)
-        rep.check("In 2000" in t and "100 w" in t and "By 2006 it was 125 w" in t and "up 25%" in t, f"first and latest values with years, and the change ({t[:120]})")
+        rep.check("In 2006" in t and "was 125 w, up 25% on 2000" in t and "In 2000 it had been 100 w" in t, f"first and latest values with years, and the change ({t[:120]})")
         rep.check("peaked at 130 w in 2005" in t and "lowest" not in t.split("peaked")[0], f"the peak ({t[:200]})")
         rep.check(re.search(r"sharpest (rise|fall)", t) is not None and ("2003" in t), f"the sharpest move, with years ({t})")
         t = js("() => { const d = document.createElement('div'); d.innerHTML = AtlasNarrative.story(AtlasDebug.M.gdp_per_head, 'E09000001'); return d.innerText; }")
