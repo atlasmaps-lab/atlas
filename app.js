@@ -1252,6 +1252,16 @@
     syncMenu(); store.set("atlas-uk-look", look);
     try { applyMapColours(); } catch (e) { /* the style isn't ready yet */ }
   }
+  // 0.10.1: the look (light or dark, map type, boundary thickness, colourblind colours), map colours and toolbox
+  // settings are the same in every app. They were already saved for all of them; now an app that is already open (a tab
+  // in Atlas Multi, another browser tab) follows a change made in another one straight away.
+  window.addEventListener("storage", e => {
+    try {
+      if (e.key === "atlas-uk-look" && e.newValue) { Object.assign(look, JSON.parse(e.newValue)); applyLook(); }
+      if (e.key === "atlas-071-mapcol" && e.newValue) { const v = JSON.parse(e.newValue); Object.keys(MAPCOL).forEach(k => delete MAPCOL[k]); Object.assign(MAPCOL, v); applyLook(); }
+      if (e.key === "atlas-13-tools" && e.newValue) { Object.assign(TOOLS, JSON.parse(e.newValue)); applyTools(); }
+    } catch (err) { /* a half-written value: the next change brings it back in line */ }
+  });
   const RELIEF_OVER = ["interpolate", ["linear"], ["zoom"], 5, 0.08, 8, 0.18, 11, 0.28];
   const RELIEF = { map: ["interpolate", ["linear"], ["zoom"], 5, 0.12, 8, 0.2, 12, 0.3], terrain: ["interpolate", ["linear"], ["zoom"], 5, 0.45, 10, 0.6], satellite: 0, hybrid: 0 };
   function rememberOpacity(id, prop) { if (!(id + prop in origOpacity)) { const v = map.getPaintProperty(id, prop); origOpacity[id + prop] = v == null ? 1 : v; } return origOpacity[id + prop]; }
