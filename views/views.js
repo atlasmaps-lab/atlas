@@ -18,14 +18,14 @@
   "use strict";
   const VIEWS = {
     politics: { owner: "", js: ["view.js"], css: ["view.css"] },
-    economic: { owner: "", js: ["econ.js", "view.js"], css: ["view.css"] },
+    economic: { owner: "", js: ["econ.js", "spending.js", "view.js"], css: ["view.css"] },
     social:   { owner: "", js: ["store.js", "social.js", "view.js"], css: ["view.css"] },
     health:   { owner: "", js: ["view.js"], css: ["view.css"] },
     markets:  { owner: "", js: ["view.js"], css: ["view.css"] },
     transport: { owner: "", js: ["view.js"], css: ["view.css"] },
     environment: { owner: "", js: ["view.js"], css: ["view.css"] },
   };
-  const V = "0920";   // bump with the ?v= numbers in index.html so browsers fetch fresh copies
+  const V = "1000";   // bump with the ?v= numbers in index.html so browsers fetch fresh copies
 
   window.ATLAS_VIEWS = VIEWS;
   const m = location.hash.match(/app=([a-z]+)/), open = m && VIEWS[m[1]] ? m[1] : null;

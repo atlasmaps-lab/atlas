@@ -958,6 +958,42 @@
     return out;
   }
 
+  // ---------- 0.10: government spending (data/spending.js: HM Treasury PESA and CRA, MHCLG revenue outturn) ----------
+  const SPD = window.ATLAS_SPEND || null, GSP = "Public spending";
+  const fyMid = fy => +fy.slice(0, 4) + "-10-01";   // a financial year sits at its middle on the time bar
+  const fyAt = (years, d) => { let y = null; for (const fy of years || []) if (fyMid(fy) <= d) y = fy; return y; };
+  function councilSpend(c) { // net current spending on residents: the council's own, plus a population share of its county's (two-tier areas)
+    const L = SPD && SPD.la; if (!L || !L.v) return null; const own = L.v[c], cty = L.county && L.county[c], cv = cty && L.v[cty];
+    if (!own && !cv) return null; const out = (own || L.services.map(() => 0)).slice(); let est = false;
+    if (cv) { const kids = Object.keys(L.county).filter(k => L.county[k] === cty), pops = kids.map(k => popAt(k, "2025-07-01") || 0), tp = pops.reduce((a, b) => a + b, 0), sh = tp ? (popAt(c, "2025-07-01") || 0) / tp : 0;
+      cv.forEach((v, i) => { out[i] += v * sh; }); est = true; }
+    return { v: out, est, county: cty, countyName: cty ? (L.cname && L.cname[cty]) || nameOf(cty) : null };
+  }
+  window.AtlasCouncilSpend = c => councilSpend(c);   // read by data/bd_spending.js
+  if (SPD && SPD.cra && SPD.cra.tot) {
+    const C = SPD.cra, RLV = ["region", "nation", "country"], RNM = { council: "Published for regions and nations: see Council spending for councils", ward: "Published for regions and nations", constituency: "Published for regions and nations" };
+    const src = SPD.sources.cra + " (OGL v3.0). Identifiable spending: what can be attributed to people in a region (not defence, debt interest or overseas spending)";
+    const regTot = (code, fy) => code === UKC ? Object.values(C.tot).reduce((a, o) => a + (o[fy] || 0), 0) : lvlOf(code) === "nation" && code === "E92000001" ? Object.keys(C.tot).filter(k => k.startsWith("E12")).reduce((a, k) => a + (C.tot[k][fy] || 0), 0) : (C.tot[code] || {})[fy];
+    def({ id: "spend_ph", p: "economic", group: GSP, label: "Public spending per head", scale: "ratio", nature: "rate", temporal: "annual", levels: RLV, nmText: RNM, source: src, weight: "population", fmt: v => "£" + fmtInt(v),
+      span: () => [fyMid(C.years[0]), TODAY], desc: "Government spending that benefits people here, per resident, in the financial year",
+      how: "Identifiable public spending (central government, councils and public corporations) attributed to the region or nation ÷ its mid-year population. Current prices",
+      get(code, d) { const fy = fyAt(C.years, d); if (!fy) return null; const t = regTot(code, fy), p = popAt(code, fy.slice(0, 4) + "-07-01"); if (t == null || !p) return null; const v = t * 1e6 / p;
+        return { v, text: `£${fmtInt(v)} a person (£${(t / 1000).toFixed(1)}bn in all)`, yr: fy }; } });
+    def({ id: "spend_tot", p: "economic", group: GSP, label: "Public spending (identifiable)", scale: "ratio", nature: "amount", temporal: "annual", levels: RLV, nmText: RNM, source: src, fmt: v => "£" + (v / 1e9).toFixed(1) + "bn",
+      span: () => [fyMid(C.years[0]), TODAY], desc: "Total government spending that benefits people here, in the financial year", how: "Identifiable public spending attributed to the region or nation, current prices",
+      get(code, d) { const fy = fyAt(C.years, d); if (!fy) return null; const t = regTot(code, fy); return t == null ? null : { v: t * 1e6, text: `£${(t / 1000).toFixed(1)}bn`, yr: fy }; } });
+  }
+  if (SPD && SPD.la && SPD.la.v) {
+    const L = SPD.la, src = SPD.sources.la + ` ${L.year} (OGL v3.0). Two-tier areas: the district's own spending plus a population share of the county's`;
+    def({ id: "council_spend_ph", p: "economic", group: GSP, label: "Council spending per head", scale: "ratio", nature: "rate", temporal: "static", levels: ["council", "region", "nation"], weight: "population", source: src, fmt: v => "£" + fmtInt(v),
+      valid: code => /^(S|W|N)/.test(code) ? "England only for now (Scotland, Wales and Northern Ireland publish their own council accounts)" : null, nmText: { ward: "Published for councils" },
+      desc: "Councils' net day-to-day spending on services for residents, per person", how: `Net current expenditure on services, ${L.year}, ÷ residents. Net of fees, charges and specific grants (such as the schools grant), so it shows what the council pays for from council tax, business rates and general grants, not everything spent through it`,
+      get(code) { const lv = lvlOf(code), f = c => { const r = councilSpend(c); return r ? r.v.reduce((a, b) => a + b, 0) : null; };
+        const t = lv === "council" ? f(code) : sumCouncils(code, f), p = lv === "council" ? popAt(code, "2025-07-01") : sumCouncils(code, c => L.v[c] || (L.county && L.county[c]) ? popAt(c, "2025-07-01") : null);
+        if (t == null || !p) return null; const r = lv === "council" ? councilSpend(code) : null;
+        return { v: t * 1e6 / p, text: `£${fmtInt(t * 1e6 / p)} a person (£${t.toFixed(0)}m)`, yr: L.year, est: r && r.est, estWhy: r && r.est ? `Includes a population share of ${r.countyName}'s spending (education, social care, roads)` : "" }; } });
+  }
+
   // ---------- 0.9: inward investment by region (DBT inward investment results; data/investment.js) ----------
   const INV = window.ATLAS_INVEST || null, GINV = "Investment";
   if (INV && INV.dbt && INV.dbt.region) {
@@ -4909,6 +4945,7 @@
   if (window.AtlasMoney) AtlasMoney.init(CTX);
   if (window.AtlasTrade) AtlasTrade.init(CTX);   // 0.9
   if (window.AtlasNarrative) AtlasNarrative.init(CTX);   // 0.10
+  CTX.councilSpend = c => councilSpend(c);
 
   // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------
   // News shows only when the feed has items for what's on screen: the focused place (or anything inside it), the topics

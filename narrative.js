@@ -42,6 +42,11 @@
       "Assigned to where the trading business is registered, so head-office regions (London) look bigger; services exports aren't included; councils inside a larger published area get a share by population."],
     trade_balance: ["Goods exports minus goods imports.", "Goods only: the UK sells far more services than goods, so a goods deficit isn't the whole picture."],
     inv_jobs: ["Jobs that newly arrived foreign investment projects expect to create.", "Projects recorded by DBT; the jobs are expected, not counted later; projects across several regions are listed separately."],
+    spend_ph: ["Government spending that can be traced to the people living here, per person, in the year: benefits and pensions, health, schools, policing, transport and more.",
+      "Only identifiable spending is placed (about 85% of the total: defence, debt interest and aid can't be); some is allocated by formula, and places with older or poorer populations get more through pensions and benefits, so a higher figure isn't a measure of favour."],
+    spend_tot: ["Total government spending that can be traced to people here, in the year.", "A total: bigger places spend more. Use spending per head to compare."],
+    council_spend_ph: ["What the council spends on services per resident, from its own money and general grants.",
+      "Net of fees, charges and specific grants (for example the schools grant), so it understates everything spent through the council; in two-tier areas Atlas adds a population share of the county's spending."],
     eco_gva_share: ["The chosen industry's share of the area's output.", "Industries are assigned by where businesses are, and output by where it's produced."],
   };
 
