@@ -45,7 +45,16 @@
       minWidth: Math.min(rec.min.w, maxW()) + "px", minHeight: rec.shrunk ? "" : Math.min(rec.min.h, maxH()) + "px",
       maxWidth: rec.maxed ? "" : `calc(100vw - ${2 * MARGIN}px)`, maxHeight: rec.maxed || rec.shrunk ? "" : `calc(100vh - ${TOP + MARGIN}px)` });
   }
-  const save = rec => { if (rec.key) store.set(rec.key, rec.st); };
+  // 0.10.1: slots. Boxes of the same kind share one place: move or resize any of them, and the next one opens where you
+  // put it. "main" is every docked box (app panels, charts, info, Compare, Analyse, Export, news, money, trade); "card"
+  // is the small cards (places, stops, protests). App panels share the size too; other boxes keep their own size.
+  const SLOTKEY = s => "atlas-0101-slot-" + s;
+  function slotOf(type) {
+    if (/^app-/.test(type) || ["chart", "compare", "analyse", "export", "info", "news", "money", "trade"].includes(type)) return "main";
+    if (["place", "poi", "stop", "protest", "protest-list"].includes(type)) return "card";
+    return null;
+  }
+  const save = rec => { if (rec.key) store.set(rec.key, rec.st); if (rec.slot) store.set(SLOTKEY(rec.slot), Object.assign({ from: rec.type }, rec.st)); };
   function changed(rec) { clearTimeout(rec.t); rec.t = setTimeout(() => { if (!rec.el.hidden && rec.onResize) rec.onResize(); }, 150); }
 
   // 0.7.1: resize from every edge and corner, not only the bottom-right grip. edges(el, { start, move(dx, dy, dir), end })
@@ -70,6 +79,7 @@
     const rec = { el, type: o.type || "win" + (++seq), title: o.title || "", handle: o.handle || ".wm-head", min: Object.assign({ w: 320, h: 200 }, o.min || {}),
       def: o.def || null, onResize: o.onResize || null, close: o.close || (() => close(el)), cascade: !!o.cascade, maxed: false, shrunk: false, parent: null };
     rec.key = o.remember === false ? null : "atlas-18-win-" + rec.type;
+    rec.slot = o.slot === undefined ? slotOf(rec.type) : o.slot;
     rec.st = fit(rec, Object.assign({}, rec.def ? rec.def() : defaultRect(rec), rec.key ? store.get(rec.key, {}) : {}));
     reg.set(el, rec); el.classList.add("fwin", "wm"); el.dataset.wmType = rec.type;
     apply(rec);
@@ -166,11 +176,55 @@
     if (parent) {   // above its parent, offset down and to the left so both edges show
       const p = reg.get(parent); const pr = p.maxed ? fillRect() : p.st;
       rec.st = fit(rec, { x: pr.x - 36, y: pr.y + 36, w: Math.max(rec.st.w, Math.min(pr.w, maxW())), h: rec.st.h });
-    } else if (!was) rec.st = fit(rec, rec.st);
+    } else if (!was) {
+      const sl = rec.slot && store.get(SLOTKEY(rec.slot), null);
+      if (sl && o.slot !== false) rec.st = fit(rec, { x: sl.x, y: sl.y, w: /^app-/.test(rec.type) && /^app-/.test(sl.from || "") ? sl.w : rec.st.w, h: /^app-/.test(rec.type) && /^app-/.test(sl.from || "") ? sl.h : rec.st.h });
+      else rec.st = fit(rec, rec.st);
+    }
     el.hidden = false; stack = stack.filter(x => x !== el); stack.push(el); restack(); apply(rec); decorate(el);
+    if (!was && !parent) makeRoom(rec);
     stack.forEach(x => { if (reg.get(x).parent === el) decorate(x); });
     if (parent || o.pulse !== false) pulse(el);
     changed(rec);
+  }
+  // 0.10.1: when a box opens on top of another open box, the older one slides to the nearest free place beside it
+  // (left, right, below or above), avoiding the key, the time bar, the perspectives panel and the other boxes. Only
+  // for this session: the box's own remembered place isn't changed, so it comes back there next time.
+  const area = r => Math.max(0, r.w) * Math.max(0, r.h);
+  const inter = (a, b) => area({ w: Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), h: Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) });
+  function fixedRects() {
+    return ["legend", "timebar", "dock", "apphead"].map(id => document.getElementById(id)).filter(e => e && !e.hidden && e.offsetWidth)
+      .map(e => { const b = e.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; });
+  }
+  function makeRoom(rec) {
+    const a = Object.assign({}, rec.st); if (rec.maxed) return;
+    stack.filter(x => x !== rec.el).forEach(x => {
+      const o = reg.get(x); if (!o || o.maxed || o.shrunk || o.parent === rec.el || rec.parent === x) return;
+      const b = o.st, ov = inter(a, b); if (ov < 0.15 * Math.min(area(a), area(b))) return;
+      const gap = 10, cands = [{ x: a.x - b.w - gap, y: b.y }, { x: a.x + a.w + gap, y: b.y }, { x: b.x, y: a.y + a.h + gap }, { x: b.x, y: a.y - b.h - gap },
+        { x: a.x - b.w - gap, y: a.y }, { x: MARGIN, y: b.y }];
+      const others = stack.filter(y => y !== x && y !== rec.el && !reg.get(y).maxed).map(y => reg.get(y).st).concat(fixedRects());
+      let best = null, bestCost = Infinity;
+      cands.forEach(c => {
+        const r = fit(o, { x: c.x, y: c.y, w: b.w, h: b.h });
+        const cost = inter(r, a) * 4 + others.reduce((t, q) => t + inter(r, q), 0) + Math.hypot(r.x - b.x, r.y - b.y) * 2;
+        if (cost < bestCost) { bestCost = cost; best = r; }
+      });
+      const gap2 = 10, room = innerWidth - 2 * MARGIN;
+      if ((!best || inter(best, a) > 0.05 * Math.min(area(a), area(b))) && a.w + b.w + gap2 <= room) {
+        // neither side has room: move the pair so they sit side by side, keeping the older box on the side it was on
+        const oldRight = b.x + b.w / 2 > a.x + a.w / 2;
+        const left = clamp(oldRight ? a.x : b.x, MARGIN, innerWidth - MARGIN - a.w - gap2 - b.w);
+        const na = fit(rec, { x: oldRight ? left : left + b.w + gap2, y: a.y, w: a.w, h: a.h });
+        best = fit(o, { x: oldRight ? left + a.w + gap2 : left, y: b.y, w: b.w, h: b.h });
+        rec.el.classList.add("wm-shift"); rec.st = na; apply(rec); a.x = na.x;
+        clearTimeout(rec.el._sh); rec.el._sh = setTimeout(() => rec.el.classList.remove("wm-shift"), 450);
+      }
+      if (best && inter(best, a) < ov) {
+        x.classList.add("wm-shift"); o.st = best; apply(o); changed(o);
+        clearTimeout(x._sh); x._sh = setTimeout(() => x.classList.remove("wm-shift"), 450);
+      }
+    });
   }
   function close(el) {
     const rec = reg.get(el); if (!rec || el.hidden && !stack.includes(el)) { if (el) el.hidden = true; return false; }
@@ -182,5 +236,5 @@
   function closeTop() { const el = top(); if (!el) return false; reg.get(el).close(); return true; }
   window.addEventListener("resize", () => reg.forEach(rec => { rec.st = fit(rec, rec.st); apply(rec); if (!rec.el.hidden) changed(rec); }));
 
-  window.AtlasWM = { TOPNOW: () => TOP, place: (el, r) => { const rec = reg.get(el); if (!rec) return; rec.maxed = false; el.classList.remove("maxed"); rec.st = fit(rec, Object.assign({}, rec.st, r)); apply(rec); save(rec); changed(rec); }, setTop: t => { TOP = t; reg.forEach(rec => { rec.st = fit(rec, rec.st); apply(rec); }); }, edges, register, make, open, close, front, top, closeTop, isOpen, decorate, pulse, rectOf: el => reg.has(el) ? Object.assign({}, reg.get(el).st) : null, stack: () => stack.slice(), MARGIN, TOP };
+  window.AtlasWM = { TOPNOW: () => TOP, slot: k => store.get(SLOTKEY(k), null), place: (el, r) => { const rec = reg.get(el); if (!rec) return; rec.maxed = false; el.classList.remove("maxed"); rec.st = fit(rec, Object.assign({}, rec.st, r)); apply(rec); save(rec); changed(rec); }, setTop: t => { TOP = t; reg.forEach(rec => { rec.st = fit(rec, rec.st); apply(rec); }); }, edges, register, make, open, close, front, top, closeTop, isOpen, decorate, pulse, rectOf: el => reg.has(el) ? Object.assign({}, reg.get(el).st) : null, stack: () => stack.slice(), MARGIN, TOP };
 })();

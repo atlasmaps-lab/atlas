@@ -826,6 +826,7 @@ sup.est { margin-left: 3px; }
 #cmp.fwin, #export-dlg.fwin, #analyse.fwin, #chartp.fwin, .wmwin { container-type: inline-size; }
 .wm-top { box-shadow: 0 16px 48px rgba(0,0,0,.28); }
 .wm-pulse { animation: wmpulse .7s ease-out; }
+.wm-shift { transition: left .35s ease, top .35s ease; }   /* 0.10.1: a box sliding aside to make room */
 @keyframes wmpulse { 0% { box-shadow: 0 0 0 0 rgba(59,120,181,.75), 0 16px 48px rgba(0,0,0,.28); } 100% { box-shadow: 0 0 0 14px rgba(59,120,181,0), 0 16px 48px rgba(0,0,0,.28); } }
 .wm-back { border: 1px solid var(--rule); background: var(--chip, #f1eee6); color: var(--ink); border-radius: 12px; padding: 2px 9px; font-size: 11.5px; white-space: nowrap; cursor: pointer; }
 .wm-back:hover { border-color: var(--ink-3); }
@@ -1020,7 +1021,7 @@ body.apptab-on #menu { top: 50px; }
 body.appmode #top > .brand { display: none; }
 body.appmode #map { top: var(--ahh, 92px); height: calc(100% - var(--ahh, 92px)); }
 body.appmode #menu { left: auto; right: max(16px, calc((100vw - 1240px) / 2 + 20px)); top: 52px; }
-body.appmode #legend:not(.moved) { top: calc(var(--ahh, 92px) + 12px) !important; }
+body.appmode #legend:not(.moved) { top: calc(var(--ahh, 92px) + 12px) !important; bottom: auto !important; }   /* 0.10.1: as tall as what it shows, not stretched down to the perspectives panel */
 body.appmode #tabs { position: fixed; right: 16px; top: 100px; }
 .lvrow.lvhex { display: flex; gap: 12px; align-items: center; padding-left: 30px; font-size: 12px; } .lvhex .lvv { color: var(--ink-3); } .lvhex label { display: flex; gap: 4px; align-items: center; cursor: pointer; }
 body.hexmode #map, body.hexmode .maplibregl-canvas { background: #eef1f2; }

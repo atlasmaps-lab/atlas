@@ -2361,7 +2361,8 @@
     $("key-show").style.bottom = (window.innerHeight - dock.getBoundingClientRect().top + 8) + "px";
     const sized = legend._size && legend._size.h;   // a key resized by hand keeps its height
     if (legend._moved) { if (!sized) legend.style.maxHeight = Math.max(120, window.innerHeight - legend.getBoundingClientRect().top - 12) + "px"; return; }
-    const top = dock.getBoundingClientRect().top; legend.style.bottom = (window.innerHeight - top + 8) + "px"; if (!sized) legend.style.maxHeight = Math.max(120, top - 8 - 64) + "px";
+    const top = dock.getBoundingClientRect().top; legend.style.bottom = (window.innerHeight - top + 8) + "px";
+    if (!sized) legend.style.maxHeight = Math.max(120, top - 8 - (document.body.classList.contains("appmode") ? legend.getBoundingClientRect().top : 64)) + "px";   // 0.10.1: in an app the key hangs from the header, so it may grow down to the perspectives panel and no further
   }
   const timebar = $("timebar");
   const mapW = () => { const c = map && map.getContainer && map.getContainer(); return (c && c.clientWidth) || window.innerWidth; };   // narrower than the window in Split view
@@ -5060,7 +5061,8 @@
     WM.open(w.el);
     const pw = Math.max((x.min || {}).w || 340, Math.min(520, Math.round(innerWidth * 0.36))), ph = Math.max((x.min || {}).h || 240, Math.round(innerHeight * 0.62));
     const last = open.sort((a, b) => b.y - a.y)[0], top = WM.TOPNOW ? WM.TOPNOW() : 100;
-    WM.place(w.el, last ? { x: last.x, y: last.y + 44, w: last.w, h: ph } : { x: innerWidth - pw - 16, y: top, w: pw, h: ph });
+    const slot = WM.slot && WM.slot("main");   // 0.10.1: where you last put a box, if you moved one
+    if (!slot) WM.place(w.el, last ? { x: last.x, y: last.y + 44, w: last.w, h: ph } : { x: innerWidth - pw - 16, y: top, w: pw, h: ph });
     markLinks();
     const isTool = APP.tools.includes(x);
     if (window.AtlasPanel && !isTool && x.editorial !== false) AtlasPanel.watch(w.body, { app: APP.name.replace(/^Atlas /, ""), title: x.title, blurb: x.blurb || "", editorial: x.editorial });   // 0.10: editorial layout
