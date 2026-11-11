@@ -74,6 +74,9 @@ def fetch():
                     "https://www.ons.gov.uk" + ONS["ltim"], "OGL v3.0", "UK; councils", "for data/people.js (pipeline/fetch_people.py)")
 
 
+DHP_ALIAS = {"rhondda cynon taff": "rhondda cynon taf"}   # DWP's name → Atlas's (after nm())
+
+
 def latest(pat):
     fs = sorted((f for f in os.listdir(RAW) if re.search(pat, f, re.I)), key=lambda f: os.path.getmtime(os.path.join(RAW, f)))
     return os.path.join(RAW, fs[-1]) if fs else None
@@ -219,6 +222,7 @@ def finances():
         s = open(os.path.join(ROOT, "data", "uk-data.js"), encoding="utf-8").read(); PL = json.loads(s[s.index("{"):s.rindex("}") + 1])["places"]
         nm = lambda t: re.sub(r"[^a-z]+", " ", t.lower().replace("&", "and").replace("city of ", "").replace(", city of", "")).strip()
         byname = {nm(v["name"]): k for k, v in PL.items() if v["level"] == "council"}
+        byname.update({a: byname[b] for a, b in DHP_ALIAS.items() if b in byname})   # 0.10.1: DWP spells some councils differently
         miss = []
         for r in rs[(hi or 0) + 1:]:
             if not r or not r[0] or r[0].startswith(("Total", "Great Britain", "England", "Scotland", "Wales")): continue

@@ -34,7 +34,7 @@
   const ago = t => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? "just now" : m < 60 ? m + " min ago" : m < 1440 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " d ago"; };
   const when = t => new Date(t).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   const gbp = v => "£" + (+v).toLocaleString("en-GB", { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 });
-  let ctx = null, ready = null, F = { scope: "near" }, MK = { cat: "", q: "" }, panels = {}, actWin = 3, actOn = false;
+  let ctx = null, ready = null, pinsOn = true, F = { scope: "near" }, MK = { cat: "", q: "" }, panels = {}, actWin = 3, actOn = false;
 
   const S = () => ST().state, me = () => ST().me(), adult = () => !me() || me().adult !== false;
   const userOf = id => (S().users[id] || (me() && me().id === id ? me() : null) || { name: "Someone", handle: "unknown" });
@@ -58,9 +58,16 @@
     m.addLayer({ id: "soc-cl", type: "circle", source: "soc", filter: ["has", "point_count"], paint: { "circle-color": "#d0701c", "circle-opacity": 0.85, "circle-radius": ["step", ["get", "point_count"], 13, 10, 17, 40, 22], "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
     if (!ctx.plain) m.addLayer({ id: "soc-cl-n", type: "symbol", source: "soc", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["PT Serif Bold"], "text-size": 11 }, paint: { "text-color": "#fff" } });
     m.addLayer({ id: "soc-pts", type: "circle", source: "soc", filter: ["!", ["has", "point_count"]], paint: { "circle-color": ["get", "c"], "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 5, 14, 9], "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
+    showPins(pinsOn);
     m.on("click", "soc-pts", e => { const f = e.features[0]; if (f) openItem(f.properties.t, f.properties.id); });
     m.on("click", "soc-cl", e => { const f = e.features[0]; m.getSource("soc").getClusterExpansionZoom(f.properties.cluster_id).then ? m.getSource("soc").getClusterExpansionZoom(f.properties.cluster_id).then(z => m.easeTo({ center: f.geometry.coordinates, zoom: z })) : m.easeTo({ center: f.geometry.coordinates, zoom: m.getZoom() + 2 }); });
     ["soc-pts", "soc-cl"].forEach(id => { m.on("mouseenter", id, () => { m.getCanvas().style.cursor = "pointer"; }); m.on("mouseleave", id, () => { m.getCanvas().style.cursor = ""; }); });
+  }
+  // 0.10.1: the orange post/event/listing pins belong to the Social tabs; the statistics tabs (Migration, Deprivation, …)
+  // hide them, so the only colours on the map are the ones the key explains
+  function showPins(on) {
+    pinsOn = on; const m = ctx && ctx.map; if (!m) return;
+    ["soc-cl", "soc-cl-n", "soc-pts"].forEach(id => { if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", on ? "visible" : "none"); });
   }
   function refreshMap() {
     if (!ctx.map.getSource("soc")) return;
@@ -260,5 +267,5 @@
     });
   }
   const panel = id => (c, el) => { panels[id] = el; init(c).then(() => { bind(); PANELS[id](el); }); el.innerHTML = el.innerHTML || `<p class="ap-note">Loading…</p>`; };
-  window.AtlasSocial = { init, panel, PANELS, refreshMap, bannedReason, coarse, stripImage, get cells() { return refreshMap.cells; }, setFeed: k => { F.scope = k; }, setActivity: (on, h) => { actOn = on; if (h) actWin = h; refreshMap(); } };
+  window.AtlasSocial = { init, panel, PANELS, refreshMap, bannedReason, coarse, stripImage, get cells() { return refreshMap.cells; }, setFeed: k => { F.scope = k; }, showPins, setActivity: (on, h) => { actOn = on; if (h) actWin = h; refreshMap(); } };
 })();

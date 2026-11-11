@@ -2689,7 +2689,8 @@
     const ms = curPlan.notes.filter(n => n.ch).map(n => M[n.id]), note = $("tnote"), bits = [];
     if (!isNow()) bits.push(`Showing ${longDate(state.date)}`);
     if (ms.some(m => m.temporal === "annual") && +state.date.slice(0, 4) < SY[0]) bits.push(`GDP and population start in ${SY[0]}`);
-    else if (ms.some(m => m.temporal === "annual") && +state.date.slice(0, 4) > SY[SY.length - 1] - 1) bits.push("economic figures: latest year available");
+    else if (ms.some(m => m.temporal === "annual") && +state.date.slice(0, 4) > SY[SY.length - 1] - 1) { const yrs = [...new Set(ms.filter(m => m.temporal === "annual").map(m => { try { const r = m.get(UKC, state.date); return r && r.yr && String(r.yr); } catch (e) { return null; } }).filter(Boolean))].sort();
+      bits.push(yrs.length ? `figures for ${yrs.slice(0, 3).join(", ")}, the latest available` : "figures: latest year available"); }
     if (ms.some(m => m.temporal === "event")) bits.push(`protests ${winLabel()}`);
     if (ms.some(m => m.temporal === "static")) bits.push("average age has no history yet");
     if (state.level === "constituency" && state.date < "1997-05-01") bits.push("constituency records start in 1997");
@@ -5135,7 +5136,10 @@
       if (typeof m === "function") { m(CTX); return; }
       if (m.level) CTX.setLevel(m.level);
       const ids = (m.metrics || []).filter(id => M[id]);
-      if (ids.length) mapOnly(ids);
+      // 0.10.1: if the bar was at its latest date, it stays at the latest date of what this tab maps (the stories speak
+      // of the latest figures, so the map shows those too); a date the user picked is left alone
+      const atEnd = state.date >= viewHi();
+      if (ids.length) { mapOnly(ids); if (atEnd && state.date < viewHi() && !state.playing) setDate(viewHi()); }
       if (m.view) CTX.view(m.view[0], m.view[1]);
     } catch (e) { console.error(e); }
   }
