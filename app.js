@@ -4290,6 +4290,60 @@
     if (VIEW.mode === "ws") setView("split");
     repaint(); toast(`${spec.label} is on the map (Analysis perspective).`);
   }
+  // ---------- 0.10: what in Atlas's data goes with the chosen metric ----------
+  // Every other numeric metric is correlated with the outcome across the places being compared (Spearman, robust to
+  // outliers; Pearson shown too). p-values are corrected for testing many metrics at once (Benjamini-Hochberg). Near-copies
+  // of the outcome are flagged and set aside. For the strongest, a partial correlation holds density and deprivation fixed.
+  const EXPL = {};
+  function explainKey(cfg) { return [cfg.metrics[0], cfg.level, cfg.within, (cfg.custom || []).join(","), cfg.date].join("|"); }
+  function explainRun(cfg) {
+    const k = explainKey(cfg); if (EXPL[k]) return EXPL[k];
+    const o = M[cfg.metrics[0]], st = EXPL[k] = { done: false, rows: [], n: 0, tested: 0 };
+    withDate(cfg.date, () => {
+      const codes = anCodes(cfg), y = vals(o, codes, cfg.date); st.n = y.filter(v => v != null).length; st.codes = codes;
+      const pool = anMetricsAll().filter(m => m.id !== o.id && !/_lq$/.test(m.id) && !(m.pickKey && m.pickKey === o.pickKey) && !(m.bd && m.bd === o.bd) && (!m.levels || m.levels.includes(cfg.level)));
+      const ctrl = ["density", "imd_score"].filter(id => M[id] && id !== o.id).map(id => vals(M[id], codes, cfg.date));
+      let i = 0;
+      const step = () => {
+        withDate(cfg.date, () => { for (const end = Math.min(pool.length, i + 12); i < end; i++) {
+          const m = pool[i]; let x; try { x = vals(m, codes, cfg.date); } catch (e) { continue; }
+          const s = ST.spearman(x, y); if (s.r == null || s.n < 30) continue; const pr = ST.pearson(x, y); st.tested++;
+          st.rows.push({ m, r: s.r, p: s.p, pr: pr.r, n: s.n, x, dup: Math.abs(s.r) > 0.97 || Math.abs(pr.r || 0) > 0.97 || (m.group === o.group && m.p === o.p && Math.abs(s.r) > 0.9) });
+        } });
+        if (i < pool.length) { setTimeout(step, 0); if (!anEl.hidden) explainPaint(); return; }
+        // Benjamini-Hochberg: q = p * tests / rank, made monotone from the largest p down
+        const L = st.rows.filter(r => r.p != null).sort((a, b) => a.p - b.p), T = L.length; let mn = 1;
+        for (let j = T - 1; j >= 0; j--) { mn = Math.min(mn, L[j].p * T / (j + 1)); L[j].q = mn; }
+        st.rows.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+        st.rows.filter(r => !r.dup && !(r.m.p === o.p && r.m.group === o.group)).slice(0, 3).forEach(r => { if (!ctrl.length) return; const res = ST.partial([y, r.x].concat(ctrl)); if (res.R) { r.partial = res.R[0][1]; r.pn = res.n; } });
+        st.rows.forEach(r => { delete r.x; }); st.done = true; if (!anEl.hidden) explainPaint();
+      };
+      setTimeout(step, 0);
+    });
+    return st;
+  }
+  function explainHTML(cfg) {
+    if (cfg.mode === "time" || !cfg.metrics.length || !M[cfg.metrics[0]]) return "";
+    const lab = m => m.bd && BD[m.bd] ? `${BD[m.bd].label}: ${BD[m.bd].name(pickOf(m.id))}` : m.label;   // breakdowns name the chosen category
+    const o = M[cfg.metrics[0]], st = explainRun(cfg), unit = (LEVEL_OPTS().find(x => x[0] === cfg.level) || [0, "places"])[1].toLowerCase();
+    const same = r => r.m.p === o.p && r.m.group === o.group;   // other measures of the same thing (e.g. other life expectancies)
+    const real = st.rows.filter(r => !r.dup && !same(r)), kin = st.rows.filter(r => !r.dup && same(r)), dup = st.rows.filter(r => r.dup), top = real.slice(0, 10), say = r => {
+      const a = esc(lab(r.m).toLowerCase()), b = esc(lab(o).toLowerCase());
+      return r.r > 0 ? `Places with higher ${a} tend to have higher ${b}` : `Places with higher ${a} tend to have lower ${b}`; };
+    return `<details class="ex" open><summary><b>What in Atlas's data goes with ${esc(o.label)}</b> <small>${st.done ? `${st.tested} metrics tested across ${st.n} ${esc(unit)}` : `looking through the metrics… ${st.tested} so far`}</small></summary>
+      ${top.length ? `<table class="ex-t"><thead><tr><th>Metric</th><th>Link (Spearman)</th><th class="num">r</th><th class="num">Pearson</th><th title="Holding population density and deprivation fixed">Holding density and deprivation fixed</th><th class="num">places</th></tr></thead><tbody>
+        ${top.length ? "" : ""}${top.map(r => `<tr data-exm="${r.m.id}" title="${esc(say(r))}. Click to plot it against ${esc(o.label)}"><td class="ex-n"><i class="sw" style="background:${PER[r.m.p].hue}"></i>${esc(lab(r.m))}<small>${esc(say(r))}</small></td>
+          <td><span class="ex-bar"><i style="${r.r >= 0 ? `left:50%;width:${(50 * r.r).toFixed(1)}%;background:#2b6cb0` : `right:50%;width:${(-50 * r.r).toFixed(1)}%;background:#c0392b`}"></i></span><small>${esc(ST.strength(r.r))}${r.q != null && r.q >= 0.05 ? " · could be chance" : ""}</small></td>
+          <td class="num">${r.r.toFixed(2)}</td><td class="num">${r.pr != null ? r.pr.toFixed(2) : "—"}</td><td class="num">${r.partial != null ? `${r.partial.toFixed(2)}${Math.abs(r.partial) < Math.abs(r.r) / 2 ? " <small>(mostly explained by them)</small>" : ""}` : ""}</td><td class="num">${r.n}</td></tr>`).join("")}</tbody></table>` : st.done ? `<p class="aempty">Not enough places with both values to say anything.</p>` : ""}
+      ${kin.length ? `<p class="ex-dup"><b>Other measures in the same group</b> (${esc(o.group || PER[o.p].name)}), which move with it as you'd expect: ${kin.slice(0, 6).map(r => `<button class="linkish" data-exm="${r.m.id}">${esc(r.m.label)}</button> ${r.r.toFixed(2)}`).join(", ")}.</p>` : ""}
+      ${dup.length ? `<p class="ex-dup">Set aside as near-copies of ${esc(o.label)} (built from the same numbers, or almost identical): ${dup.slice(0, 6).map(r => esc(r.m.label)).join(", ")}.</p>` : ""}
+      <div class="ex-warn"><b>Read with care.</b><ul>
+        <li><b>Correlation is not causation.</b> Two things can move together because a third drives both (age, cities, deprivation), or by coincidence.</li>
+        <li><b>Places, not people.</b> A link between areas doesn't mean the same holds for individuals in them (the ecological fallacy).</li>
+        <li><b>Many tests.</b> With ${st.tested || "many"} metrics tried, some links appear by chance; those still likely to be chance after correcting for that (Benjamini-Hochberg, q ≥ 0.05) are marked.</li>
+        <li><b>Scope.</b> ${esc(nameOf(cfg.within === "custom" ? UKC : cfg.within))}, ${esc(unit)}, on ${esc(longDate(cfg.date))}; each link uses only places with both values. Different boundaries or dates can give different answers.</li></ul></div></details>`;
+  }
+  function explainPaint() { const box = anEl.querySelector(".an-ex"); if (!box) return; const cfg = Object.assign({}, AN, { date: state.date }); box.innerHTML = explainHTML(cfg); }
   function renderAnalyse() {
     if (anEl.hidden) return;
     const cfg = Object.assign({}, AN, { date: state.date }), methods = anMethods(cfg), okM = methods.filter(m => m[2]);
@@ -4308,6 +4362,7 @@
       </div><div class="an-main">
         ${AN.metrics.length ? `<div class="an-methods">${methods.map(([id, l, ok, why]) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}>${esc(l)}</button>`).join("")}</div>${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")} ${helpBtn("m-" + AN.method, "Help: what this method needs and assumes")}</p>` : `<p class="anwhy">No method suits this choice yet. ${methods.filter(m => !m[2]).slice(0, 3).map(([id, l, , why]) => `<button class="linkish" data-help="m-${id}">${esc(l)}: ${esc(why)}</button>`).join(" · ")}</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
         ${AN.method === "rel" ? `<label class="anpick">Split by a category <select data-ansplit><option value="">none</option>${anCats().map(m => `<option value="${m.id}" ${AN.split === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : ""}
+        <div class="an-ex">${explainHTML(cfg)}</div>
         <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
         ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Show on map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy data (CSV)</button>` : ""}</div>` : ""}
       </div></div>`;
@@ -4319,6 +4374,7 @@
   WM.register(anEl, { type: "analyse", title: "Analyse", handle: ".an-head", min: { w: 360, h: 260 }, onResize: renderAnalyse, close: closeAnalyse });
   anEl.addEventListener("click", e => {
     const a = e.target.closest("[data-go]"); if (a) { focus(a.dataset.go); return; }
+    const ex = e.target.closest("[data-exm]"); if (ex) { AN.metrics = [AN.metrics[0], ex.dataset.exm]; AN.method = "rel"; saveAN(); renderAnalyse(); return; }   // 0.10: plot the pair
     const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
     if (b.hasAttribute("data-anx")) { closeAnalyse(); return; }
     if (ds.anmethod && b.getAttribute("aria-disabled") === "true") { undoToast(`${AN_BY[ds.anmethod].label}: ${b.title}.`, () => {}); const t = $("toast"), u = $("undo-btn"); if (u) { u.textContent = "What it needs"; u.onclick = () => { t.hidden = true; openHelp("help-m-" + ds.anmethod); }; } return; }
