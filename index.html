@@ -1155,6 +1155,15 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
   .pf-bar { margin: 4px 0 6px; } .pf-t td { padding: 2px 4px; } .pf-t tr[data-pfk] { cursor: pointer; } .pf-t tr[data-pfk]:hover { background: var(--hover); }
   .pf-lq { white-space: nowrap; } .pf-lqbar { position: relative; display: inline-block; width: 60px; height: 7px; background: var(--chip); border-radius: 3px; vertical-align: middle; margin-right: 4px; }
   .pf-lqbar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; } .pf-lq small { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  /* 0.10: narratives */
+  .nv p { margin: 0 0 7px; line-height: 1.5; }
+  .nv-story { font-family: var(--f-serif, "PT Serif", Georgia, serif); font-size: 13.5px; color: var(--ink); }
+  .nv-story b { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .nv-means, .nv-trust { font-size: 12px; color: var(--ink-2); }
+  .nv-trust { border-left: 3px solid #d9a441; padding-left: 8px; }
+  .nv-est { color: var(--ink-3); font-size: 12px; font-family: var(--f); }
+  .nv-card { margin: 8px 0 4px; padding: 8px 10px; background: var(--chip); border-radius: 8px; }
+  .nv-k { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
   .crowdramp { margin: 6px 0 2px; }
   .cr-bar { height: 10px; border-radius: 5px; }
   .cr-ticks { display: grid; grid-template-columns: repeat(4, 1fr); font-size: 10.5px; color: var(--ink-2); margin-top: 2px; }
@@ -1332,6 +1341,7 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
 <script src="windows.js?v=0920"></script>
 <script src="money.js?v=0920"></script>
 <script src="trade.js?v=0920"></script>
+<script src="narrative.js?v=0920"></script>
 <script src="profile.js?v=0920"></script>
 <script src="devdesign.js?v=0920"></script>
 <script src="app.js?v=0920"></script>

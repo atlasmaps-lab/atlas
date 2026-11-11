@@ -2660,7 +2660,7 @@
     const era = p.level === "constituency" && p.to ? ` ${p.from.slice(0, 4)}–${p.to.slice(0, 4)}${p.approx ? " (approx. boundary)" : ""}` : "";
     return `${pinned ? `<button class="x" data-close aria-label="Close">×</button>` : ""}<div class="lvl"><span>${esc(LABEL[p.level])}${esc(era)}</span><span>${esc(code.replace(/^P\d\d-/, ""))}</span></div>
       <h3>${esc(nameOf(code))}${rec ? ` <span class="tag">edited</span>` : ""}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}<ul>${items.join("")}</ul>
-      ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${cardContext(onMap, code, pinned)}${window.AtlasMoney && (p.level === "constituency" || p.level === "council") ? AtlasMoney.areaLine(code, d, pinned) : ""}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
+      ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${pinned && window.AtlasNarrative ? onMap.filter(m => EN.isNum(m)).slice(0, 2).map(m => { const t = AtlasNarrative.story(m, code, { short: true }); return t ? `<div class="nv-card"><div class="nv-k">The story · ${esc(m.label)} ${infoBtn(m.id)}</div>${t}</div>` : ""; }).join("") : ""}${cardContext(onMap, code, pinned)}${window.AtlasMoney && (p.level === "constituency" || p.level === "council") ? AtlasMoney.areaLine(code, d, pinned) : ""}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
       ${rec && rec.notes ? `<div class="notes">${esc(rec.notes)}</div>` : ""}
       ${pinned ? `<div class="acts"><button class="btn primary" data-edit>Edit</button><button class="btn" data-chartme>Chart</button><button class="btn" data-wscard title="Send this card to the workspace">Card → workspace</button><button class="btn" data-wstile title="Send this place as a tile (a small map) to the workspace">Tile → workspace</button><button class="btn" data-addcmp>${state.sel.some(s => s.code === code) ? "✓ Selected" : "+ Compare"}</button><button class="btn" data-zoom>Zoom to</button><button class="btn" data-outline title="Turn this place's outline into a shape you can drag over other places, at its real size">Drag outline</button>${PR.events.length ? `<button class="btn" data-prhere title="The protests here ${esc(winLabel())}">Protests here</button>` : ""}</div>` : ""}`;
   }
@@ -3961,7 +3961,8 @@
     const rel = METRICS.filter(x => x.p === m.p && x.group === m.group && x.id !== m.id && PER[x.p].ready).slice(0, 6);
     const row = (k, v) => v ? `<tr><th>${k}</th><td>${v}</td></tr>` : "";
     const src = sourceOf(m);
-    return `<p class="ilead">${esc(m.desc || "")}</p><table class="itab">${row("How it's worked out", esc(m.how || EN.aggregate(m).why))}
+    const nv = window.AtlasNarrative ? AtlasNarrative.story(m, state.focus && P[state.focus] ? state.focus : UKC) : "";   // 0.10: the story first
+    return `${nv || `<p class="ilead">${esc(m.desc || "")}</p>`}<table class="itab">${row("How it's worked out", esc(m.how || EN.aggregate(m).why))}
       ${row("Unit", ex ? `e.g. ${esc((m.fmt || String)(ex.v))}${m.unit ? ` (${esc(m.unit)})` : ""}` : m.unit ? esc(m.unit) : "")}
       ${row("Kind of data", `${esc(m.scale)}, ${esc(m.nature)} · ${esc({ state: "holds until it changes", annual: "one value a year", event: "dated events", static: "one date only", election: "holds from one election to the next" }[m.temporal] || m.temporal)}`)}
       ${row("Where it applies", m.levels ? esc(m.levels.map(pl).join(", ")) + ` <small>(elsewhere: ${esc(NM_TEXT.toLowerCase())})</small>` : "every boundary set with data")}
@@ -4838,6 +4839,7 @@
     openChart: o => openChart(o), openCmp: () => openCmp(), openProtestList: () => openProtestList(), openProtestCard: i => openProtestCard(i), openInfo: id => openMetricInfo(id),
     sendToWS: it => sendToWS(it), toast, copy, download, searchNames, onDate: f => appListeners.push(f), openPanel: id => openAppPanel(id), store,
     mapped: () => planMetrics().map(m => m.id),   // 0.9
+    caveat: id => CAVEAT[id] || "", story: (id, code, o) => window.AtlasNarrative && M[id] ? AtlasNarrative.story(M[id], code || state.focus || UKC, o) : "",   // 0.10
     defineMetric: m => { if (!M[m.id]) def(m); PS.active[m.id] = true; }, repaint: () => repaint(),
     // 0.7.1
     projection: () => projection(), POLLS, ent, linkPerson, get NEWS() { return window.ATLAS_NEWS || null; }, parentOf: c => parentOf(c), value: (id, c, d) => { const m = M[id]; if (!m) return null; try { return m.get(c, d || state.date); } catch (e) { return null; } },
@@ -4850,6 +4852,7 @@
   CTX.map = map; CTX.POI = POIDATA; CTX.openPoiCard = id => openPoiCard(id); CTX.plain = plain;   // 0.8: views that draw on the map (Atlas Transport)
   if (window.AtlasMoney) AtlasMoney.init(CTX);
   if (window.AtlasTrade) AtlasTrade.init(CTX);   // 0.9
+  if (window.AtlasNarrative) AtlasNarrative.init(CTX);   // 0.10
 
   // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------
   // News shows only when the feed has items for what's on screen: the focused place (or anything inside it), the topics
