@@ -1,6 +1,27 @@
-# Atlas 0.9.2 — United Kingdom
+# Atlas 0.10.1 — United Kingdom
 
 Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
+
+## What's new in 0.10.1
+
+Built on Mo's 0.10.
+
+- **Boxes keep their place.** Move a header panel, a chart or the ⓘ box, and the next one opens where you put it (header panels keep the size too), even after a reload. A box that opens on top of another pushes the older one aside instead of covering it.
+- **Header menus.** A header link whose panel has its own tabs shows ▾; hovering it opens a menu of those tabs (Politics → Money, Transport → Stations & hubs, Markets → Calculator, Social → Feed). Picking one opens the panel at that tab, story on top.
+- **Light/dark and map settings follow across apps**: switching one app to dark (or changing the map type, map colours or toolbox) changes every other app that's open, and the ones you open next.
+- **Commuting:** moving dots along the commuting lines run in the net direction; more dots, more commuters. The Commuting panel opens with its story (England and Wales, or the council you picked) instead of being empty.
+- **A story for every Economic tab and indicator.** Indicators opens with the economy in four numbers; each tile says where its latest figure stands; each indicator's chart opens with what it tells us and how far to trust it. Stories too for Forecasts vs outturn, Regions, Release calendar and Rates & sterling.
+- **Analyse → "what goes with":** every link, in a scrolling table with wider names, a p column and a significance filter (All, p < 0.10, 0.05, 0.01, 0.001; corrected for many tests unless you untick it). A note marks links where the two measures disagree.
+- **To workspace:** every chart and table under a header tab has a button that sends a copy to the workspace, titled with the panel and section it came from.
+- **Fixes:**
+  - the key in the apps is as tall as what it shows (it stretched down to the perspectives panel)
+  - a header tab puts its metric on the map at that metric's latest date, unless you picked a date; the note under the time bar names the year the map shows
+  - Social's orange post pins hide on the statistics tabs, where the key doesn't explain them
+  - line chart end labels fit inside the chart and don't overlap (Migration)
+  - Rhondda Cynon Taf has its Discretionary Housing Payments (DWP spells it "Rhondda, Cynon, Taff")
+  - public sector net borrowing is shown as borrowing (positive means borrowed; it was stored with the surplus sign)
+  - place profiles no longer compare the UK with itself
+- For view owners: a panel can declare `tabs: [[id, label], …]` and `setTab: id => …` to get a header menu; see `openPanelTab` in `app.js`.
 
 ## What's new in 0.9.2
 

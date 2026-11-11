@@ -1252,6 +1252,16 @@
     syncMenu(); store.set("atlas-uk-look", look);
     try { applyMapColours(); } catch (e) { /* the style isn't ready yet */ }
   }
+  // 0.10.1: the look (light or dark, map type, boundary thickness, colourblind colours), map colours and toolbox
+  // settings are the same in every app. They were already saved for all of them; now an app that is already open (a tab
+  // in Atlas Multi, another browser tab) follows a change made in another one straight away.
+  window.addEventListener("storage", e => {
+    try {
+      if (e.key === "atlas-uk-look" && e.newValue) { Object.assign(look, JSON.parse(e.newValue)); applyLook(); }
+      if (e.key === "atlas-071-mapcol" && e.newValue) { const v = JSON.parse(e.newValue); Object.keys(MAPCOL).forEach(k => delete MAPCOL[k]); Object.assign(MAPCOL, v); applyLook(); }
+      if (e.key === "atlas-13-tools" && e.newValue) { Object.assign(TOOLS, JSON.parse(e.newValue)); applyTools(); }
+    } catch (err) { /* a half-written value: the next change brings it back in line */ }
+  });
   const RELIEF_OVER = ["interpolate", ["linear"], ["zoom"], 5, 0.08, 8, 0.18, 11, 0.28];
   const RELIEF = { map: ["interpolate", ["linear"], ["zoom"], 5, 0.12, 8, 0.2, 12, 0.3], terrain: ["interpolate", ["linear"], ["zoom"], 5, 0.45, 10, 0.6], satellite: 0, hybrid: 0 };
   function rememberOpacity(id, prop) { if (!(id + prop in origOpacity)) { const v = map.getPaintProperty(id, prop); origOpacity[id + prop] = v == null ? 1 : v; } return origOpacity[id + prop]; }
@@ -1736,6 +1746,10 @@
     map.addSource("commute-lines", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({ id: "commute-lines", type: "line", source: "commute-lines", layout: hide, paint: { "line-color": ["match", ["get", "dir"], "in", "#7b4fa6", "#13876b"], "line-opacity": 0.65,
       "line-width": ["interpolate", ["linear"], ["get", "n"], 200, 0.4, 2000, 1.2, 20000, 3.5, 80000, 7] } }, bf);
+    // 0.10.1: moving dots along the commuting lines, travelling in the net direction (more go one way than the other)
+    map.addSource("commute-dots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "commute-dots", type: "circle", source: "commute-dots", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 1.5, 9, 2.6, 12, 3.4],
+      "circle-color": ["match", ["get", "dir"], "in", "#7b4fa6", "#0f6e55"], "circle-stroke-color": "#fff", "circle-stroke-width": 0.6, "circle-opacity": 0.95 } }, bf);
     map.addSource("trade-ports", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({ id: "trade-ports", type: "circle", source: "trade-ports", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["get", "v"], 1e8, 3, 1e10, 8, 1e11, 16], "circle-color": "#1f2a2e", "circle-opacity": 0.78, "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2 } }, bf);
   }
@@ -1794,10 +1808,47 @@
     Object.entries(NET_LAYERS).forEach(([id, ids]) => ids.forEach(l => { if (map.getLayer(l)) map.setLayoutProperty(l, "visibility", on.has(id) ? "visible" : "none"); }));
     if (on.has("inf_rail") || on.has("inf_power")) loadData("data/networks.js", "ATLAS_NETWORKS").then(N => { if (N && !syncNetworks.osm) { syncNetworks.osm = 1; map.getSource("net-osm").setData(N.rail); map.getSource("net-osm-p").setData(N.power); } }).catch(() => {});
     syncTrade(on);   // 0.9
-    if (on.has("commute_lines")) { const k = state.focus || ""; if (syncNetworks.cm !== k) { syncNetworks.cm = k; map.getSource("commute-lines").setData({ type: "FeatureCollection", features: commuteFeatures() }); } }
+    if (on.has("commute_lines")) { const k = state.focus || ""; if (syncNetworks.cm !== k) { syncNetworks.cm = k; const fs = commuteFeatures(); map.getSource("commute-lines").setData({ type: "FeatureCollection", features: fs }); startCommute(fs); } }
+    else if (syncNetworks.cm !== undefined) { syncNetworks.cm = undefined; stopCommute(); }
     if (on.has("inf_ferry")) loadData("data/ferries.js", "ATLAS_FERRIES").then(F => { if (F && !syncNetworks.ferry) { syncNetworks.ferry = 1; map.getSource("net-ferry").setData(F.routes); } });
     if (on.has("inf_freight")) loadData("data/freight.js", "ATLAS_FREIGHT").then(F => { if (!F) return; if (!syncNetworks.freight) { syncNetworks.freight = 1; F.routes.features.forEach((f, i) => { f.id = i; }); map.getSource("net-freight").setData(F.routes); } startFreight(F); });
     else stopFreight();
+  }
+  // 0.10.1: commuting dots. Each pair of councils gets one stream of dots, moving the way more people go (net); the
+  // number of dots grows with how many commute between them either way (square root, so the biggest don't drown the rest).
+  // Only the largest flows are in Atlas (each council's top destinations), so the net is between those listed flows.
+  let commuteAnim = null;
+  function commutePairs(fs) {
+    const pair = {};
+    fs.forEach(f => { const { a, b, n, dir } = f.properties, k = a < b ? a + "|" + b : b + "|" + a, p = pair[k] = pair[k] || { lo: a < b ? a : b, hi: a < b ? b : a, fwd: 0, back: 0, dir, c: null };
+      if (a === p.lo) p.fwd = Math.max(p.fwd, n); else p.back = Math.max(p.back, n); });
+    const rev = (o, w) => { const t = CM && CM.out[o] && CM.out[o].top; const x = t && t.find(r => r[0] === w); return x ? x[1] : 0; };
+    return Object.values(pair).map(p => {
+      if (!p.fwd) p.fwd = rev(p.lo, p.hi); if (!p.back) p.back = rev(p.hi, p.lo);
+      const A = PT[p.lo], B = PT[p.hi], net = p.fwd - p.back; if (!A || !B || !net) return null;
+      const from = net > 0 ? A : B, to = net > 0 ? B : A, gross = p.fwd + p.back;
+      return { from, to, n: Math.max(1, Math.min(12, Math.round(Math.sqrt(gross / 400)))), dir: p.dir, net: Math.abs(net), gross };
+    }).filter(Boolean);
+  }
+  function startCommute(fs) {
+    stopCommute(); const pairs = commutePairs(fs); if (!pairs.length) return;
+    map.setLayoutProperty("commute-dots", "visibility", "visible");
+    const t0 = performance.now();
+    const step = () => {
+      if (!commuteAnim) return;
+      // a tab in the background doesn't animate (it only costs battery); with reduced motion the dots stand still
+      if (document.hidden) { commuteAnim = setTimeout(() => requestAnimationFrame(step), 500); return; }
+      const t = (matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : performance.now() - t0) / 1000, feats = [];
+      pairs.forEach((r, j) => { for (let k = 0; k < r.n; k++) { const f = ((t / 9) + k / r.n + j * 0.137) % 1;
+        feats.push({ type: "Feature", properties: { dir: r.dir }, geometry: { type: "Point", coordinates: [r.from[0] + (r.to[0] - r.from[0]) * f, r.from[1] + (r.to[1] - r.from[1]) * f] } }); } });
+      if (map.getSource("commute-dots")) map.getSource("commute-dots").setData({ type: "FeatureCollection", features: feats });
+      commuteAnim = setTimeout(() => requestAnimationFrame(step), 66);
+    };
+    commuteAnim = 1; step();
+  }
+  function stopCommute() {
+    if (commuteAnim && commuteAnim !== 1) clearTimeout(commuteAnim); commuteAnim = null;
+    if (map.getSource("commute-dots")) { map.getSource("commute-dots").setData({ type: "FeatureCollection", features: [] }); map.setLayoutProperty("commute-dots", "visibility", "none"); }
   }
   // moving dots: how much goes each way. Dots per route grow with the tonnage (square root, so big routes don't drown the rest)
   function startFreight(F) {
@@ -2218,7 +2269,7 @@
   }
   function commuteLegend() {
     const f = state.focus && P[state.focus] && P[state.focus].level === "council" && CM ? state.focus : null;
-    if (!f) return `<div class="note">The 500 biggest flows between councils. Click a council for its own: where its people work, and where its workers come from.</div>`;
+    if (!f) return `<div class="note">The 500 biggest flows between councils. Moving dots travel the way more people commute (the net direction); more dots means more commuters either way. Click a council for its own: where its people work, and where its workers come from.</div>`;
     const L = (x, w) => (x || []).slice(0, 5).map(([c, n]) => `${esc(nameOf(c))} ${fmtInt(n)}`).join(", ");
     return `<div class="note"><b>${esc(nameOf(f))}</b> · out to ${L((CM.out[f] || {}).top)}; in from ${L((CM.in[f] || {}).top)}. Census 2021.</div>`;
   }
@@ -2361,7 +2412,8 @@
     $("key-show").style.bottom = (window.innerHeight - dock.getBoundingClientRect().top + 8) + "px";
     const sized = legend._size && legend._size.h;   // a key resized by hand keeps its height
     if (legend._moved) { if (!sized) legend.style.maxHeight = Math.max(120, window.innerHeight - legend.getBoundingClientRect().top - 12) + "px"; return; }
-    const top = dock.getBoundingClientRect().top; legend.style.bottom = (window.innerHeight - top + 8) + "px"; if (!sized) legend.style.maxHeight = Math.max(120, top - 8 - 64) + "px";
+    const top = dock.getBoundingClientRect().top; legend.style.bottom = (window.innerHeight - top + 8) + "px";
+    if (!sized) legend.style.maxHeight = Math.max(120, top - 8 - (document.body.classList.contains("appmode") ? legend.getBoundingClientRect().top : 64)) + "px";   // 0.10.1: in an app the key hangs from the header, so it may grow down to the perspectives panel and no further
   }
   const timebar = $("timebar");
   const mapW = () => { const c = map && map.getContainer && map.getContainer(); return (c && c.clientWidth) || window.innerWidth; };   // narrower than the window in Split view
@@ -2639,7 +2691,8 @@
     const ms = curPlan.notes.filter(n => n.ch).map(n => M[n.id]), note = $("tnote"), bits = [];
     if (!isNow()) bits.push(`Showing ${longDate(state.date)}`);
     if (ms.some(m => m.temporal === "annual") && +state.date.slice(0, 4) < SY[0]) bits.push(`GDP and population start in ${SY[0]}`);
-    else if (ms.some(m => m.temporal === "annual") && +state.date.slice(0, 4) > SY[SY.length - 1] - 1) bits.push("economic figures: latest year available");
+    else if (ms.some(m => m.temporal === "annual") && +state.date.slice(0, 4) > SY[SY.length - 1] - 1) { const yrs = [...new Set(ms.filter(m => m.temporal === "annual").map(m => { try { const r = m.get(UKC, state.date); return r && r.yr && String(r.yr); } catch (e) { return null; } }).filter(Boolean))].sort();
+      bits.push(yrs.length ? `figures for ${yrs.slice(0, 3).join(", ")}, the latest available` : "figures: latest year available"); }
     if (ms.some(m => m.temporal === "event")) bits.push(`protests ${winLabel()}`);
     if (ms.some(m => m.temporal === "static")) bits.push("average age has no history yet");
     if (state.level === "constituency" && state.date < "1997-05-01") bits.push("constituency records start in 1997");
@@ -4402,6 +4455,7 @@
   // outliers; Pearson shown too). p-values are corrected for testing many metrics at once (Benjamini-Hochberg). Near-copies
   // of the outcome are flagged and set aside. For the strongest, a partial correlation holds density and deprivation fixed.
   const EXPL = {};
+  const EXF = { p: null, raw: false };   // 0.10.1: the table's significance filter (corrected p unless raw)
   function explainKey(cfg) { return [cfg.metrics[0], cfg.level, cfg.within, (cfg.custom || []).join(","), cfg.date].join("|"); }
   function explainRun(cfg) {
     const k = explainKey(cfg); if (EXPL[k]) return EXPL[k];
@@ -4434,14 +4488,18 @@
     const lab = m => m.bd && BD[m.bd] ? `${BD[m.bd].label}: ${BD[m.bd].name(pickOf(m.id))}` : m.label;   // breakdowns name the chosen category
     const o = M[cfg.metrics[0]], st = explainRun(cfg), unit = (LEVEL_OPTS().find(x => x[0] === cfg.level) || [0, "places"])[1].toLowerCase();
     const same = r => r.m.p === o.p && r.m.group === o.group;   // other measures of the same thing (e.g. other life expectancies)
-    const real = st.rows.filter(r => !r.dup && !same(r)), kin = st.rows.filter(r => !r.dup && same(r)), dup = st.rows.filter(r => r.dup), top = real.slice(0, 10), say = r => {
+    const real = st.rows.filter(r => !r.dup && !same(r)), kin = st.rows.filter(r => !r.dup && same(r)), dup = st.rows.filter(r => r.dup), pOf = r => EXF.raw ? r.p : (r.q != null ? r.q : r.p), top = real.filter(r => EXF.p == null || (pOf(r) != null && pOf(r) < EXF.p)), say = r => {
       const a = esc(lab(r.m).toLowerCase()), b = esc(lab(o).toLowerCase());
       return r.r > 0 ? `Places with higher ${a} tend to have higher ${b}` : `Places with higher ${a} tend to have lower ${b}`; };
     return `<details class="ex" open><summary><b>What in Atlas's data goes with ${esc(o.label)}</b> <small>${st.done ? `${st.tested} metrics tested across ${st.n} ${esc(unit)}` : `looking through the metrics… ${st.tested} so far`}</small></summary>
-      ${top.length ? `<table class="ex-t"><thead><tr><th>Metric</th><th>Link (Spearman)</th><th class="num">r</th><th class="num">Pearson</th><th title="Holding population density and deprivation fixed">Holding density and deprivation fixed</th><th class="num">places</th></tr></thead><tbody>
+      <div class="ex-filter" role="group" aria-label="Show only statistically significant links"><span>Show</span>${[[null, "All"], [0.10, "p < 0.10"], [0.05, "p < 0.05"], [0.01, "p < 0.01"], [0.001, "p < 0.001"]].map(([v, l]) => `<button type="button" class="${EXF.p === v ? "on" : ""}" data-exsig="${v == null ? "" : v}">${l}</button>`).join("")}
+        <label title="Benjamini-Hochberg: allows for testing many metrics at once. Untick for the plain p-value of each test"><input type="checkbox" data-exraw ${EXF.raw ? "" : "checked"}> corrected for many tests</label>
+        <small>${st.done ? `${top.length} of ${real.length} links shown` : ""}</small></div>
+      ${top.length ? `<div class="ex-scroll"><table class="ex-t"><thead><tr><th>Metric</th><th>Link (Spearman)</th><th class="num">r</th><th class="num">Pearson</th><th class="num" title="${EXF.raw ? "Plain p-value of each test" : "Corrected for testing many metrics at once (Benjamini-Hochberg)"}">p${EXF.raw ? "" : " (corr.)"}</th><th title="Holding population density and deprivation fixed">Holding density and deprivation fixed</th><th class="num">places</th></tr></thead><tbody>
         ${top.length ? "" : ""}${top.map(r => `<tr data-exm="${r.m.id}" title="${esc(say(r))}. Click to plot it against ${esc(o.label)}"><td class="ex-n"><i class="sw" style="background:${PER[r.m.p].hue}"></i>${esc(lab(r.m))}<small>${esc(say(r))}</small></td>
           <td><span class="ex-bar"><i style="${r.r >= 0 ? `left:50%;width:${(50 * r.r).toFixed(1)}%;background:#2b6cb0` : `right:50%;width:${(-50 * r.r).toFixed(1)}%;background:#c0392b`}"></i></span><small>${esc(ST.strength(r.r))}${r.q != null && r.q >= 0.05 ? " · could be chance" : ""}</small></td>
-          <td class="num">${r.r.toFixed(2)}</td><td class="num">${r.pr != null ? r.pr.toFixed(2) : "—"}</td><td class="num">${r.partial != null ? `${r.partial.toFixed(2)}${Math.abs(r.partial) < Math.abs(r.r) / 2 ? " <small>(mostly explained by them)</small>" : ""}` : ""}</td><td class="num">${r.n}</td></tr>`).join("")}</tbody></table>` : st.done ? `<p class="aempty">Not enough places with both values to say anything.</p>` : ""}
+          <td class="num">${r.r.toFixed(2)}</td><td class="num">${r.pr != null ? r.pr.toFixed(2) : "—"}${r.pr != null && Math.abs(r.r - r.pr) > 0.3 ? `<small class="ex-div" title="Spearman ranks the places; Pearson uses the values. When they differ this much, the link is curved, or a few extreme places pull Pearson up or down: plot it to see">differ</small>` : ""}</td>
+          <td class="num">${(v => v == null ? "—" : v < 0.001 ? "<0.001" : v.toFixed(3))(pOf(r))}</td><td class="num">${r.partial != null ? `${r.partial.toFixed(2)}${Math.abs(r.partial) < Math.abs(r.r) / 2 ? " <small>(mostly explained by them)</small>" : ""}` : ""}</td><td class="num">${r.n}</td></tr>`).join("")}</tbody></table></div>` : st.done ? (real.length ? `<p class="aempty">No link passes p < ${EXF.p}${EXF.raw ? "" : " after correcting for many tests"}.</p>` : `<p class="aempty">Not enough places with both values to say anything.</p>`) : ""}
       ${kin.length ? `<p class="ex-dup"><b>Other measures in the same group</b> (${esc(o.group || PER[o.p].name)}), which move with it as you'd expect: ${kin.slice(0, 6).map(r => `<button class="linkish" data-exm="${r.m.id}">${esc(r.m.label)}</button> ${r.r.toFixed(2)}`).join(", ")}.</p>` : ""}
       ${dup.length ? `<p class="ex-dup">Set aside as near-copies of ${esc(o.label)} (built from the same numbers, or almost identical): ${dup.slice(0, 6).map(r => esc(r.m.label)).join(", ")}.</p>` : ""}
       <div class="ex-warn"><b>Read with care.</b><ul>
@@ -4481,6 +4539,8 @@
   WM.register(anEl, { type: "analyse", title: "Analyse", handle: ".an-head", min: { w: 360, h: 260 }, onResize: renderAnalyse, close: closeAnalyse });
   anEl.addEventListener("click", e => {
     const a = e.target.closest("[data-go]"); if (a) { focus(a.dataset.go); return; }
+    const sg = e.target.closest("[data-exsig]"); if (sg) { EXF.p = sg.dataset.exsig === "" ? null : +sg.dataset.exsig; explainPaint(); return; }   // 0.10.1
+    const rw = e.target.closest("[data-exraw]"); if (rw) { EXF.raw = !rw.checked; explainPaint(); return; }
     const ex = e.target.closest("[data-exm]"); if (ex) { AN.metrics = [AN.metrics[0], ex.dataset.exm]; AN.method = "rel"; saveAN(); renderAnalyse(); return; }   // 0.10: plot the pair
     const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
     if (b.hasAttribute("data-anx")) { closeAnalyse(); return; }
@@ -5060,12 +5120,14 @@
     WM.open(w.el);
     const pw = Math.max((x.min || {}).w || 340, Math.min(520, Math.round(innerWidth * 0.36))), ph = Math.max((x.min || {}).h || 240, Math.round(innerHeight * 0.62));
     const last = open.sort((a, b) => b.y - a.y)[0], top = WM.TOPNOW ? WM.TOPNOW() : 100;
-    WM.place(w.el, last ? { x: last.x, y: last.y + 44, w: last.w, h: ph } : { x: innerWidth - pw - 16, y: top, w: pw, h: ph });
+    const slot = WM.slot && WM.slot("main");   // 0.10.1: where you last put a box, if you moved one
+    if (!slot) WM.place(w.el, last ? { x: last.x, y: last.y + 44, w: last.w, h: ph } : { x: innerWidth - pw - 16, y: top, w: pw, h: ph });
     markLinks();
     const isTool = APP.tools.includes(x);
+    if (window.AtlasPanel && AtlasPanel.watchSends && x.editorial !== false) AtlasPanel.watchSends(w.body);   // 0.10.1: charts and tables to the workspace
     if (window.AtlasPanel && !isTool && x.editorial !== false) AtlasPanel.watch(w.body, { app: APP.name.replace(/^Atlas /, ""), title: x.title, blurb: x.blurb || "", editorial: x.editorial });   // 0.10: editorial layout
     const draw = () => { if (!w.el.hidden) { try { x.render(CTX, w.body); } catch (e) { console.error(e); w.body.innerHTML = `<p class="aempty">Couldn't draw this: ${esc(e.message)}</p>`; } } };
-    draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
+    w.draw = draw; draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
   }
   // 0.9.2: the header links work as tabs. Opening one closes the other panels, and puts what that tab is about on the
   // map: a panel's `map` is either a function (ctx => ...) or { level, metrics: [ids], view: [[lon, lat], zoom] }.
@@ -5076,7 +5138,10 @@
       if (typeof m === "function") { m(CTX); return; }
       if (m.level) CTX.setLevel(m.level);
       const ids = (m.metrics || []).filter(id => M[id]);
-      if (ids.length) mapOnly(ids);
+      // 0.10.1: if the bar was at its latest date, it stays at the latest date of what this tab maps (the stories speak
+      // of the latest figures, so the map shows those too); a date the user picked is left alone
+      const atEnd = state.date >= viewHi();
+      if (ids.length) { mapOnly(ids); if (atEnd && state.date < viewHi() && !state.playing) setDate(viewHi()); }
       if (m.view) CTX.view(m.view[0], m.view[1]);
     } catch (e) { console.error(e); }
   }
@@ -5086,6 +5151,35 @@
     applyPanelMap(x);
     openAppPanel(id);
     markLinks();
+  }
+  // 0.10.1: a header link whose panel has tabs of its own (Money's Parties/Donors/…, the calculators, Stations/Airports/
+  // Ports) opens a menu of them as soon as the pointer is on it; picking one opens the panel at that tab, story on top.
+  const tabsOf = x => { try { const t = typeof x.tabs === "function" ? x.tabs(CTX) : x.tabs; return Array.isArray(t) && t.length > 1 ? t : null; } catch (e) { return null; } };
+  function openPanelTab(id, k) {
+    const x = [...APP.panels, ...APP.tools].find(p => p.id === id); if (!x) return;
+    try { x.setTab && x.setTab(k); } catch (e) { console.error(e); }
+    const was = appWins[id] && WM.isOpen(appWins[id].el);
+    openFromBar(id);
+    if (was && appWins[id].draw) appWins[id].draw();
+    hideTabMenu();
+  }
+  let tabMenu = null, tabMenuFor = null, tabMenuT = 0;
+  function hideTabMenu() { clearTimeout(tabMenuT); if (tabMenu) tabMenu.hidden = true; tabMenuFor = null; }
+  function showTabMenu(b) {
+    const id = b.dataset.apanel, x = [...APP.panels, ...APP.tools].find(p => p.id === id), t = x && tabsOf(x);
+    clearTimeout(tabMenuT); if (!t) { hideTabMenu(); return; }
+    if (!tabMenu) {
+      tabMenu = document.createElement("div"); tabMenu.id = "ah-tabmenu"; tabMenu.setAttribute("role", "menu"); document.body.appendChild(tabMenu);
+      tabMenu.addEventListener("mouseenter", () => clearTimeout(tabMenuT));
+      tabMenu.addEventListener("mouseleave", () => { tabMenuT = setTimeout(hideTabMenu, 220); });
+      tabMenu.addEventListener("click", e => { const i = e.target.closest("[data-ahtab]"); if (i) openPanelTab(tabMenu.dataset.for, i.dataset.ahtab); });
+    }
+    if (tabMenuFor !== id) {
+      tabMenu.dataset.for = id;
+      tabMenu.innerHTML = t.map(([k, l]) => `<button role="menuitem" data-ahtab="${esc(k)}">${esc(l)}</button>`).join("");
+    }
+    const r = b.getBoundingClientRect(); tabMenu.hidden = false; tabMenuFor = id;
+    tabMenu.style.left = Math.max(8, Math.min(innerWidth - tabMenu.offsetWidth - 8, r.left)) + "px"; tabMenu.style.top = Math.round(r.bottom) + "px";
   }
   function markLinks() { document.querySelectorAll("#appbar [data-apanel]").forEach(b => { const o = appWins[b.dataset.apanel]; b.classList.toggle("on", !!o && WM.isOpen(o.el)); }); }
   function renderAppsMenu() {
@@ -5120,7 +5214,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.10</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.10.1</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));
@@ -5154,7 +5248,11 @@
       WM.open(w.el); return;
     }
     bar.innerHTML = [...APP.panels, ...APP.tools].map(x => `<button class="ah-link${APP.tools.includes(x) ? " tool" : ""}" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("");
-    bar.hidden = false; bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) openFromBar(b.dataset.apanel); });
+    bar.hidden = false; bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) { hideTabMenu(); openFromBar(b.dataset.apanel); } });
+    bar.querySelectorAll("[data-apanel]").forEach(b => { const x = [...APP.panels, ...APP.tools].find(p => p.id === b.dataset.apanel); if (x && tabsOf(x)) b.classList.add("has-tabs"); });
+    bar.addEventListener("mouseover", e => { const b = e.target.closest("[data-apanel]"); if (b) showTabMenu(b); });
+    bar.addEventListener("mouseleave", () => { clearTimeout(tabMenuT); tabMenuT = setTimeout(hideTabMenu, 220); });
+    bar.addEventListener("focusin", e => { const b = e.target.closest("[data-apanel]"); if (b) showTabMenu(b); });
     requestAnimationFrame(() => { const h = $("apphead").offsetHeight; document.documentElement.style.setProperty("--ahh", h + "px"); WM.setTop(h + 8); map.resize(); });
     dockOpenP = APP.perspective; setFold(false);
     if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) map.loaded() ? APP.init(CTX) : map.once("load", () => APP.init(CTX)); }

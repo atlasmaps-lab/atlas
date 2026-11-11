@@ -48,7 +48,11 @@
 
   function line(series, o, filled) {
     o = o || {}; const pts = allPts(series); if (!pts.length) return empty();
+    // 0.10.1: end labels get room on the right (they were cut off) and are spread out so they don't sit on each other
+    const ends = series.length > 1 && series.length <= 6, nm = s => String(s.name).slice(0, 14);
+    if (ends && o.right == null) o = Object.assign({}, o, { right: Math.min(110, 10 + 6.2 * Math.max(...series.map(s => nm(s).length))) });
     const f = frame(o, pts.map(p => p[0]), pts.map(p => p[1]));
+    const labs = [];
     const paths = series.map((s, i) => {
       const c = colourOf(s, i); let d = "", started = false, area = "";
       s.pts.forEach(p => { if (p[1] == null || !isFinite(p[1])) { started = false; return; } d += (started ? "L" : "M") + f.sx(p[0]).toFixed(1) + " " + f.sy(p[1]).toFixed(1); started = true; });
@@ -56,8 +60,14 @@
       const last = s.pts.filter(p => p[1] != null).slice(-1)[0];
       // p[2]: "e" a general election (solid point), "b" a by-election (hollow point)
       const dots = s.pts.length <= 40 || s.marks ? s.pts.filter(p => p[1] != null).map(p => p[2] === "b" ? `<circle cx="${f.sx(p[0]).toFixed(1)}" cy="${f.sy(p[1]).toFixed(1)}" r="3.4" fill="var(--solid,#fff)" stroke="${c}" stroke-width="1.6"/>` : `<circle cx="${f.sx(p[0]).toFixed(1)}" cy="${f.sy(p[1]).toFixed(1)}" r="${p[2] ? 3.4 : 2.2}" fill="${c}"/>`).join("") : "";
-      return area + `<path d="${d}" fill="none" stroke="${c}" stroke-width="2.2" stroke-linejoin="round"/>` + dots + (last && series.length > 1 && series.length <= 6 ? `<text class="end" x="${Math.min(f.W - 4, f.sx(last[0]) + 4)}" y="${f.sy(last[1]) + 3}" fill="${c}">${esc(String(s.name).slice(0, 14))}</text>` : "");
-    }).join("");
+      return area + `<path d="${d}" fill="none" stroke="${c}" stroke-width="2.2" stroke-linejoin="round"/>` + dots + ((last && ends && labs.push({ x: f.sx(last[0]) + 4, y: f.sy(last[1]) + 3, c, t: nm(s) })) ? "" : "");
+    }).join("") + (() => {
+      labs.sort((a, b) => a.y - b.y);
+      for (let k = 1; k < labs.length; k++) if (labs[k].y - labs[k - 1].y < 11) labs[k].y = labs[k - 1].y + 11;
+      const over = labs.length ? labs[labs.length - 1].y - (f.H - f.B + 3) : 0;
+      if (over > 0) labs.forEach(l => { l.y -= over; }); for (let k = labs.length - 2; k >= 0; k--) if (labs[k + 1].y - labs[k].y < 11) labs[k].y = labs[k + 1].y - 11;
+      return labs.map(l => `<text class="end" x="${Math.min(f.W - 4, l.x).toFixed(1)}" y="${l.y.toFixed(1)}" fill="${l.c}">${esc(l.t)}</text>`).join("");
+    })();
     return svg(f.W, f.H, f.axes + `<rect class="hit" x="${f.L}" y="${f.T}" width="${f.W - f.L - f.R}" height="${f.H - f.T - f.B}"/>` + paths, "", { kind: "xy", series: series.map((s, i) => ({ name: s.name, colour: colourOf(s, i), pts: s.pts })), f: { L: f.L, R: f.R, T: f.T, B: f.B, W: f.W, H: f.H, x0: f.x0, x1: f.x1, y0: f.y0, y1: f.y1 }, vfmt: o.vfmt, xlab: o.xlab || yearLab }) + legend(series);
   }
   function bars(series, o) {

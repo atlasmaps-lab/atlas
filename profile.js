@@ -29,7 +29,7 @@
       // the story: the largest category, the most over-represented against the country, and how concentrated the mix is
       const bySize = rows.slice().sort((a, b) => b.v - a.v), big = bySize[0], over = rows.filter(r => r.lq && r.s >= 1).sort((a, b) => b.lq - a.lq)[0], under = rows.filter(r => r.lq != null && (r.sb || 0) >= 2).sort((a, b) => a.lq - b.lq)[0];
       const top3 = bySize.slice(0, 3).reduce((a, r) => a + r.s, 0), what = (o.label || "").toLowerCase();
-      const story = big ? `In ${esc(where)}, the largest group in ${esc(what)} is <b>${esc(big.n)}</b>: ${esc(ctx.bd.fmt(st.id, big.v))}, ${pct(big.s)} of the total${big.sb != null ? `, against ${pct(big.sb)} in ${esc(theBase)}` : ""}.
+      const story = big ? `In ${esc(where)}, the largest group in ${esc(what)} is <b>${esc(big.n)}</b>: ${esc(ctx.bd.fmt(st.id, big.v))}, ${pct(big.s)} of the total${big.sb != null && where !== theBase && where.replace(/^the /, "") !== theBase.replace(/^the /, "") ? `, against ${pct(big.sb)} in ${esc(theBase)}` : ""}.
         ${over && over !== big && over.lq > 1.3 ? `Compared with ${esc(theBase)}, ${esc(over.n)} stands out most: ${pct(over.s)} here, ${over.lq.toFixed(1)} times the share in ${esc(theBase)}.` : ""}
         ${under && under.lq < 0.6 ? `${esc(under.n)} is the most under-represented (${pct(under.s)} here against ${pct(under.sb)}).` : ""}
         The three largest make up ${pct(top3)} of the total.` : "";

@@ -38,6 +38,23 @@
   // 0.8: the top bar follows what an economist tracks: the headline indicators, forecasts against outturn, the regions,
   // the release calendar, then the place view and rankings (econ.js holds the shared panels)
   const EC = id => (ctx, el) => window.AtlasEcon ? AtlasEcon[id](ctx, el) : (el.innerHTML = "<p class='ap-note'>The economic panels didn't load.</p>");
+  // 0.10.1: Commuting opens with its story (Census 2021): the UK picture, or the chosen council's
+  function commuteStory(ctx, CM, c) {
+    const f = n => Math.round(n).toLocaleString("en-GB"), e = ctx.esc, codes = Object.keys(CM.out);
+    const inn = k => (CM.in[k] || {}).n || 0, out = k => (CM.out[k] || {}).n || 0, net = k => inn(k) - out(k);
+    const res = k => out(k) + (CM.within[k] || 0) + (CM.home[k] || 0);
+    const trust = `<p class="nv-trust"><b>How far to trust it.</b> Census 2021 counted where people worked on 21 March 2021, during a lockdown, so home working is far higher and travel lower than in a normal year. Only each council's largest flows are listed. England and Wales only (Scotland's census was a year later, Northern Ireland's is published separately).</p>`;
+    const means = `<p class="nv-means"><b>What it tells us.</b> Which places draw workers in and which send them out: job centres against commuter towns, and how far labour markets cross council borders.</p>`;
+    if (!c) {
+      const tot = codes.reduce((t, k) => t + out(k), 0), byNet = codes.slice().sort((a, b) => net(b) - net(a));
+      const hm = codes.reduce((t, k) => t + (CM.home[k] || 0), 0), all = codes.reduce((t, k) => t + res(k), 0);
+      const top = byNet.slice(0, 3), bot = byNet.slice(-3).reverse();
+      return `<div class="nv"><p class="nv-story">${f(tot)} people in England and Wales worked in a different council from the one they lived in on Census day 2021. ${e(ctx.nameOf(top[0]))} drew the most workers in, ${f(net(top[0]))} more than left it each day, followed by ${top.slice(1).map(k => `${e(ctx.nameOf(k))} (${f(net(k))})`).join(" and ")}; the biggest commuter areas, sending out more than they took in, were ${bot.map(k => `${e(ctx.nameOf(k))} (${f(-net(k))})`).join(", ")}. ${hm ? `${f(hm / all * 100)}% of working residents worked mainly from home.` : ""}</p>${means}${trust}</div><p class="ap-note">Moving dots on the map travel the way more people commute; more dots means more commuters either way. Click a council for its own flows.</p>`;
+    }
+    const n = net(c), r = res(c), tops = (CM.out[c].top || [])[0], topi = ((CM.in[c] || {}).top || [])[0];
+    return `<div class="nv"><p class="nv-story">${e(ctx.nameOf(c))} ${n >= 0 ? `drew in ${f(n)} more workers than it sent out` : `sent out ${f(-n)} more workers than it took in`} on Census day 2021: ${f(inn(c))} came in to work and ${f(out(c))} of its ${f(r)} working residents worked elsewhere${tops ? `, most of them in ${e(ctx.nameOf(tops[0]))} (${f(tops[1])})` : ""}. ${topi ? `The most workers came in from ${e(ctx.nameOf(topi[0]))} (${f(topi[1])}). ` : ""}${r && CM.home[c] ? `${f(CM.home[c] / r * 100)}% worked mainly from home.` : ""}</p>${means}${trust}</div>`;
+  }
+
   window.AtlasApps && AtlasApps.register({
     id: "economic", name: "Atlas Economic", perspective: "economic", accent: "#13876b", dataNeeds: ["ATLAS_SERIES"],
     init(ctx) { ctx.mapOnly(["gdp_per_head"]); ctx.openPanel("indicators"); },
@@ -46,9 +63,9 @@
       { id: "spending", map: { level: "region", metrics: ["spend_ph"] }, title: "Public spending", blurb: "Where public money goes: the UK by function, regions and nations per person, and your council by service", live: true, render: (ctx, el) => window.AtlasSpending ? AtlasSpending.panel(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 480, h: 420 } },
       { id: "industries", map: {"level": "council", "metrics": ["eco_gva_top"]}, title: "Industries", blurb: "Output and jobs by industry, against the region and the UK; the fastest-growing industries", live: true, render: (ctx, el) => window.AtlasProfile ? AtlasProfile.panel(["eco_gva", "eco_jobs", "eco_gva_grow"], { what: "Industry" })(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 560, h: 420 } },
       { id: "commuting", map: {"level": "council", "metrics": ["commute_net"]}, title: "Commuting", blurb: "Where people here work, and where workers here live (Census 2021)", live: true, render: (ctx, el) => { const on = ctx.mapped ? ctx.mapped() : []; if (!on.includes("commute_lines")) ctx.mapOnly(on.concat(["commute_lines"])); const c = ctx.focused; const I = window.ATLAS_INDUSTRY, CM = I && I.commute; if (!CM) { el.innerHTML = "<p class='ap-note'>Not loaded.</p>"; return; }
-        if (!c || !CM.out[c]) { el.innerHTML = "<p class='ap-note'>Click a council in England or Wales: its commuting flows draw on the map and list here.</p>"; return; }
+        if (!c || !CM.out[c]) { el.innerHTML = commuteStory(ctx, CM); return; }
         const t = (L, d) => `<table class="tr-t"><thead><tr><th>${d}</th><th class="num">People</th></tr></thead><tbody>${L.map(([k, n]) => `<tr><td class="tr-n">${ctx.esc(ctx.nameOf(k))}</td><td class="num">${n.toLocaleString("en-GB")}</td></tr>`).join("")}</tbody></table>`;
-        el.innerHTML = `<h4>${ctx.esc(ctx.nameOf(c))}</h4><p class="ap-note">${(CM.within[c] || 0).toLocaleString("en-GB")} live and work here; ${(CM.out[c].n).toLocaleString("en-GB")} go out to work; ${((CM.in[c] || {}).n || 0).toLocaleString("en-GB")} come in; ${(CM.home[c] || 0).toLocaleString("en-GB")} worked mainly from home (Census day 2021, in lockdown).</p><div class="tr-two"><div>${t(CM.out[c].top, "Works in")}</div><div>${t((CM.in[c] || {}).top || [], "Lives in")}</div></div>`; }, min: { w: 460, h: 360 } },
+        el.innerHTML = commuteStory(ctx, CM, c) + `<h4>${ctx.esc(ctx.nameOf(c))}</h4><p class="ap-note">${(CM.within[c] || 0).toLocaleString("en-GB")} live and work here; ${(CM.out[c].n).toLocaleString("en-GB")} go out to work; ${((CM.in[c] || {}).n || 0).toLocaleString("en-GB")} come in${CM.home[c] ? `; ${CM.home[c].toLocaleString("en-GB")} worked mainly from home` : ""} (Census day 2021, in lockdown).</p><div class="tr-two"><div>${t(CM.out[c].top, "Works in")}</div><div>${t((CM.in[c] || {}).top || [], "Lives in")}</div></div>`; }, min: { w: 460, h: 360 } },
       { id: "indicators", map: {"level": "council", "metrics": ["gdp_per_head"]}, title: "Indicators", blurb: "GDP, inflation, jobs, pay, public finances and trade: latest, trend and next release", render: EC("indicators"), min: { w: 520, h: 420 } },
       { id: "forecasts", title: "Forecasts vs outturn", blurb: "Independent forecasters and the OBR, against what was published", render: EC("forecasts"), min: { w: 520, h: 380 } },
       { id: "regions", map: {"level": "region", "metrics": ["gdp_per_head"]}, title: "Regions", blurb: "GVA per head and growth by region", render: EC("regions"), min: { w: 480, h: 380 } },

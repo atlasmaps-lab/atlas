@@ -35,11 +35,14 @@
   // 0.8: Atlas Social is a social layer on the map (social.js, store.js); the statistics are kept under Statistics
   const SP = id => window.AtlasSocial ? AtlasSocial.panel(id) : (ctx, el) => { el.innerHTML = "<p class='ap-note'>Atlas Social didn't load.</p>"; };
   const dev = !!(window.AtlasTheme && AtlasTheme.dev);
+  // 0.10.1: Social's own tabs show the pins; the statistics tabs hide them (see showPins in social.js)
+  const pins = on => ctx => window.AtlasSocial && AtlasSocial.showPins && AtlasSocial.showPins(on);
+  const withPins = ps => ps.map(p => Object.assign({ onOpen: pins(!p.map) }, p));
   window.AtlasApps && AtlasApps.register({
     id: "social", name: "Atlas Social", perspective: "social", accent: "#d0701c", dataNeeds: ["ATLAS_SERIES"],
     init(ctx) { ctx.openPanel("feed"); },
-    panels: [
-      { id: "feed", editorial: false, title: "Feed", render: SP("feed"), min: { w: 380, h: 420 } },
+    panels: withPins([
+      { id: "feed", editorial: false, title: "Feed", tabs: [["near", "Near this view"], ["area", "Around the area in focus"], ["following", "Following"]], setTab: k => window.AtlasSocial && AtlasSocial.setFeed && AtlasSocial.setFeed(k), render: SP("feed"), min: { w: 380, h: 420 } },
       { id: "post", editorial: false, title: "Post", render: SP("post"), min: { w: 360, h: 380 } },
       { id: "events", editorial: false, title: "Events", render: SP("events"), min: { w: 380, h: 380 } },
       { id: "market", editorial: false, title: "Marketplace", render: SP("market"), min: { w: 400, h: 420 } },
@@ -52,7 +55,7 @@
       { id: "migration", map: { level: "council", metrics: ["mig_intl_net"] }, title: "Migration", blurb: "Who moves to and from the UK and why, and arrivals and departures for each council", live: true, render: (ctx, el) => window.AtlasPeople ? AtlasPeople.migration(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 480, h: 420 } },
       { id: "support", map: { level: "council", metrics: ["claimant_rate"] }, title: "Housing & support", blurb: "Out-of-work benefits, children in low-income families, social housing and waiting lists", live: true, render: (ctx, el) => window.AtlasPeople ? AtlasPeople.support(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 480, h: 420 } },
       { id: "census", map: {"level": "council", "metrics": ["cen_ethnic_top"]}, title: "Census profile", blurb: "Every Census 2021 category for the place in focus, against its region and England and Wales", live: true, render: (ctx, el) => window.AtlasProfile ? AtlasProfile.panel(["cen_ethnic", "cen_religion", "cen_birth", "cen_language", "cen_english", "cen_age", "cen_nssec", "cen_occupation", "cen_activity", "cen_quals", "cen_tenure", "cen_households"], { what: "Category" })(ctx, el) : (el.innerHTML = "<p class='ap-note'>Not loaded.</p>"), min: { w: 560, h: 420 } },
-    ],
-    tools: [{ id: "pyramid", map: {"level": "council", "metrics": ["average_age"]}, title: "Population pyramid", render: pyramid }],
+    ]),
+    tools: withPins([{ id: "pyramid", map: {"level": "council", "metrics": ["average_age"]}, title: "Population pyramid", render: pyramid }]),
   });
 })();

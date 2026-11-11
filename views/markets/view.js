@@ -185,6 +185,6 @@
       { id: "marketplace", editorial: false, title: "Marketplace", blurb: "Buy and sell between people near you (with Atlas Social)", render: (ctx, el) => window.AtlasSocial ? AtlasSocial.panel("market")(ctx, el) : (el.innerHTML = "<p class='ap-note'>The marketplace didn't load.</p>"), min: { w: 400, h: 420 } },
     ],
     // 0.7.2: the four calculators live together in one Calculator, with a tab for each
-    tools: [{ id: "calc", title: "Calculator", blurb: "DCF, comparables, dividend discount and returns calculators", render: calculator, min: { w: 440, h: 360 } }],
+    tools: [{ id: "calc", title: "Calculator", tabs: CALCS.map(c => [c.id, c.title]), setTab: k => { calculator.at = k; }, blurb: "DCF, comparables, dividend discount and returns calculators", render: calculator, min: { w: 440, h: 360 } }],
   });
 })();
