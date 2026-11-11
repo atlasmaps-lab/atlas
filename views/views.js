@@ -19,7 +19,7 @@
   const VIEWS = {
     politics: { owner: "", js: ["view.js"], css: ["view.css"] },
     economic: { owner: "", js: ["econ.js", "spending.js", "view.js"], css: ["view.css"] },
-    social:   { owner: "", js: ["store.js", "social.js", "view.js"], css: ["view.css"] },
+    social:   { owner: "", js: ["store.js", "social.js", "people.js", "view.js"], css: ["view.css"] },
     health:   { owner: "", js: ["view.js"], css: ["view.css"] },
     markets:  { owner: "", js: ["view.js"], css: ["view.css"] },
     transport: { owner: "", js: ["view.js"], css: ["view.css"] },

@@ -47,6 +47,15 @@
     spend_tot: ["Total government spending that can be traced to people here, in the year.", "A total: bigger places spend more. Use spending per head to compare."],
     council_spend_ph: ["What the council spends on services per resident, from its own money and general grants.",
       "Net of fees, charges and specific grants (for example the schools grant), so it understates everything spent through the council; in two-tier areas Atlas adds a population share of the county's spending."],
+    mig_intl_net: ["How much the population grew (or shrank) from people moving between here and abroad, per 1,000 residents.",
+      "Local international migration is modelled from national surveys and administrative records, so single-year figures for small councils are uncertain; students and short stays are hard to place."],
+    mig_internal_net: ["Whether more people move here from the rest of the UK than leave for it, per 1,000 residents.", "Based on GP and benefit records of address changes; young men and students register late, so their moves are under-counted."],
+    asylum_support: ["People seeking asylum who are housed or supported by the Home Office here, per 10,000 residents.", "A snapshot on one date; the Home Office chooses where to house people, so it reflects accommodation contracts, not where people chose to live."],
+    social_homes_pct: ["How much of the housing here is owned by councils and housing associations, let at below-market rents.", "Counts homes, not whether they're affordable or in good repair; MHCLG fills some councils' gaps with estimates."],
+    council_homes: ["How many homes the council owns, each year since 1979.", "Falls come from Right to Buy sales, demolitions and whole-stock transfers to housing associations; a council that transferred everything drops to zero though the homes are still social housing."],
+    waiting_list: ["Households waiting for social housing, per 100 homes.", "Not a coherent measure of need on its own: councils set their own rules on who may join and many have cut their lists, so a short list can mean strict rules rather than little need."],
+    claimant_rate: ["People claiming out-of-work benefits, as a share of residents aged 16 to 64.", "Since Universal Credit it includes some people in work who must look for more hours, so it reads higher than unemployment; it's a timely local signal, not the official unemployment rate."],
+    child_poverty: ["Children growing up in households on less than 60% of the median income after paying for housing.", "Local estimates calibrated to a national survey; best for comparing places and trends, not exact counts."],
     eco_gva_share: ["The chosen industry's share of the area's output.", "Industries are assigned by where businesses are, and output by where it's produced."],
   };
 

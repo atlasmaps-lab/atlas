@@ -994,6 +994,77 @@
         return { v: t * 1e6 / p, text: `£${fmtInt(t * 1e6 / p)} a person (£${t.toFixed(0)}m)`, yr: L.year, est: r && r.est, estWhy: r && r.est ? `Includes a population share of ${r.countyName}'s spending (education, social care, roads)` : "" }; } });
   }
 
+  // ---------- 0.10: migration, social housing, people's finances (data/people.js) ----------
+  const PPL = window.ATLAS_PEOPLE || null;
+  if (PPL) {
+    const MY = PPL.myeb || {}, AS = PPL.asylum || {}, HO = PPL.housing || {}, FN = PPL.fin || {}, src = PPL.sources;
+    const CLV = ["council", "region", "nation", "country"], nmW = { ward: "Published for councils", constituency: "Published for councils" };
+    const myIdx = d => { let j = -1; (MY.years || []).forEach((y, i) => { if (y + "-06-30" <= d) j = i; }); return j; };
+    const myVal = (c, k, j) => { const r = MY.v && MY.v[c]; return r && r[k] && r[k][j] != null ? r[k][j] : null; };
+    const mySum = (code, k, j) => lvlOf(code) === "council" ? myVal(code, k, j) : sumCouncils(code, c => myVal(c, k, j));
+    const myLabel = j => `year to June ${MY.years[j]}`;
+    const mig = (id, k, label, desc, how, per) => def({ id, p: "social", group: "Migration", label, scale: per ? "interval" : "ratio", nature: per ? "change" : "count", mid: per ? 0 : undefined, temporal: "annual", levels: CLV, nmText: nmW,
+      span: () => [MY.years[0] + "-06-30", TODAY], source: src.myeb + " (OGL v3.0)", desc, how, fmt: per ? (v => (v > 0 ? "+" : "") + v.toFixed(1) + " per 1,000") : fmtInt,
+      get(code, d) { const j = myIdx(d); if (j < 0) return null; const v = mySum(code, k, j); if (v == null) return null;
+        if (!per) return { v, text: `${fmtInt(v)} people`, yr: myLabel(j) };
+        const pop = mySum(code, "population", j); if (!pop) return null; const r = 1000 * v / pop; return { v: r, text: `${r > 0 ? "+" : ""}${r.toFixed(1)} per 1,000 residents (${v > 0 ? "+" : ""}${fmtInt(v)} people)`, yr: myLabel(j) }; } });
+    if (MY.v) {
+      mig("mig_intl_net", "international_net", "Net international migration", "People arriving from abroad minus people leaving for abroad, per 1,000 residents", "(International arrivals − departures) ÷ population, ONS mid-year estimates", true);
+      mig("mig_internal_net", "internal_net", "Net migration within the UK", "People moving in from the rest of the UK minus people moving out, per 1,000 residents", "(Moves in from other UK councils − moves out) ÷ population", true);
+      mig("mig_intl_in", "international_in", "Arrivals from abroad", "People who moved here from outside the UK in the year", "ONS mid-year estimates, international immigration component", false);
+      mig("mig_internal_in", "internal_in", "Arrivals from the rest of the UK", "People who moved here from another part of the UK in the year", "ONS mid-year estimates, internal migration (in)", false);
+    }
+    if (AS.support) {
+      const asTot = c => { const o = AS.support[c]; return o ? Object.values(o).reduce((a, b) => a + b, 0) : null; };
+      def({ id: "asylum_support", p: "social", group: "Migration", label: "People on asylum support", scale: "ratio", nature: "rate", temporal: "static", levels: CLV, nmText: nmW, weight: "population", source: src.asylum + " (OGL v3.0)",
+        fmt: v => v.toFixed(1) + " per 10,000", desc: "Asylum seekers housed or supported by the Home Office here, per 10,000 residents", how: `People receiving asylum support (section 95, section 4 or initial accommodation, including hotels) on ${AS.support_date}, ÷ residents`,
+        get(code) { const lv = lvlOf(code), n = lv === "council" ? asTot(code) : sumCouncils(code, asTot), p = popAt(code, "2025-07-01"); if (n == null || !p) return null;
+          const h = lv === "council" ? Object.entries(AS.support[code] || {}).find(([k]) => /hotel/i.test(k)) : null;
+          return { v: 10000 * n / p, text: `${(10000 * n / p).toFixed(1)} per 10,000 (${fmtInt(n)} people${h ? `, ${fmtInt(h[1])} in hotels` : ""})`, yr: AS.support_date }; } });
+      const rsTot = c => { const o = AS.resettle[c]; return o ? Object.values(o).reduce((a, b) => a + b, 0) : null; };
+      def({ id: "resettled", p: "social", group: "Migration", label: "Refugees resettled here (since 2014)", scale: "ratio", nature: "count", temporal: "static", levels: CLV, nmText: nmW, source: src.asylum + " (OGL v3.0)", fmt: fmtInt,
+        desc: "People resettled here through government schemes (Syria, Afghanistan, UK Resettlement Scheme and others) since 2014", how: "Sum of people resettled by council, all schemes, from 2014 to the latest quarter (excludes Homes for Ukraine and the Hong Kong BN(O) route)",
+        get(code) { const n = lvlOf(code) === "council" ? rsTot(code) : sumCouncils(code, rsTot); return n == null ? null : { v: n, text: `${fmtInt(n)} people` }; } });
+    }
+    if (HO.stock) {
+      const hsrc = src.housing + " (OGL v3.0)", hEN = code => /^(S|W|N)/.test(code) ? "England only for now" : null;
+      const st = c => HO.stock[c] || null, stSum = (code, i) => lvlOf(code) === "council" ? (st(code) || [])[i] : sumCouncils(code, c => (st(c) || [])[i]);
+      def({ id: "social_homes_pct", p: "social", group: "Social housing", label: "Social homes", scale: "ratio", nature: "share", temporal: "static", levels: ["council", "region", "nation"], valid: hEN, nmText: nmW, source: hsrc, fmt: pct1, breaks: [10, 14, 18, 24],
+        desc: "Homes owned by councils and housing associations, as a share of all homes", how: `(Council homes + housing association homes) ÷ all homes, ${HO.stock_year} (MHCLG table 100)`,
+        get(code) { const a = stSum(code, 0), b = stSum(code, 1), t = [0, 1, 2, 3].reduce((s, i) => s + (stSum(code, i) || 0), 0); if (!t) return null; const v = 100 * ((a || 0) + (b || 0)) / t;
+          return { v, text: `${pct1(v)} (${fmtInt((a || 0) + (b || 0))} of ${fmtInt(t)} homes: ${fmtInt(a || 0)} council, ${fmtInt(b || 0)} housing association)`, yr: HO.stock_year }; } });
+      const serAt2 = (S, code, d) => { const lv = lvlOf(code), y = String(Math.min(+d.slice(0, 4), 2099)); const pick = c => { const o = S[c]; if (!o) return null; let k = null; for (const yy in o) if (yy <= y && (!k || yy > k)) k = yy; return k ? [k, o[k]] : null; };
+        if (lv === "council") return pick(code); if (S[code]) return pick(code); let t = 0, yr = null, any = false; councilsIn(code).forEach(c => { const x = pick(c); if (x) { t += x[1]; yr = x[0]; any = true; } }); return any ? [yr, t] : null; };
+      def({ id: "council_homes", p: "social", group: "Social housing", label: "Council-owned homes", scale: "ratio", nature: "count", temporal: "annual", levels: ["council", "region", "nation"], valid: hEN, nmText: nmW, source: hsrc, fmt: fmtInt,
+        span: () => ["1979-04-01", TODAY], desc: "Homes owned by the council, each year since 1979 (Right to Buy and transfers to housing associations shrank this)", how: "MHCLG table 116, local authority dwelling stock at 1 April (councils that transferred all their homes show none)",
+        get(code, d) { const r = serAt2(HO.la_series, code, d); return r ? { v: r[1], text: `${fmtInt(r[1])} homes`, yr: r[0] } : null; } });
+      def({ id: "waiting_list", p: "social", group: "Social housing", label: "Households on the housing register", scale: "ratio", nature: "rate", temporal: "annual", levels: ["council", "region", "nation"], valid: hEN, nmText: nmW, source: hsrc, weight: "population",
+        span: () => ["1987-04-01", TODAY], fmt: v => v.toFixed(1) + " per 100 homes", desc: "Households waiting for social housing (on the council's register), per 100 homes", how: "Households on the local authority housing register at 1 April (MHCLG table 600) ÷ homes (table 100). Councils set their own rules on who can join, so lists aren't directly comparable",
+        get(code, d) { const r = serAt2(HO.waiting, code, d), t = [0, 1, 2, 3].reduce((s, i) => s + (stSum(code, i) || 0), 0); if (!r || !t) return null; return { v: 100 * r[1] / t, text: `${fmtInt(r[1])} households (${(100 * r[1] / t).toFixed(1)} per 100 homes)`, yr: r[0] }; } });
+    }
+    if (FN.claim) {
+      const mIdx = d => { let j = -1; (FN.months || []).forEach((m, i) => { const t = new Date(m + " 15"); if (t.toISOString().slice(0, 10) <= d) j = i; }); return j; };
+      def({ id: "claimant_rate", p: "social", group: "Finances and support", label: "Claimant count (out-of-work benefits)", scale: "ratio", nature: "share", temporal: "annual", levels: CLV, nmText: nmW, source: src.claim + " (OGL v3.0)", fmt: pct1, breaks: [2.5, 3.5, 4.5, 6],
+        span: () => [new Date(FN.months[0] + " 15").toISOString().slice(0, 10), TODAY], desc: "People claiming benefits mainly because they're unemployed, as a share of residents aged 16 to 64",
+        how: "Universal Credit claimants required to look for work, plus Jobseeker's Allowance, ÷ residents aged 16-64 (ONS). Monthly; includes some people in low-paid work who must look for more",
+        get(code, d) { const j = mIdx(d); if (j < 0) return null; const r = (FN.claim_rate[code] || [])[j], n = (FN.claim[code] || [])[j]; if (r == null) return null; return { v: r, text: `${pct1(r)}${n != null ? ` (${fmtInt(n)} people)` : ""}`, yr: FN.months[j] }; } });
+    }
+    if (FN.cilif) {
+      const yrs = FN.cilif_years || [];
+      def({ id: "child_poverty", p: "social", group: "Finances and support", label: "Children in low-income families", scale: "ratio", nature: "share", temporal: "annual", levels: ["ward", "council", "region", "nation", "country"], source: src.cilif + " (OGL v3.0)", fmt: pct1, breaks: [15, 22, 30, 40],
+        span: () => [(+yrs[0] - 1) + "-10-01", TODAY], desc: "Children living in households below 60% of the UK median income after housing costs",
+        how: "DWP local estimates (benefit and tax credit records, calibrated to the national survey), after housing costs, financial years ending " + yrs.join(", "),
+        get(code, d) { const o = FN.cilif[code] || FN.cilif_ward[code]; if (!o) return null; let j = -1; yrs.forEach((y, i) => { if ((+y - 1) + "-10-01" <= d) j = i; }); if (j < 0) return null; const v = o[1][j]; if (v == null) return null;
+          return { v: v <= 1 ? 100 * v : v, text: `${pct1(v <= 1 ? 100 * v : v)}${o[0][j] != null ? ` (${fmtInt(o[0][j])} children)` : ""}`, yr: `FYE ${yrs[j]}` }; } });
+    }
+    if (FN.dhp) def({ id: "dhp_awards", p: "social", group: "Finances and support", label: "Discretionary Housing Payments", scale: "ratio", nature: "count", temporal: "static", levels: ["council", "region", "nation"], source: src.dhp + " (OGL v3.0)", fmt: fmtInt,
+      desc: "Extra help with rent from the council, for people on Housing Benefit or Universal Credit housing costs", how: "Number of awards in the financial year, and spending",
+      get(code) { const lv = lvlOf(code), f = c => (FN.dhp[c] || [])[0], n = lv === "council" ? f(code) : sumCouncils(code, f); if (n == null) return null; const sp = lv === "council" ? (FN.dhp[code] || [])[1] : sumCouncils(code, c => (FN.dhp[c] || [])[1]);
+        return { v: n, text: `${fmtInt(n)} awards${sp ? `, £${fmtInt(sp)}` : ""}` }; } });
+    if (PPL.sx && PPL.sx.v) Object.entries(PPL.sx.meta || {}).forEach(([k, mt]) => def({ id: "sx_" + k, p: "social", group: "Finances and support", label: mt.dataset, scale: "ratio", nature: "count", temporal: "static", levels: ["council"], source: "DWP Stat-Xplore (OGL v3.0)", fmt: fmtInt,
+      desc: mt.measure + (mt.mean ? "; " + mt.mean : ""), get(code) { const o = PPL.sx.v[code]; if (!o || o[k] == null) return null; return { v: o[k], text: fmtInt(o[k]) + (o[k + "_mean"] != null ? ` · average £${o[k + "_mean"].toFixed(2)}` : ""), yr: mt.month }; } }));
+  }
+
   // ---------- 0.9: inward investment by region (DBT inward investment results; data/investment.js) ----------
   const INV = window.ATLAS_INVEST || null, GINV = "Investment";
   if (INV && INV.dbt && INV.dbt.region) {
