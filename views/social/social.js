@@ -260,5 +260,5 @@
     });
   }
   const panel = id => (c, el) => { panels[id] = el; init(c).then(() => { bind(); PANELS[id](el); }); el.innerHTML = el.innerHTML || `<p class="ap-note">Loading…</p>`; };
-  window.AtlasSocial = { init, panel, PANELS, refreshMap, bannedReason, coarse, stripImage, get cells() { return refreshMap.cells; }, setActivity: (on, h) => { actOn = on; if (h) actWin = h; refreshMap(); } };
+  window.AtlasSocial = { init, panel, PANELS, refreshMap, bannedReason, coarse, stripImage, get cells() { return refreshMap.cells; }, setFeed: k => { F.scope = k; }, setActivity: (on, h) => { actOn = on; if (h) actWin = h; refreshMap(); } };
 })();

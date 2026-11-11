@@ -5124,7 +5124,7 @@
     if (window.AtlasPanel && AtlasPanel.watchSends && x.editorial !== false) AtlasPanel.watchSends(w.body);   // 0.10.1: charts and tables to the workspace
     if (window.AtlasPanel && !isTool && x.editorial !== false) AtlasPanel.watch(w.body, { app: APP.name.replace(/^Atlas /, ""), title: x.title, blurb: x.blurb || "", editorial: x.editorial });   // 0.10: editorial layout
     const draw = () => { if (!w.el.hidden) { try { x.render(CTX, w.body); } catch (e) { console.error(e); w.body.innerHTML = `<p class="aempty">Couldn't draw this: ${esc(e.message)}</p>`; } } };
-    draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
+    w.draw = draw; draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
   }
   // 0.9.2: the header links work as tabs. Opening one closes the other panels, and puts what that tab is about on the
   // map: a panel's `map` is either a function (ctx => ...) or { level, metrics: [ids], view: [[lon, lat], zoom] }.
@@ -5145,6 +5145,35 @@
     applyPanelMap(x);
     openAppPanel(id);
     markLinks();
+  }
+  // 0.10.1: a header link whose panel has tabs of its own (Money's Parties/Donors/…, the calculators, Stations/Airports/
+  // Ports) opens a menu of them as soon as the pointer is on it; picking one opens the panel at that tab, story on top.
+  const tabsOf = x => { try { const t = typeof x.tabs === "function" ? x.tabs(CTX) : x.tabs; return Array.isArray(t) && t.length > 1 ? t : null; } catch (e) { return null; } };
+  function openTab(id, k) {
+    const x = [...APP.panels, ...APP.tools].find(p => p.id === id); if (!x) return;
+    try { x.setTab && x.setTab(k); } catch (e) { console.error(e); }
+    const was = appWins[id] && WM.isOpen(appWins[id].el);
+    openFromBar(id);
+    if (was && appWins[id].draw) appWins[id].draw();
+    hideTabMenu();
+  }
+  let tabMenu = null, tabMenuFor = null, tabMenuT = 0;
+  function hideTabMenu() { clearTimeout(tabMenuT); if (tabMenu) tabMenu.hidden = true; tabMenuFor = null; }
+  function showTabMenu(b) {
+    const id = b.dataset.apanel, x = [...APP.panels, ...APP.tools].find(p => p.id === id), t = x && tabsOf(x);
+    clearTimeout(tabMenuT); if (!t) { hideTabMenu(); return; }
+    if (!tabMenu) {
+      tabMenu = document.createElement("div"); tabMenu.id = "ah-tabmenu"; tabMenu.setAttribute("role", "menu"); document.body.appendChild(tabMenu);
+      tabMenu.addEventListener("mouseenter", () => clearTimeout(tabMenuT));
+      tabMenu.addEventListener("mouseleave", () => { tabMenuT = setTimeout(hideTabMenu, 220); });
+      tabMenu.addEventListener("click", e => { const i = e.target.closest("[data-ahtab]"); if (i) openTab(tabMenu.dataset.for, i.dataset.ahtab); });
+    }
+    if (tabMenuFor !== id) {
+      tabMenu.dataset.for = id;
+      tabMenu.innerHTML = t.map(([k, l]) => `<button role="menuitem" data-ahtab="${esc(k)}">${esc(l)}</button>`).join("");
+    }
+    const r = b.getBoundingClientRect(); tabMenu.hidden = false; tabMenuFor = id;
+    tabMenu.style.left = Math.max(8, Math.min(innerWidth - tabMenu.offsetWidth - 8, r.left)) + "px"; tabMenu.style.top = Math.round(r.bottom) + "px";
   }
   function markLinks() { document.querySelectorAll("#appbar [data-apanel]").forEach(b => { const o = appWins[b.dataset.apanel]; b.classList.toggle("on", !!o && WM.isOpen(o.el)); }); }
   function renderAppsMenu() {
@@ -5213,7 +5242,11 @@
       WM.open(w.el); return;
     }
     bar.innerHTML = [...APP.panels, ...APP.tools].map(x => `<button class="ah-link${APP.tools.includes(x) ? " tool" : ""}" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("");
-    bar.hidden = false; bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) openFromBar(b.dataset.apanel); });
+    bar.hidden = false; bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) { hideTabMenu(); openFromBar(b.dataset.apanel); } });
+    bar.querySelectorAll("[data-apanel]").forEach(b => { const x = [...APP.panels, ...APP.tools].find(p => p.id === b.dataset.apanel); if (x && tabsOf(x)) b.classList.add("has-tabs"); });
+    bar.addEventListener("mouseover", e => { const b = e.target.closest("[data-apanel]"); if (b) showTabMenu(b); });
+    bar.addEventListener("mouseleave", () => { clearTimeout(tabMenuT); tabMenuT = setTimeout(hideTabMenu, 220); });
+    bar.addEventListener("focusin", e => { const b = e.target.closest("[data-apanel]"); if (b) showTabMenu(b); });
     requestAnimationFrame(() => { const h = $("apphead").offsetHeight; document.documentElement.style.setProperty("--ahh", h + "px"); WM.setTop(h + 8); map.resize(); });
     dockOpenP = APP.perspective; setFold(false);
     if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) map.loaded() ? APP.init(CTX) : map.once("load", () => APP.init(CTX)); }

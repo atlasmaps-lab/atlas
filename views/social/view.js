@@ -39,7 +39,7 @@
     id: "social", name: "Atlas Social", perspective: "social", accent: "#d0701c", dataNeeds: ["ATLAS_SERIES"],
     init(ctx) { ctx.openPanel("feed"); },
     panels: [
-      { id: "feed", editorial: false, title: "Feed", render: SP("feed"), min: { w: 380, h: 420 } },
+      { id: "feed", editorial: false, title: "Feed", tabs: [["near", "Near this view"], ["area", "Around the area in focus"], ["following", "Following"]], setTab: k => window.AtlasSocial && AtlasSocial.setFeed && AtlasSocial.setFeed(k), render: SP("feed"), min: { w: 380, h: 420 } },
       { id: "post", editorial: false, title: "Post", render: SP("post"), min: { w: 360, h: 380 } },
       { id: "events", editorial: false, title: "Events", render: SP("events"), min: { w: 380, h: 380 } },
       { id: "market", editorial: false, title: "Marketplace", render: SP("market"), min: { w: 400, h: 420 } },

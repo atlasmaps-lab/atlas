@@ -1020,6 +1020,11 @@ body.apptab-on #menu { top: 50px; }
 #apphead .ah-link { border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 8px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
 #apphead .ah-link:hover { color: var(--ink); border-bottom-color: color-mix(in srgb, var(--app) 40%, transparent); }
 #apphead .ah-link.on { color: var(--app); border-bottom-color: var(--app); }
+#apphead .ah-link.has-tabs::after { content: " ▾"; font-size: 10px; color: inherit; opacity: .75; }
+#ah-tabmenu { position: fixed; z-index: 710; min-width: 170px; background: var(--solid); border: 1px solid var(--rule); border-top: 3px solid var(--app, #446); border-radius: 0 0 8px 8px; box-shadow: var(--shadow); padding: 4px; display: flex; flex-direction: column; }
+#ah-tabmenu[hidden] { display: none; }
+#ah-tabmenu button { border: 0; background: none; font: inherit; font-size: 13px; text-align: left; padding: 7px 10px; border-radius: 5px; color: var(--ink); cursor: pointer; white-space: nowrap; }
+#ah-tabmenu button:hover, #ah-tabmenu button:focus-visible { background: var(--hover); color: var(--ink); }
 #apphead .ah-link.tool::before { content: "⚙ "; font-weight: 400; color: var(--ink-3); }
 body.appmode #top > .brand { display: none; }
 body.appmode #map { top: var(--ahh, 92px); height: calc(100% - var(--ahh, 92px)); }

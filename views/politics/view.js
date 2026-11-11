@@ -286,10 +286,11 @@
   // ---------- Money in politics (0.8) ----------
   // Donations and loans registered with the Electoral Commission, MPs' registered interests, and donors who have won
   // public contracts. The cards themselves (MP, party, donor, place) are core (money.js), so they open from anywhere.
+  const MFTABS = [["parties", "Parties"], ["donors", "Top donors"], ["latest", "Every donation"], ["contracts", "Donors with contracts"], ["lobby", "Meetings with ministers"], ["map", "On the map"]];
   const MF = { tab: "parties", q: "", party: "", st: "", min: 0, year: "" };
   function moneyPanel(ctx, el) {
     const Mo = ctx.money; if (!Mo) { el.innerHTML = `<p class="ap-note">The money data isn't loaded (data/money.js).</p>`; return; }
-    const D = Mo.data, Y = +ctx.today.slice(0, 4), tabs = [["parties", "Parties"], ["donors", "Top donors"], ["latest", "Every donation"], ["contracts", "Donors with contracts"], ["lobby", "Meetings with ministers"], ["map", "On the map"]];
+    const D = Mo.data, Y = +ctx.today.slice(0, 4), tabs = MFTABS;
     let body = "";
     if (MF.tab === "parties") {
       const rows = Object.entries(D.parties).map(([k, P]) => { const t5 = [0, 1, 2, 3, 4].reduce((s, i) => s + ((P.y[Y - i] || [0])[0]), 0); return { k, t5, tot: Object.values(P.y).reduce((s, v) => s + v[0], 0) }; }).filter(r => r.tot >= 1e5).sort((a, b) => b.t5 - a.t5 || b.tot - a.tot);
@@ -343,7 +344,7 @@
       { id: "councils", map: {"level": "council", "metrics": ["control"]}, title: "Councils", render: councils, min: { w: 460, h: 360 } },
       { id: "projection", map: {"level": "constituency", "metrics": ["proj_winner"]}, title: "Projection", render: projection, min: { w: 420, h: 320 } },
       { id: "news", title: "News", render: news, min: { w: 420, h: 320 } },
-      { id: "money", map: {"level": "constituency", "metrics": ["money_received"]}, title: "Money", blurb: "Donations, loans, MPs' interests and donors with public contracts", render: moneyPanel, min: { w: 460, h: 380 } },
+      { id: "money", map: {"level": "constituency", "metrics": ["money_received"]}, title: "Money", blurb: "Donations, loans, MPs' interests and donors with public contracts", tabs: MFTABS, setTab: k => { MF.tab = k; }, render: moneyPanel, min: { w: 460, h: 380 } },
       { id: "referendums", map: {"level": "council", "metrics": ["eu_leave"]}, title: "Referendums", render: referendums },
       { id: "protests", map: {"level": "council", "metrics": ["control", "protest_events"]}, title: "Protests", render: protests },
     ],
