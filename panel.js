@@ -46,5 +46,42 @@
     body._edObs.observe(body, { childList: true });
     dress(body, meta);
   }
-  window.AtlasPanel = { dress, watch, firstSentence };
+  // 0.10.1: every chart and table in a header panel can go to the workspace. A small button follows each chart (an SVG
+  // at least 160 px wide) and each table of two rows or more; it sends a copy as a card, titled with the panel and the
+  // section it sits under. Added again whenever the panel redraws.
+  function sendable(body) {
+    const items = [...body.querySelectorAll("svg, table")].filter(el => !el.closest(".ws-send-done, .ec-tile, button, .ed-head, .ed-notes") && !el.dataset.wsSend &&
+      (el.tagName === "TABLE" ? el.rows.length >= 2 && !el.parentElement.closest("table") : (el.getBoundingClientRect().width >= 160 || +(el.getAttribute("width") || 0) >= 160 || (el.viewBox && el.viewBox.baseVal && el.viewBox.baseVal.width >= 160)) && !el.parentElement.closest("svg")));
+    items.forEach(el => {
+      el.dataset.wsSend = "1";
+      const host = el.closest(".tscroll, .ex-scroll, .ec-chartwrap") || el;
+      const b = document.createElement("button"); b.type = "button"; b.className = "ws-send"; b.dataset.wssend = "1";
+      b.title = "Send a copy of this " + (el.tagName === "TABLE" ? "table" : "chart") + " to the workspace"; b.textContent = "To workspace";
+      host.after(b); b._target = el;
+    });
+  }
+  function sectionOf(body, el) {   // the nearest heading above an element in the panel
+    const hs = [...body.querySelectorAll("h3, h4")]; let best = null;   // section heads, not the panel's headline
+    hs.forEach(h => { if (h.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) best = h; });
+    return best ? best.textContent.trim().replace(/\s+/g, " ").slice(0, 90) : "";
+  }
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest("[data-wssend]"); if (!b || !b._target) return;
+    const body = b.closest(".wm-body") || document.body, meta = body._edMeta || {}, el = b._target;
+    const sec = sectionOf(body, el), title = [meta.title, sec && sec !== meta.title ? sec : ""].filter(Boolean).join(" · ") || "From Atlas";
+    const clone = el.cloneNode(true); clone.removeAttribute("data-ws-send");
+    const r = el.getBoundingClientRect();
+    if (window.AtlasCtx && AtlasCtx.sendToWS) {
+      AtlasCtx.sendToWS({ type: "card", title, html: `<div class="ws-snap">${clone.outerHTML}</div><div class="wsmeta">${esc(meta.app ? "Atlas " + meta.app : "Atlas")} · ${esc(title)}</div>`,
+        w: Math.max(360, Math.min(900, Math.round(r.width) + 40)), h: Math.max(240, Math.min(700, Math.round(r.height) + 110)) });
+      b.textContent = "Sent ✓"; setTimeout(() => { b.textContent = "To workspace"; }, 1600);
+    }
+  });
+  function watchSends(body) {
+    if (body._wsObs) return; let t = 0;
+    body._wsObs = new MutationObserver(() => { cancelAnimationFrame(t); t = requestAnimationFrame(() => sendable(body)); });
+    body._wsObs.observe(body, { childList: true, subtree: true });
+    requestAnimationFrame(() => sendable(body));
+  }
+  window.AtlasPanel = { dress, watch, firstSentence, watchSends };
 })();

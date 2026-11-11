@@ -5121,6 +5121,7 @@
     if (!slot) WM.place(w.el, last ? { x: last.x, y: last.y + 44, w: last.w, h: ph } : { x: innerWidth - pw - 16, y: top, w: pw, h: ph });
     markLinks();
     const isTool = APP.tools.includes(x);
+    if (window.AtlasPanel && AtlasPanel.watchSends && x.editorial !== false) AtlasPanel.watchSends(w.body);   // 0.10.1: charts and tables to the workspace
     if (window.AtlasPanel && !isTool && x.editorial !== false) AtlasPanel.watch(w.body, { app: APP.name.replace(/^Atlas /, ""), title: x.title, blurb: x.blurb || "", editorial: x.editorial });   // 0.10: editorial layout
     const draw = () => { if (!w.el.hidden) { try { x.render(CTX, w.body); } catch (e) { console.error(e); w.body.innerHTML = `<p class="aempty">Couldn't draw this: ${esc(e.message)}</p>`; } } };
     draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
