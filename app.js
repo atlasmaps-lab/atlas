@@ -958,6 +958,113 @@
     return out;
   }
 
+  // ---------- 0.10: government spending (data/spending.js: HM Treasury PESA and CRA, MHCLG revenue outturn) ----------
+  const SPD = window.ATLAS_SPEND || null, GSP = "Public spending";
+  const fyMid = fy => +fy.slice(0, 4) + "-10-01";   // a financial year sits at its middle on the time bar
+  const fyAt = (years, d) => { let y = null; for (const fy of years || []) if (fyMid(fy) <= d) y = fy; return y; };
+  function councilSpend(c) { // net current spending on residents: the council's own, plus a population share of its county's (two-tier areas)
+    const L = SPD && SPD.la; if (!L || !L.v) return null; const own = L.v[c], cty = L.county && L.county[c], cv = cty && L.v[cty];
+    if (!own && !cv) return null; const out = (own || L.services.map(() => 0)).slice(); let est = false;
+    if (cv) { const kids = Object.keys(L.county).filter(k => L.county[k] === cty), pops = kids.map(k => popAt(k, "2025-07-01") || 0), tp = pops.reduce((a, b) => a + b, 0), sh = tp ? (popAt(c, "2025-07-01") || 0) / tp : 0;
+      cv.forEach((v, i) => { out[i] += v * sh; }); est = true; }
+    return { v: out, est, county: cty, countyName: cty ? (L.cname && L.cname[cty]) || nameOf(cty) : null };
+  }
+  window.AtlasCouncilSpend = c => councilSpend(c);   // read by data/bd_spending.js
+  if (SPD && SPD.cra && SPD.cra.tot) {
+    const C = SPD.cra, RLV = ["region", "nation", "country"], RNM = { council: "Published for regions and nations: see Council spending for councils", ward: "Published for regions and nations", constituency: "Published for regions and nations" };
+    const src = SPD.sources.cra + " (OGL v3.0). Identifiable spending: what can be attributed to people in a region (not defence, debt interest or overseas spending)";
+    const regTot = (code, fy) => code === UKC ? Object.values(C.tot).reduce((a, o) => a + (o[fy] || 0), 0) : lvlOf(code) === "nation" && code === "E92000001" ? Object.keys(C.tot).filter(k => k.startsWith("E12")).reduce((a, k) => a + (C.tot[k][fy] || 0), 0) : (C.tot[code] || {})[fy];
+    def({ id: "spend_ph", p: "economic", group: GSP, label: "Public spending per head", scale: "ratio", nature: "rate", temporal: "annual", levels: RLV, nmText: RNM, source: src, weight: "population", fmt: v => "£" + fmtInt(v),
+      span: () => [fyMid(C.years[0]), TODAY], desc: "Government spending that benefits people here, per resident, in the financial year",
+      how: "Identifiable public spending (central government, councils and public corporations) attributed to the region or nation ÷ its mid-year population. Current prices",
+      get(code, d) { const fy = fyAt(C.years, d); if (!fy) return null; const t = regTot(code, fy), p = popAt(code, fy.slice(0, 4) + "-07-01"); if (t == null || !p) return null; const v = t * 1e6 / p;
+        return { v, text: `£${fmtInt(v)} a person (£${(t / 1000).toFixed(1)}bn in all)`, yr: fy }; } });
+    def({ id: "spend_tot", p: "economic", group: GSP, label: "Public spending (identifiable)", scale: "ratio", nature: "amount", temporal: "annual", levels: RLV, nmText: RNM, source: src, fmt: v => "£" + (v / 1e9).toFixed(1) + "bn",
+      span: () => [fyMid(C.years[0]), TODAY], desc: "Total government spending that benefits people here, in the financial year", how: "Identifiable public spending attributed to the region or nation, current prices",
+      get(code, d) { const fy = fyAt(C.years, d); if (!fy) return null; const t = regTot(code, fy); return t == null ? null : { v: t * 1e6, text: `£${(t / 1000).toFixed(1)}bn`, yr: fy }; } });
+  }
+  if (SPD && SPD.la && SPD.la.v) {
+    const L = SPD.la, src = SPD.sources.la + ` ${L.year} (OGL v3.0). Two-tier areas: the district's own spending plus a population share of the county's`;
+    def({ id: "council_spend_ph", p: "economic", group: GSP, label: "Council spending per head", scale: "ratio", nature: "rate", temporal: "static", levels: ["council", "region", "nation"], weight: "population", source: src, fmt: v => "£" + fmtInt(v),
+      valid: code => /^(S|W|N)/.test(code) ? "England only for now (Scotland, Wales and Northern Ireland publish their own council accounts)" : null, nmText: { ward: "Published for councils" },
+      desc: "Councils' net day-to-day spending on services for residents, per person", how: `Net current expenditure on services, ${L.year}, ÷ residents. Net of fees, charges and specific grants (such as the schools grant), so it shows what the council pays for from council tax, business rates and general grants, not everything spent through it`,
+      get(code) { const lv = lvlOf(code), f = c => { const r = councilSpend(c); return r ? r.v.reduce((a, b) => a + b, 0) : null; };
+        const t = lv === "council" ? f(code) : sumCouncils(code, f), p = lv === "council" ? popAt(code, "2025-07-01") : sumCouncils(code, c => L.v[c] || (L.county && L.county[c]) ? popAt(c, "2025-07-01") : null);
+        if (t == null || !p) return null; const r = lv === "council" ? councilSpend(code) : null;
+        return { v: t * 1e6 / p, text: `£${fmtInt(t * 1e6 / p)} a person (£${t.toFixed(0)}m)`, yr: L.year, est: r && r.est, estWhy: r && r.est ? `Includes a population share of ${r.countyName}'s spending (education, social care, roads)` : "" }; } });
+  }
+
+  // ---------- 0.10: migration, social housing, people's finances (data/people.js) ----------
+  const PPL = window.ATLAS_PEOPLE || null;
+  if (PPL) {
+    const MY = PPL.myeb || {}, AS = PPL.asylum || {}, HO = PPL.housing || {}, FN = PPL.fin || {}, src = PPL.sources;
+    const CLV = ["council", "region", "nation", "country"], nmW = { ward: "Published for councils", constituency: "Published for councils" };
+    const myIdx = d => { let j = -1; (MY.years || []).forEach((y, i) => { if (y + "-06-30" <= d) j = i; }); return j; };
+    const myVal = (c, k, j) => { const r = MY.v && MY.v[c]; return r && r[k] && r[k][j] != null ? r[k][j] : null; };
+    const mySum = (code, k, j) => lvlOf(code) === "council" ? myVal(code, k, j) : sumCouncils(code, c => myVal(c, k, j));
+    const myLabel = j => `year to June ${MY.years[j]}`;
+    const mig = (id, k, label, desc, how, per) => def({ id, p: "social", group: "Migration", label, scale: per ? "interval" : "ratio", nature: per ? "change" : "count", mid: per ? 0 : undefined, temporal: "annual", levels: CLV, nmText: nmW,
+      span: () => [MY.years[0] + "-06-30", TODAY], source: src.myeb + " (OGL v3.0)", desc, how, fmt: per ? (v => (v > 0 ? "+" : "") + v.toFixed(1) + " per 1,000") : fmtInt,
+      get(code, d) { const j = myIdx(d); if (j < 0) return null; const v = mySum(code, k, j); if (v == null) return null;
+        if (!per) return { v, text: `${fmtInt(v)} people`, yr: myLabel(j) };
+        const pop = mySum(code, "population", j); if (!pop) return null; const r = 1000 * v / pop; return { v: r, text: `${r > 0 ? "+" : ""}${r.toFixed(1)} per 1,000 residents (${v > 0 ? "+" : ""}${fmtInt(v)} people)`, yr: myLabel(j) }; } });
+    if (MY.v) {
+      mig("mig_intl_net", "international_net", "Net international migration", "People arriving from abroad minus people leaving for abroad, per 1,000 residents", "(International arrivals − departures) ÷ population, ONS mid-year estimates", true);
+      mig("mig_internal_net", "internal_net", "Net migration within the UK", "People moving in from the rest of the UK minus people moving out, per 1,000 residents", "(Moves in from other UK councils − moves out) ÷ population", true);
+      mig("mig_intl_in", "international_in", "Arrivals from abroad", "People who moved here from outside the UK in the year", "ONS mid-year estimates, international immigration component", false);
+      mig("mig_internal_in", "internal_in", "Arrivals from the rest of the UK", "People who moved here from another part of the UK in the year", "ONS mid-year estimates, internal migration (in)", false);
+    }
+    if (AS.support) {
+      const asTot = c => { const o = AS.support[c]; return o ? Object.values(o).reduce((a, b) => a + b, 0) : null; };
+      def({ id: "asylum_support", p: "social", group: "Migration", label: "People on asylum support", scale: "ratio", nature: "rate", temporal: "static", levels: CLV, nmText: nmW, weight: "population", source: src.asylum + " (OGL v3.0)",
+        fmt: v => v.toFixed(1) + " per 10,000", desc: "Asylum seekers housed or supported by the Home Office here, per 10,000 residents", how: `People receiving asylum support (section 95, section 4 or initial accommodation, including hotels) on ${AS.support_date}, ÷ residents`,
+        get(code) { const lv = lvlOf(code), n = lv === "council" ? asTot(code) : sumCouncils(code, asTot), p = popAt(code, "2025-07-01"); if (n == null || !p) return null;
+          const h = lv === "council" ? Object.entries(AS.support[code] || {}).find(([k]) => /hotel/i.test(k)) : null;
+          return { v: 10000 * n / p, text: `${(10000 * n / p).toFixed(1)} per 10,000 (${fmtInt(n)} people${h ? `, ${fmtInt(h[1])} in hotels` : ""})`, yr: AS.support_date }; } });
+      const rsTot = c => { const o = AS.resettle[c]; return o ? Object.values(o).reduce((a, b) => a + b, 0) : null; };
+      def({ id: "resettled", p: "social", group: "Migration", label: "Refugees resettled here (since 2014)", scale: "ratio", nature: "count", temporal: "static", levels: CLV, nmText: nmW, source: src.asylum + " (OGL v3.0)", fmt: fmtInt,
+        desc: "People resettled here through government schemes (Syria, Afghanistan, UK Resettlement Scheme and others) since 2014", how: "Sum of people resettled by council, all schemes, from 2014 to the latest quarter (excludes Homes for Ukraine and the Hong Kong BN(O) route)",
+        get(code) { const n = lvlOf(code) === "council" ? rsTot(code) : sumCouncils(code, rsTot); return n == null ? null : { v: n, text: `${fmtInt(n)} people` }; } });
+    }
+    if (HO.stock) {
+      const hsrc = src.housing + " (OGL v3.0)", hEN = code => /^(S|W|N)/.test(code) ? "England only for now" : null;
+      const st = c => HO.stock[c] || null, stSum = (code, i) => lvlOf(code) === "council" ? (st(code) || [])[i] : sumCouncils(code, c => (st(c) || [])[i]);
+      def({ id: "social_homes_pct", p: "social", group: "Social housing", label: "Social homes", scale: "ratio", nature: "share", temporal: "static", levels: ["council", "region", "nation"], valid: hEN, nmText: nmW, source: hsrc, fmt: pct1, breaks: [10, 14, 18, 24],
+        desc: "Homes owned by councils and housing associations, as a share of all homes", how: `(Council homes + housing association homes) ÷ all homes, ${HO.stock_year} (MHCLG table 100)`,
+        get(code) { const a = stSum(code, 0), b = stSum(code, 1), t = [0, 1, 2, 3].reduce((s, i) => s + (stSum(code, i) || 0), 0); if (!t) return null; const v = 100 * ((a || 0) + (b || 0)) / t;
+          return { v, text: `${pct1(v)} (${fmtInt((a || 0) + (b || 0))} of ${fmtInt(t)} homes: ${fmtInt(a || 0)} council, ${fmtInt(b || 0)} housing association)`, yr: HO.stock_year }; } });
+      const serAt2 = (S, code, d) => { const lv = lvlOf(code), y = String(Math.min(+d.slice(0, 4), 2099)); const pick = c => { const o = S[c]; if (!o) return null; let k = null; for (const yy in o) if (yy <= y && (!k || yy > k)) k = yy; return k ? [k, o[k]] : null; };
+        if (lv === "council") return pick(code); if (S[code]) return pick(code); let t = 0, yr = null, any = false; councilsIn(code).forEach(c => { const x = pick(c); if (x) { t += x[1]; yr = x[0]; any = true; } }); return any ? [yr, t] : null; };
+      def({ id: "council_homes", p: "social", group: "Social housing", label: "Council-owned homes", scale: "ratio", nature: "count", temporal: "annual", levels: ["council", "region", "nation"], valid: hEN, nmText: nmW, source: hsrc, fmt: fmtInt,
+        span: () => ["1979-04-01", TODAY], desc: "Homes owned by the council, each year since 1979 (Right to Buy and transfers to housing associations shrank this)", how: "MHCLG table 116, local authority dwelling stock at 1 April (councils that transferred all their homes show none)",
+        get(code, d) { const r = serAt2(HO.la_series, code, d); return r ? { v: r[1], text: `${fmtInt(r[1])} homes`, yr: r[0] } : null; } });
+      def({ id: "waiting_list", p: "social", group: "Social housing", label: "Households on the housing register", scale: "ratio", nature: "rate", temporal: "annual", levels: ["council", "region", "nation"], valid: hEN, nmText: nmW, source: hsrc, weight: "population",
+        span: () => ["1987-04-01", TODAY], fmt: v => v.toFixed(1) + " per 100 homes", desc: "Households waiting for social housing (on the council's register), per 100 homes", how: "Households on the local authority housing register at 1 April (MHCLG table 600) ÷ homes (table 100). Councils set their own rules on who can join, so lists aren't directly comparable",
+        get(code, d) { const r = serAt2(HO.waiting, code, d), t = [0, 1, 2, 3].reduce((s, i) => s + (stSum(code, i) || 0), 0); if (!r || !t) return null; return { v: 100 * r[1] / t, text: `${fmtInt(r[1])} households (${(100 * r[1] / t).toFixed(1)} per 100 homes)`, yr: r[0] }; } });
+    }
+    if (FN.claim) {
+      const mIdx = d => { let j = -1; (FN.months || []).forEach((m, i) => { const t = new Date(m + " 15"); if (t.toISOString().slice(0, 10) <= d) j = i; }); return j; };
+      def({ id: "claimant_rate", p: "social", group: "Finances and support", label: "Claimant count (out-of-work benefits)", scale: "ratio", nature: "share", temporal: "annual", levels: CLV, nmText: nmW, source: src.claim + " (OGL v3.0)", fmt: pct1, breaks: [2.5, 3.5, 4.5, 6],
+        span: () => [new Date(FN.months[0] + " 15").toISOString().slice(0, 10), TODAY], desc: "People claiming benefits mainly because they're unemployed, as a share of residents aged 16 to 64",
+        how: "Universal Credit claimants required to look for work, plus Jobseeker's Allowance, ÷ residents aged 16-64 (ONS). Monthly; includes some people in low-paid work who must look for more",
+        get(code, d) { const j = mIdx(d); if (j < 0) return null; const r = (FN.claim_rate[code] || [])[j], n = (FN.claim[code] || [])[j]; if (r == null) return null; return { v: r, text: `${pct1(r)}${n != null ? ` (${fmtInt(n)} people)` : ""}`, yr: FN.months[j] }; } });
+    }
+    if (FN.cilif) {
+      const yrs = FN.cilif_years || [];
+      def({ id: "child_poverty", p: "social", group: "Finances and support", label: "Children in low-income families", scale: "ratio", nature: "share", temporal: "annual", levels: ["ward", "council", "region", "nation", "country"], source: src.cilif + " (OGL v3.0)", fmt: pct1, breaks: [15, 22, 30, 40],
+        span: () => [(+yrs[0] - 1) + "-10-01", TODAY], desc: "Children living in households below 60% of the UK median income after housing costs",
+        how: "DWP local estimates (benefit and tax credit records, calibrated to the national survey), after housing costs, financial years ending " + yrs.join(", "),
+        get(code, d) { const o = FN.cilif[code] || FN.cilif_ward[code]; if (!o) return null; let j = -1; yrs.forEach((y, i) => { if ((+y - 1) + "-10-01" <= d) j = i; }); if (j < 0) return null; const v = o[1][j]; if (v == null) return null;
+          return { v: v <= 1 ? 100 * v : v, text: `${pct1(v <= 1 ? 100 * v : v)}${o[0][j] != null ? ` (${fmtInt(o[0][j])} children)` : ""}`, yr: `FYE ${yrs[j]}` }; } });
+    }
+    if (FN.dhp) def({ id: "dhp_awards", p: "social", group: "Finances and support", label: "Discretionary Housing Payments", scale: "ratio", nature: "count", temporal: "static", levels: ["council", "region", "nation"], source: src.dhp + " (OGL v3.0)", fmt: fmtInt,
+      desc: "Extra help with rent from the council, for people on Housing Benefit or Universal Credit housing costs", how: "Number of awards in the financial year, and spending",
+      get(code) { const lv = lvlOf(code), f = c => (FN.dhp[c] || [])[0], n = lv === "council" ? f(code) : sumCouncils(code, f); if (n == null) return null; const sp = lv === "council" ? (FN.dhp[code] || [])[1] : sumCouncils(code, c => (FN.dhp[c] || [])[1]);
+        return { v: n, text: `${fmtInt(n)} awards${sp ? `, £${fmtInt(sp)}` : ""}` }; } });
+    if (PPL.sx && PPL.sx.v) Object.entries(PPL.sx.meta || {}).forEach(([k, mt]) => def({ id: "sx_" + k, p: "social", group: "Finances and support", label: mt.dataset, scale: "ratio", nature: "count", temporal: "static", levels: ["council"], source: "DWP Stat-Xplore (OGL v3.0)", fmt: fmtInt,
+      desc: mt.measure + (mt.mean ? "; " + mt.mean : ""), get(code) { const o = PPL.sx.v[code]; if (!o || o[k] == null) return null; return { v: o[k], text: fmtInt(o[k]) + (o[k + "_mean"] != null ? ` · average £${o[k + "_mean"].toFixed(2)}` : ""), yr: mt.month }; } }));
+  }
+
   // ---------- 0.9: inward investment by region (DBT inward investment results; data/investment.js) ----------
   const INV = window.ATLAS_INVEST || null, GINV = "Investment";
   if (INV && INV.dbt && INV.dbt.region) {
@@ -2660,7 +2767,7 @@
     const era = p.level === "constituency" && p.to ? ` ${p.from.slice(0, 4)}–${p.to.slice(0, 4)}${p.approx ? " (approx. boundary)" : ""}` : "";
     return `${pinned ? `<button class="x" data-close aria-label="Close">×</button>` : ""}<div class="lvl"><span>${esc(LABEL[p.level])}${esc(era)}</span><span>${esc(code.replace(/^P\d\d-/, ""))}</span></div>
       <h3>${esc(nameOf(code))}${rec ? ` <span class="tag">edited</span>` : ""}</h3>${past ? `<div class="asof">As of ${esc(longDate(d))}</div>` : ""}<ul>${items.join("")}</ul>
-      ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${cardContext(onMap, code, pinned)}${window.AtlasMoney && (p.level === "constituency" || p.level === "council") ? AtlasMoney.areaLine(code, d, pinned) : ""}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
+      ${mapped.length ? `<ul class="extra">${mapped.join("")}</ul>` : ""}${pinned && window.AtlasNarrative ? onMap.filter(m => EN.isNum(m)).slice(0, 2).map(m => { const t = AtlasNarrative.story(m, code, { short: true }); return t ? `<div class="nv-card"><div class="nv-k">The story · ${esc(m.label)} ${infoBtn(m.id)}</div>${t}</div>` : ""; }).join("") : ""}${cardContext(onMap, code, pinned)}${window.AtlasMoney && (p.level === "constituency" || p.level === "council") ? AtlasMoney.areaLine(code, d, pinned) : ""}${extra.length ? `<ul class="extra">${extra.join("")}</ul>` : ""}${dj}
       ${rec && rec.notes ? `<div class="notes">${esc(rec.notes)}</div>` : ""}
       ${pinned ? `<div class="acts"><button class="btn primary" data-edit>Edit</button><button class="btn" data-chartme>Chart</button><button class="btn" data-wscard title="Send this card to the workspace">Card → workspace</button><button class="btn" data-wstile title="Send this place as a tile (a small map) to the workspace">Tile → workspace</button><button class="btn" data-addcmp>${state.sel.some(s => s.code === code) ? "✓ Selected" : "+ Compare"}</button><button class="btn" data-zoom>Zoom to</button><button class="btn" data-outline title="Turn this place's outline into a shape you can drag over other places, at its real size">Drag outline</button>${PR.events.length ? `<button class="btn" data-prhere title="The protests here ${esc(winLabel())}">Protests here</button>` : ""}</div>` : ""}`;
   }
@@ -3961,7 +4068,8 @@
     const rel = METRICS.filter(x => x.p === m.p && x.group === m.group && x.id !== m.id && PER[x.p].ready).slice(0, 6);
     const row = (k, v) => v ? `<tr><th>${k}</th><td>${v}</td></tr>` : "";
     const src = sourceOf(m);
-    return `<p class="ilead">${esc(m.desc || "")}</p><table class="itab">${row("How it's worked out", esc(m.how || EN.aggregate(m).why))}
+    const nv = window.AtlasNarrative ? AtlasNarrative.story(m, state.focus && P[state.focus] ? state.focus : UKC) : "";   // 0.10: the story first
+    return `${nv || `<p class="ilead">${esc(m.desc || "")}</p>`}<table class="itab">${row("How it's worked out", esc(m.how || EN.aggregate(m).why))}
       ${row("Unit", ex ? `e.g. ${esc((m.fmt || String)(ex.v))}${m.unit ? ` (${esc(m.unit)})` : ""}` : m.unit ? esc(m.unit) : "")}
       ${row("Kind of data", `${esc(m.scale)}, ${esc(m.nature)} · ${esc({ state: "holds until it changes", annual: "one value a year", event: "dated events", static: "one date only", election: "holds from one election to the next" }[m.temporal] || m.temporal)}`)}
       ${row("Where it applies", m.levels ? esc(m.levels.map(pl).join(", ")) + ` <small>(elsewhere: ${esc(NM_TEXT.toLowerCase())})</small>` : "every boundary set with data")}
@@ -4289,6 +4397,60 @@
     if (VIEW.mode === "ws") setView("split");
     repaint(); toast(`${spec.label} is on the map (Analysis perspective).`);
   }
+  // ---------- 0.10: what in Atlas's data goes with the chosen metric ----------
+  // Every other numeric metric is correlated with the outcome across the places being compared (Spearman, robust to
+  // outliers; Pearson shown too). p-values are corrected for testing many metrics at once (Benjamini-Hochberg). Near-copies
+  // of the outcome are flagged and set aside. For the strongest, a partial correlation holds density and deprivation fixed.
+  const EXPL = {};
+  function explainKey(cfg) { return [cfg.metrics[0], cfg.level, cfg.within, (cfg.custom || []).join(","), cfg.date].join("|"); }
+  function explainRun(cfg) {
+    const k = explainKey(cfg); if (EXPL[k]) return EXPL[k];
+    const o = M[cfg.metrics[0]], st = EXPL[k] = { done: false, rows: [], n: 0, tested: 0 };
+    withDate(cfg.date, () => {
+      const codes = anCodes(cfg), y = vals(o, codes, cfg.date); st.n = y.filter(v => v != null).length; st.codes = codes;
+      const pool = anMetricsAll().filter(m => m.id !== o.id && !/_lq$/.test(m.id) && !(m.pickKey && m.pickKey === o.pickKey) && !(m.bd && m.bd === o.bd) && (!m.levels || m.levels.includes(cfg.level)));
+      const ctrl = ["density", "imd_score"].filter(id => M[id] && id !== o.id).map(id => vals(M[id], codes, cfg.date));
+      let i = 0;
+      const step = () => {
+        withDate(cfg.date, () => { for (const end = Math.min(pool.length, i + 12); i < end; i++) {
+          const m = pool[i]; let x; try { x = vals(m, codes, cfg.date); } catch (e) { continue; }
+          const s = ST.spearman(x, y); if (s.r == null || s.n < 30) continue; const pr = ST.pearson(x, y); st.tested++;
+          st.rows.push({ m, r: s.r, p: s.p, pr: pr.r, n: s.n, x, dup: Math.abs(s.r) > 0.97 || Math.abs(pr.r || 0) > 0.97 || (m.group === o.group && m.p === o.p && Math.abs(s.r) > 0.9) });
+        } });
+        if (i < pool.length) { setTimeout(step, 0); if (!anEl.hidden) explainPaint(); return; }
+        // Benjamini-Hochberg: q = p * tests / rank, made monotone from the largest p down
+        const L = st.rows.filter(r => r.p != null).sort((a, b) => a.p - b.p), T = L.length; let mn = 1;
+        for (let j = T - 1; j >= 0; j--) { mn = Math.min(mn, L[j].p * T / (j + 1)); L[j].q = mn; }
+        st.rows.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+        st.rows.filter(r => !r.dup && !(r.m.p === o.p && r.m.group === o.group)).slice(0, 3).forEach(r => { if (!ctrl.length) return; const res = ST.partial([y, r.x].concat(ctrl)); if (res.R) { r.partial = res.R[0][1]; r.pn = res.n; } });
+        st.rows.forEach(r => { delete r.x; }); st.done = true; if (!anEl.hidden) explainPaint();
+      };
+      setTimeout(step, 0);
+    });
+    return st;
+  }
+  function explainHTML(cfg) {
+    if (cfg.mode === "time" || !cfg.metrics.length || !M[cfg.metrics[0]]) return "";
+    const lab = m => m.bd && BD[m.bd] ? `${BD[m.bd].label}: ${BD[m.bd].name(pickOf(m.id))}` : m.label;   // breakdowns name the chosen category
+    const o = M[cfg.metrics[0]], st = explainRun(cfg), unit = (LEVEL_OPTS().find(x => x[0] === cfg.level) || [0, "places"])[1].toLowerCase();
+    const same = r => r.m.p === o.p && r.m.group === o.group;   // other measures of the same thing (e.g. other life expectancies)
+    const real = st.rows.filter(r => !r.dup && !same(r)), kin = st.rows.filter(r => !r.dup && same(r)), dup = st.rows.filter(r => r.dup), top = real.slice(0, 10), say = r => {
+      const a = esc(lab(r.m).toLowerCase()), b = esc(lab(o).toLowerCase());
+      return r.r > 0 ? `Places with higher ${a} tend to have higher ${b}` : `Places with higher ${a} tend to have lower ${b}`; };
+    return `<details class="ex" open><summary><b>What in Atlas's data goes with ${esc(o.label)}</b> <small>${st.done ? `${st.tested} metrics tested across ${st.n} ${esc(unit)}` : `looking through the metrics… ${st.tested} so far`}</small></summary>
+      ${top.length ? `<table class="ex-t"><thead><tr><th>Metric</th><th>Link (Spearman)</th><th class="num">r</th><th class="num">Pearson</th><th title="Holding population density and deprivation fixed">Holding density and deprivation fixed</th><th class="num">places</th></tr></thead><tbody>
+        ${top.length ? "" : ""}${top.map(r => `<tr data-exm="${r.m.id}" title="${esc(say(r))}. Click to plot it against ${esc(o.label)}"><td class="ex-n"><i class="sw" style="background:${PER[r.m.p].hue}"></i>${esc(lab(r.m))}<small>${esc(say(r))}</small></td>
+          <td><span class="ex-bar"><i style="${r.r >= 0 ? `left:50%;width:${(50 * r.r).toFixed(1)}%;background:#2b6cb0` : `right:50%;width:${(-50 * r.r).toFixed(1)}%;background:#c0392b`}"></i></span><small>${esc(ST.strength(r.r))}${r.q != null && r.q >= 0.05 ? " · could be chance" : ""}</small></td>
+          <td class="num">${r.r.toFixed(2)}</td><td class="num">${r.pr != null ? r.pr.toFixed(2) : "—"}</td><td class="num">${r.partial != null ? `${r.partial.toFixed(2)}${Math.abs(r.partial) < Math.abs(r.r) / 2 ? " <small>(mostly explained by them)</small>" : ""}` : ""}</td><td class="num">${r.n}</td></tr>`).join("")}</tbody></table>` : st.done ? `<p class="aempty">Not enough places with both values to say anything.</p>` : ""}
+      ${kin.length ? `<p class="ex-dup"><b>Other measures in the same group</b> (${esc(o.group || PER[o.p].name)}), which move with it as you'd expect: ${kin.slice(0, 6).map(r => `<button class="linkish" data-exm="${r.m.id}">${esc(r.m.label)}</button> ${r.r.toFixed(2)}`).join(", ")}.</p>` : ""}
+      ${dup.length ? `<p class="ex-dup">Set aside as near-copies of ${esc(o.label)} (built from the same numbers, or almost identical): ${dup.slice(0, 6).map(r => esc(r.m.label)).join(", ")}.</p>` : ""}
+      <div class="ex-warn"><b>Read with care.</b><ul>
+        <li><b>Correlation is not causation.</b> Two things can move together because a third drives both (age, cities, deprivation), or by coincidence.</li>
+        <li><b>Places, not people.</b> A link between areas doesn't mean the same holds for individuals in them (the ecological fallacy).</li>
+        <li><b>Many tests.</b> With ${st.tested || "many"} metrics tried, some links appear by chance; those still likely to be chance after correcting for that (Benjamini-Hochberg, q ≥ 0.05) are marked.</li>
+        <li><b>Scope.</b> ${esc(nameOf(cfg.within === "custom" ? UKC : cfg.within))}, ${esc(unit)}, on ${esc(longDate(cfg.date))}; each link uses only places with both values. Different boundaries or dates can give different answers.</li></ul></div></details>`;
+  }
+  function explainPaint() { const box = anEl.querySelector(".an-ex"); if (!box) return; const cfg = Object.assign({}, AN, { date: state.date }); box.innerHTML = explainHTML(cfg); }
   function renderAnalyse() {
     if (anEl.hidden) return;
     const cfg = Object.assign({}, AN, { date: state.date }), methods = anMethods(cfg), okM = methods.filter(m => m[2]);
@@ -4307,6 +4469,7 @@
       </div><div class="an-main">
         ${AN.metrics.length ? `<div class="an-methods">${methods.map(([id, l, ok, why]) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}>${esc(l)}</button>`).join("")}</div>${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")} ${helpBtn("m-" + AN.method, "Help: what this method needs and assumes")}</p>` : `<p class="anwhy">No method suits this choice yet. ${methods.filter(m => !m[2]).slice(0, 3).map(([id, l, , why]) => `<button class="linkish" data-help="m-${id}">${esc(l)}: ${esc(why)}</button>`).join(" · ")}</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
         ${AN.method === "rel" ? `<label class="anpick">Split by a category <select data-ansplit><option value="">none</option>${anCats().map(m => `<option value="${m.id}" ${AN.split === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : ""}
+        <div class="an-ex">${explainHTML(cfg)}</div>
         <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
         ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Show on map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy data (CSV)</button>` : ""}</div>` : ""}
       </div></div>`;
@@ -4318,6 +4481,7 @@
   WM.register(anEl, { type: "analyse", title: "Analyse", handle: ".an-head", min: { w: 360, h: 260 }, onResize: renderAnalyse, close: closeAnalyse });
   anEl.addEventListener("click", e => {
     const a = e.target.closest("[data-go]"); if (a) { focus(a.dataset.go); return; }
+    const ex = e.target.closest("[data-exm]"); if (ex) { AN.metrics = [AN.metrics[0], ex.dataset.exm]; AN.method = "rel"; saveAN(); renderAnalyse(); return; }   // 0.10: plot the pair
     const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
     if (b.hasAttribute("data-anx")) { closeAnalyse(); return; }
     if (ds.anmethod && b.getAttribute("aria-disabled") === "true") { undoToast(`${AN_BY[ds.anmethod].label}: ${b.title}.`, () => {}); const t = $("toast"), u = $("undo-btn"); if (u) { u.textContent = "What it needs"; u.onclick = () => { t.hidden = true; openHelp("help-m-" + ds.anmethod); }; } return; }
@@ -4838,6 +5002,7 @@
     openChart: o => openChart(o), openCmp: () => openCmp(), openProtestList: () => openProtestList(), openProtestCard: i => openProtestCard(i), openInfo: id => openMetricInfo(id),
     sendToWS: it => sendToWS(it), toast, copy, download, searchNames, onDate: f => appListeners.push(f), openPanel: id => openAppPanel(id), store,
     mapped: () => planMetrics().map(m => m.id),   // 0.9
+    caveat: id => CAVEAT[id] || "", story: (id, code, o) => window.AtlasNarrative && M[id] ? AtlasNarrative.story(M[id], code || state.focus || UKC, o) : "",   // 0.10
     defineMetric: m => { if (!M[m.id]) def(m); PS.active[m.id] = true; }, repaint: () => repaint(),
     // 0.7.1
     projection: () => projection(), POLLS, ent, linkPerson, get NEWS() { return window.ATLAS_NEWS || null; }, parentOf: c => parentOf(c), value: (id, c, d) => { const m = M[id]; if (!m) return null; try { return m.get(c, d || state.date); } catch (e) { return null; } },
@@ -4850,6 +5015,8 @@
   CTX.map = map; CTX.POI = POIDATA; CTX.openPoiCard = id => openPoiCard(id); CTX.plain = plain;   // 0.8: views that draw on the map (Atlas Transport)
   if (window.AtlasMoney) AtlasMoney.init(CTX);
   if (window.AtlasTrade) AtlasTrade.init(CTX);   // 0.9
+  if (window.AtlasNarrative) AtlasNarrative.init(CTX);   // 0.10
+  CTX.councilSpend = c => councilSpend(c);
 
   // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------
   // News shows only when the feed has items for what's on screen: the focused place (or anything inside it), the topics

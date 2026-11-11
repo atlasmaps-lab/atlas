@@ -1152,9 +1152,31 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
   .tr-pn { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tr-tariff label { font-size: 12px; } .tr-tariff select { max-width: 220px; }
   .trk { margin-top: 4px; display: grid; gap: 2px; }
+  .sp-sub td { font-size: 11.5px; color: var(--ink-2); } .sp-sub .tr-n { padding-left: 14px; } tr[data-spf], tr[data-spgo] { cursor: pointer; } tr[data-spf]:hover, tr[data-spgo]:hover { background: var(--hover); }
   .pf-bar { margin: 4px 0 6px; } .pf-t td { padding: 2px 4px; } .pf-t tr[data-pfk] { cursor: pointer; } .pf-t tr[data-pfk]:hover { background: var(--hover); }
   .pf-lq { white-space: nowrap; } .pf-lqbar { position: relative; display: inline-block; width: 60px; height: 7px; background: var(--chip); border-radius: 3px; vertical-align: middle; margin-right: 4px; }
   .pf-lqbar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; } .pf-lq small { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  /* 0.10: what goes with this (Analyse) */
+  .ex { margin: 4px 0 12px; border: 1px solid var(--rule); border-radius: 10px; padding: 8px 10px; background: var(--solid); }
+  .ex > summary { cursor: pointer; font-size: 13px; } .ex > summary small { color: var(--ink-3); margin-left: 6px; font-weight: 400; }
+  .ex-t { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; }
+  .ex-t th { font-size: 10.5px; color: var(--ink-3); text-align: left; font-weight: 600; padding: 3px 4px; border-bottom: 1px solid var(--rule); }
+  .ex-t td { padding: 4px; border-bottom: 1px solid var(--rule); vertical-align: top; } .ex-t tr[data-exm] { cursor: pointer; } .ex-t tr[data-exm]:hover { background: var(--hover); }
+  .ex-t .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ex-n small { display: block; color: var(--ink-3); font-size: 11px; } .ex-n .sw { width: 8px; height: 8px; display: inline-block; border-radius: 2px; margin-right: 5px; }
+  .ex-bar { position: relative; display: block; width: 110px; height: 7px; background: var(--chip); border-radius: 3px; margin: 3px 0; } .ex-bar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+  .ex-t td small { color: var(--ink-3); font-size: 11px; }
+  .ex-dup { font-size: 11.5px; color: var(--ink-3); }
+  .ex-warn { font-size: 11.5px; color: var(--ink-2); background: rgba(217,164,65,.12); border-radius: 8px; padding: 6px 10px; } .ex-warn ul { margin: 4px 0 0; padding-left: 16px; } .ex-warn li { margin: 2px 0; }
+  /* 0.10: narratives */
+  .nv p { margin: 0 0 7px; line-height: 1.5; }
+  .nv-story { font-family: var(--f-serif, "PT Serif", Georgia, serif); font-size: 13.5px; color: var(--ink); }
+  .nv-story b { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .nv-means, .nv-trust { font-size: 12px; color: var(--ink-2); }
+  .nv-trust { border-left: 3px solid #d9a441; padding-left: 8px; }
+  .nv-est { color: var(--ink-3); font-size: 12px; font-family: var(--f); }
+  .nv-card { margin: 8px 0 4px; padding: 8px 10px; background: var(--chip); border-radius: 8px; }
+  .nv-k { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
   .crowdramp { margin: 6px 0 2px; }
   .cr-bar { height: 10px; border-radius: 5px; }
   .cr-ticks { display: grid; grid-template-columns: repeat(4, 1fr); font-size: 10.5px; color: var(--ink-2); margin-top: 2px; }
@@ -1170,9 +1192,9 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=0920">
-<script src="theme.js?v=0920"></script>
-<script src="theme-apply.js?v=0920"></script>
+<link rel="stylesheet" href="fonts.css?v=1000">
+<script src="theme.js?v=1000"></script>
+<script src="theme-apply.js?v=1000"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1293,29 +1315,33 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=0920"></script>
+<script src="data/places_poi.js?v=1000"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=0920"></script>
-<script src="data/representation.js?v=0920"></script>
-<script src="data/trade.js?v=0920"></script>
-<script src="data/investment.js?v=0920"></script>
-<script src="data/industry.js?v=0920"></script>
-<script src="data/census.js?v=0920"></script>
-<script src="data/health_deaths.js?v=0920"></script>
-<script src="data/bd_economy.js?v=0920"></script>
-<script src="data/bd_census.js?v=0920"></script>
-<script src="data/bd_health.js?v=0920"></script>
-<script src="data/transport.js?v=0920"></script>
-<script src="data/economy.js?v=0920"></script>
-<script src="data/airports.js?v=0920"></script>
+<script src="data/money.js?v=1000"></script>
+<script src="data/representation.js?v=1000"></script>
+<script src="data/trade.js?v=1000"></script>
+<script src="data/investment.js?v=1000"></script>
+<script src="data/industry.js?v=1000"></script>
+<script src="data/census.js?v=1000"></script>
+<script src="data/health_deaths.js?v=1000"></script>
+<script src="data/bd_economy.js?v=1000"></script>
+<script src="data/bd_census.js?v=1000"></script>
+<script src="data/spending.js?v=1000"></script>
+<script src="data/bd_health.js?v=1000"></script>
+<script src="data/people.js?v=1000"></script>
+<script src="data/bd_spending.js?v=1000"></script>
+<script src="data/bd_people.js?v=1000"></script>
+<script src="data/transport.js?v=1000"></script>
+<script src="data/economy.js?v=1000"></script>
+<script src="data/airports.js?v=1000"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="data/environment.js?v=0920"></script>
-<script src="stats.js?v=0920"></script>
-<script src="psephology.js?v=0920"></script>
-<script src="charts.js?v=0920"></script>
-<script src="engine.js?v=0920"></script>
-<script src="xlsx.js?v=0920"></script>
+<script src="data/environment.js?v=1000"></script>
+<script src="stats.js?v=1000"></script>
+<script src="psephology.js?v=1000"></script>
+<script src="charts.js?v=1000"></script>
+<script src="engine.js?v=1000"></script>
+<script src="xlsx.js?v=1000"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1325,15 +1351,16 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=0920"></script>
-<script src="apps.js?v=0920"></script>
-<script src="views/views.js?v=0920"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=1000"></script>
+<script src="apps.js?v=1000"></script>
+<script src="views/views.js?v=1000"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=0920"></script>
-<script src="money.js?v=0920"></script>
-<script src="trade.js?v=0920"></script>
-<script src="profile.js?v=0920"></script>
-<script src="devdesign.js?v=0920"></script>
-<script src="app.js?v=0920"></script>
+<script src="windows.js?v=1000"></script>
+<script src="money.js?v=1000"></script>
+<script src="trade.js?v=1000"></script>
+<script src="narrative.js?v=1000"></script>
+<script src="profile.js?v=1000"></script>
+<script src="devdesign.js?v=1000"></script>
+<script src="app.js?v=1000"></script>
 </body>
 </html>
