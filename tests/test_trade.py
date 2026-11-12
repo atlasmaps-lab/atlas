@@ -35,6 +35,10 @@ def main():
         page.route("**/trade-tariff.service.gov.uk/api/v2/commodities/**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(COMMODITY)))
         page.wait_for_function("document.querySelector('.tr-head')", timeout=60000)
         rep.check("exports" in js("() => document.querySelector('.tr-head').innerText").lower() and js("() => AtlasDebug.PS.mapped.markets.includes('trade_routes_exp')"), "Atlas Markets opens on Trade, with export routes on the map")
+        # 0.12: exports and imports together
+        rep.check(js("() => !!document.querySelector('[data-trf=both].on')") and js("() => !!document.querySelector('.tr-2 thead')"), "Trade shows exports and imports together by default (both columns, sortable)")
+        js("() => document.querySelector('[data-trmap=both]').click()"); page.wait_for_timeout(1500)
+        rep.check(js("() => ['trade_routes_exp', 'trade_routes_imp'].every(id => AtlasDebug.PS.mapped.markets.includes(id))"), "Show both routes puts export and import routes on the map together")
         # products: drill down
         open_panel(page, "products"); page.wait_for_selector("[data-trtog='87']")
         page.click("[data-trtog='87']"); page.wait_for_selector("[data-trtog='8703']", timeout=60000); page.click("[data-trtog='8703']"); page.wait_for_selector("[data-trtog='870380']"); page.click("[data-trtog='870380']")

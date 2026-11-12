@@ -38,14 +38,20 @@
   win.open = new Map();
 
   // ---------- Trade (overview) ----------
-  const OV = { f: "exp" };
+  const OV = { f: "both" };   // 0.12: exports and imports together by default
+  const vOf = (o, f) => !o ? 0 : f === "both" ? (o.exp || 0) + (o.imp || 0) : (o[f] || 0);
+  // both directions side by side: name, exports, imports, balance (a table with headings, so it sorts)
+  const bars2 = (rows, nameOf, click) => { const mx = Math.max(1, ...rows.map(r => Math.max(r.exp || 0, r.imp || 0)));
+    return `<table class="tr-t tr-2"><thead><tr><th></th><th class="num">${FL.exp}</th><th class="num">${FL.imp}</th><th class="num">Balance</th></tr></thead><tbody>${rows.map(r => `<tr ${click ? `data-${click}="${esc(r.k)}"` : ""}><td class="tr-n">${nameOf(r.k)}<span class="tr-b2"><i style="width:${(100 * (r.exp || 0) / mx).toFixed(1)}%;background:${FLC.exp}"></i><i style="width:${(100 * (r.imp || 0) / mx).toFixed(1)}%;background:${FLC.imp}"></i></span></td><td class="num" data-v="${r.exp || 0}">${gbp(r.exp || 0)}</td><td class="num" data-v="${r.imp || 0}">${gbp(r.imp || 0)}</td><td class="num ${(r.exp || 0) - (r.imp || 0) < 0 ? "neg" : "pos"}" data-v="${(r.exp || 0) - (r.imp || 0)}">${gbp((r.exp || 0) - (r.imp || 0))}</td></tr>`).join("")}</tbody></table>`; };
   function overview(cx, el) {
     const t = T(); if (!t) { el.innerHTML = `<p class="ap-note">Trade data isn't loaded.</p>`; return; }
-    const f = OV.f, o = f === "exp" ? "imp" : "exp", bal = t.tot.exp - t.tot.imp;
+    const f = OV.f, o = f === "exp" ? "imp" : "exp", bal = t.tot.exp - t.tot.imp, both = f === "both";
     const mser = ["exp", "imp"].map(k => ({ name: FL[k], colour: FLC[k], pts: t.months[k].map(([m, v]) => [ym(m), v]) }));
     const chs = Object.entries(t.ch).map(([k, c]) => [k, c[f]]).sort((a, b) => b[1] - a[1]).slice(0, 10);
     const cts = Object.entries(t.cty).map(([k, c]) => [k, c[f], gbp(c[f] - c[o]).replace(/^(?!−)/, f === "exp" ? "+" : "")]).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    const mv = (t.movers[f] || []).slice(0, 8);
+    const mv = both ? [...(t.movers.exp || []).slice(0, 5).map(x => [...x, "exp"]), ...(t.movers.imp || []).slice(0, 5).map(x => [...x, "imp"])] : (t.movers[f] || []).slice(0, 8).map(x => [...x, f]);
+    const chs2 = Object.entries(t.ch).map(([k, c]) => ({ k, exp: c.exp, imp: c.imp })).sort((a, b) => (b.exp + b.imp) - (a.exp + a.imp)).slice(0, 10);
+    const cts2 = Object.entries(t.cty).map(([k, c]) => ({ k, exp: c.exp, imp: c.imp })).sort((a, b) => (b.exp + b.imp) - (a.exp + a.imp)).slice(0, 10);
     const yr = k => { const y = {}; t.months[k].forEach(([m, v]) => { const Y = 2000 + +m.slice(0, 2); y[Y] = (y[Y] || 0) + v; }); return y; }, ye = yr("exp"), y0 = Object.keys(ye).sort()[0], full = Object.keys(ye).filter(y => t.months.exp.filter(([m]) => 2000 + +m.slice(0, 2) === +y).length === 12).sort();
     const fy = full[full.length - 1], tc = Object.entries(t.cty).sort((a, b) => b[1].exp - a[1].exp)[0], ti = Object.entries(t.cty).sort((a, b) => b[1].imp - a[1].imp)[0], tch = Object.entries(t.ch).sort((a, b) => b[1].exp - a[1].exp)[0];
     const story = `The UK ${bal < 0 ? "buys" : "sells"} <b>${gbp(Math.abs(bal))}</b> more goods ${bal < 0 ? "than it sells" : "than it buys"} a year. In the 12 months to ${esc(mname(t.period[1]))} it exported ${gbp(t.tot.exp)} of goods and imported ${gbp(t.tot.imp)}.
@@ -55,13 +61,13 @@
         <p class="nv-trust">HMRC's customs and survey records, revised for months. Goods only: the UK earns most abroad from services, so a goods deficit isn't the whole picture (Partners shows services too). Precious metals moving through London swing the totals; imports are by country of origin.</p></div>
       <div class="tr-head"><div><span class="tr-k">Exports</span><b>${gbp(t.tot.exp)}</b></div><div><span class="tr-k">Imports</span><b>${gbp(t.tot.imp)}</b></div><div><span class="tr-k">Balance</span><b class="${bal < 0 ? "neg" : "pos"}">${gbp(bal)}</b></div></div>
       <p class="ap-note">Monthly since 2016:</p><div class="tr-chart">${trend(mser, 440, 150)}</div>
-      <div class="seg sm" role="group">${["exp", "imp"].map(k => `<button data-trf="${k}" class="${k === f ? "on" : ""}">${FL[k]}</button>`).join("")}</div>
-      <h4>Top products (chapters)</h4>${bars(chs, f, k => `${esc(k)} ${esc(short(t.ch[k].n))}`, "trprod")}
-      <h4>Top partners <small>(value, and the UK's balance with them)</small></h4>${bars(cts, f, k => esc(cty(k)), "trcty")}
-      <h4>Biggest changes on the year before</h4><table class="tr-t">${mv.map(([h, n, v, pv]) => `<tr data-trprod="${h}"><td class="tr-n">${esc(h)} ${esc(short(n))}</td><td class="num">${gbp(pv)} → ${gbp(v)}</td><td class="num tr-x ${v >= pv ? "pos" : "neg"}">${chg(v, pv)}</td></tr>`).join("")}</table>
+      <div class="seg sm" role="group">${["both", "exp", "imp"].map(k => `<button data-trf="${k}" class="${k === f ? "on" : ""}">${k === "both" ? "Both" : FL[k]}</button>`).join("")}</div>
+      <h4>Top products (chapters)</h4>${both ? bars2(chs2, k => `${esc(k)} ${esc(short(t.ch[k].n))}`, "trprod") : bars(chs, f, k => `${esc(k)} ${esc(short(t.ch[k].n))}`, "trprod")}
+      <h4>Top partners <small>(${both ? "exports, imports and the UK's balance" : "value, and the UK's balance with them"})</small></h4>${both ? bars2(cts2, k => esc(cty(k)), "trcty") : bars(cts, f, k => esc(cty(k)), "trcty")}
+      <h4>Biggest changes on the year before</h4><table class="tr-t">${mv.map(([h, n, v, pv, fl]) => `<tr data-trprod="${h}"><td class="tr-n">${esc(h)} ${esc(short(n))}${both ? ` <small class="tr-fl ${fl}">${FL[fl]}</small>` : ""}</td><td class="num">${gbp(pv)} → ${gbp(v)}</td><td class="num tr-x ${v >= pv ? "pos" : "neg"}">${chg(v, pv)}</td></tr>`).join("")}</table>
       <h4>Dependence: imports mostly from one country</h4><p class="ap-note">Products (HS6) worth over £50m a year where one country supplies more than half of UK imports.</p>
       <table class="tr-t">${(t.dep || []).slice(0, 12).map(([h, n, c, sh, v]) => `<tr data-trprod="${h}"><td class="tr-n">${esc(short(n, 46))}</td><td>${esc(cty(c))}</td><td class="num">${(sh * 100).toFixed(0)}%</td><td class="num tr-x">${gbp(v)}</td></tr>`).join("")}</table>
-      <div class="ap-row"><button class="btn sm" data-trmap="exp">Show export routes</button><button class="btn sm" data-trmap="imp">Show import routes</button><button class="btn sm" data-trmetric>Map exports by area</button></div>
+      <div class="ap-row"><button class="btn sm" data-trmap="both">Show both routes</button><button class="btn sm" data-trmap="exp">Export routes</button><button class="btn sm" data-trmap="imp">Import routes</button><button class="btn sm" data-trmetric>Map exports by area</button></div>
       <p class="ap-note">${esc(t.sources)}</p>`;
     el.onclick = e => {
       const b = e.target.closest("[data-trf]"); if (b) { OV.f = b.dataset.trf; overview(cx, el); return; }
@@ -76,30 +82,30 @@
     const po = e.target.closest("[data-trport]"); if (po) { openPort(po.dataset.trport); return true; }
     return false;
   }
-  function showRoutes(f, code) {
-    ctx.trade.setProduct(code || null, f);
-    const on = ctx.mapped ? ctx.mapped() : []; ctx.mapOnly([...new Set(on.filter(id => !/^trade_routes_/.test(id)).concat(["trade_routes_" + f]))]);
+  function showRoutes(f, code) {   // 0.12: "both" shows export and import routes together (imports dashed)
+    ctx.trade.setProduct(code || null, f === "both" ? "exp" : f);
+    const on = ctx.mapped ? ctx.mapped() : []; ctx.mapOnly([...new Set(on.filter(id => !/^trade_routes_/.test(id)).concat(f === "both" ? ["trade_routes_exp", "trade_routes_imp"] : ["trade_routes_" + f]))]);
     ctx.view([10, 35], 1.6);
   }
   const mname = k => new Date(2000 + +k.slice(0, 2), +k.slice(2) - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
   const short = (n, l) => { n = String(n || ""); l = l || 60; return n.length > l ? n.slice(0, l - 1) + "…" : n; };
 
   // ---------- Products ----------
-  const PR = { f: "exp", q: "", open: new Set() };
+  const PR = { f: "both", q: "", open: new Set() };
   function products(cx, el) {
     const t = T(); if (!t) { el.innerHTML = ""; return; }
     const f = PR.f;
     const row = (code, depth) => { const n = node(code); if (!n) return ""; const has = code.length < 8, op = PR.open.has(code);
-      return `<li style="--d:${depth}"><div class="tr-row"><button class="tr-tog" ${has ? `data-trtog="${code}"` : "disabled"} aria-label="${op ? "Close" : "Open"}">${has ? (op ? "▾" : "▸") : "·"}</button><button class="linkish tr-pn" data-trprod="${code}"><b>${esc(code)}</b> ${esc(short(n.n, 70))}</button><span class="num">${gbp(n[f])}</span></div>
-        ${op ? `<ul>${(D ? kids(code) : []).map(k => [k, (node(k) || {})[f] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 60).map(([k]) => row(k, depth + 1)).join("") || (D ? "" : `<li class="ap-note">Loading…</li>`)}</ul>` : ""}</li>`; };
+      return `<li style="--d:${depth}"><div class="tr-row"><button class="tr-tog" ${has ? `data-trtog="${code}"` : "disabled"} aria-label="${op ? "Close" : "Open"}">${has ? (op ? "▾" : "▸") : "·"}</button><button class="linkish tr-pn" data-trprod="${code}"><b>${esc(code)}</b> ${esc(short(n.n, 70))}</button>${f === "both" ? `<span class="num tr-ei" data-v="${(n.exp || 0) + (n.imp || 0)}"><i class="e">${gbp(n.exp || 0)}</i><i class="i">${gbp(n.imp || 0)}</i></span>` : `<span class="num">${gbp(n[f])}</span>`}</div>
+        ${op ? `<ul>${(D ? kids(code) : []).map(k => [k, vOf(node(k), f)]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 60).map(([k]) => row(k, depth + 1)).join("") || (D ? "" : `<li class="ap-note">Loading…</li>`)}</ul>` : ""}</li>`; };
     let list;
     if (PR.q && D) {
       const q = PR.q.toLowerCase(), hits = [];
-      [["h4", D.h4], ["h6", D.h6], ["c8", D.c8]].forEach(([, M]) => { for (const k in M) if (k.startsWith(q) || M[k].n.toLowerCase().includes(q)) hits.push([k, M[k][f] || 0]); });
-      Object.entries(t.ch).forEach(([k, c]) => { if (k.startsWith(q) || c.n.toLowerCase().includes(q)) hits.push([k, c[f]]); });
+      [["h4", D.h4], ["h6", D.h6], ["c8", D.c8]].forEach(([, M]) => { for (const k in M) if (k.startsWith(q) || M[k].n.toLowerCase().includes(q)) hits.push([k, vOf(M[k], f)]); });
+      Object.entries(t.ch).forEach(([k, c]) => { if (k.startsWith(q) || c.n.toLowerCase().includes(q)) hits.push([k, vOf(c, f)]); });
       list = hits.sort((a, b) => b[1] - a[1]).slice(0, 80).map(([k, v]) => `<li><div class="tr-row"><span class="tr-lv">${level(k).split(" ")[0]}</span><button class="linkish tr-pn" data-trprod="${k}"><b>${esc(k)}</b> ${esc(short(node(k).n, 70))}</button><span class="num">${gbp(v)}</span></div></li>`).join("") || `<li class="ap-note">Nothing matches “${esc(PR.q)}”.</li>`;
-    } else list = Object.entries(t.ch).sort((a, b) => b[1][f] - a[1][f]).map(([k]) => row(k, 0)).join("");
-    el.innerHTML = `<div class="ap-row"><input class="tr-q" data-trq placeholder="Search products: a name or a code (e.g. whisky, 8703, salmon)" value="${esc(PR.q)}"><div class="seg sm">${["exp", "imp"].map(k => `<button data-trpf="${k}" class="${k === f ? "on" : ""}">${FL[k]}</button>`).join("")}</div></div>
+    } else list = Object.entries(t.ch).sort((a, b) => vOf(b[1], f) - vOf(a[1], f)).map(([k]) => row(k, 0)).join("");
+    el.innerHTML = `<div class="ap-row"><input class="tr-q" data-trq placeholder="Search products: a name or a code (e.g. whisky, 8703, salmon)" value="${esc(PR.q)}"><div class="seg sm">${["both", "exp", "imp"].map(k => `<button data-trpf="${k}" class="${k === f ? "on" : ""}">${k === "both" ? "Both" : FL[k]}</button>`).join("")}</div></div>
       <p class="ap-note">97 chapters → about 1,200 headings → 5,000 subheadings → 9,000 product codes (CN8). Open a row with ▸; click a name for its card. 12 months to ${esc(mname(t.period[1]))}.</p><ul class="tr-tree">${list}</ul>`;
     const q = el.querySelector("[data-trq]");
     q.oninput = () => { PR.q = q.value.trim(); clearTimeout(products.t); products.t = setTimeout(() => detail().then(() => { products(cx, el); const n = el.querySelector("[data-trq]"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }), 220); };
@@ -324,7 +330,12 @@
   });
 
   window.AtlasTrade = {
-    init(c) { ctx = c; },
+    init(c) { ctx = c; setTimeout(() => {   // 0.12: a trade route on the map opens its partner
+      if (!ctx.registerPick) return;
+      ctx.registerPick({ id: "trade-routes", layers: ["trade-exp", "trade-imp"], pad: 4, priority: 22,
+        hover: f => { const p = f.properties, d = T(); const cn = d && d.cty[p.c] ? d.cty[p.c].n : p.c, pn = d && d.ports[p.p] ? d.ports[p.p].n : p.p; return `<div class="poi-h"><b>${esc(p.f === "exp" ? `${pn} → ${cn}` : `${cn} → ${pn}`)}</b><div class="poi-sub">${p.f === "exp" ? "Exports" : "Imports"} · about ${gbp(p.v)} a year · click for ${esc(cn)}</div></div>`; },
+        open: f => openPartner(f.properties.c) });
+    }, 0); },
     overview, products, partners, ports: portsPanel, firms, investment, income, openProduct, openPartner, openPort, showRoutes, PARTNER_EXTRA, gbp,
   };
 })();
