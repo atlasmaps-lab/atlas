@@ -65,7 +65,9 @@ def main():
         rep.check(not page.errors, "no console errors" + (f": {page.errors[:3]}" if page.errors else ""))
         page.context.close()
         page = open_atlas(b, base, (1440, 900), query="debug#app=markets"); js = page.evaluate; page.wait_for_timeout(1500)
-        open_panel(page, "marketplace"); page.wait_for_timeout(1500)
+        open_panel(page, "marketplace")
+        try: page.wait_for_selector("[data-sonewlisting]", timeout=10000)   # 0.10.1: Atlas Social's store can take a couple of seconds to load
+        except Exception: pass
         rep.check(js("() => !!document.querySelector('[data-sonewlisting]')"), "Atlas Markets has the marketplace too")
         rep.check(not page.errors, "Atlas Markets: no console errors" + (f": {page.errors[:3]}" if page.errors else ""))
         page.context.close()

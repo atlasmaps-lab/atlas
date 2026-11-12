@@ -1,1 +1,3 @@
 /* Atlas Economic only: this file loads only in the Economic tab (views/views.js), so nothing here can change Atlas Multi or another view. */
+/* 0.10.1: each indicator tile says where its latest figure stands */
+.ec-story { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; line-height: 1.25; min-height: 13px; }

@@ -826,6 +826,10 @@ sup.est { margin-left: 3px; }
 #cmp.fwin, #export-dlg.fwin, #analyse.fwin, #chartp.fwin, .wmwin { container-type: inline-size; }
 .wm-top { box-shadow: 0 16px 48px rgba(0,0,0,.28); }
 .wm-pulse { animation: wmpulse .7s ease-out; }
+.wm-shift { transition: left .35s ease, top .35s ease; }
+.ws-send { display: block; margin: 2px 0 10px auto; border: 1px solid var(--rule); background: var(--solid); color: var(--ink-2); border-radius: 12px; padding: 2px 9px; font: inherit; font-size: 11px; cursor: pointer; opacity: .75; }   /* 0.10.1 */
+.ws-send:hover { opacity: 1; color: var(--ink); border-color: var(--ink-3); }
+.ws-snap { overflow: auto; } .ws-snap svg { max-width: 100%; height: auto; } .ws-snap table { width: 100%; border-collapse: collapse; font-size: 12px; } .ws-snap td, .ws-snap th { padding: 3px 5px; border-bottom: 1px solid var(--rule); }   /* 0.10.1: a box sliding aside to make room */
 @keyframes wmpulse { 0% { box-shadow: 0 0 0 0 rgba(59,120,181,.75), 0 16px 48px rgba(0,0,0,.28); } 100% { box-shadow: 0 0 0 14px rgba(59,120,181,0), 0 16px 48px rgba(0,0,0,.28); } }
 .wm-back { border: 1px solid var(--rule); background: var(--chip, #f1eee6); color: var(--ink); border-radius: 12px; padding: 2px 9px; font-size: 11.5px; white-space: nowrap; cursor: pointer; }
 .wm-back:hover { border-color: var(--ink-3); }
@@ -1016,11 +1020,16 @@ body.apptab-on #menu { top: 50px; }
 #apphead .ah-link { border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 8px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
 #apphead .ah-link:hover { color: var(--ink); border-bottom-color: color-mix(in srgb, var(--app) 40%, transparent); }
 #apphead .ah-link.on { color: var(--app); border-bottom-color: var(--app); }
+#apphead .ah-link.has-tabs::after { content: " ▾"; font-size: 10px; color: inherit; opacity: .75; }
+#ah-tabmenu { position: fixed; z-index: 710; min-width: 170px; background: var(--solid); border: 1px solid var(--rule); border-top: 3px solid var(--app, #446); border-radius: 0 0 8px 8px; box-shadow: var(--shadow); padding: 4px; display: flex; flex-direction: column; }
+#ah-tabmenu[hidden] { display: none; }
+#ah-tabmenu button { border: 0; background: none; font: inherit; font-size: 13px; text-align: left; padding: 7px 10px; border-radius: 5px; color: var(--ink); cursor: pointer; white-space: nowrap; }
+#ah-tabmenu button:hover, #ah-tabmenu button:focus-visible { background: var(--hover); color: var(--ink); }
 #apphead .ah-link.tool::before { content: "⚙ "; font-weight: 400; color: var(--ink-3); }
 body.appmode #top > .brand { display: none; }
 body.appmode #map { top: var(--ahh, 92px); height: calc(100% - var(--ahh, 92px)); }
 body.appmode #menu { left: auto; right: max(16px, calc((100vw - 1240px) / 2 + 20px)); top: 52px; }
-body.appmode #legend:not(.moved) { top: calc(var(--ahh, 92px) + 12px) !important; }
+body.appmode #legend:not(.moved) { top: calc(var(--ahh, 92px) + 12px) !important; bottom: auto !important; }   /* 0.10.1: as tall as what it shows, not stretched down to the perspectives panel */
 body.appmode #tabs { position: fixed; right: 16px; top: 100px; }
 .lvrow.lvhex { display: flex; gap: 12px; align-items: center; padding-left: 30px; font-size: 12px; } .lvhex .lvv { color: var(--ink-3); } .lvhex label { display: flex; gap: 4px; align-items: center; cursor: pointer; }
 body.hexmode #map, body.hexmode .maplibregl-canvas { background: #eef1f2; }
@@ -1166,6 +1175,18 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
   .ex-n small { display: block; color: var(--ink-3); font-size: 11px; } .ex-n .sw { width: 8px; height: 8px; display: inline-block; border-radius: 2px; margin-right: 5px; }
   .ex-bar { position: relative; display: block; width: 110px; height: 7px; background: var(--chip); border-radius: 3px; margin: 3px 0; } .ex-bar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
   .ex-t td small { color: var(--ink-3); font-size: 11px; }
+  /* 0.10.1: every link, scrolling (about ten in view), with a significance filter on top */
+  .ex-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 8px 0 4px; font-size: 11.5px; }
+  .ex-filter > span { color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; font-size: 10.5px; margin-right: 2px; }
+  .ex-filter button { border: 1px solid var(--rule); background: var(--solid); color: var(--ink); border-radius: 12px; padding: 2px 9px; font: inherit; cursor: pointer; }
+  .ex-filter button.on { background: var(--ink); color: var(--solid); border-color: var(--ink); }
+  .ex-filter label { display: inline-flex; gap: 4px; align-items: center; margin-left: 6px; color: var(--ink-2); }
+  .ex-filter small { margin-left: auto; color: var(--ink-3); }
+  .ex-scroll { max-height: 420px; overflow: auto; border: 1px solid var(--rule); border-radius: 6px; }
+  .ex-scroll .ex-t { margin: 0; min-width: 640px; }
+  .ex-scroll .ex-t thead th { position: sticky; top: 0; background: var(--solid); z-index: 1; }
+  .ex-t td.ex-n { min-width: 210px; }
+  .ex-t .ex-div { display: block; color: #b9770e; font-size: 10px; cursor: help; }
   .ex-dup { font-size: 11.5px; color: var(--ink-3); }
   .ex-warn { font-size: 11.5px; color: var(--ink-2); background: rgba(217,164,65,.12); border-radius: 8px; padding: 6px 10px; } .ex-warn ul { margin: 4px 0 0; padding-left: 16px; } .ex-warn li { margin: 2px 0; }
   /* 0.10: editorial panels */
@@ -1354,9 +1375,9 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=1103">
-<script src="theme.js?v=1103"></script>
-<script src="theme-apply.js?v=1103"></script>
+<link rel="stylesheet" href="fonts.css?v=1110">
+<script src="theme.js?v=1110"></script>
+<script src="theme-apply.js?v=1110"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1477,33 +1498,33 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=1103"></script>
+<script src="data/places_poi.js?v=1110"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=1103"></script>
-<script src="data/representation.js?v=1103"></script>
-<script src="data/trade.js?v=1103"></script>
-<script src="data/investment.js?v=1103"></script>
-<script src="data/industry.js?v=1103"></script>
-<script src="data/census.js?v=1103"></script>
-<script src="data/health_deaths.js?v=1103"></script>
-<script src="data/bd_economy.js?v=1103"></script>
-<script src="data/bd_census.js?v=1103"></script>
-<script src="data/spending.js?v=1103"></script>
-<script src="data/bd_health.js?v=1103"></script>
-<script src="data/people.js?v=1103"></script>
-<script src="data/bd_spending.js?v=1103"></script>
-<script src="data/bd_people.js?v=1103"></script>
-<script src="data/transport.js?v=1103"></script>
-<script src="data/economy.js?v=1103"></script>
-<script src="data/airports.js?v=1103"></script>
+<script src="data/money.js?v=1110"></script>
+<script src="data/representation.js?v=1110"></script>
+<script src="data/trade.js?v=1110"></script>
+<script src="data/investment.js?v=1110"></script>
+<script src="data/industry.js?v=1110"></script>
+<script src="data/census.js?v=1110"></script>
+<script src="data/health_deaths.js?v=1110"></script>
+<script src="data/bd_economy.js?v=1110"></script>
+<script src="data/bd_census.js?v=1110"></script>
+<script src="data/spending.js?v=1110"></script>
+<script src="data/bd_health.js?v=1110"></script>
+<script src="data/people.js?v=1110"></script>
+<script src="data/bd_spending.js?v=1110"></script>
+<script src="data/bd_people.js?v=1110"></script>
+<script src="data/transport.js?v=1110"></script>
+<script src="data/economy.js?v=1110"></script>
+<script src="data/airports.js?v=1110"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="data/environment.js?v=1103"></script>
-<script src="stats.js?v=1103"></script>
-<script src="psephology.js?v=1103"></script>
-<script src="charts.js?v=1103"></script>
-<script src="engine.js?v=1103"></script>
-<script src="xlsx.js?v=1103"></script>
+<script src="data/environment.js?v=1110"></script>
+<script src="stats.js?v=1110"></script>
+<script src="psephology.js?v=1110"></script>
+<script src="charts.js?v=1110"></script>
+<script src="engine.js?v=1110"></script>
+<script src="xlsx.js?v=1110"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1513,20 +1534,20 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=1103"></script>
-<script src="apps.js?v=1103"></script>
-<script src="views/views.js?v=1103"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=1110"></script>
+<script src="apps.js?v=1110"></script>
+<script src="views/views.js?v=1110"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=1103"></script>
-<script src="money.js?v=1103"></script>
-<script src="trade.js?v=1103"></script>
-<script src="narrative.js?v=1103"></script>
-<script src="panel.js?v=1103"></script>
-<script src="data/events.js?v=1103"></script>
-<script src="card.js?v=1103"></script>
-<script src="menu.js?v=1103"></script>
-<script src="profile.js?v=1103"></script>
-<script src="devdesign.js?v=1103"></script>
-<script src="app.js?v=1103"></script>
+<script src="windows.js?v=1110"></script>
+<script src="money.js?v=1110"></script>
+<script src="trade.js?v=1110"></script>
+<script src="narrative.js?v=1110"></script>
+<script src="panel.js?v=1110"></script>
+<script src="data/events.js?v=1110"></script>
+<script src="card.js?v=1110"></script>
+<script src="menu.js?v=1110"></script>
+<script src="profile.js?v=1110"></script>
+<script src="devdesign.js?v=1110"></script>
+<script src="app.js?v=1110"></script>
 </body>
 </html>

@@ -272,7 +272,7 @@
       { id: "directions", title: "Directions", render: (ctx, el) => { bind(ctx); PANEL = Object.assign(PANEL || {}, { ctx, el }); directions(ctx, el); }, min: { w: 380, h: 420 } },
       { id: "reach", title: "Reach", blurb: "Everywhere you can get to within a time", render: (ctx, el) => { bind(ctx); PANEL = Object.assign(PANEL || {}, { isoEl: el }); reach(ctx, el); }, min: { w: 360, h: 320 } },
       { id: "trails", title: "Trails", render: (ctx, el) => { bind(ctx); trails(ctx, el); } },
-      { id: "hubs", map: {"level": "council", "metrics": ["rail_usage"]}, title: "Stations & hubs", render: (ctx, el) => { bind(ctx); PANEL = Object.assign(PANEL || {}, { hubEl: el }); hubs(ctx, el); }, min: { w: 380, h: 360 } },
+      { id: "hubs", map: {"level": "council", "metrics": ["rail_usage"]}, title: "Stations & hubs", tabs: [["station", "Stations"], ["airport", "Airports"], ["port", "Ports"]], setTab: k => { hubs.k = k; }, render: (ctx, el) => { bind(ctx); PANEL = Object.assign(PANEL || {}, { hubEl: el }); hubs(ctx, el); }, min: { w: 380, h: 360 } },
       { id: "planner", map: {"metrics": ["inf_rail", "inf_roads"]}, title: "Planner data", render: (ctx, el) => { bind(ctx); PANEL = Object.assign(PANEL || {}, { planEl: el }); planner(ctx, el); } },
     ],
     tools: [],

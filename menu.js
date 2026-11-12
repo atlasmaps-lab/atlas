@@ -112,10 +112,14 @@
   }
   function specFor(x) {
     let f = x.menu || ((window.AtlasMenus || {})[APP.id] || {})[x.id];
-    try { const s = f ? f(ctx, B) : auto(x); if (s && s.sections) s.sections = s.sections.filter(sc => sc && ((sc.items || []).length || (sc.figures || []).length)); return s && s.sections && s.sections.length ? s : auto(x); } catch (e) { console.error(e); return auto(x); }
+    let s; try { s = f ? f(ctx, B) : auto(x); if (s && s.sections) s.sections = s.sections.filter(sc => sc && ((sc.items || []).length || (sc.figures || []).length)); if (!(s && s.sections && s.sections.length)) s = auto(x); } catch (e) { console.error(e); s = auto(x); }
+    // 0.10.1: a panel with tabs of its own (Money's Parties, Donors, …) lists them, to open the panel at that tab
+    const tabs = H.tabs ? H.tabs(x) : null;
+    if (tabs) s.sections.unshift({ label: `${x.title}: its tabs`, note: "Opens the full panel at that tab.", items: tabs.map(([k, l]) => ({ label: l, sub: `${x.title} › ${l}`, isPanel: true, key: k, fn: () => H.openTab(x.id, k) })) });
+    return s;
   }
   // a heading drops down a menu when it has its own, or metrics to build one from; otherwise it opens its panel
-  const hasMenu = x => x.menu !== false && x.editorial !== false && !APP.tools.includes(x) && !!(x.menu || ((window.AtlasMenus || {})[APP.id] || {})[x.id] || (x.map && typeof x.map !== "function" && (x.map.metrics || []).some(id => ctx.M[id])));
+  const hasMenu = x => x.menu !== false && x.editorial !== false && !APP.tools.includes(x) && !!(x.menu || (H.tabs && H.tabs(x)) || ((window.AtlasMenus || {})[APP.id] || {})[x.id] || (x.map && typeof x.map !== "function" && (x.map.metrics || []).some(id => ctx.M[id])));
 
   // ---------- drawing ----------
   let el = null;
@@ -127,7 +131,7 @@
     el.innerHTML = `<div class="mg-in" role="menu" aria-label="${esc(x.title)}">
       <nav class="mg-col mg-secs"><div class="mg-h">${esc(x.title)}</div>${s.sections.map((sc, i) => `<button type="button" class="mg-sec${sc === sec ? " on" : ""}" data-msec="${i}" role="menuitem">${esc(sc.label)}</button>`).join("")}</nav>
       <div class="mg-col mg-items"><div class="mg-h">${esc(sec.label)}</div>${sec.note ? `<p class="mg-note">${esc(sec.note)}</p>` : ""}
-        ${(sec.items || []).filter(Boolean).map((it, i) => `<div class="mg-it${it.isPanel ? " mg-full" : ""}"><button type="button" class="mg-go" data-mit="${i}" role="menuitem"><span class="mg-l">${esc(it.label)}</span>${it.sub ? `<small>${esc(it.sub)}</small>` : ""}</button>
+        ${(sec.items || []).filter(Boolean).map((it, i) => `<div class="mg-it${it.isPanel ? " mg-full" : ""}"><button type="button" class="mg-go" data-mit="${i}"${it.key ? ` data-mkey="${esc(it.key)}"` : ""} role="menuitem"><span class="mg-l">${esc(it.label)}</span>${it.sub ? `<small>${esc(it.sub)}</small>` : ""}</button>
           ${it.isPanel ? "" : `<span class="mg-acts">${it.map || it.metric ? `<button type="button" data-mact="map" data-mi="${i}" title="Put on map" aria-label="Put ${esc(it.label)} on the map">${IC.map}</button>` : ""}<button type="button" data-mact="ws" data-mi="${i}" title="Send to workspace" aria-label="Send ${esc(it.label)} to the workspace">${IC.ws}</button><button type="button" data-mact="card" data-mi="${i}" title="Create an information card" aria-label="Card for ${esc(it.label)}">${IC.card}</button></span>`}</div>`).join("")}</div>
       <div class="mg-col mg-figs">${figs.length ? `<div class="mg-h">${esc(sec.figTitle || "Key figures")}</div><div class="mg-tiles">${figs.map((f, i) => `<button type="button" class="mg-tile" data-mfig="${i}" title="${esc(f.label)}: open its card">${f.colour ? `<i class="mg-sw" style="background:${esc(f.colour)}"></i>` : ""}<span class="mg-tl">${esc(f.label)}</span><b class="mg-tv">${esc(f.value)}</b>${f.chg ? `<span class="mg-tc ${f.tone || (/^▲/.test(f.chg) ? "up" : /^▼/.test(f.chg) ? "down" : "")}">${esc(f.chg)}</span>` : ""}</button>`).join("")}</div>` : ""}</div>
       <aside class="mg-col mg-side"><p>${esc(s.lede || x.blurb || `Everything in ${x.title}, by category. Each row opens a card you can put on the map or send to the workspace.`)}</p>
@@ -141,8 +145,8 @@
   }
   function act(it, kind) {
     if (!it) return;
+    if (it.fn && (kind === "go" || it.isPanel)) { close(); it.fn(ctx); return; }
     if (it.isPanel || (it.panel && !it.card && !it.metric)) { close(); H.openFull(it.panel); return; }
-    if (it.fn && kind === "go") { close(); it.fn(ctx); return; }
     if (kind === "map") { C().applyMap(it.map || { metrics: [it.metric] }); return; }
     const spec = itemCard(it); if (!spec) { if (it.map) C().applyMap(it.map); return; }
     if (kind === "ws") { const d = document.createElement("div"); d.innerHTML = C().html(spec); ctx.sendToWS({ type: "card", title: spec.title, html: d.firstElementChild.outerHTML, w: 400, h: 600 }); return; }

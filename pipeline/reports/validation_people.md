@@ -5,4 +5,4 @@
 - Asylum support at 30 Jun 2026: 93,293 people in 346 councils
 - England social homes (2025): council 1,551,773, housing association 2,611,988
 - UK claimant count September 2026: 1702905.0
-- DHP councils not matched by name: Rhondda, Cynon, Taff
+- DHP councils not matched by name: none
