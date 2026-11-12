@@ -1,0 +1,31 @@
+/* Atlas Social (0.11) · the bar's dropdown menus (see menu.js): Statistics, Deprivation, Migration (with the UK's net
+ * migration since 2012, marked with what plausibly moved it), Housing & support, and every Census 2021 topic.
+ */
+(function () {
+  "use strict";
+  const reg = window.AtlasMenus = window.AtlasMenus || {}; const M = reg.social = reg.social || {};
+  const MON = { Mar: 0.25, Jun: 0.5, Sep: 0.75, Dec: 0.999 }, MNAME = { Mar: "March", Jun: "June", Sep: "September", Dec: "December" };
+  const k = n => Math.abs(n) >= 1e6 ? (n / 1e6).toFixed(2) + "m" : Math.round(n / 1000).toLocaleString("en-GB") + "k";
+  function ltim(ctx, B, flow, group, title) {
+    const P = window.ATLAS_PEOPLE, s = P && P.ltim && P.ltim.nat[flow] && P.ltim.nat[flow][group]; if (!s) return null;
+    const lab = {}; const pts = Object.entries(s).map(([p, v]) => { const m = p.match(/YE (\w{3}) (\d\d)/); if (!m) return null; const x = 2000 + +m[2] + MON[m[1]]; lab[x.toFixed(3)] = `year to ${MNAME[m[1]]} 20${m[2]}${/ P$/.test(p) ? " (provisional)" : ""}`; return [x, v]; }).filter(Boolean).sort((a, b) => a[0] - b[0]);
+    return B.series({ title, app: "Social", pts, unit: "", fmt: v => (v < 0 ? "−" : "") + k(Math.abs(v)), topics: ["migration"], period: x => lab[x.toFixed(3)] || String(Math.floor(x)), src: P.sources.ltim, url: "https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/internationalmigration/bulletins/longterminternationalmigrationprovisional/latest",
+      means: flow === "net migration" ? "People arriving to live in the UK for at least a year, minus people leaving for at least a year." : `People ${flow === "immigration" ? "arriving to live in" : "leaving"} the UK for at least a year.`,
+      trust: "Provisional estimates from Home Office visa and travel records and tax and benefit data; revised by tens of thousands as people's actual stays become known. Emigration is the least certain part.", map: { level: "council", metrics: ["mig_intl_net"] } });
+  }
+  function ltimSec(ctx, B) {
+    const P = window.ATLAS_PEOPLE; if (!P || !P.ltim) return null; const n = P.ltim.nat, last = s => { const e = Object.entries(s); return e[e.length - 1][1]; };
+    const it = (flow, g, label) => n[flow] && n[flow][g] ? { label, sub: `${k(last(n[flow][g]))} in the ${P.ltim.latest.replace(/YE (\w{3}) (\d\d).*/, (m, a, b) => `year to ${MNAME[a]} 20${b}`)}`, card: () => ltim(ctx, B, flow, g, label), map: { level: "council", metrics: ["mig_intl_net"] } } : null;
+    const fig = (flow, g, label) => { if (!n[flow] || !n[flow][g]) return null; const e = Object.values(n[flow][g]), a = e[e.length - 1], b = e[e.length - 5]; return { label, value: k(a), chg: b != null ? `${a >= b ? "▲" : "▼"} ${k(Math.abs(a - b))} on a year` : "", card: () => ltim(ctx, B, flow, g, label) }; };
+    return { label: "The UK: arrivals and departures", note: "Long-term migration to and from the UK since 2012, by nationality.", figTitle: "Latest year",
+      items: [it("net migration", "All Nationalities", "Net migration"), it("immigration", "All Nationalities", "Immigration"), it("emigration", "All Nationalities", "Emigration"), it("net migration", "British", "Net migration: British"), it("net migration", "EU+", "Net migration: EU+"), it("net migration", "Non-EU+", "Net migration: non-EU+")].filter(Boolean),
+      figures: [fig("net migration", "All Nationalities", "Net migration"), fig("immigration", "All Nationalities", "Immigration"), fig("emigration", "All Nationalities", "Emigration"), fig("net migration", "Non-EU+", "Non-EU+ net")].filter(Boolean) };
+  }
+  M.migration = (ctx, B) => ({ lede: "Who moves to and from the UK and why, and arrivals and departures for each council.", sections: [ltimSec(ctx, B), B.group("Migration", "social", { label: "Councils", note: "International and internal moves, asylum support and resettlement, per council." }), B.bd("ppl_asylum_acc", { label: "Asylum support by type" }), B.bd("ppl_resettle", { label: "Resettlement schemes" }), B.bd("cen_birth", { label: "Country of birth (Census)" }), { label: "The full panel", items: [B.panel("migration", "Open Migration", "Reasons, nationalities and the place view")] }].filter(Boolean) });
+  M.support = (ctx, B) => ({ sections: [B.group("Finances and support", "social", { label: "Benefits and low income" }), B.group("Social housing", "social", { label: "Social housing" }), B.bd("ppl_tenure_stock", { label: "Who owns the homes" }), B.group("Housing need", "markets", { label: "Homelessness and housing need" }), { label: "The full panel", items: [B.panel("support", "Open Housing & support", "Benefits, low income, social housing and waiting lists")] }].filter(Boolean) });
+  M.people = (ctx, B) => ({ sections: [B.group("Population & age", "social", { label: "Population and age" }), B.bd("cen_age", { label: "Age (Census)" }), { label: "The full panel", items: [B.panel("people", "Open Statistics", "Population, change, density and age"), B.panel("pyramid", "Population pyramid", "Ages by sex")] }].filter(Boolean) });
+  M.deprivation = (ctx, B) => ({ sections: [B.group("Deprivation (England, 2025)", "social", { label: "Deprivation, by domain", note: "English Indices of Deprivation 2025: overall and the seven domains." }), { label: "The full panel", items: [B.panel("deprivation", "Open Deprivation", "Overall and by domain, for the place in focus")] }].filter(Boolean) });
+  M.change = (ctx, B) => ({ sections: [B.group("Population & age", "social", { label: "Population change" }), B.group("Migration", "social", { label: "Moves in and out" })].filter(Boolean) });
+  M.census = (ctx, B) => ({ lede: "Every Census 2021 topic for the place in focus, against its region and England and Wales.", sections: [["cen_ethnic", "Ethnic group"], ["cen_religion", "Religion"], ["cen_birth", "Country of birth"], ["cen_language", "Main language"], ["cen_english", "English proficiency"], ["cen_age", "Age"], ["cen_nssec", "Social class (NS-SEC)"], ["cen_occupation", "Occupation"], ["cen_activity", "Economic activity"], ["cen_quals", "Qualifications"], ["cen_tenure", "Tenure"], ["cen_households", "Households"]].map(([id, l]) => B.bd(id, { label: l })).filter(Boolean) });
+  window.AtlasSocialMenu = { ltim };
+})();

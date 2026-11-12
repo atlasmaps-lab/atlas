@@ -135,5 +135,5 @@
     share: (part, whole) => whole ? (100 * part / whole).toFixed(part / whole < 0.1 ? 1 : 0) + "%" : "—",
   };
 
-  window.AtlasNarrative = { init(c) { ctx = c; }, story, MEANS, ...N };
+  window.AtlasNarrative = { init(c) { ctx = c; }, story, MEANS, series: (m, code) => series(m, code), fmtOf, isPts, ...N };
 })();

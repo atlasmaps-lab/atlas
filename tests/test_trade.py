@@ -8,7 +8,7 @@ figure is a population share of its HMRC area); the traders list for a council.
 """
 import os, sys, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from atlas_test import server, browser, open_atlas, Report
+from atlas_test import server, browser, open_atlas, Report, open_panel
 
 HEADING = {"data": {"id": "1", "type": "heading", "attributes": {}}, "included": [
     {"type": "commodity", "id": "9", "attributes": {"goods_nomenclature_item_id": "8703801010", "leaf": True, "formatted_description": "New battery electric vehicles"}}]}
@@ -36,7 +36,7 @@ def main():
         page.wait_for_function("document.querySelector('.tr-head')", timeout=60000)
         rep.check("exports" in js("() => document.querySelector('.tr-head').innerText").lower() and js("() => AtlasDebug.PS.mapped.markets.includes('trade_routes_exp')"), "Atlas Markets opens on Trade, with export routes on the map")
         # products: drill down
-        page.click("#appbar [data-apanel=products]"); page.wait_for_selector("[data-trtog='87']")
+        open_panel(page, "products"); page.wait_for_selector("[data-trtog='87']")
         page.click("[data-trtog='87']"); page.wait_for_selector("[data-trtog='8703']", timeout=60000); page.click("[data-trtog='8703']"); page.wait_for_selector("[data-trtog='870380']"); page.click("[data-trtog='870380']")
         page.wait_for_selector("[data-trprod^='870380']:not([data-trprod='870380'])")
         rep.check(js("() => [...document.querySelectorAll('[data-trprod^=\"870380\"]')].some(b => b.dataset.trprod.length === 8)"), "the product tree drills down: chapter 87 → heading 8703 → 870380 → CN8")
@@ -58,10 +58,10 @@ def main():
         w = js("() => [...document.querySelectorAll('.tr-win')].pop().innerText").lower()
         rep.check(all(k in w for k in ("what the uk sells them", "services", "direct investment", "current account")), "a partner card has goods, services, FDI and the current account")
         # investment and income
-        page.click("#appbar [data-apanel=investment]"); page.wait_for_timeout(800)
+        open_panel(page, "investment"); page.wait_for_timeout(800)
         w = js("() => document.body.innerText").lower()
         rep.check("foreign-owned in uk" in w and "who owns most in the uk" in w, "the Investment panel shows FDI positions by country and industry")
-        page.click("#appbar [data-apanel=income]"); page.wait_for_timeout(800)
+        open_panel(page, "income"); page.wait_for_timeout(800)
         w = js("() => document.body.innerText").lower()
         rep.check("sent abroad (dividends)" in w and "brought home (dividends)" in w and "all income across the border" in w, "the Income flows panel shows profits sent home and kept, and all primary income")
         # place metrics
@@ -72,7 +72,7 @@ def main():
         r = js("() => AtlasDebug.M.inv_jobs.get('E12000002', AtlasDebug.state.date)")
         rep.check(r and r["v"] > 0, f"new jobs from foreign investment for a region ({r and r['text']})")
         # traders near you
-        js("() => AtlasDebug.focus('E08000025')"); page.wait_for_timeout(1200); page.click("#appbar [data-apanel=traders]")
+        js("() => AtlasDebug.focus('E08000025')"); page.wait_for_timeout(1200); open_panel(page, "traders")
         page.wait_for_function("() => /exporting and/i.test(document.body.innerText)", timeout=60000)
         rep.check(js("() => document.querySelectorAll('.tr-t tbody tr').length") > 20, "Traders near you lists businesses in the council in focus")
         rep.check(not [e for e in page.errors if "favicon" not in e and "trade-tariff" not in e], f"no errors ({page.errors[:2]})")

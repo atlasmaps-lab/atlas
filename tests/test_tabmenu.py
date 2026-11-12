@@ -1,5 +1,7 @@
 """
 Atlas 0.10.1: header links with tabs of their own open a menu of them on hover.   python tests/test_tabmenu.py
+0.11: links with a dropdown (Money, Stations & hubs) list their tabs as the dropdown's first category; tools and forms
+(Calculator, Feed) keep the small tab menu.
 
 Politics → Money (Parties, Top donors, …), Transport → Stations & hubs (Stations, Airports, Ports), Markets → Calculator
 and Social → Feed show a ▾; hovering one shows its tabs under it straight away, and picking one opens the panel at
@@ -22,6 +24,16 @@ def main():
             page = open_atlas(b, base, (1440, 900), query="debug#app=" + app); js = page.evaluate
             page.wait_for_timeout(2500)
             link = f".ah-nav [data-apanel='{pid}']"
+            if js("s => document.querySelector(s).classList.contains('has-menu')", link):   # 0.11: the tabs are in the dropdown
+                page.hover(link); page.wait_for_timeout(500)
+                first = js("() => document.querySelector('#mega .mg-sec') ? document.querySelector('#mega .mg-sec').textContent : ''")
+                keys = js("() => [...document.querySelectorAll('#mega [data-mkey]')].map(b => b.dataset.mkey)")
+                rep.check("its tabs" in first and tab in keys, f"{app} → {pid}: the dropdown lists its tabs first ({first}: {', '.join(keys)})")
+                page.click(f"#mega [data-mkey='{tab}']"); page.wait_for_timeout(1500)
+                rep.check(js("s => !!document.querySelector('.apppanel:not([hidden]) ' + s)", on), f"…picking {tab} opens the panel at that tab")
+                rep.check(js("() => document.getElementById('mega').hidden"), "…and the dropdown closes")
+                rep.check(not page.errors, f"{app}: no console errors" + (f": {page.errors[:3]}" if page.errors else ""))
+                page.context.close(); continue
             rep.check(js("s => document.querySelector(s).classList.contains('has-tabs')", link), f"{app} → {pid}: marked ▾")
             page.hover(link); page.wait_for_timeout(250)
             items = js("() => { const m = document.getElementById('ah-tabmenu'); return m && !m.hidden ? [...m.querySelectorAll('[data-ahtab]')].map(b => b.dataset.ahtab) : []; }")
@@ -37,7 +49,7 @@ def main():
             page.click("#ah-tabmenu [data-ahtab]"); page.wait_for_timeout(1200)
             n = js("() => [...document.querySelectorAll('.apppanel')].filter(w => !w.hidden).length")
             rep.check(js("s => !!document.querySelector('.apppanel:not([hidden]) .on[data-mftab=\"' + s + '\"], .apppanel:not([hidden]) .on[data-trhub=\"' + s + '\"], .apppanel:not([hidden]) .on[data-calc=\"' + s + '\"], .apppanel:not([hidden]) .on[data-sofeed=\"' + s + '\"]')", first) and n >= 1, f"…and switches tab while open ({first})")
-            plain = js("() => { const b = [...document.querySelectorAll('.ah-nav [data-apanel]')].find(b => !b.classList.contains('has-tabs')); return b && b.dataset.apanel; }")
+            plain = js("() => { const b = [...document.querySelectorAll('.ah-nav [data-apanel]')].find(b => !b.classList.contains('has-tabs') && !b.classList.contains('has-menu')); return b && b.dataset.apanel; }")
             if plain:
                 page.hover(f".ah-nav [data-apanel='{plain}']"); page.wait_for_timeout(250)
                 rep.check(js("() => document.getElementById('ah-tabmenu').hidden"), f"{app}: a link without tabs ({plain}) shows no menu")

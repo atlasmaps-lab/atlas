@@ -186,7 +186,7 @@
   let bound = false;
   function bind(ctx) { if (bound) return; bound = true;
     document.addEventListener("click", e => { const t = e.target.closest && e.target.closest("[data-ecchart],[data-ecmap]"); if (!t) return;
-      if (t.dataset.ecchart) openChart(ctx, t.dataset.ecchart); else if (t.dataset.ecmap) { ctx.mapOnly([t.dataset.ecmap]); ctx.setLevel("region"); } }); }
+      if (t.dataset.ecchart) { const sp = window.AtlasEconMenu && window.AtlasCard ? AtlasEconMenu.card(ctx, t.dataset.ecchart) : null; if (sp) AtlasCard.open(sp); else openChart(ctx, t.dataset.ecchart); }   /* 0.11: the indicator's card (latest, trend, why it moved) */ else if (t.dataset.ecmap) { ctx.mapOnly([t.dataset.ecmap]); ctx.setLevel("region"); } }); }
   const wrap = f => (ctx, el) => { bind(ctx); f(ctx, el); };
   window.AtlasEcon = { indicators: wrap(indicators), rates: wrap(rates), forecasts: wrap(forecasts), calendar: wrap(calendar), regions: wrap(regions), xOf, periodName };
 })();

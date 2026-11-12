@@ -5,7 +5,7 @@ MP, party, donor and place cards; the money line on area cards; the map metric; 
 """
 import os, sys, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from atlas_test import server, browser, open_atlas, Report, ROOT
+from atlas_test import server, browser, open_atlas, Report, ROOT, open_panel
 
 
 def load(name, var):
@@ -41,7 +41,7 @@ def main():
         page.context.close()
 
         page = open_atlas(b, base, (1440, 900), query="debug#app=politics"); js = page.evaluate; page.wait_for_timeout(1500)
-        page.click("#apphead [data-apanel=money]"); page.wait_for_timeout(600)
+        open_panel(page, "money"); page.wait_for_timeout(600)
         rep.check(js("() => [...document.querySelectorAll('.fwin')].some(w => !w.hidden && /Since 2001/.test(w.textContent))"), "Atlas Politics has a Money panel listing the parties")
         page.click("[data-mftab=latest]"); page.wait_for_function("() => !!document.querySelector('.mo-body .mo-tab tr')", timeout=60000)
         n = js("() => document.querySelectorAll('.mo-body .mo-tab tr').length")

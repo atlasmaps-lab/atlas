@@ -7,7 +7,7 @@ panels open; the area metrics are cleared, so the zones are their own view.
 """
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tests"))
-from atlas_test import server, browser, open_atlas, Report
+from atlas_test import server, browser, open_atlas, Report, open_panel
 
 
 def main():
@@ -15,7 +15,7 @@ def main():
     with server() as base, browser() as b:
         page = open_atlas(b, base, (1440, 900), query="debug#app=environment"); js = page.evaluate
         tabs = js("() => [...document.querySelectorAll('.ah-nav [data-apanel]')].map(b => b.textContent.trim())")
-        rep.check(tabs[:6] == ["Timeline", "Floods", "Coast", "Heat", "Conservation", "Sources"], f"header tabs: {tabs}")
+        rep.check(tabs[:7] == ["Timeline", "Floods", "Coast", "Heat", "Conservation", "Climate & air", "Sources"], f"header tabs: {tabs}")
         page.wait_for_function("() => AtlasCtx.map.getSource('env-floods') && AtlasCtx.map.getSource('env-cons') && AtlasCtx.map.getSource('env-coast')", timeout=60000)
         rep.check(js("() => AtlasDebug.mapped ? AtlasDebug.mapped().length === 0 : true"), "no area metrics on the map: the zones are their own view")
         count = lambda: js("() => AtlasCtx.map.querySourceFeatures('env-floods-pt').length")
@@ -44,7 +44,7 @@ def main():
         np55 = js("() => AtlasCtx.map.getSource('env-cons')._data.features.filter(f => f.properties.k === 'np' && f.properties.y && f.properties.y <= 1955).length")
         rep.check(8 <= np55 <= 9, f"National Parks designated by 1955: {np55} (Peak District, Lake District, Snowdonia, Dartmoor, Pembrokeshire Coast…)")
         # 0.9.2: the slider drags (it isn't redrawn while it moves)
-        page.click(".ah-nav [data-apanel='timeline']"); page.wait_for_timeout(400)
+        open_panel(page, "timeline"); page.wait_for_timeout(400)
         bx = page.locator("[data-envyear]").bounding_box()
         page.mouse.move(bx["x"] + bx["width"] * 0.9, bx["y"] + bx["height"] / 2); page.mouse.down()
         for k in range(10):
@@ -55,12 +55,12 @@ def main():
         # 0.9.2: header tabs work as tabs, and each shows only its own layer on the map
         vis = lambda: js("() => ['floods-fill', 'coast-fill', 'heat-fill', 'cons-fill'].filter(id => AtlasCtx.map.getLayer('env-' + id) && AtlasCtx.map.getLayoutProperty('env-' + id, 'visibility') === 'visible')")
         for p, want in (("floods", ["floods-fill"]), ("coast", ["coast-fill"]), ("heat", ["heat-fill"]), ("conservation", ["cons-fill"])):
-            page.click(f".ah-nav [data-apanel='{p}']"); page.wait_for_timeout(1500)
+            open_panel(page, f"{p}"); page.wait_for_timeout(1500)
             rep.check(vis() == want, f"the {p.title()} tab shows only its own layer ({vis()})")
             rep.check(js("() => [...document.querySelectorAll('.apppanel')].filter(w => !w.hidden).length") == 1, f"…and replaces the window before it")
-        page.click(".ah-nav [data-apanel='timeline']"); page.wait_for_timeout(800)
+        open_panel(page, "timeline"); page.wait_for_timeout(800)
         rep.check("heat-fill" in vis() and "cons-fill" in vis(), f"back on Timeline, the layers you ticked come back ({vis()})")
-        page.click(".ah-nav [data-apanel='sources']"); page.wait_for_timeout(600)
+        open_panel(page, "sources"); page.wait_for_timeout(600)
         rep.check(js("() => !!document.querySelector('.env-cov')"), "Sources opens")
         rep.check(not page.errors, "no console errors" + (f": {page.errors}" if page.errors else ""))
         page.context.close()

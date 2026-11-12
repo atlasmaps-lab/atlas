@@ -8,7 +8,7 @@ Atlas 0.10.1: boxes keep their place and make room for each other.   python test
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from atlas_test import server, browser, open_atlas, Report
+from atlas_test import server, browser, open_atlas, Report, open_panel
 
 
 def main():
@@ -18,19 +18,19 @@ def main():
         page.wait_for_timeout(2500)
         rect = sel = None
         rect = lambda s: js("s => { const e = [...document.querySelectorAll(s)].find(x => !x.hidden); if (!e) return null; const r = e.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; }", s)
-        page.click(".ah-nav [data-apanel='spending']"); page.wait_for_timeout(1500)
+        open_panel(page, "spending"); page.wait_for_timeout(1500)
         # drag the panel by its title bar to the left of the screen
         h = page.locator(".apppanel:not([hidden]) .wm-head").first.bounding_box()
         page.mouse.move(h["x"] + 60, h["y"] + 12); page.mouse.down()
         for k in range(12): page.mouse.move(h["x"] + 60 - k * 45, h["y"] + 12 + k * 8); page.wait_for_timeout(20)
         page.mouse.up(); page.wait_for_timeout(300)
         moved = rect(".apppanel")
-        page.click(".ah-nav [data-apanel='indicators']"); page.wait_for_timeout(1500)
+        open_panel(page, "indicators"); page.wait_for_timeout(1500)
         nxt = rect(".apppanel")
         rep.check(moved and nxt and abs(moved[0] - nxt[0]) < 3 and abs(moved[1] - nxt[1]) < 3, f"the next header panel opens where the last one was moved ({moved} → {nxt})")
         rep.check(moved and nxt and abs(moved[2] - nxt[2]) < 3, "…and at the same width")
         page.reload(); page.wait_for_timeout(3000)
-        page.click(".ah-nav [data-apanel='regions']"); page.wait_for_timeout(1500)
+        open_panel(page, "regions"); page.wait_for_timeout(1500)
         again = rect(".apppanel")
         rep.check(again and abs(again[0] - moved[0]) < 3, f"…and still there after a reload ({again})")
         # a second box opening on top makes the first one slide aside

@@ -6,7 +6,7 @@ and the section it sits under. Small sparklines (in indicator tiles) don't get o
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from atlas_test import server, browser, open_atlas, Report
+from atlas_test import server, browser, open_atlas, Report, open_panel
 
 
 def main():
@@ -15,7 +15,7 @@ def main():
         page = open_atlas(b, base, (1440, 900), query="debug#app=economic"); js = page.evaluate
         page.wait_for_timeout(2500)
         n0 = js("() => AtlasDebug.WS ? AtlasDebug.WS().items.length : (JSON.parse(localStorage.getItem('atlas-16-ws') || '{}').projects || [{items: []}])[0].items.length")
-        page.click(".ah-nav [data-apanel='regions']"); page.wait_for_timeout(1800)
+        open_panel(page, "regions"); page.wait_for_timeout(1800)
         btns = js("() => document.querySelectorAll('.apppanel:not([hidden]) .ws-send').length")
         rep.check(btns >= 2, f"Regions: each chart has a To workspace button ({btns})")
         page.click(".apppanel:not([hidden]) .ws-send"); page.wait_for_timeout(600)
@@ -24,10 +24,10 @@ def main():
         last = items[-1] if items else {}
         rep.check(len(items) > 0 and last.get("type") == "card" and "<svg" in last.get("html", ""), f"…and sends the chart as a card ({last.get('title')})")
         rep.check("Regions" in (last.get("title") or ""), "…titled with the panel it came from")
-        page.click(".ah-nav [data-apanel='indicators']"); page.wait_for_timeout(1500)
+        open_panel(page, "indicators"); page.wait_for_timeout(1500)
         spark = js("() => document.querySelectorAll('.apppanel:not([hidden]) .ec-tile + .ws-send, .apppanel:not([hidden]) .ec-tile .ws-send').length")
         rep.check(spark == 0, "indicator tiles' sparklines don't get a button")
-        page.click(".ah-nav [data-apanel='forecasts']"); page.wait_for_timeout(1500)
+        open_panel(page, "forecasts"); page.wait_for_timeout(1500)
         t = js("() => document.querySelectorAll('.apppanel:not([hidden]) .ws-send').length")
         rep.check(t >= 1, f"Forecasts: tables have a To workspace button ({t})")
         rep.check(not page.errors, "no console errors" + (f": {page.errors[:3]}" if page.errors else ""))

@@ -68,7 +68,10 @@
       if (over > 0) labs.forEach(l => { l.y -= over; }); for (let k = labs.length - 2; k >= 0; k--) if (labs[k + 1].y - labs[k].y < 11) labs[k].y = labs[k + 1].y - 11;
       return labs.map(l => `<text class="end" x="${Math.min(f.W - 4, l.x).toFixed(1)}" y="${l.y.toFixed(1)}" fill="${l.c}">${esc(l.t)}</text>`).join("");
     })();
-    return svg(f.W, f.H, f.axes + `<rect class="hit" x="${f.L}" y="${f.T}" width="${f.W - f.L - f.R}" height="${f.H - f.T - f.B}"/>` + paths, "", { kind: "xy", series: series.map((s, i) => ({ name: s.name, colour: colourOf(s, i), pts: s.pts })), f: { L: f.L, R: f.R, T: f.T, B: f.B, W: f.W, H: f.H, x0: f.x0, x1: f.x1, y0: f.y0, y1: f.y1 }, vfmt: o.vfmt, xlab: o.xlab || yearLab }) + legend(series);
+    // 0.11: o.events [{x, n, label}]: numbered dashed lines for what plausibly moved the series (data/events.js)
+    let lastX = -99, lane = 0;   // markers closer than 15px step down a lane so their numbers don't overlap
+    const evs = (o.events || []).filter(e => e.x >= f.x0 && e.x <= f.x1).map(e => { const xv = f.sx(e.x), x = xv.toFixed(1); lane = xv - lastX < 15 ? (lane + 1) % 3 : 0; lastX = xv; const cy = f.T + 6 + lane * 15; return `<g class="ev" ${tip(e.label)}><line x1="${x}" x2="${x}" y1="${cy + 6}" y2="${f.H - f.B}" stroke="currentColor" stroke-opacity=".45" stroke-dasharray="3 3"/><circle cx="${x}" cy="${cy}" r="6.5" fill="var(--ink,#1f2a2e)"/><text x="${x}" y="${cy + 3}" text-anchor="middle" fill="var(--solid,#fff)" style="font-size:9px;font-weight:700">${esc(String(e.n))}</text></g>`; }).join("");
+    return svg(f.W, f.H, f.axes + evs + `<rect class="hit" x="${f.L}" y="${f.T}" width="${f.W - f.L - f.R}" height="${f.H - f.T - f.B}"/>` + paths, "", { kind: "xy", series: series.map((s, i) => ({ name: s.name, colour: colourOf(s, i), pts: s.pts })), f: { L: f.L, R: f.R, T: f.T, B: f.B, W: f.W, H: f.H, x0: f.x0, x1: f.x1, y0: f.y0, y1: f.y1 }, vfmt: o.vfmt, xlab: o.xlab || yearLab }) + legend(series);
   }
   function bars(series, o) {
     o = o || {}; const pts = allPts(series); if (!pts.length) return empty();

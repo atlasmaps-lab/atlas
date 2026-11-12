@@ -7,7 +7,7 @@ a category when clicked.
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from atlas_test import server, browser, open_atlas, Report
+from atlas_test import server, browser, open_atlas, Report, open_panel
 
 BHAM = "E08000025"
 
@@ -40,7 +40,7 @@ def main():
         for app, panel, phrase in [("economic", "industries", "industry"), ("social", "census", "category"), ("health", "deaths", "cause")]:
             p2 = open_atlas(b, base, (1440, 900), query="debug#app=" + app); p2.wait_for_timeout(800)
             p2.evaluate(f"() => AtlasDebug.focus('{BHAM}')"); p2.wait_for_timeout(1200)
-            p2.click(f"#appbar [data-apanel={panel}]"); p2.wait_for_selector(".pf-t tr[data-pfk]", timeout=30000)
+            open_panel(p2, f"{panel}"); p2.wait_for_selector(".pf-t tr[data-pfk]", timeout=30000)
             txt = p2.evaluate("() => document.querySelector('.pf-t').closest('.wm-body').innerText").lower()
             rep.check("birmingham" in txt and phrase in txt and "west midlands" in txt, f"{app}: the {panel} panel compares Birmingham with its region and the country")
             p2.click(".pf-t tr[data-pfk]:nth-child(2)"); p2.wait_for_timeout(900)
