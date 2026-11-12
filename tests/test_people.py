@@ -6,7 +6,7 @@ support); the metrics for a council; the breakdowns; the Migration and Housing &
 """
 import os, sys, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from atlas_test import server, browser, open_atlas, Report
+from atlas_test import server, browser, open_atlas, Report, open_panel
 
 
 def main():
@@ -22,10 +22,10 @@ def main():
         rep.check(all(r), f"every new metric has a value for Birmingham ({r})")
         r = js("() => ['ppl_tenure_stock', 'ppl_asylum_acc', 'ppl_resettle'].map(id => Object.keys(AtlasDebug.bdOf(id, 'E08000025') || {}).length)")
         rep.check(r[0] >= 3 and r[1] >= 2 and r[2] >= 1, f"breakdowns: homes by owner, asylum accommodation, resettlement scheme ({r})")
-        page.click("#appbar [data-apanel=migration]"); page.wait_for_selector(".apppanel:not([hidden]) .nv-story")
+        open_panel(page, "migration"); page.wait_for_selector(".apppanel:not([hidden]) .nv-story")
         s = js("() => { const b = [...document.querySelectorAll('.apppanel:not([hidden]) .wm-body')].pop(); return ((b.querySelector('.ed-h') || {}).innerText || '') + ' ' + ((b.querySelector('.nv-story') || {}).innerText || ''); }")
         rep.check("Net migration" in s and "peaked" in s and re.search(r"main reason for coming was (work|study)", s), f"the Migration panel tells the story ({s[:200]})")
-        page.click("#appbar [data-apanel=support]"); page.wait_for_selector(".apppanel:not([hidden]) .nv-story")
+        open_panel(page, "support"); page.wait_for_selector(".apppanel:not([hidden]) .nv-story")
         s = js("() => { const b = [...document.querySelectorAll('.apppanel:not([hidden]) .wm-body')].pop(); return ((b.querySelector('.ed-h') || {}).innerText || '') + ' ' + ((b.querySelector('.nv-story') || {}).innerText || ''); }")
         rep.check("claimed out-of-work benefits" in s and "low-income families" in s and "Right to Buy" in s, f"the Housing & support panel tells the story ({s[:160]})")
         rep.check("Stat-Xplore" in js("() => document.querySelector('.apppanel:not([hidden]) .nv-trust').innerText"), "…and says award levels need Stat-Xplore")

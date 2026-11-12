@@ -7,7 +7,7 @@ history; port cards show freight partners, crossings and sailings (mocked); netw
 """
 import os, sys, json, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from atlas_test import server, browser, open_atlas, Report, ROOT
+from atlas_test import server, browser, open_atlas, Report, ROOT, open_panel
 
 BOARD = {"at": "2026-11-09T10:00:00Z", "dep": [{"n": "BA 117", "airline": "British Airways", "place": "New York JFK", "iata": "JFK", "sched": "2026-11-09 10:25+00:00", "est": "2026-11-09 10:55+00:00", "status": "Delayed", "terminal": "5", "gate": "A10"}],
          "arr": [{"n": "VS 4", "airline": "Virgin Atlantic", "place": "New York JFK", "iata": "JFK", "sched": "2026-11-09 11:05+00:00", "est": "", "status": "Expected", "terminal": "3", "gate": ""}]}
@@ -77,7 +77,7 @@ def main():
         page = open_atlas(b, base, (1440, 900), query="debug#app=transport"); js = page.evaluate
         page.route("**/api.transitous.org/api/v1/one-to-all**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(ONE2ALL), headers={"Access-Control-Allow-Origin": "*"}))
         page.route("**/nominatim.openstreetmap.org/**", lambda r: r.fulfill(status=200, content_type="application/json", body="[]"))
-        page.wait_for_timeout(1200); page.click("#apphead [data-apanel=reach]"); page.wait_for_timeout(400)
+        page.wait_for_timeout(1200); open_panel(page, "reach"); page.wait_for_timeout(400)
         page.click("[data-trimode=transit]"); page.fill("[data-trq=iso]", "London Bridge"); page.wait_for_selector("[data-trhits=iso] li[data-trhit]"); page.dispatch_event("[data-trhits=iso] li[data-trhit]", "mousedown"); page.wait_for_timeout(1200)
         rep.check("stops reachable" in js("() => document.querySelector('[data-trisoout]').textContent"), "Reach has a train and public transport option")
         rep.check(not page.errors, "Atlas Transport: no console errors" + (f": {page.errors[:3]}" if page.errors else ""))

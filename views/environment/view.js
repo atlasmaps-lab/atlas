@@ -306,6 +306,16 @@
   }
   function mine(ctx) { bind(ctx); if (S.mine) Object.assign(S.on, S.mine); apply(); renderAll(); }
 
+  // 0.11: Climate & air: the area measures (emissions, renewables, recycling, air quality, electric cars) for the place in focus
+  const CLIMATE = [["Greenhouse gas emissions", "Emissions"], ["Renewable electricity", "Renewable power"], ["Waste and recycling", "Waste and recycling"], ["Air quality", "Air quality"], ["Electric vehicles", "Electric cars"]];
+  function climate(ctx, el) {
+    const code = ctx.focused && ctx.P[ctx.focused] ? ctx.focused : ctx.UKC, esc = ctx.esc;
+    const v = (id, c) => { const r = ctx.value(id, c); return r && r.v != null && !r.nm ? (r.text || (ctx.M[id].fmt ? ctx.M[id].fmt(r.v) : r.v)) : "—"; };
+    el.innerHTML = `<p class="ap-note">${esc(code === ctx.UKC ? "The UK" : ctx.nameOf(code))}${code === ctx.UKC ? "" : " against the UK"}. Click a measure to map it; click a council on the map to see it here.</p>` +
+      CLIMATE.map(([g, l]) => { const ms = ctx.METRICS.filter(m => m.group === g && m.p === "environment"); return ms.length ? `<h4>${esc(l)}</h4><table class="mo-tab"><tr><th></th><th class="num">Here</th>${code === ctx.UKC ? "" : `<th class="num">UK</th>`}</tr>${ms.map(m => `<tr class="clk" data-envm="${m.id}"><td>${esc(m.label)}</td><td class="num">${esc(v(m.id, code))}</td>${code === ctx.UKC ? "" : `<td class="num">${esc(v(m.id, ctx.UKC))}</td>`}</tr>`).join("")}</table>` : ""; }).join("") +
+      `<p class="ap-note">Sources: DESNZ, Defra, DfT and OHID (Open Government Licence).</p>`;
+    el.onclick = e => { const r = e.target.closest("[data-envm]"); if (r) ctx.mapOnly([r.dataset.envm]); };
+  }
   const PANELS = { timeline, floods, coast, heat, conservation, sources };
   function bind(ctx) {
     if (CTX) return; CTX = ctx;
@@ -323,6 +333,8 @@
       { id: "coast", map: ctx => only(ctx, "coast"), title: "Coast", blurb: "Coastal erosion forecast to 2055 and 2105", render: (ctx, el) => { bind(ctx); coast(ctx, el); }, min: { w: 360, h: 380 } },
       { id: "heat", map: ctx => only(ctx, "heat"), title: "Heat", blurb: "Hot summer days, today and as the world warms", render: (ctx, el) => { bind(ctx); heat(ctx, el); }, min: { w: 360, h: 380 } },
       { id: "conservation", map: ctx => only(ctx, "cons"), title: "Conservation", blurb: "National Parks and Ramsar wetlands by year designated", render: (ctx, el) => { bind(ctx); conservation(ctx, el); }, min: { w: 360, h: 380 } },
+      { id: "climate", map: { level: "council", metrics: ["env_ghg_pc"] }, title: "Climate & air", blurb: "Emissions, renewable power, recycling, air quality and electric cars for the place in focus", live: true, render: climate, min: { w: 420, h: 380 },
+        menu: (ctx, B) => ({ lede: "How each place is doing on emissions, clean power, waste, air and electric cars, with the trend and what moved it.", sections: CLIMATE.map(([g, l]) => B.group(g, "environment", { label: l })).concat([{ label: "The full panel", items: [B.panel("climate", "Open Climate & air", "Every measure for the place in focus")] }]).filter(Boolean) }) },
       { id: "sources", title: "Sources", blurb: "Where the zones come from, nation by nation", render: (ctx, el) => { bind(ctx); sources(ctx, el); }, min: { w: 420, h: 300 } },
     ],
     tools: [],

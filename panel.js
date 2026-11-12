@@ -37,7 +37,26 @@
     const notes = [...body.querySelectorAll(":scope > .ap-note")].filter(p => /OGL|Licence|Source|ONS|HMRC|DWP|MHCLG|Treasury|Fingertips|Census/.test(p.textContent));
     const src = notes[notes.length - 1];
     if (src && src === body.lastElementChild) { const d = document.createElement("details"); d.className = "ed-notes"; d.innerHTML = `<summary>How to read this · Sources</summary>`; src.replaceWith(d); d.appendChild(src); }
+    sections(body, meta);
   }
+  // 0.11: every section of a panel (a heading and what follows it) can be lifted out as a card or sent to the workspace
+  const SEC_BTNS = `<span class="ed-sacts"><button type="button" data-edcard title="Open this section as a card" aria-label="Open as a card"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7.5 8h9M7.5 12h5M7.5 16h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" data-edws title="Send this section to the workspace" aria-label="Send to workspace"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button></span>`;
+  function sections(body, meta) {
+    body.querySelectorAll(":scope > h4").forEach(h => { if (h.querySelector(".ed-sacts")) return; h.insertAdjacentHTML("beforeend", SEC_BTNS); h._edMeta = meta; });
+  }
+  function sectionSpec(h) {
+    const meta = h._edMeta || {}, parts = []; let n = h.nextElementSibling;
+    while (n && n.tagName !== "H4" && !n.classList.contains("ed-notes")) { parts.push(n.outerHTML); n = n.nextElementSibling; }
+    const t = h.cloneNode(true); t.querySelectorAll(".ed-sacts").forEach(x => x.remove()); const title = t.textContent.trim();
+    const story = h.closest(".wm-body") && h.closest(".wm-body").querySelector(".ed-h");
+    return { app: meta.app || "", title, items: [{ k: `${meta.title || ""}${story ? " · " + story.textContent : ""}`.slice(0, 120), h: esc(title), more: parts.join(""), open: true }], source: "Atlas", when: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }), panel: meta.id || null };
+  }
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-edcard],[data-edws]"); if (!b || !window.AtlasCard) return; const h = b.closest("h4"); if (!h) return;
+    e.preventDefault(); e.stopPropagation(); const spec = sectionSpec(h);
+    if (b.hasAttribute("data-edcard")) { AtlasCard.open(spec); return; }
+    const d = document.createElement("div"); d.innerHTML = AtlasCard.html(spec); window.AtlasCtx && AtlasCtx.sendToWS({ type: "card", title: spec.title, html: d.firstElementChild.outerHTML, w: 420, h: 520 });
+  }, true);
   // watch a panel body so the layout survives the panel redrawing itself
   function watch(body, meta) {
     if (body._edObs) { body._edMeta = meta; return; }

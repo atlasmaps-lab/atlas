@@ -4139,10 +4139,10 @@
 
   // ---------- Analyse: compare variables across all places (or within one area, or over time), not just chosen places ----------
   const ST = window.AtlasStats, anEl = $("analyse");
-  const AN = Object.assign({ metrics: [], level: "council", within: UKC, mode: "across", place: UKC, method: null, outcome: null, k: 0, split: "", corr: "pearson" }, store.get("atlas-16-an", {}));
+  const AN = Object.assign({ metrics: [], level: "council", within: UKC, mode: "across", place: UKC, method: null, outcome: null, k: 0, split: "", corr: "pearson", controls: [], test: null }, store.get("atlas-16-an", {}));
   AN.metrics = (AN.metrics || []).filter(id => M[id]);
   AN.custom = (AN.custom || []).filter(c => P[c]);
-  const saveAN = () => store.set("atlas-16-an", { metrics: AN.metrics, level: AN.level, within: AN.within, mode: AN.mode, place: AN.place, corr: AN.corr, custom: AN.custom });
+  const saveAN = () => store.set("atlas-16-an", { metrics: AN.metrics, level: AN.level, within: AN.within, mode: AN.mode, place: AN.place, corr: AN.corr, custom: AN.custom, controls: AN.controls, outcome: AN.outcome, test: AN.test });
 
   const anMetricsAll = () => METRICS.filter(m => PER[m.p] && PER[m.p].ready && EN.isNum(m) && m.p !== "analysis");
   const anCats = () => METRICS.filter(m => PER[m.p] && PER[m.p].ready && EN.isCat(m) && m.p !== "analysis");
@@ -4184,6 +4184,8 @@
     { id: "dist2", mode: "across", label: "Each distribution", needs: "Exactly two numeric metrics", check: c => c.k !== 2 ? `For two metrics: you have ${nums(c.k)}` : null },
     { id: "matrix", mode: "across", label: "Correlation matrix", needs: "Three or more numeric metrics", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : null },
     { id: "partial", mode: "across", label: "Partial correlations", needs: "Three or more numeric metrics; at least metrics + 3 places with every value", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n < c.k + 3 ? `Needs at least ${c.k + 3} places: you have ${c.n}` : null },
+    { id: "ctl", mode: "across", label: "Test with controls", needs: "Two or more numeric metrics (an outcome and a factor to test) and at least one factor to control for; at least factors + 12 places with every value",
+      check: c => c.k < 2 ? `Needs two numeric metrics, an outcome and a factor to test: you have ${nums(c.k)}` : !c.ctl ? "Choose at least one factor to control for (Control for…)" : c.n < c.ctl + 14 ? `Needs at least ${c.ctl + 14} places: you have ${c.n}` : null },
     { id: "reg", mode: "across", label: "Regression", needs: "Three or more numeric metrics (one outcome, two or more predictors); more places than metrics + 10 (Atlas's minimum)",
       check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n <= c.k + 10 ? `Needs more than ${c.k + 10} places (metrics + 10): you have ${c.n}` : null },
     { id: "pca", mode: "across", label: "Components (what moves together)", needs: "Three or more numeric metrics, standardised; at least metrics + 3 places with every value", check: c => c.k < 3 ? `Needs at least three numeric metrics: you have ${nums(c.k)}` : c.n < c.k + 3 ? `Needs at least ${c.k + 3} places: you have ${c.n}` : null },
@@ -4198,7 +4200,7 @@
   // which methods suit this choice: all of the mode's methods, each with ok and the reason when it isn't
   function anMethods(cfg) {
     const over = cfg.mode === "time", ms = cfg.metrics.map(id => M[id]).filter(Boolean);
-    const c = { k: ms.length, n: over ? 0 : anCodes(cfg).length, sel: cfg.within === "sel", annual2: ms.slice(0, 2).every(m => m.temporal === "annual") };
+    const c = { k: ms.length, n: over ? 0 : anCodes(cfg).length, sel: cfg.within === "sel", annual2: ms.slice(0, 2).every(m => m.temporal === "annual"), ctl: (cfg.controls || []).filter(id => M[id] && !cfg.metrics.slice(0, 2).includes(id)).length };
     return AN_METHODS.filter(x => x.mode === (over ? "time" : "across")).map(x => { const why = x.check(c); return [x.id, x.label, !why, why]; });
   }
   const METHOD_WHY = {
@@ -4209,6 +4211,7 @@
     dist2: "The spread of each metric on its own, side by side.",
     matrix: "Every pair of metrics at once. Blue: they rise together; red: one rises as the other falls. Stars mark links unlikely to be chance (p < 0.05).",
     partial: "Each pair's link after holding all the other metrics fixed. A link that vanishes here was explained by the others.",
+    ctl: "Tests whether the factor is still linked to the outcome once the factors you choose to control for are held fixed: the link on its own, holding each control fixed in turn, and holding them all fixed at once (partial correlation and regression).",
     reg: "Predicts one metric (the outcome) from all the others together. Standardised effects show which predictor matters most; the leftovers (residuals) show where places do better or worse than predicted.",
     pca: "Finds a few underlying patterns (components) that summarise many metrics: which metrics rise and fall together, and each place's score on each pattern.",
     cluster: "Sorts places into groups with similar profiles across all the metrics (k-means on standardised values; the number of groups is chosen by how well separated they are).",
@@ -4218,6 +4221,62 @@
     lag: "Whether the metrics move together over the years, and whether one leads the other. Uses year-on-year changes, because two things that both grow over time look related even when they aren't.",
   };
   function anRows(cfg) { return withDate(cfg.date || state.date, () => { const codes = anCodes(cfg), ms = cfg.metrics.map(id => M[id]).filter(Boolean); return { codes, ms, cols: ms.map(m => vals(m, codes, cfg.date || state.date)) }; }); }
+  // 0.11: a test with controls: is the factor still linked to the outcome once the chosen factors are held fixed?
+  function ctlPicks(cfg, ms) {
+    const ids = ms.map(m => m.id), yi = Math.max(0, ids.indexOf(cfg.outcome)), t = ids.indexOf(cfg.test), xi = t >= 0 && t !== yi ? t : yi === 0 ? 1 : 0;
+    return { yi, xi, cIds: (cfg.controls || []).filter(id => M[id] && id !== ids[yi] && id !== ids[xi]) };
+  }
+  function ctlResult(cfg, out, o) {
+    const { codes, ms, cols, d, w, unit, where, head, caveat } = o, { yi, xi, cIds } = ctlPicks(cfg, ms), yM = ms[yi], xM = ms[xi];
+    const pick = `<div class="anpicks"><label class="anpick">Outcome <select data-anoutcome>${ms.map((m, i) => `<option value="${m.id}" ${i === yi ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label><label class="anpick">Factor to test <select data-antest>${ms.map((m, i) => i === yi ? "" : `<option value="${m.id}" ${i === xi ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label></div>`;
+    out.title = `${xM.label} and ${yM.label}, controlling for ${cIds.length} factor${cIds.length === 1 ? "" : "s"}`;
+    if (!cIds.length) return Object.assign(out, { html: pick + `<div class="aempty">Choose at least one factor to control for in “Control for” above.</div>` });
+    const cCols = withDate(d, () => cIds.map(id => vals(M[id], codes, d))), C = ST.complete([cols[yi], cols[xi], ...cCols]), n = C.idx.length, k = cIds.length;
+    if (n < k + 14) return Object.assign(out, { html: pick + `<div class="aempty">Only ${n} ${esc(unit)} have the outcome, the factor and every control; at least ${k + 14} are needed. Try fewer controls or a wider area.</div>` });
+    const [Y, X, ...Cc] = C.cols, lab = id => M[id].label, lc = t => /^[A-Z][A-Z]/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1), f = fmtOf(yM);
+    const raw = ST.pearson(X, Y), rawS = ST.spearman(X, Y), all = ST.partial([Y, X, ...Cc]);
+    if (!all.R) return Object.assign(out, { html: pick + `<div class="aempty">${all.singular ? "Two or more of these carry the same information (one is built from the others), so they can't be held fixed separately. Remove one of the controls." : "Too few places with every value."}</div>` });
+    const pr = all.R[0][1], pp = all.p[0][1], rk = ST.ranks, alS = ST.partial([rk(Y), rk(X), ...Cc.map(rk)]), prS = alS.R ? alS.R[0][1] : null;
+    const one = cIds.map((id, j) => { const q = ST.partial([Y, X, Cc[j]]); return { id, r: q.R ? q.R[0][1] : null, cx: ST.pearson(X, Cc[j]).r, cy: ST.pearson(Y, Cc[j]).r }; });
+    const reg0 = ST.multiple(Y, [X]), regC = ST.multiple(Y, Cc), regF = ST.multiple(Y, [X, ...Cc]);
+    const flip = Math.sign(pr) !== Math.sign(raw.r) && Math.abs(pr) >= 0.1 && ST.sig(pp), ratio = Math.abs(raw.r) > 0.05 ? Math.abs(pr) / Math.abs(raw.r) : null;
+    const verdict = Math.abs(raw.r) < 0.1 && Math.abs(pr) < 0.1 ? "There is little link on its own, and none once the controls are held fixed."
+      : flip ? `The link <b>reverses</b>: on its own it is ${raw.r.toFixed(2)}, but holding the controls fixed it is ${pr.toFixed(2)}. Among places alike on the controls, the pattern runs the other way.`
+      : Math.abs(pr) < 0.1 || (ratio != null && ratio < 0.33) ? `The link is <b>mostly explained by the controls</b>: ${raw.r.toFixed(2)} on its own, ${pr.toFixed(2)} once they are held fixed.`
+      : ratio != null && ratio < 0.75 ? `The link is <b>weaker but still there</b>: ${raw.r.toFixed(2)} on its own, ${pr.toFixed(2)} once the controls are held fixed${ST.sig(pp) ? "" : " (now small enough to be chance)"}.`
+      : `The link <b>holds up</b>: ${raw.r.toFixed(2)} on its own, ${pr.toFixed(2)} once the controls are held fixed${ST.sig(pp) ? "" : ", though it could be chance"}.`;
+    const biggest = one.filter(x => x.r != null).sort((a, b) => Math.abs(b.r - raw.r) - Math.abs(a.r - raw.r))[0];
+    const warn = [];
+    one.filter(x => Math.abs(x.cx) > 0.85).forEach(x => warn.push(`${lab(x.id)} and ${lc(xM.label)} are almost the same across places (r = ${x.cx.toFixed(2)}), so holding it fixed leaves little of the factor to test.`));
+    if (n < 10 * (k + 1)) warn.push(`${n} places for ${k + 1} factors is thin: estimates can swing a lot with a few places (a common rule of thumb is ten places per factor).`);
+    const sx = ST.sd(X), dY = v => (v >= 0 ? "+" : "") + f(v);
+    out.html = head(out.title, `${n} ${unit} in ${where} with every value · ${longDate(d)}`) + pick +
+      `<p class="anverdict">${verdict}</p>` +
+      CH.coef([{ name: "On its own", v: raw.r, colour: "#1f2a2e", note: ST.pText(raw.p) }].concat(one.map(x => ({ name: lab(x.id), v: x.r, note: "held fixed alone" })), [{ name: `All ${k} held fixed`, v: pr, colour: "#2b6cb0", note: ST.pText(pp), faint: !ST.sig(pp) }]), { w, vfmt: v => (+v).toFixed(2), xtitle: `Correlation of ${xM.label} with ${yM.label} (−1 to 1)` }) +
+      `<ul class="anstat"><li>On its own: Pearson r = <b>${raw.r.toFixed(2)}</b> (${ST.pText(raw.p)}) · Spearman ρ = <b>${rawS.r != null ? rawS.r.toFixed(2) : "—"}</b>.</li>
+        <li>Holding ${esc(cIds.map(id => lc(lab(id))).join(", "))} fixed: partial r = <b>${pr.toFixed(2)}</b> (${ST.pText(pp)})${prS != null ? ` · on ranks <b>${prS.toFixed(2)}</b>` : ""}.</li>
+        ${biggest && k > 1 ? `<li>The control that changes the link most on its own: <b>${esc(lab(biggest.id))}</b> (from ${raw.r.toFixed(2)} to ${biggest.r.toFixed(2)} holding just it fixed).</li>` : ""}
+        ${!reg0.error && !regF.error ? `<li>Regression: a place one typical step (${esc(fmtOf(xM)(sx))}) higher in ${esc(lc(xM.label))} has ${esc(dY(reg0.beta[1] * sx))} ${esc(lc(yM.label))} on its own, and <b>${esc(dY(regF.beta[1] * sx))}</b> once the controls are held fixed (${ST.pText(regF.p[1])}).</li>` : ""}
+        ${!regC.error && !regF.error ? `<li>The controls alone explain <b>${pct(regC.r2)}</b> of the differences in ${esc(lc(yM.label))}; adding ${esc(lc(xM.label))} explains a further <b>${(100 * Math.max(0, regF.r2 - regC.r2)).toFixed(1)} points</b> (${pct(regF.r2)} in all).</li>` : ""}</ul>` +
+      (warn.length ? `<div class="ex-warn"><b>Check before relying on this.</b><ul>${warn.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>` : "") +
+      `<table class="ex-t"><thead><tr><th>Control</th><th class="num">with the factor</th><th class="num">with the outcome</th><th class="num">link holding it fixed</th></tr></thead><tbody>${one.map(x => `<tr><td>${esc(lab(x.id))}</td><td class="num">${x.cx != null ? x.cx.toFixed(2) : "—"}</td><td class="num">${x.cy != null ? x.cy.toFixed(2) : "—"}</td><td class="num">${x.r != null ? x.r.toFixed(2) : "—"}</td></tr>`).join("")}</tbody></table>` +
+      caveat("Control for things that could drive both the factor and the outcome (age, density, deprivation), not for things the factor itself causes: holding a consequence fixed (a mediator) hides part of the real effect, and holding fixed something both cause (a collider) can invent a link. Even with controls, a link between places isn't proof of cause, and needn't hold for the people in them.");
+    out.map = !regC.error ? { kind: "residual", label: `${yM.label} beyond what the controls predict`, codes, values: regC.residuals, level: cfg.level, fmt: f } : null;
+    out.csv = XL.csv([["code", "name", yM.label, xM.label, ...cIds.map(lab)], ...C.idx.map((i, j) => [codes[i], nameOf(codes[i]), Y[j], X[j], ...Cc.map(c => c[j])])]);
+    return out;
+  }
+  const CTL_SUGGEST = ["density", "imd_score", "average_age", "population", "gdp_per_head", "claimant_rate", "pop_change", "c_bad_health"];
+  function ctlBoxHTML(cfg) {
+    if (cfg.mode === "time" || !cfg.metrics.length) return "";
+    const ch = (cfg.controls || []).filter(id => M[id]), lab = id => M[id].label, sug = CTL_SUGGEST.filter(id => M[id] && !ch.includes(id) && !cfg.metrics.slice(0, 2).includes(id) && (!M[id].levels || M[id].levels.includes(cfg.level)));
+    const others = cfg.metrics.slice(2).filter(id => !ch.includes(id));
+    return `<details class="an-ctl" ${ch.length || cfg.method === "ctl" ? "open" : ""}><summary><b>Control for</b> <small>${ch.length ? esc(ch.map(lab).join(", ")) : "choose factors to hold fixed"}</small></summary>
+      ${ch.length ? `<div class="chips">${ch.map(id => `<span class="chip">${esc(lab(id))}<button data-anctlrm="${id}" aria-label="Stop controlling for ${esc(lab(id))}">×</button></span>`).join("")}<button class="lnk" data-anctlclear>clear</button></div>` : ""}
+      <div class="an-ctl-add"><input type="search" data-anctlq placeholder="Add a factor: search any metric…" aria-label="Search for a factor to control for"><div class="an-ctl-res"></div></div>
+      ${sug.length || others.length ? `<div class="an-ctl-sug"><small>Often useful:</small> ${sug.slice(0, 6).map(id => `<button class="btn sm" data-anctladd="${id}">+ ${esc(lab(id))}</button>`).join("")}${others.length ? `<button class="btn sm" data-anctlothers>+ the other ${others.length} chosen metric${others.length > 1 ? "s" : ""}</button>` : ""}</div>` : ""}
+      <p class="an-ctl-note">Used by <b>Test with controls</b>${ch.length ? " and by the “holding fixed” column above" : ""}. Hold fixed what could drive both things, not what the factor itself causes.</p>
+      ${ch.length && cfg.method !== "ctl" && cfg.metrics.length >= 2 ? `<button class="btn primary sm" data-anmethod="ctl">Run the test with these controls</button>` : ""}</details>`;
+  }
   function anResult(cfg, w) { // -> { title, html, csv, map } for one method; pure given cfg, so the workspace can re-run it
     w = w || 640;
     const { codes, ms, cols: raw } = anRows(cfg), method = cfg.method, d = cfg.date || state.date, where = cfg.within === "sel" ? "your selection" : cfg.within === UKC ? "the UK" : nameOf(cfg.within);
@@ -4317,6 +4376,7 @@
         caveat("Areas with fewer than 5 places are left out. A link can be strong overall but weak or reversed inside areas (Simpson's paradox).");
       return out;
     }
+    if (method === "ctl") return ctlResult(cfg, out, { codes, ms, cols, d, w, unit, where, head, caveat });
     const labels = ms.map(m => m.label);
     if (method === "matrix") {
       const { R, N } = ST.corrMatrix(cols, cfg.corr), Pm = R.map((row, i) => row.map((r, j) => r == null || i === j ? null : (ST[cfg.corr === "spearman" ? "spearman" : "pearson"](cols[i], cols[j])).p));
@@ -4402,14 +4462,15 @@
   // outliers; Pearson shown too). p-values are corrected for testing many metrics at once (Benjamini-Hochberg). Near-copies
   // of the outcome are flagged and set aside. For the strongest, a partial correlation holds density and deprivation fixed.
   const EXPL = {};
-  function explainKey(cfg) { return [cfg.metrics[0], cfg.level, cfg.within, (cfg.custom || []).join(","), cfg.date].join("|"); }
+  function explainKey(cfg) { return [cfg.metrics[0], cfg.level, cfg.within, (cfg.custom || []).join(","), cfg.date, (cfg.controls || []).join(",")].join("|"); }
+  const explainCtl = cfg => { const o = cfg.metrics[0], ch = (cfg.controls || []).filter(id => M[id] && id !== o); return ch.length ? ch : ["density", "imd_score"].filter(id => M[id] && id !== o); };
   function explainRun(cfg) {
     const k = explainKey(cfg); if (EXPL[k]) return EXPL[k];
     const o = M[cfg.metrics[0]], st = EXPL[k] = { done: false, rows: [], n: 0, tested: 0 };
     withDate(cfg.date, () => {
       const codes = anCodes(cfg), y = vals(o, codes, cfg.date); st.n = y.filter(v => v != null).length; st.codes = codes;
       const pool = anMetricsAll().filter(m => m.id !== o.id && !/_lq$/.test(m.id) && !(m.pickKey && m.pickKey === o.pickKey) && !(m.bd && m.bd === o.bd) && (!m.levels || m.levels.includes(cfg.level)));
-      const ctrl = ["density", "imd_score"].filter(id => M[id] && id !== o.id).map(id => vals(M[id], codes, cfg.date));
+      const ctlIds = explainCtl(cfg), ctrlOf = Object.fromEntries(ctlIds.map(id => [id, vals(M[id], codes, cfg.date)]));
       let i = 0;
       const step = () => {
         withDate(cfg.date, () => { for (const end = Math.min(pool.length, i + 12); i < end; i++) {
@@ -4422,7 +4483,7 @@
         const L = st.rows.filter(r => r.p != null).sort((a, b) => a.p - b.p), T = L.length; let mn = 1;
         for (let j = T - 1; j >= 0; j--) { mn = Math.min(mn, L[j].p * T / (j + 1)); L[j].q = mn; }
         st.rows.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
-        st.rows.filter(r => !r.dup && !(r.m.p === o.p && r.m.group === o.group)).slice(0, 3).forEach(r => { if (!ctrl.length) return; const res = ST.partial([y, r.x].concat(ctrl)); if (res.R) { r.partial = res.R[0][1]; r.pn = res.n; } });
+        st.rows.filter(r => !r.dup && !(r.m.p === o.p && r.m.group === o.group)).slice(0, 3).forEach(r => { const ctrl = ctlIds.filter(id => id !== r.m.id).map(id => ctrlOf[id]); if (!ctrl.length) return; const res = ST.partial([y, r.x].concat(ctrl)); if (res.R) { r.partial = res.R[0][1]; r.pn = res.n; } });
         st.rows.forEach(r => { delete r.x; }); st.done = true; if (!anEl.hidden) explainPaint();
       };
       setTimeout(step, 0);
@@ -4438,7 +4499,7 @@
       const a = esc(lab(r.m).toLowerCase()), b = esc(lab(o).toLowerCase());
       return r.r > 0 ? `Places with higher ${a} tend to have higher ${b}` : `Places with higher ${a} tend to have lower ${b}`; };
     return `<details class="ex" open><summary><b>What in Atlas's data goes with ${esc(o.label)}</b> <small>${st.done ? `${st.tested} metrics tested across ${st.n} ${esc(unit)}` : `looking through the metrics… ${st.tested} so far`}</small></summary>
-      ${top.length ? `<table class="ex-t"><thead><tr><th>Metric</th><th>Link (Spearman)</th><th class="num">r</th><th class="num">Pearson</th><th title="Holding population density and deprivation fixed">Holding density and deprivation fixed</th><th class="num">places</th></tr></thead><tbody>
+      ${top.length ? `<table class="ex-t"><thead><tr><th>Metric</th><th>Link (Spearman)</th><th class="num">r</th><th class="num">Pearson</th><th title="Holding ${esc(explainCtl(cfg).map(id => M[id].label).join(" and "))} fixed (change them in Control for)">Holding ${esc(explainCtl(cfg).length > 2 ? explainCtl(cfg).length + " factors" : explainCtl(cfg).map(id => { const t = M[id].label; return /^[A-Z][A-Z]/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1); }).join(" and "))} fixed</th><th class="num">places</th></tr></thead><tbody>
         ${top.length ? "" : ""}${top.map(r => `<tr data-exm="${r.m.id}" title="${esc(say(r))}. Click to plot it against ${esc(o.label)}"><td class="ex-n"><i class="sw" style="background:${PER[r.m.p].hue}"></i>${esc(lab(r.m))}<small>${esc(say(r))}</small></td>
           <td><span class="ex-bar"><i style="${r.r >= 0 ? `left:50%;width:${(50 * r.r).toFixed(1)}%;background:#2b6cb0` : `right:50%;width:${(-50 * r.r).toFixed(1)}%;background:#c0392b`}"></i></span><small>${esc(ST.strength(r.r))}${r.q != null && r.q >= 0.05 ? " · could be chance" : ""}</small></td>
           <td class="num">${r.r.toFixed(2)}</td><td class="num">${r.pr != null ? r.pr.toFixed(2) : "—"}</td><td class="num">${r.partial != null ? `${r.partial.toFixed(2)}${Math.abs(r.partial) < Math.abs(r.r) / 2 ? " <small>(mostly explained by them)</small>" : ""}` : ""}</td><td class="num">${r.n}</td></tr>`).join("")}</tbody></table>` : st.done ? `<p class="aempty">Not enough places with both values to say anything.</p>` : ""}
@@ -4469,6 +4530,7 @@
       </div><div class="an-main">
         ${AN.metrics.length ? `<div class="an-methods">${methods.map(([id, l, ok, why]) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}>${esc(l)}</button>`).join("")}</div>${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")} ${helpBtn("m-" + AN.method, "Help: what this method needs and assumes")}</p>` : `<p class="anwhy">No method suits this choice yet. ${methods.filter(m => !m[2]).slice(0, 3).map(([id, l, , why]) => `<button class="linkish" data-help="m-${id}">${esc(l)}: ${esc(why)}</button>`).join(" · ")}</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
         ${AN.method === "rel" ? `<label class="anpick">Split by a category <select data-ansplit><option value="">none</option>${anCats().map(m => `<option value="${m.id}" ${AN.split === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : ""}
+        <div class="an-ctlbox">${ctlBoxHTML(cfg)}</div>
         <div class="an-ex">${explainHTML(cfg)}</div>
         <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
         ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Show on map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy data (CSV)</button>` : ""}</div>` : ""}
@@ -4487,6 +4549,10 @@
     if (ds.anmethod && b.getAttribute("aria-disabled") === "true") { undoToast(`${AN_BY[ds.anmethod].label}: ${b.title}.`, () => {}); const t = $("toast"), u = $("undo-btn"); if (u) { u.textContent = "What it needs"; u.onclick = () => { t.hidden = true; openHelp("help-m-" + ds.anmethod); }; } return; }
     if (ds.antrim) AN.trim = ds.antrim === "1"; else if (ds.anmode) AN.mode = ds.anmode; else if (ds.anmethod) AN.method = ds.anmethod; else if (ds.ancorr) AN.corr = ds.ancorr;
     else if (b.hasAttribute("data-anclear")) AN.metrics = [];
+    else if (ds.anctladd) { AN.controls = (AN.controls || []).filter(x => x !== ds.anctladd).concat(ds.anctladd); }   // 0.11: Control for
+    else if (ds.anctlrm) AN.controls = (AN.controls || []).filter(x => x !== ds.anctlrm);
+    else if (b.hasAttribute("data-anctlclear")) AN.controls = [];
+    else if (b.hasAttribute("data-anctlothers")) AN.controls = [...new Set((AN.controls || []).concat(AN.metrics.slice(2)))];
     else if (b.hasAttribute("data-anws")) { const cfg = Object.assign({}, AN, { date: state.date }); sendToWS({ type: "analysis", title: anEl._last.title, cfg }); return; }
     else if (b.hasAttribute("data-anmap")) { showOnMap(anEl._last.map); return; }
     else if (b.hasAttribute("data-ancsv")) { copy(anEl._last.csv); return; }
@@ -4495,11 +4561,14 @@
   });
   PS_ADD.an = c => { if (!AN.custom.includes(c)) AN.custom.push(c); AN.within = "custom"; if (P[c].level !== AN.level && LEVEL_OPTS().some(([l]) => l === P[c].level) && AN.custom.length === 1) AN.level = P[c].level; saveAN(); renderAnalyse(); };
   PS_ADD.anplace = c => { AN.place = c; saveAN(); renderAnalyse(); };
+  anEl.addEventListener("input", e => { const q = e.target.closest("[data-anctlq]"); if (!q) return; const box = anEl.querySelector(".an-ctl-res"), t = q.value.trim().toLowerCase(); if (!box) return;   // 0.11: search for a control
+    const hits = t.length < 2 ? [] : anMetricsAll().filter(m => EN.isNum(m) && m.p !== "analysis" && !/_(lq|top)$/.test(m.id) && !(AN.controls || []).includes(m.id) && (!m.levels || m.levels.includes(AN.level)) && (m.label + " " + (m.group || "")).toLowerCase().includes(t)).slice(0, 12);
+    box.innerHTML = hits.map(m => `<button class="an-ctl-hit" data-anctladd="${m.id}"><i class="sw" style="background:${PER[m.p].hue}"></i>${esc(m.label)}<small>${esc(m.group || PER[m.p].name)}</small></button>`).join("") || (t.length >= 2 ? `<p class="muted">No numeric metric matches.</p>` : ""); });
   anEl.addEventListener("click", e => { const r = e.target.closest("[data-anrmp]"); if (r) { AN.custom = AN.custom.filter(c => c !== r.dataset.anrmp); saveAN(); renderAnalyse(); } if (e.target.closest("[data-anrmall]")) { AN.custom = []; saveAN(); renderAnalyse(); } });
   anEl.addEventListener("change", e => { const t = e.target, ds = t.dataset;
     if (ds.anm) AN.metrics = t.checked ? AN.metrics.concat(ds.anm) : AN.metrics.filter(x => x !== ds.anm);
     else if (ds.anlevel != null) AN.level = t.value; else if (ds.anwithin != null) AN.within = t.value; else if (ds.anplace != null) AN.place = t.value;
-    else if (ds.anoutcome != null) AN.outcome = t.value; else if (ds.ank != null) AN.k = +t.value; else if (ds.ansplit != null) AN.split = t.value; else return;
+    else if (ds.anoutcome != null) AN.outcome = t.value; else if (ds.antest != null) AN.test = t.value; else if (ds.ank != null) AN.k = +t.value; else if (ds.ansplit != null) AN.split = t.value; else return;
     saveAN(); renderAnalyse(); });
 
   // ---------- the workspace: a project board for tables, charts, analyses, cards, tiles, map pictures and notes ----------
@@ -5017,6 +5086,8 @@
   if (window.AtlasTrade) AtlasTrade.init(CTX);   // 0.9
   if (window.AtlasNarrative) AtlasNarrative.init(CTX);   // 0.10
   CTX.councilSpend = c => councilSpend(c);
+  CTX.sourceOf = m => sourceOf(m);   // 0.11
+  if (window.AtlasCard) AtlasCard.init(CTX, { openPanel: id => APP ? openFromBar(id) : openMetricInfo(id) });   // 0.11: information cards and the ⓘ peek
 
   // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------
   // News shows only when the feed has items for what's on screen: the focused place (or anything inside it), the topics
@@ -5063,7 +5134,7 @@
     WM.place(w.el, last ? { x: last.x, y: last.y + 44, w: last.w, h: ph } : { x: innerWidth - pw - 16, y: top, w: pw, h: ph });
     markLinks();
     const isTool = APP.tools.includes(x);
-    if (window.AtlasPanel && !isTool && x.editorial !== false) AtlasPanel.watch(w.body, { app: APP.name.replace(/^Atlas /, ""), title: x.title, blurb: x.blurb || "", editorial: x.editorial });   // 0.10: editorial layout
+    if (window.AtlasPanel && !isTool && x.editorial !== false) AtlasPanel.watch(w.body, { app: APP.name.replace(/^Atlas /, ""), title: x.title, blurb: x.blurb || "", editorial: x.editorial, id: x.id });   // 0.10: editorial layout
     const draw = () => { if (!w.el.hidden) { try { x.render(CTX, w.body); } catch (e) { console.error(e); w.body.innerHTML = `<p class="aempty">Couldn't draw this: ${esc(e.message)}</p>`; } } };
     draw(); if (x.live && !w.live) { w.live = true; appListeners.push(draw); }
   }
@@ -5120,7 +5191,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.10</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.11</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));
@@ -5154,7 +5225,10 @@
       WM.open(w.el); return;
     }
     bar.innerHTML = [...APP.panels, ...APP.tools].map(x => `<button class="ah-link${APP.tools.includes(x) ? " tool" : ""}" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("");
-    bar.hidden = false; bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) openFromBar(b.dataset.apanel); });
+    bar.hidden = false;
+    // 0.11: headings drop down menus (menu.js); forms and tools still open their panel straight away
+    if (window.AtlasMenu) AtlasMenu.init(CTX, APP, { openFull: id => openFromBar(id), applyMap: x => { if (x.map) applyPanelMap(x); else if (x.onOpen) { try { x.onOpen(CTX); } catch (e) { console.error(e); } } }, mark: id => bar.querySelectorAll("[data-apanel]").forEach(b => b.classList.toggle("cur", b.dataset.apanel === id)) });
+    else bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) openFromBar(b.dataset.apanel); });
     requestAnimationFrame(() => { const h = $("apphead").offsetHeight; document.documentElement.style.setProperty("--ahh", h + "px"); WM.setTop(h + 8); map.resize(); });
     dockOpenP = APP.perspective; setFold(false);
     if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) map.loaded() ? APP.init(CTX) : map.once("load", () => APP.init(CTX)); }

@@ -6,7 +6,7 @@ the shared core with their own panels and tools; a perspective with no data is "
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from atlas_test import server, browser, open_atlas, Report
+from atlas_test import server, browser, open_atlas, Report, open_panel
 
 
 def main():
@@ -27,9 +27,9 @@ def main():
         rep.check(js("() => document.title") == "Atlas Markets" and page.is_visible("#appbar"), "#app=markets opens Atlas Markets with its own bar")
         rep.check(js("() => [...document.querySelectorAll('#dock .pname')].filter(b => b.dataset.open !== 'analysis').length") == 0 and js("() => [...new Set([...document.querySelectorAll('#dock .pgroup')].map(b => b.dataset.p))].join()") == "markets", "the dock offers only Markets' own categories (0.7.1: no perspective headers)")
         rep.check("exports" in js("() => document.querySelector('.apppanel:not([hidden]) .wm-body').textContent").lower(), "0.9: Atlas Markets opens on Trade")
-        page.click("#appbar [data-apanel=overview]"); page.wait_for_timeout(400)
+        open_panel(page, "overview"); page.wait_for_timeout(400)
         rep.check("not available" in js("() => [...document.querySelectorAll('.apppanel:not([hidden]) .wm-body')].pop().textContent").lower(), "the market overview says prices are not available, and why")
-        page.click("#appbar [data-apanel=calc]"); page.wait_for_timeout(400); page.click(".apppanel:not([hidden]) [data-calc=dcf]"); page.wait_for_timeout(300)
+        open_panel(page, "calc"); page.wait_for_timeout(400); page.click(".apppanel:not([hidden]) [data-calc=dcf]"); page.wait_for_timeout(300)
         r = js("() => { const w = [...document.querySelectorAll('.apppanel:not([hidden])')].pop(); return [w.querySelectorAll('.mk-sens td').length, /Enterprise value/.test(w.textContent), /not investment advice/.test(w.textContent)]; }")
         rep.check(r[0] == 25 and r[1] and r[2], f"DCF: enterprise value, a 5 × 5 WACC × growth table, and the advice warning ({r})")
         page.click(".apppanel:not([hidden]) [data-calc=comps]"); page.wait_for_timeout(400)
@@ -38,7 +38,7 @@ def main():
         js("""() => { const w = [...document.querySelectorAll('.apppanel:not([hidden])')].pop(), t = w.querySelector('[data-k=px]'); t.value = '2020-01-31,100\\n2020-02-29,110\\n2020-03-31,88\\n2020-04-30,121'; t.dispatchEvent(new Event('input', { bubbles: true })); }""")
         r = js("() => [...document.querySelectorAll('.apppanel:not([hidden])')].pop().querySelector('.mk-out').textContent")
         rep.check("21.0%" in r and "-20.0%" in r, f"returns: total return 21% and maximum drawdown −20% from pasted prices")
-        page.click("#appbar [data-apanel=companies]"); page.wait_for_timeout(300)
+        open_panel(page, "companies"); page.wait_for_timeout(300)
         page.click(".apppanel:not([hidden]) tr[data-co]"); page.wait_for_timeout(300)
         rep.check(js("() => !!document.querySelector('.wmwin[data-wm-type=company]:not([hidden])')"), "a company card opens from the screener")
         rep.check(not page.errors, "Markets: no console errors" + (f": {page.errors}" if page.errors else ""))
@@ -47,7 +47,7 @@ def main():
         page = open_atlas(b, base, (1440, 900), query="debug#app=politics"); js = page.evaluate; page.wait_for_timeout(2000)
         rep.check(not js("() => document.body.classList.contains('hexmode')") and js("() => AtlasDebug.PS.mapped.political.includes('ge_winner')"), "Atlas Politics opens with every seat coloured by its winner (0.7.1: real boundaries; hex is a view under Constituencies)")
         rep.check("650 seats" in js("() => document.querySelector('.apppanel:not([hidden])').textContent"), "the election view shows the seat count (650)")
-        page.click("#appbar [data-apanel=swing]"); page.wait_for_timeout(400)
+        open_panel(page, "swing"); page.wait_for_timeout(400)
         before = js("() => [...document.querySelectorAll('.apppanel:not([hidden])')].pop().querySelector('.seatbar').innerHTML")
         js("""() => { const w = [...document.querySelectorAll('.apppanel:not([hidden])')].pop(), i = w.querySelector('[data-sw=lab]'); i.value = 20; i.dispatchEvent(new Event('input', { bubbles: true })); }"""); page.wait_for_timeout(600)
         after = js("() => [...document.querySelectorAll('.apppanel:not([hidden])')].pop().querySelector('.seatbar').innerHTML")
@@ -56,7 +56,7 @@ def main():
         js("() => [...document.querySelectorAll('.apppanel:not([hidden])')].pop().querySelector('[data-swmap]').click()"); page.wait_for_timeout(800)
         rep.check(js("() => AtlasDebug.PS.mapped.political.includes('uns_winner')"), "the projection goes on the map")
         for pid in ("seat", "councils", "referendums"):
-            page.click(f"#appbar [data-apanel={pid}]"); page.wait_for_timeout(400)
+            open_panel(page, f"{pid}"); page.wait_for_timeout(400)
         rep.check(js("() => !!document.querySelector('.apppanel:not([hidden]) svg.ap-svg')"), "councils draw seats over time and control")
         rep.check(not page.errors, "Politics: no console errors" + (f": {page.errors}" if page.errors else ""))
         page.context.close()
@@ -65,7 +65,7 @@ def main():
             page = open_atlas(b, base, (1440, 900), query="debug#app=" + app); js = page.evaluate; page.wait_for_timeout(1500)
             rep.check(word in js("() => [...document.querySelectorAll('.apppanel:not([hidden]), .fwin:not([hidden])')].map(e => e.textContent).join(' ')"), f"Atlas {app.title()} opens on its first panel")
             for x in js("() => [...document.querySelectorAll('#appbar [data-apanel]')].map(b => b.dataset.apanel)"):
-                page.click(f"#appbar [data-apanel={x}]"); page.wait_for_timeout(250)
+                open_panel(page, f"{x}"); page.wait_for_timeout(250)
             rep.check(not page.errors, f"{app}: every panel opens without console errors" + (f": {page.errors}" if page.errors else ""))
             page.context.close()
         page = open_atlas(b, base, (1440, 900), query="debug#app=transport"); js = page.evaluate; page.wait_for_timeout(800)

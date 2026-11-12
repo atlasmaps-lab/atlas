@@ -2,6 +2,10 @@
  * Copy this folder to views/<id>/, rename below, and add a line for it in views/views.js.
  * Talk to the core only through ctx (see docs/perspective-apps.md): ctx.M (metrics), ctx.sel, ctx.focused,
  * ctx.date, ctx.nameOf, ctx.openPanel, ctx.openChart, ctx.mapOnly, ctx.esc, ctx.CH (charts) and the rest.
+ * 0.11: a panel's heading in the bar drops down a menu. Give the panel `menu: (ctx, B) => ({ sections: [...] })`, or put
+ * the menus in views/<id>/menu.js (see views/politics/menu.js); B (menu.js) builds rows and figures from metrics,
+ * breakdowns and series. Without one, Atlas builds a menu from the panel's `map.metrics` and their groups. Forms and
+ * tools: `menu: false` (they open straight away).
  */
 (function () {
   "use strict";

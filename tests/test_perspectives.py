@@ -6,7 +6,7 @@ chart against England and inequality by deprivation decile. Social: deprivation 
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from atlas_test import server, browser, open_atlas, Report
+from atlas_test import server, browser, open_atlas, Report, open_panel
 
 
 def visible_text(js):
@@ -23,12 +23,12 @@ def main():
         rep.check("CPI inflation" in t and "Unemployment" in t and "next" in t, "tiles show inflation, unemployment and the next release")
         page.click(".ec-tile[data-ecchart=cpi]"); page.wait_for_timeout(500)
         rep.check(js("() => [...document.querySelectorAll('.fwin')].some(w => !w.hidden && /CPI inflation/.test(w.textContent) && w.querySelector('svg path'))"), "a tile opens its chart")
-        page.click("#apphead [data-apanel=forecasts]"); page.wait_for_timeout(600)
+        open_panel(page, "forecasts"); page.wait_for_timeout(600)
         t = visible_text(js)
         rep.check("Median" in t and "OBR" in t and "GDP" in t, "Forecasts lists the consensus and the OBR")
-        page.click("#apphead [data-apanel=calendar]"); page.wait_for_timeout(500)
+        open_panel(page, "calendar"); page.wait_for_timeout(500)
         rep.check("Next updates" in visible_text(js), "the release calendar lists the next updates")
-        page.click("#apphead [data-apanel=rates]"); page.wait_for_timeout(500)
+        open_panel(page, "rates"); page.wait_for_timeout(500)
         rep.check("10-year gilt yield" in visible_text(js), "Rates & sterling shows gilt yields")
         rep.check(not page.errors, "Atlas Economic: no console errors" + (f": {page.errors[:3]}" if page.errors else ""))
         v = js("() => AtlasDebug.M.imd_decile.get('E06000002', AtlasDebug.state.date)")
@@ -39,25 +39,25 @@ def main():
 
         page = open_atlas(b, base, (1440, 900), query="debug#app=health"); js = page.evaluate; page.wait_for_timeout(1500)
         js("() => AtlasCtx.focus('E06000002')"); page.wait_for_timeout(1200)
-        page.click("#apphead [data-apanel=spine]"); page.wait_for_timeout(700)
+        open_panel(page, "spine"); page.wait_for_timeout(700)
         k = js("() => [...document.querySelectorAll('.fwin')].filter(w => !w.hidden && /against England/.test(w.textContent)).map(w => w.querySelectorAll('svg circle').length)[0] || 0")
         rep.check(k >= 8, f"the spine chart places the council on each indicator ({k})")
-        page.click("#apphead [data-apanel=inequality]"); page.wait_for_timeout(700)
+        open_panel(page, "inequality"); page.wait_for_timeout(700)
         rep.check("Gap between the least and most deprived" in visible_text(js), "Inequality shows the gap between deprivation deciles")
         rep.check(not page.errors, "Atlas Health: no console errors" + (f": {page.errors[:3]}" if page.errors else ""))
         page.context.close()
 
         page = open_atlas(b, base, (1440, 900), query="debug#app=social"); js = page.evaluate; page.wait_for_timeout(1500)
         js("() => AtlasCtx.focus('E08000003')"); page.wait_for_timeout(1200)
-        page.click("#apphead [data-apanel=deprivation]"); page.wait_for_timeout(700)
+        open_panel(page, "deprivation"); page.wait_for_timeout(700)
         rep.check("Income" in visible_text(js) and "Decile" in visible_text(js), "Social: deprivation by domain for Manchester")
         rep.check(not page.errors, "Atlas Social: no console errors" + (f": {page.errors[:3]}" if page.errors else ""))
         page.context.close()
 
         page = open_atlas(b, base, (1440, 900), query="debug#app=markets"); js = page.evaluate; page.wait_for_timeout(1500)
-        page.click("#apphead [data-apanel=rates]"); page.wait_for_timeout(500)
+        open_panel(page, "rates"); page.wait_for_timeout(500)
         rep.check("Bank Rate" in visible_text(js), "Atlas Markets has Rates & sterling too")
-        page.click("#apphead [data-apanel=money]"); page.wait_for_timeout(500)
+        open_panel(page, "money"); page.wait_for_timeout(500)
         rep.check(js("() => document.querySelectorAll('.fwin:not([hidden]) [data-modonor]').length") > 10, "Atlas Markets lists company political donors")
         rep.check(not page.errors, "Atlas Markets: no console errors" + (f": {page.errors[:3]}" if page.errors else ""))
         page.context.close()

@@ -7,7 +7,7 @@ the transport metrics have values; stops load at street zoom.
 """
 import os, sys, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from atlas_test import server, browser, open_atlas, Report
+from atlas_test import server, browser, open_atlas, Report, open_panel
 
 LINE6 = "_p~iF~ps|U_ulLnnqC_mqNvxq`@"   # a short polyline (precision 5 sample, decoded at 6: any shape will do)
 VALHALLA = {"trip": {"summary": {"time": 1010, "length": 4.79}, "legs": [{"shape": "iqrfaBj~jDuB`bBzAb_@xCda@fa@heC|Dh^vC`e@", "maneuvers": [{"instruction": "Cycle north on Borough High Street.", "length": 0.4, "time": 80}, {"instruction": "You have arrived.", "length": 0, "time": 0}]}]}}
@@ -48,7 +48,7 @@ def main():
         rep.check(n >= 2, f"…and drawn on the map ({n} legs)")
         page.click("[data-trmode=bicycle]"); page.wait_for_timeout(800)
         rep.check("Borough High Street" in js("() => document.querySelector('.tr-steps').textContent"), "cycling: the steps come from the road router")
-        page.click("#apphead [data-apanel=reach]"); page.wait_for_timeout(500)
+        open_panel(page, "reach"); page.wait_for_timeout(500)
         choose("iso", "London Bridge"); page.wait_for_timeout(1200)
         txt = js("() => document.querySelector('[data-trisoout]').textContent")
         rep.check("councils have their centre" in txt, f"Reach lists the councils inside ({txt[:60]})")

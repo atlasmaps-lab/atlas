@@ -7,7 +7,7 @@ opens with its story and drills into a function.
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from atlas_test import server, browser, open_atlas, Report
+from atlas_test import server, browser, open_atlas, Report, open_panel
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
         rep.check(r[0] and r[0]["est"] and "West Sussex" in r[0]["estWhy"] and r[1] and not r[1].get("est"), "a district includes a share of its county's spending (marked est.); a unitary council doesn't")
         r = js("() => ['spd_fn', 'spd_sub', 'spd_dept', 'spd_council'].map(id => Object.keys(AtlasDebug.bdOf(id, id === 'spd_council' ? 'E08000025' : 'E12000007') || {}).length)")
         rep.check(r[0] == 10 and r[1] > 30 and r[2] >= 10 and r[3] >= 8, f"breakdowns: by function, in detail, by department, council by service ({r})")
-        page.click("#appbar [data-apanel=spending]"); page.wait_for_selector(".apppanel:not([hidden]) .nv-story")
+        open_panel(page, "spending"); page.wait_for_selector(".apppanel:not([hidden]) .nv-story")
         s = js("() => { const b = [...document.querySelectorAll('.apppanel:not([hidden]) .wm-body')].pop(); return ((b.querySelector('.ed-h') || {}).innerText || '') + ' ' + ((b.querySelector('.nv-story') || {}).innerText || ''); }")
         rep.check("£1,360bn" in s and "Social protection" in s and "per head" in s, f"the panel opens with the story ({s[:140]})")
         js("() => document.querySelector('[data-spf=\"Social protection\"]').click()"); page.wait_for_timeout(400)

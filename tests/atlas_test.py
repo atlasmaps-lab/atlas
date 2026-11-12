@@ -73,3 +73,12 @@ class Report:
     def done(self):
         print(f"{self.name}: {self.n - len(self.fails)} of {self.n} checks passed")
         sys.exit(1 if self.fails else 0)
+
+
+def open_panel(page, pid):
+    """0.11: a heading in an app's bar drops down a menu; open its full panel from there (tools open straight away)."""
+    pid = str(pid).strip("'\"")
+    page.click(f"#appbar [data-apanel='{pid}']")
+    page.wait_for_timeout(120)
+    if page.evaluate("() => { const m = document.getElementById('mega'); return !!m && !m.hidden; }"):
+        page.click("#mega [data-mfull]")
