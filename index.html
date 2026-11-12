@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atlas 0.11 · UK</title>
+<title>Atlas 0.11.1 · UK</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
 <style>
 /* Layout: the map is the whole window.
@@ -1371,13 +1371,100 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
   .ed-sacts button:hover, .ed-sacts button:focus-visible { opacity: 1; background: rgba(255,255,255,.18); outline: none; }
   :root[data-mode="dark"] .ed-sacts button:hover { background: rgba(0,0,0,.12); }
   .ed-sacts svg { width: 15px; height: 15px; }
+  /* ---------- 0.11.1: menus that stack, cards and panels in one look, and motion ---------- */
+  :root { --ease: cubic-bezier(.2, .7, .2, 1); --pc-text: "Atlas Text", "Surveyor Text A", "Surveyor Text B", "Newsreader", Georgia, serif; --pc-head: "Atlas Head", "Surveyor Text A", "Surveyor Text B", "Newsreader", Georgia, serif; interpolate-size: allow-keywords; }
+  .mega { animation: mgIn2 .2s var(--ease); }
+  @keyframes mgIn2 { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .mg-in { display: flex; align-items: stretch; max-height: calc(100vh - var(--ahh, 96px) - 24px); }
+  .mg-in > .mg-col { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #3a3e44 transparent; }
+  .mg-secs { flex: 0 0 214px; } .mg-items { flex: 1 1 260px; max-width: 330px; min-width: 220px; } .mg-figs { flex: 1 1 300px; min-width: 0; } .mg-side { flex: 0 0 236px; }
+  .mg-in[data-deep="2"] .mg-items, .mg-in[data-deep="3"] .mg-items, .mg-in[data-deep="4"] .mg-items, .mg-in[data-deep="5"] .mg-items { max-width: 300px; }
+  .mg-new { animation: mgCol .22s var(--ease); }
+  @keyframes mgCol { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+  .mg-h { display: flex; align-items: baseline; gap: 8px; min-height: 18px; } .mg-h > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mg-back { border: 0; background: var(--mg-tile); color: var(--mg-ink); font: inherit; font-size: 12px; border-radius: 999px; padding: 3px 10px; cursor: pointer; white-space: nowrap; max-width: 60%; overflow: hidden; text-overflow: ellipsis; transition: background .15s; } .mg-back:hover { background: #34383e; }
+  .mg-it { position: relative; transition: background .15s var(--ease); }
+  .mg-it.on { background: #2c2f34; box-shadow: inset 3px 0 0 var(--app, #fff); }
+  .mg-it.has-kids .mg-go { padding-right: 2px; }
+  .mg-more { flex: none; width: 18px; text-align: center; color: var(--mg-ink2); font-size: 18px; line-height: 1; transition: transform .15s var(--ease), color .15s; }
+  .mg-it.on .mg-more, .mg-it:hover .mg-more { color: #fff; transform: translateX(2px); }
+  .mg-dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 7px; vertical-align: 1px; }
+  .mg-go, .mg-go small, .mg-note, .mg-side p { font-family: var(--pc-text); }
+  .mg-go small { font-variant-numeric: tabular-nums; }
+  .mg-tile { transition: background .15s var(--ease), transform .15s var(--ease); } .mg-tile:hover { transform: translateY(-1px); }
+  .mg-sec { transition: background .15s var(--ease); }
+  .mg-acts { transition: opacity .15s var(--ease); }
+  @media (max-width: 1100px) { .mg-in { flex-wrap: wrap; } .mg-side { flex: 1 1 100%; flex-direction: row; } .mg-figs { flex-basis: 260px; } }
+  @media (max-width: 760px) { .mg-in { display: block; max-height: none; } .mg-items { max-width: none; } .mg-in > .mg-col { overflow: visible; } .mg-back { max-width: 70%; } }
+  /* cards: words in the text face (the digits face stays for big figures), numbers that fit their box, charts you can lift out */
+  .pcard .pc-k, .pcard .pc-body, .pcard .pc-lede, .pcard .pc-foot, .pcard .pc-iacts, .pc-peek .pk-means { font-family: var(--pc-text); }
+  .pcard .pc-h, .pc-peek .pc-h, .pc-pill { font-family: var(--pc-head); }
+  .pc-k { letter-spacing: .01em; } .pc-h { font-size: 17.5px; line-height: 1.32; }
+  .pc-viz { position: relative; }
+  .pc-bign { width: 100%; height: 100%; box-sizing: border-box; padding: 6px 8px; overflow: hidden; align-content: center; gap: 2px; }
+  .pc-bign b { font-family: var(--f-num); font-size: 22px; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .pc-bign.s b { font-size: 18px; } .pc-bign.xs b { font-size: 14.5px; }
+  .pc-bign small { font-family: var(--pc-text); font-size: 11px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .pc-vacts { position: absolute; top: 5px; right: 5px; display: flex; gap: 3px; opacity: 0; transform: translateY(-2px); transition: opacity .15s var(--ease), transform .15s var(--ease); z-index: 1; }
+  .pc-viz:hover .pc-vacts, .pc-chart:hover .pc-vacts, .pc-vacts:focus-within { opacity: 1; transform: none; }
+  .pc-vacts button { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--pc-edge, #c6c9ce); background: var(--solid, #fff); color: var(--ink); display: grid; place-items: center; padding: 0; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.12); transition: background .15s; }
+  .pc-vacts button:hover { background: var(--hover); } .pc-vacts svg { width: 14px; height: 14px; }
+  @media (hover: none) { .pc-vacts { opacity: 1; transform: none; } }
+  .pc-chart { position: relative; }
+  .pc-it > summary { transition: background .15s var(--ease); border-radius: 10px; } .pc-it > summary:hover { background: color-mix(in srgb, var(--hover) 60%, transparent); }
+  .pc-it::details-content { height: 0; overflow: clip; transition: height .28s var(--ease), content-visibility .28s allow-discrete; }
+  .pc-it[open]::details-content { height: auto; }
+  .pc-iacts button, .pc-iacts a, .pc-follow, .pc-dots, .pc-menu button, .pc-menu a { transition: background .15s var(--ease), border-color .15s; }
+  .pc-menu { transform-origin: bottom right; animation: pcPop .16s var(--ease); }
+  @keyframes pcPop { from { opacity: 0; transform: scale(.96) translateY(4px); } to { opacity: 1; transform: none; } }
+  .pc-loading .pc-h { animation: pcPulse 1.1s ease-in-out infinite alternate; } @keyframes pcPulse { from { opacity: .45; } to { opacity: 1; } }
+  .pc-peek:not([hidden]) { animation: pcPop .16s var(--ease); transform-origin: left center; }
+  /* windows open with a short rise; panels share the card's masthead and title bar */
+  .wm:not([hidden]) { animation: wmIn .22s var(--ease); }
+  @keyframes wmIn { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
+  .apppanel .wm-head { border-bottom: 0; padding: 6px 10px 0 18px; } .apppanel .wm-head .wm-title { visibility: hidden; }
+  .apppanel .wm-body.ed { padding-top: 2px; }
+  .ed-mast { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; text-transform: none; letter-spacing: 0; }
+  .ed-mast .pc-logo, .ed-mast .pc-app { font-size: 20px; } .ed-mast .pc-app { color: var(--app, var(--pc-acc)); }
+  .ed-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ed-pill { margin: 0 0 10px; }
+  .ed .ed-h { font-family: var(--pc-head); font-size: 19px; } .ed .ed-dek { font-family: var(--pc-text); }
+  .ed .tr-tabs { display: flex; gap: 4px; flex-wrap: wrap; border: 0; background: var(--chip); border-radius: 999px; padding: 4px; margin: 4px 0 12px; }
+  .ed .tr-tabs button { border: 0; border-radius: 999px; padding: 6px 12px; background: none; color: var(--ink-2); font: inherit; font-size: 13px; cursor: pointer; transition: background .18s var(--ease), color .18s, box-shadow .18s; }
+  .ed .tr-tabs button.on { background: var(--solid); color: var(--ink); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .ed .tr-tabs button:hover:not(.on) { color: var(--ink); }
+  .ed .ap-note, .ed .mo-src, .ed p { font-family: var(--pc-text); }
+  .ed table.mo-tab td, .ed table.mo-tab th { padding: 7px 6px; }
+  .mf-rows .mf-go { cursor: pointer; transition: background .15s var(--ease); } .mf-rows .mf-go:hover, .mf-rows .mf-go:focus-visible { background: var(--hover); outline: none; }
+  .mf-rows td:first-child { font-family: var(--pc-text); font-weight: 600; } .mf-rows .sw { margin-right: 8px; } .mf-chev { color: var(--ink-3); font-size: 18px; width: 18px; text-align: right; transition: transform .15s; } .mf-go:hover .mf-chev { transform: translateX(2px); color: var(--ink); }
+  .ws-sends { display: flex; justify-content: flex-end; gap: 6px; margin: 2px 0 10px; }
+  .ws-sends .ws-send { margin: 0; }
+  .ws-card { border: 1px solid var(--rule); background: var(--solid); color: var(--ink-2); border-radius: 12px; padding: 2px 9px; font: inherit; font-size: 11px; cursor: pointer; opacity: .75; transition: opacity .15s, color .15s; }
+  .ws-card:hover { opacity: 1; color: var(--ink); border-color: var(--ink-3); }
+  /* the workspace: a zoom control on the board, smooth zoom from the buttons, and new items arrive gently */
+  .ws-zoomer { position: absolute; right: 18px; bottom: 18px; z-index: 5; display: flex; align-items: center; gap: 2px; background: var(--solid); border: 1px solid var(--rule); border-radius: 999px; padding: 4px; box-shadow: 0 6px 20px rgba(0,0,0,.14); }
+  .ws-zoomer button { border: 0; background: none; color: var(--ink); font: inherit; font-size: 16px; min-width: 32px; height: 32px; border-radius: 999px; cursor: pointer; transition: background .15s; padding: 0 8px; }
+  .ws-zoomer button:hover { background: var(--hover); } .ws-zoomer .wz-v { font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 52px; } .ws-zoomer .wz-fit { font-size: 12.5px; font-weight: 600; }
+  .ws-canvas { touch-action: pan-x pan-y; }
+  .ws-inner.ws-smooth { transition: transform .25s var(--ease); }
+  .wsi { transition: box-shadow .2s var(--ease); } .wsi.dragging { transition: none; }
+  .wsi-new { animation: wsiIn .45s var(--ease); }
+  @keyframes wsiIn { 0% { opacity: 0; transform: scale(.94); box-shadow: 0 0 0 0 var(--app, #3b78b5); } 60% { opacity: 1; transform: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--app, #3b78b5) 45%, transparent); } 100% { box-shadow: 0 2px 10px rgba(0,0,0,.08); } }
+  #ws:not([hidden]) { animation: wsFade .22s var(--ease); } @keyframes wsFade { from { opacity: 0; } to { opacity: 1; } }
+  .btn, .ah-link, .tab { transition: background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease), box-shadow .15s var(--ease); }
+  .pc-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); margin: 12px 0 2px; border-top: 1px solid var(--pc-line); border-bottom: 1px solid var(--pc-line); }
+  .pc-fig { padding: 10px 10px 9px 0; min-width: 0; } .pc-fig + .pc-fig { padding-left: 12px; border-left: 1px solid var(--pc-line); }
+  .pc-fig b { display: block; font-family: var(--f-num); font-size: 19px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .pc-fig span { display: block; font-family: var(--pc-text); font-size: 11.5px; color: var(--ink-3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pc-peek .pc-figs { display: none; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } .pc-it::details-content { transition: none; } }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=1110">
-<script src="theme.js?v=1110"></script>
-<script src="theme-apply.js?v=1110"></script>
+<link rel="stylesheet" href="fonts.css?v=1112">
+<script src="theme.js?v=1112"></script>
+<script src="theme-apply.js?v=1112"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1498,33 +1585,33 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=1110"></script>
+<script src="data/places_poi.js?v=1112"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=1110"></script>
-<script src="data/representation.js?v=1110"></script>
-<script src="data/trade.js?v=1110"></script>
-<script src="data/investment.js?v=1110"></script>
-<script src="data/industry.js?v=1110"></script>
-<script src="data/census.js?v=1110"></script>
-<script src="data/health_deaths.js?v=1110"></script>
-<script src="data/bd_economy.js?v=1110"></script>
-<script src="data/bd_census.js?v=1110"></script>
-<script src="data/spending.js?v=1110"></script>
-<script src="data/bd_health.js?v=1110"></script>
-<script src="data/people.js?v=1110"></script>
-<script src="data/bd_spending.js?v=1110"></script>
-<script src="data/bd_people.js?v=1110"></script>
-<script src="data/transport.js?v=1110"></script>
-<script src="data/economy.js?v=1110"></script>
-<script src="data/airports.js?v=1110"></script>
+<script src="data/money.js?v=1112"></script>
+<script src="data/representation.js?v=1112"></script>
+<script src="data/trade.js?v=1112"></script>
+<script src="data/investment.js?v=1112"></script>
+<script src="data/industry.js?v=1112"></script>
+<script src="data/census.js?v=1112"></script>
+<script src="data/health_deaths.js?v=1112"></script>
+<script src="data/bd_economy.js?v=1112"></script>
+<script src="data/bd_census.js?v=1112"></script>
+<script src="data/spending.js?v=1112"></script>
+<script src="data/bd_health.js?v=1112"></script>
+<script src="data/people.js?v=1112"></script>
+<script src="data/bd_spending.js?v=1112"></script>
+<script src="data/bd_people.js?v=1112"></script>
+<script src="data/transport.js?v=1112"></script>
+<script src="data/economy.js?v=1112"></script>
+<script src="data/airports.js?v=1112"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="data/environment.js?v=1110"></script>
-<script src="stats.js?v=1110"></script>
-<script src="psephology.js?v=1110"></script>
-<script src="charts.js?v=1110"></script>
-<script src="engine.js?v=1110"></script>
-<script src="xlsx.js?v=1110"></script>
+<script src="data/environment.js?v=1112"></script>
+<script src="stats.js?v=1112"></script>
+<script src="psephology.js?v=1112"></script>
+<script src="charts.js?v=1112"></script>
+<script src="engine.js?v=1112"></script>
+<script src="xlsx.js?v=1112"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1534,20 +1621,20 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=1110"></script>
-<script src="apps.js?v=1110"></script>
-<script src="views/views.js?v=1110"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=1112"></script>
+<script src="apps.js?v=1112"></script>
+<script src="views/views.js?v=1112"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=1110"></script>
-<script src="money.js?v=1110"></script>
-<script src="trade.js?v=1110"></script>
-<script src="narrative.js?v=1110"></script>
-<script src="panel.js?v=1110"></script>
-<script src="data/events.js?v=1110"></script>
-<script src="card.js?v=1110"></script>
-<script src="menu.js?v=1110"></script>
-<script src="profile.js?v=1110"></script>
-<script src="devdesign.js?v=1110"></script>
-<script src="app.js?v=1110"></script>
+<script src="windows.js?v=1112"></script>
+<script src="money.js?v=1112"></script>
+<script src="trade.js?v=1112"></script>
+<script src="narrative.js?v=1112"></script>
+<script src="panel.js?v=1112"></script>
+<script src="data/events.js?v=1112"></script>
+<script src="card.js?v=1112"></script>
+<script src="menu.js?v=1112"></script>
+<script src="profile.js?v=1112"></script>
+<script src="devdesign.js?v=1112"></script>
+<script src="app.js?v=1112"></script>
 </body>
 </html>
