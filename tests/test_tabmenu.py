@@ -27,6 +27,13 @@ def main():
             if js("s => document.querySelector(s).classList.contains('has-menu')", link):   # 0.11: the tabs are in the dropdown
                 page.hover(link); page.wait_for_timeout(500)
                 first = js("() => document.querySelector('#mega .mg-sec') ? document.querySelector('#mega .mg-sec').textContent : ''")
+                secs = js("() => [...document.querySelectorAll('#mega .mg-sec')].map(b => b.textContent)")
+                if "its tabs" not in first:   # 0.11.1: Money's tabs became the dropdown's own categories, each opening further
+                    rep.check("Parties" in secs and "Top donors" in secs, f"{app} → {pid}: the dropdown has the panel's tabs as categories ({secs})")
+                    page.click("#mega [data-mfull]"); page.wait_for_timeout(1200); page.click(f".apppanel:not([hidden]) [data-mftab='{tab}']"); page.wait_for_timeout(800)
+                    rep.check(js("s => !!document.querySelector('.apppanel:not([hidden]) ' + s)", on), f"…and the full panel still has its {tab} tab")
+                    rep.check(not page.errors, f"{app}: no console errors" + (f": {page.errors[:3]}" if page.errors else ""))
+                    page.context.close(); continue
                 keys = js("() => [...document.querySelectorAll('#mega [data-mkey]')].map(b => b.dataset.mkey)")
                 rep.check("its tabs" in first and tab in keys, f"{app} → {pid}: the dropdown lists its tabs first ({first}: {', '.join(keys)})")
                 page.click(f"#mega [data-mkey='{tab}']"); page.wait_for_timeout(1500)

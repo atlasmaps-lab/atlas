@@ -108,7 +108,10 @@
         const up = s.b > s.a, gap = s.yb - s.ya;
         out.push(`The sharpest ${up ? "rise" : "fall"} came ${gap === 1 ? `in ${s.yb}` : `between ${s.ya} and ${s.yb}`}: from ${esc(f(s.a))} in ${s.ya}, ${YEARS_W[gap] || `${gap} years later`} it ${up ? "had risen" : "had fallen"} to ${esc(f(s.b))}, ${isPts(m) ? `${Math.abs(s.b - s.a).toFixed(1)} points` : `a ${Math.abs((s.b / s.a - 1) * 100).toFixed(1)}% ${up ? "rise" : "drop"}`}.`);
       }
-    } else if (now && now.v != null && !now.nm) out.push(`${esc(m.label)} in ${esc(where)}: <b>${esc(now.text || f(now.v))}</b>${now.yr ? ` (${esc(now.yr)})` : ""}.`);
+    } else if (now && now.v != null && !now.nm) {   // 0.11: the figure first, short; any detail ("28,809,340 of 48,224,212") after it
+      const fv = f(now.v), more = now.text && now.text !== fv && now.text.startsWith(fv) ? now.text.slice(fv.length).trim().replace(/^\((.*)\)$/, "$1") : "";
+      out.push(`${esc(m.label)} in ${esc(where)}: <b>${esc(now.text && !now.text.startsWith(fv) ? now.text : fv)}</b>${now.yr ? ` (${esc(now.yr)})` : ""}.${more ? ` That is ${esc(more)}.` : ""}`);
+    }
     if (now && now.v != null && !now.nm && code !== ctx.UKC && !opts.noCompare) {
       let uk = null; try { uk = m.get(ctx.UKC, d); } catch (e) {}
       const bits = [];

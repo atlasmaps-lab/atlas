@@ -28,7 +28,8 @@
     let headline = "", rest = "";
     if (story) { [headline, rest] = firstSentence(story.innerHTML); if (rest) story.innerHTML = rest; else story.remove(); }
     const head = document.createElement("header"); head.className = "ed-head";
-    head.innerHTML = `<div class="ed-kick">${esc(meta.app)} · ${esc(meta.title)}</div>${headline ? `<h2 class="ed-h">${esc(headline.replace(/\.$/, ""))}</h2>` : meta.blurb ? `<p class="ed-dek">${esc(meta.blurb)}</p>` : ""}`;
+    // 0.11: the card's look: ATLAS and the app as a masthead, the panel's name in the black bar, then the headline
+    head.innerHTML = `<div class="ed-kick ed-mast"><span class="pc-logo">ATLAS</span> <span class="pc-app">${esc(meta.app)}</span><span class="ed-vh"> · ${esc(meta.title)}</span></div><div class="pc-pill ed-pill">${esc(meta.title)}</div>${headline ? `<h2 class="ed-h">${esc(headline.replace(/\.$/, ""))}</h2>` : meta.blurb ? `<p class="ed-dek">${esc(meta.blurb)}</p>` : ""}`;
     body.insertBefore(head, body.firstChild);
     if (nv) { nv.classList.add("ed-story"); head.after(nv); }
     // figures: the first row of big numbers goes straight after the story
@@ -74,9 +75,12 @@
     items.forEach(el => {
       el.dataset.wsSend = "1";
       const host = el.closest(".tscroll, .ex-scroll, .ec-chartwrap") || el;
+      const what = el.tagName === "TABLE" ? "table" : "chart";
+      const row = document.createElement("div"); row.className = "ws-sends";   // 0.11: as a card, or to the workspace
+      const c = document.createElement("button"); c.type = "button"; c.className = "ws-card"; c.dataset.wscard = "1"; c.title = "Open a copy of this " + what + " as its own card"; c.textContent = "As a card"; c._target = el;
       const b = document.createElement("button"); b.type = "button"; b.className = "ws-send"; b.dataset.wssend = "1";
-      b.title = "Send a copy of this " + (el.tagName === "TABLE" ? "table" : "chart") + " to the workspace"; b.textContent = "To workspace";
-      host.after(b); b._target = el;
+      b.title = "Send a copy of this " + what + " to the workspace"; b.textContent = "To workspace";
+      row.append(c, b); host.after(row); b._target = el;
     });
   }
   function sectionOf(body, el) {   // the nearest heading above an element in the panel
@@ -84,6 +88,12 @@
     hs.forEach(h => { if (h.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) best = h; });
     return best ? best.textContent.trim().replace(/\s+/g, " ").slice(0, 90) : "";
   }
+  document.addEventListener("click", e => {   // 0.11: a chart or table as its own card
+    const b = e.target.closest && e.target.closest("[data-wscard]"); if (!b || !b._target || !window.AtlasCard) return;
+    const body = b.closest(".wm-body") || document.body, meta = body._edMeta || {}, el = b._target, sec = sectionOf(body, el);
+    const clone = el.cloneNode(true); clone.removeAttribute("data-ws-send");
+    AtlasCard.open({ app: meta.app || "", title: sec || meta.title || "From Atlas", items: [{ k: meta.title || "", h: esc(sec || meta.title || ""), more: el.tagName === "TABLE" ? `<div class="ws-snap">${clone.outerHTML}</div>` : `<div class="pc-chart">${clone.outerHTML}</div>`, open: true }], source: "Atlas", when: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }), panel: meta.id || null });
+  });
   document.addEventListener("click", e => {
     const b = e.target.closest && e.target.closest("[data-wssend]"); if (!b || !b._target) return;
     const body = b.closest(".wm-body") || document.body, meta = body._edMeta || {}, el = b._target;

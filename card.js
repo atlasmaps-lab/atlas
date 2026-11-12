@@ -94,17 +94,20 @@
       items = (items || []).filter(x => x.v > 0); const t = items.reduce((a, x) => a + x.v, 0); if (!t) return ""; let x0 = 0;
       return `<svg viewBox="0 0 120 72" class="pc-bars" aria-hidden="true">${items.map(x => { const w = 120 * x.v / t, r = `<rect x="${x0.toFixed(1)}" y="20" width="${Math.max(0.6, w - 0.6).toFixed(1)}" height="32" fill="${x.c || "#888"}"><title>${esc(x.n || "")}</title></rect>`; x0 += w; return r; }).join("")}</svg>`;
     },
-    big(text, sub) { return `<div class="pc-bign"><b>${esc(text)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</div>`; },
+    big(text, sub) { const t = String(text == null ? "" : text).replace(/\s*\(.*$/, ""), n = t.length; return `<div class="pc-bign${n > 9 ? " xs" : n > 6 ? " s" : ""}"><b>${esc(t)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</div>`; },
   };
 
   // ---------- the card ----------
   const STAR = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
   const js = o => esc(JSON.stringify(o));
+  const ICC = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7.5 8h9M7.5 12h5M7.5 16h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+  // every picture and chart in a card can become its own card or go to the workspace
+  const VACTS = `<span class="pc-vacts"><button type="button" data-pcvcard title="Open this chart as its own card" aria-label="Open this chart as a card">${ICC}</button><button type="button" data-pcvws title="Send this chart to the workspace" aria-label="Send this chart to the workspace">${STAR}</button></span>`;
   function item(it) {
     if (!it) return "";
     const acts = `${it.map ? `<button type="button" data-pcmap>Put on map</button>` : ""}<button type="button" data-pcwsi>Send to workspace</button>${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.urlLabel || "Read more")} ↗</a>` : ""}`;
-    return `<details class="pc-it"${it.open ? " open" : ""}${it.map ? ` data-pcmapspec="${js(it.map)}"` : ""}><summary><div class="pc-txt">${it.k ? `<div class="pc-k">${esc(it.k)}</div>` : ""}<div class="pc-h">${it.h}</div></div>${it.viz ? `<div class="pc-viz">${it.viz}</div>` : ""}</summary>
-      <div class="pc-body">${it.more || ""}<div class="pc-iacts">${acts}</div></div></details>`;
+    return `<details class="pc-it"${it.open ? " open" : ""}${it.map ? ` data-pcmapspec="${js(it.map)}"` : ""}><summary><div class="pc-txt">${it.k ? `<div class="pc-k">${esc(it.k)}</div>` : ""}<div class="pc-h">${it.h}</div></div>${it.viz ? `<div class="pc-viz">${it.viz}${/<svg/.test(it.viz) ? VACTS : ""}</div>` : ""}</summary>
+      <div class="pc-body">${String(it.more || "").replace(/<div class="pc-chart">/g, `<div class="pc-chart">${VACTS}`)}<div class="pc-iacts">${acts}</div></div></details>`;
   }
   function html(spec) {
     const id = "pc" + (++seq) + "-" + Date.now().toString(36);
@@ -112,7 +115,7 @@
     return `<article class="pcard" data-pcard="${id}"${spec.map ? ` data-pcmapspec="${js(spec.map)}"` : ""}${spec.panel ? ` data-pcpanelid="${esc(spec.panel)}"` : ""}>
       <header class="pc-top"><div class="pc-brand"><span class="pc-logo">ATLAS</span>${spec.app ? `<span class="pc-app">${esc(spec.app)}</span>` : ""}</div>
         <button type="button" class="pc-follow" data-pcws title="Send this card to the workspace">${STAR}<span>Workspace</span></button></header>
-      <div class="pc-pill">${esc(spec.title)}</div>${spec.lede ? `<p class="pc-lede">${spec.lede}</p>` : ""}
+      <div class="pc-pill">${esc(spec.title)}</div>${(spec.figs || []).filter(f => f && f.v != null && f.v !== "").length ? `<div class="pc-figs">${spec.figs.filter(f => f && f.v != null && f.v !== "").slice(0, 3).map(f => `<div class="pc-fig"><b class="${f.tone || ""}">${esc(f.v)}</b><span>${esc(f.l || "")}</span></div>`).join("")}</div>` : ""}${spec.lede ? `<p class="pc-lede">${spec.lede}</p>` : ""}
       <div class="pc-items">${(spec.items || []).map(item).join("")}</div>
       <footer class="pc-foot"><span class="pc-fav" aria-hidden="true">A</span><span class="pc-src">${esc(spec.source || "Atlas")}</span>${spec.when ? `<span class="pc-dot">•</span><span class="pc-when">${esc(spec.when)}</span>` : ""}
         <button type="button" class="pc-dots" data-pcmenu aria-label="More actions" title="More actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>
@@ -120,6 +123,12 @@
   }
   function open(spec) {
     if (!spec || !ctx) return null;
+    if (typeof spec.then === "function") {   // a card whose data loads first (every donation since 2010): a placeholder, then the card
+      const w = open({ title: "Loading…", items: [{ k: "One moment", h: "Loading the figures…", open: true }], source: "Atlas" }); if (!w) return null;
+      w.el.classList.add("pc-loading");
+      spec.then(sp => { if (!sp) return; w.setBody(html(sp)); w.setTitle && w.setTitle(sp.title); w.el.classList.remove("pc-loading"); }, () => w.setBody(html({ title: "Couldn't load", items: [{ k: "Sorry", h: "The data didn't load; try again" }] })));
+      return w;
+    }
     const top = ctx.WM.TOPNOW ? ctx.WM.TOPNOW() : 90, W = Math.min(440, innerWidth - 32);
     const w = ctx.WM.make({ type: "pcard", title: spec.title, html: html(spec), cascade: true, min: { w: 300, h: 240 }, def: () => ({ x: Math.max(16, innerWidth - W - 24), y: top + 8, w: W, h: Math.min(680, innerHeight - top - 24) }) });
     w.el.classList.add("pcwin"); ctx.WM.open(w.el); return w;
@@ -137,14 +146,14 @@
     const now = val(m, code), parts = splitStory(N ? N.story(m, code) : ""), topics = topicsOf(m.id, m.label, m.group, m.p);
     const w = why(pts, topics, { pts: isP, fmt: f });
     const items = [];
-    const [head, rest] = parts.story ? first(parts.story) : [now ? `${esc(m.label)} in ${esc(where)}: <b>${esc(now.text || f(now.v))}</b>` : `No figure for ${esc(where)} on this date.`, ""];
+    const [head, rest] = parts.story ? first(parts.story) : [now ? `${esc(m.label)} in ${esc(where)}: <b>${esc(f(now.v))}</b>${now.yr ? ` (${esc(now.yr)})` : ""}` : `No figure for ${esc(where)} on this date.`, ""];
     const colour = "var(--pc-acc, currentColor)";
-    items.push({ k: `The story · ${where}`, h: head.replace(/\.$/, ""), viz: pts.length > 1 ? viz.spark(pts, colour) : now ? viz.big(now.text || f(now.v), now.yr || "") : "", open: true,
+    items.push({ k: `The story · ${where}`, h: head.replace(/\.$/, ""), viz: pts.length > 1 ? viz.spark(pts, colour) : now ? viz.big(f(now.v), now.yr || "") : "", open: true,
       more: `${rest ? `<p>${rest}</p>` : ""}${pts.length > 2 ? `<div class="pc-chart">${ctx.CH.line([{ name: where, colour: "#3b78b5", pts }], { w: 380, h: 190, vfmt: f, yfmt: v => ctx.CH.compact ? ctx.CH.compact(v) : String(v), events: w.events })}</div>${evList(w.events)}` : ""}`, map: { metrics: [id] } });
     if (pts.length > 2) items.push({ k: "Why it moved", h: w.lines.length ? first(w.lines[0])[0].replace(/<[^>]+>/g, "").replace(/\.$/, "") : "No sharp moves stand out", viz: viz.big(String(w.events.length), w.events.length === 1 ? "event" : "events"), more: whyHTML(w) });
     // across the map: the place's own boundary set (wards and seats compare with their own kind)
     const lv = ctx.P[code] && ["council", "region", "nation", "constituency"].includes(ctx.P[code].level) ? ctx.P[code].level : (m.levels && m.levels[0]) || "council";
-    const rows = ctx.allCodesAt(lv).map(c => { const r = val(m, c); return r ? { c, v: r.v, t: r.text || f(r.v) } : null; }).filter(Boolean).sort((a, b) => b.v - a.v);
+    const rows = ctx.allCodesAt(lv).map(c => { const r = val(m, c); return r ? { c, v: r.v, t: f(r.v) } : null; }).filter(Boolean).sort((a, b) => b.v - a.v);
     if (rows.length >= 5 && m.scale !== "nominal") {
       const top = rows.slice(0, 5), bot = rows.slice(-3), hereI = rows.findIndex(r => r.c === code);
       items.push({ k: `Across the map · ${rows.length} ${({ council: "councils", region: "regions", nation: "nations", constituency: "seats" })[lv] || "places"}`, h: `Highest in ${esc(ctx.nameOf(top[0].c))} (${esc(top[0].t)}), lowest in ${esc(ctx.nameOf(rows[rows.length - 1].c))} (${esc(rows[rows.length - 1].t)})`,
@@ -154,7 +163,9 @@
     if (parts.means || parts.trust) items.push({ k: "What it tells us", h: esc(first(parts.means.replace(/<[^>]+>/g, ""))[0] || m.label), viz: "", more: `${parts.means ? `<p>${parts.means}</p>` : ""}${parts.trust ? `<p><b>How far to trust it.</b> ${parts.trust}</p>` : ""}` });
     const src = ctx.sourceOf ? ctx.sourceOf(m) : (m.source || ""), url = (String(src).match(/https?:\/\/[^\s;),]+/) || [])[0] || "";
     items.push({ k: "Where it comes from", h: esc(String(src).replace(/https?:\/\/\S+/g, "").replace(/\s*[;,(]\s*$/, "").slice(0, 140) || "Atlas"), more: `<p>${esc(src)}</p>${m.how ? `<p><b>How it's worked out.</b> ${esc(m.how)}</p>` : ""}`, url, urlLabel: "Source" });
-    return { app: APPN[m.p] || "", title: m.label, items, source: String(src).split(/[;(]/)[0].replace(/https?:\/\/\S+/, "").trim().slice(0, 60) || "Atlas", when: now && now.yr ? String(now.yr) : ctx.longDate(ctx.date), map: { metrics: [id] }, links: url ? [{ label: "Source", url }] : [] };
+    const rk = rows.length >= 5 ? rows.findIndex(r => r.c === code) : -1, ch = pts.length >= 2 ? (isP ? pts[pts.length - 1][1] - pts[0][1] : pts[0][1] ? (pts[pts.length - 1][1] / pts[0][1] - 1) * 100 : null) : null;
+    const figs = [now ? { v: f(now.v), l: `${where}${now.yr ? ", " + now.yr : ""}` } : null, ch != null && isFinite(ch) ? { v: `${ch >= 0 ? "▲" : "▼"} ${Math.abs(ch).toFixed(Math.abs(ch) < 10 ? 1 : 0)}${isP ? " pt" : "%"}`, l: `since ${pts[0][0]}` } : null, rk >= 0 ? { v: `${rk + 1} of ${rows.length}`, l: "highest first" } : null];
+    return { app: APPN[m.p] || "", title: m.label, figs, items, source: String(src).split(/[;(]/)[0].replace(/https?:\/\/\S+/, "").trim().slice(0, 60) || "Atlas", when: now && now.yr ? String(now.yr) : ctx.longDate(ctx.date), map: { metrics: [id] }, links: url ? [{ label: "Source", url }] : [] };
   }
 
   // ---------- actions (delegated, so cards keep working in the workspace) ----------
@@ -181,8 +192,20 @@
     const c = cleanClone(card, only), title = (only ? (only.querySelector(".pc-h") || {}).textContent : "") || (c.querySelector(".pc-pill") || {}).textContent || "Card";
     ctx.sendToWS({ type: "card", title: title.trim().slice(0, 90), html: c.outerHTML, w: 400, h: only ? 460 : 600 });
   }
+  // one chart (or a picture) lifted out of a card: its own card, with the item's words and any event list under it
+  function chartSpec(btn) {
+    const card = btn.closest(".pcard"), it = btn.closest(".pc-it"); if (!card) return null;
+    const box = btn.closest(".pc-chart, .pc-viz"), full = it && it.querySelector(".pc-body .pc-chart"), src = box && box.classList.contains("pc-viz") && full ? full : box; if (!src) return null;
+    const c = src.cloneNode(true); c.querySelectorAll(".pc-vacts").forEach(x => x.remove());
+    const svg = c.querySelector("svg"); if (svg && svg.classList.contains("spark")) { svg.removeAttribute("width"); svg.removeAttribute("height"); }
+    const evs = it && it.querySelector(".pc-evs"), k = it && it.querySelector(".pc-k"), h = it && it.querySelector(".pc-h"), app = card.querySelector(".pc-app"), pill = card.querySelector(".pc-pill");
+    return { app: app ? app.textContent : "", title: `${pill ? pill.textContent : "Chart"}${h ? "" : ""}`, items: [{ k: k ? k.textContent : "", h: h ? h.innerHTML : "", more: `<div class="pc-chart">${c.innerHTML}</div>${evs ? evs.outerHTML : ""}`, open: true }],
+      source: (card.querySelector(".pc-src") || {}).textContent || "Atlas", when: (card.querySelector(".pc-when") || {}).textContent || "" };
+  }
   function bind() {
     document.addEventListener("click", e => {
+      const v = e.target.closest("[data-pcvws],[data-pcvcard]");
+      if (v) { e.preventDefault(); e.stopPropagation(); const sp = chartSpec(v); if (!sp) return; if (v.hasAttribute("data-pcvcard")) open(sp); else { const d = document.createElement("div"); d.innerHTML = html(sp); ctx.sendToWS({ type: "card", title: sp.title, html: d.firstElementChild.outerHTML, w: 440, h: 460 }); } return; }
       const t = e.target.closest("[data-pcws],[data-pcwsi],[data-pcmap],[data-pcmenu],[data-pcpanel],[data-pccopy],[data-pcopen],[data-pcopenall]"); if (!t) { document.querySelectorAll(".pc-menu:not([hidden])").forEach(m => { if (!m.contains(e.target)) m.hidden = true; }); return; }
       const card = t.closest(".pcard"); if (!card) return;
       e.preventDefault(); e.stopPropagation();

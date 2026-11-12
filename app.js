@@ -1968,6 +1968,14 @@
     Object.entries(data.places).forEach(([c, p]) => { if (p.pt) PT[c] = p.pt; });
     syncPcon(true);
   };
+  // 0.11.1: load the constituency boundaries in use on a date (with their seat names) without waiting for the map
+  function loadPconFor(d) {
+    const need = (PCON_NEED[pconSigAt(d)] || []).filter(k => !PSETS[k]);
+    return Promise.all(need.map(k => new Promise(res => {
+      if (pconLoading.has(k)) { const t = setInterval(() => { if (PSETS[k] || !pconLoading.has(k)) { clearInterval(t); res(); } }, 150); return; }
+      pconLoading.add(k); const sc = document.createElement("script"); sc.src = `data/constituencies_${k}.js`; sc.onload = () => res(); sc.onerror = () => { pconLoading.delete(k); res(); }; document.head.appendChild(sc);
+    })));
+  }
   function syncPcon(force) {
     if (!map.getSource || !map.getSource("constituencies")) return;
     const sig = pconSigAt(state.date); if (sig === pconSig && !force) return;
@@ -4640,10 +4648,19 @@
   function saveWS() { if (!store.set("atlas-16-ws", WS)) toast("This browser's storage is full. Export the project (Export ▾ → Project file) to keep it safe."); }
   let wsSeq = Date.now();
   const maxZ = () => Math.max(0, ...proj().items.map(i => i.z || 0));
+  // 0.11: a new item goes beside what's already there (the next free place, reading left to right, top to bottom), not on top
+  function freeSpot(items, w, h) {
+    const G = 24, W = Math.max(1200, Math.round(((wsEl && wsEl.offsetWidth) || innerWidth) / wsZoom()) - G);
+    const over = (x, y) => items.some(o => x < o.x + o.w + G && x + w + G > o.x && y < o.y + o.h + G && y + h + G > o.y);
+    const cands = [[G, G]].concat(...items.map(o => [[o.x + o.w + G, o.y], [o.x, o.y + o.h + G], [G, o.y + o.h + G]]))
+      .filter(([x, y]) => x + w <= Math.max(W, w + 2 * G) && x >= 0 && y >= 0).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+    const hit = cands.find(([x, y]) => !over(x, y)); if (hit) return hit;
+    return [G, Math.max(G, ...items.map(o => o.y + o.h + G))];
+  }
   function sendToWS(item) {
-    const it = proj().items, n = it.length;
-    Object.assign(item, { id: "w" + (++wsSeq), created: Date.now(), date: item.date || state.date, x: 24 + (n % 4) * 40, y: 24 + (n % 6) * 34, w: item.w || 560, h: item.h || 400, z: maxZ() + 1 });
-    it.push(item); saveWS(); renderTabs(); if (VIEW.mode !== "map") renderWS();
+    const it = proj().items, w = item.w || 560, h = item.h || 400, [x, y] = freeSpot(it, w, h);
+    Object.assign(item, { id: "w" + (++wsSeq), created: Date.now(), date: item.date || state.date, x, y, w, h, z: maxZ() + 1 });
+    it.push(item); saveWS(); renderTabs(); wsNew = item.id; if (VIEW.mode !== "map") renderWS();
     toast(`Sent to the workspace “${proj().name}”. Swipe left or open the Workspace tab to see it.`);
   }
   function tileSVG(codes, fills, w, h) { // a small map of the places, in the colours they had on the map
@@ -4677,14 +4694,44 @@
         <span class="ws-sep"></span><div class="ws-exp"><button class="btn primary" data-wsexp>Export ▾</button><div class="ws-menu" hidden><button data-wspdf>PDF (print)</button><button data-wsslides>Presentation (HTML slides)</button><button data-wsjson>Project file (.json)</button><label>Import a project file<input type="file" accept=".json" data-wsimp hidden></label><button data-wsdel class="danger">Delete this project</button></div></div>
         <span class="ws-grow"></span><span class="ws-zoom" title="Make the whole board bigger or smaller"><button class="btn" data-wsz="-1" aria-label="Zoom the board out">−</button><button class="btn ws-zoom-v" data-wsz="0" title="Back to 100%">100%</button><button class="btn" data-wsz="1" aria-label="Zoom the board in">+</button></span><div class="seg sm"><button data-view="split" class="${VIEW.mode === "split" ? "on" : ""}" title="Map and workspace side by side">Split</button><button data-view="ws" class="${VIEW.mode === "ws" ? "on" : ""}" title="Workspace only">Full</button><button data-view="map" title="Back to the map">Map</button></div></div>
       <div class="ws-canvas" id="ws-canvas"><div class="ws-inner" style="transform:scale(${wsZoom()})">${p.items.length ? "" : `<div class="ws-empty"><h3>${esc(p.name)} is empty</h3><p>Send things here with <b>Send to workspace</b>: charts (chart panel and tabs), tables (comparison page), analyses (Analyse), area cards and tiles (a pinned card's ⋯), and pictures of the map (Capture map). Then drag them around, resize them from the corner, and drop one onto another to combine them.</p></div>`}
-        ${p.items.map(it => `<div class="wsi" data-wsi="${it.id}" style="left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;z-index:${it.z || 1}"><div class="wsi-head"><span class="wsi-t" title="Double-click to rename">${esc(it.title)}</span>
+        ${p.items.map(it => `<div class="wsi${it.id === wsNew ? " wsi-new" : ""}" data-wsi="${it.id}" style="left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;z-index:${it.z || 1}"><div class="wsi-head"><span class="wsi-t" title="Double-click to rename">${esc(it.title)}</span>
           ${LIVE[it.type] ? `<button data-wsref="${it.id}" title="Refresh to the time bar's date (${esc(dmy(state.date))})">↻</button>` : ""}${it.type === "chart" ? `<button data-wstab="${it.id}" title="Open in its own tab">⧉</button>` : ""}${it.parts || it.type === "stack" ? `<button data-wssep="${it.id}" title="Separate: split this back into the items it was made from">⇲ Separate</button>` : ""}<button data-wsdup="${it.id}" title="Duplicate">⎘</button><button data-wsx="${it.id}" title="Remove">×</button></div>
           <div class="wsi-body">${itemBody(it)}</div><div class="rgrip" data-wsrs="${it.id}" title="Drag to resize"></div></div>`).join("")}</div></div>`;
     wsEl.querySelector(".ws-zoom-v").textContent = Math.round(wsZoom() * 100) + "%";
+    // 0.11: a zoom control on the board itself (pinch also works), and a newly sent item comes into view
+    wsEl.querySelector(".ws-canvas").insertAdjacentHTML("afterend", `<div class="ws-zoomer" role="group" aria-label="Zoom the board"><button type="button" data-wsz="-1" aria-label="Zoom out" title="Zoom out (or pinch)">−</button><button type="button" class="wz-v" data-wsz="0" title="Back to 100%">${Math.round(wsZoom() * 100)}%</button><button type="button" data-wsz="1" aria-label="Zoom in" title="Zoom in (or pinch)">+</button><button type="button" class="wz-fit" data-wszfit title="Fit everything on the board in view">Fit</button></div>`);
+    if (wsNew) { const n = wsEl.querySelector(".wsi-new"), cv = wsEl.querySelector(".ws-canvas"); wsNew = null; if (n && cv) requestAnimationFrame(() => { const it = wsItem(n.dataset.wsi); if (it) cv.scrollTo({ left: Math.max(0, it.x * wsZoom() - 40), top: Math.max(0, it.y * wsZoom() - 40), behavior: "smooth" }); }); }
   }
   function wsItem(id) { return proj().items.find(i => i.id === id); }
-  const WSZ = [0.4, 0.5, 0.6, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
+  const WSZ = [0.3, 0.4, 0.5, 0.6, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5];
   const wsZoom = () => WS.zoom || 1;
+  let wsNew = null;
+  // 0.11: zoom the board by pinching (trackpad or touch), with the buttons, or Fit; the point under the fingers stays put
+  function setWSZoom(z, cx, cy, smooth) {
+    const cv = wsEl.querySelector(".ws-canvas"), inner = wsEl.querySelector(".ws-inner"); z = clamp(z, 0.3, 2.5); const z0 = wsZoom(); if (!cv || !inner || Math.abs(z - z0) < 1e-4) { WS.zoom = z; return; }
+    const r = cv.getBoundingClientRect(); if (cx == null) { cx = r.left + r.width / 2; cy = r.top + r.height / 2; }
+    const px = (cv.scrollLeft + cx - r.left) / z0, py = (cv.scrollTop + cy - r.top) / z0;
+    WS.zoom = z; inner.classList.toggle("ws-smooth", !!smooth); inner.style.transform = `scale(${z})`;
+    cv.scrollLeft = px * z - (cx - r.left); cv.scrollTop = py * z - (cy - r.top);
+    const v = wsEl.querySelector(".ws-zoom-v"); if (v) v.textContent = Math.round(z * 100) + "%";
+    const zv = wsEl.querySelector(".wz-v"); if (zv) zv.textContent = Math.round(z * 100) + "%";
+    clearTimeout(setWSZoom.t); setWSZoom.t = setTimeout(saveWS, 400);
+  }
+  function fitWS() {
+    const its = proj().items, cv = wsEl.querySelector(".ws-canvas"); if (!its.length || !cv) return setWSZoom(1, null, null, true);
+    const x1 = Math.max(...its.map(i => i.x + i.w)) + 24, y1 = Math.max(...its.map(i => i.y + i.h)) + 24;
+    setWSZoom(Math.min(1.5, cv.clientWidth / x1, cv.clientHeight / y1), null, null, true); cv.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+  }
+  wsEl.addEventListener("wheel", e => { if (!e.ctrlKey || !e.target.closest(".ws-canvas")) return; e.preventDefault(); setWSZoom(wsZoom() * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY); }, { passive: false });
+  let wsGest = 1; wsEl.addEventListener("gesturestart", e => { e.preventDefault(); wsGest = wsZoom(); });   // Safari's trackpad pinch
+  wsEl.addEventListener("gesturechange", e => { e.preventDefault(); setWSZoom(wsGest * e.scale, e.clientX, e.clientY); });
+  const wsTouch = new Map(); let wsPinch = null;
+  wsEl.addEventListener("pointerdown", e => { if (e.pointerType !== "touch" || !e.target.closest(".ws-canvas")) return; wsTouch.set(e.pointerId, [e.clientX, e.clientY]);
+    if (wsTouch.size === 2) { const [a, b] = [...wsTouch.values()]; wsPinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: wsZoom() }; } });
+  wsEl.addEventListener("pointermove", e => { if (!wsTouch.has(e.pointerId)) return; wsTouch.set(e.pointerId, [e.clientX, e.clientY]);
+    if (wsPinch && wsTouch.size === 2) { const [a, b] = [...wsTouch.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); setWSZoom(wsPinch.z * d / (wsPinch.d || 1), (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); } });
+  const wsUp = e => { wsTouch.delete(e.pointerId); if (wsTouch.size < 2) wsPinch = null; };
+  wsEl.addEventListener("pointerup", wsUp); wsEl.addEventListener("pointercancel", wsUp);
   function combine(a, b) { // drop a onto b
     const u = (x, y) => [...new Set([...(x || []), ...(y || [])])];
     if (a.type === "chart" && b.type === "chart") { if (b.spec.companies.length || a.spec.companies.length) b.spec.companies = u(b.spec.companies, a.spec.companies); else { b.spec.places = u(b.spec.places, a.spec.places); b.spec.metrics = u(b.spec.metrics, a.spec.metrics); } b.spec.style = null; b.spec.style = chartStylesFor(b.spec).best; b.title = b.title + " + " + a.title; return b; }
@@ -4747,7 +4794,8 @@
     else if (b.hasAttribute("data-wspdf")) return exportPDF();
     else if (b.hasAttribute("data-wsslides")) return exportSlides();
     else if (b.hasAttribute("data-wsjson")) return download(new Blob([JSON.stringify(p, null, 1)], { type: "application/json" }), `atlas-project-${p.name.replace(/\W+/g, "-")}.json`);
-    else if (ds.wsz != null) { const z = wsZoom(), i = WSZ.indexOf(WSZ.reduce((a, b) => Math.abs(b - z) < Math.abs(a - z) ? b : a)); WS.zoom = +ds.wsz === 0 ? 1 : WSZ[clamp(i + +ds.wsz, 0, WSZ.length - 1)]; }
+    else if (ds.wsz != null) { const z = wsZoom(), i = WSZ.indexOf(WSZ.reduce((a, b) => Math.abs(b - z) < Math.abs(a - z) ? b : a)); setWSZoom(+ds.wsz === 0 ? 1 : WSZ[clamp(i + +ds.wsz, 0, WSZ.length - 1)], null, null, true); return; }
+    else if (b.hasAttribute("data-wszfit")) { fitWS(); return; }
     else if (ds.wsx) { const it = wsItem(ds.wsx), before = JSON.stringify(p.items); p.items = p.items.filter(i => i !== it); saveWS(); renderWS(); renderTabs(); undoToast("Removed.", () => { p.items = JSON.parse(before); saveWS(); renderWS(); }); return; }
     else if (ds.wssep) { // split a combined item back into the pieces it was made from, laid out side by side
       const it = wsItem(ds.wssep), before = JSON.stringify(p.items), kids = (it.parts || it.children || []).map(k => JSON.parse(JSON.stringify(k)));
@@ -5147,6 +5195,7 @@
   if (window.AtlasNarrative) AtlasNarrative.init(CTX);   // 0.10
   CTX.councilSpend = c => councilSpend(c);
   CTX.sourceOf = m => sourceOf(m);   // 0.11
+  CTX.loadPconFor = d => loadPconFor(d);   // 0.11.1
   if (window.AtlasCard) AtlasCard.init(CTX, { openPanel: id => APP ? openFromBar(id) : openMetricInfo(id) });   // 0.11: information cards and the ⓘ peek
 
   // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------
@@ -5285,7 +5334,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.11</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.11.1</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));
