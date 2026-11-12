@@ -132,6 +132,7 @@
     el.innerHTML = `<p class="ap-note">Everywhere you can reach from a point within a time, and the places inside it.</p>${`<div class="tr-pl"><span class="tr-dot from"></span><input data-trq="iso" placeholder="From: a station, town or address" value="${ctx.esc((I.from || {}).label || "")}" autocomplete="off"><button class="btn sm" data-trpick="iso">Map</button><ul class="tr-hits" data-trhits="iso" hidden></ul></div>`}
       <div class="tr-modes">${[["auto", "Car", "#1d5590"], ["transit", "Train and public transport", "#d63a2f"], ["bicycle", "Cycle", "#2e8b57"], ["pedestrian", "Walk", "#7b4fa6"]].map(([k, l, c]) => `<button class="${I.mode === k ? "on" : ""}" data-trimode="${k}" style="--c:${c}">${l}</button>`).join("")}</div>
       <div class="ap-row">${[15, 30, 45, 60].map(m => `<button class="btn sm ${I.mins === m ? "primary" : ""}" data-trmins="${m}">${m} min</button>`).join("")}</div>
+      <label class="ck"><input type="checkbox" data-trroutes ${I.routes ? "checked" : ""}> Show the routes to the stations, airports and ports within reach</label>
       <div data-trisoout>${I.out || ""}</div><p class="tr-src">Isochrones: Valhalla (FOSSGIS). Places are counted when their centre is inside the area.</p>`;
   }
   async function runIso(ctx) {
@@ -151,10 +152,21 @@
       const hubs = ring && ctx.POI ? ctx.POI.items.filter(i => i.k !== "finance" && inside([i.lon, i.lat], ring)).sort((a, b) => (b.v || 0) - (a.v || 0)).slice(0, 8) : [];
       I.out = ring ? `<p><b>${codes.length}</b> councils have their centre within ${I.mins} minutes${pop ? ` (about <b>${ctx.fmtBig(pop)}</b> people)` : ""}.</p>${codes.length ? `<p class="ap-note">${codes.slice(0, 24).map(c => ctx.esc(ctx.nameOf(c))).join(", ")}${codes.length > 24 ? "…" : ""}</p><button class="btn sm" data-trisosel>Select them on the map</button>` : ""}
         ${hubs.length ? `<h4>Stations, airports and ports within reach</h4><ul class="tr-hubs">${hubs.map(i => `<li><button class="linkish" data-trpoi="${i.id}">${ctx.esc(i.n)}</button></li>`).join("")}</ul>` : ""}` : `<p class="ap-note">No area came back.</p>`;
-      I.codes = codes;
+      I.codes = codes; I.hubs = hubs; reachRoutes(ctx);
       ctx.map.fitBounds(bboxOf(ring), { padding: 80, duration: 900 });
     } catch (e) { I.out = `<p class="ap-note">The isochrone service didn't answer. Try again in a moment.</p>`; }
     if (PANEL && PANEL.isoEl) reach(ctx, PANEL.isoEl);
+  }
+  // 0.12: the routes to what's within reach, drawn in the mode's colour (roads, paths and cycle routes from Valhalla)
+  async function reachRoutes(ctx) {
+    const I = S.iso, src = ctx.map.getSource("mv-reach"); if (!src) return; if (!I.routes || !I.from || I.mode === "transit" || !(I.hubs || []).length) { src.setData({ type: "FeatureCollection", features: [] }); return; }
+    const col = (MODES.find(m => m[0] === I.mode) || [])[2], feats = [];
+    for (const h of I.hubs.slice(0, 8)) {
+      try { const body = { locations: [{ lat: I.from.lat, lon: I.from.lon }, { lat: h.lat, lon: h.lon }], costing: I.mode };
+        const j = await fetch(`${VALHALLA}/route?json=${encodeURIComponent(JSON.stringify(body))}`).then(r => r.json());
+        feats.push({ type: "Feature", properties: { c: col, n: h.n }, geometry: { type: "LineString", coordinates: j.trip.legs.flatMap(l => decode(l.shape, 6)) } }); src.setData({ type: "FeatureCollection", features: feats });
+      } catch (e) { /* skip that one */ }
+    }
   }
   // 0.8.1: by train (and any public transport): every stop reachable within the time (Transitous "one to all"), plus the
   // walk from it with the minutes left (at most 15), drawn as soft circles; a council counts if its centre is inside one
@@ -181,7 +193,8 @@
   function trails(ctx, el) {
     el.innerHTML = `<p>Waymarked hiking and cycling routes across the UK, from National Trails and the National Cycle Network to local paths (OpenStreetMap, via Waymarked Trails).</p>
       <label class="ck"><input type="checkbox" data-trtrail="hiking" ${S.trails.hiking ? "checked" : ""}> Hiking and walking routes</label><label class="ck"><input type="checkbox" data-trtrail="cycling" ${S.trails.cycling ? "checked" : ""}> Cycle routes</label>
-      <p class="ap-note">Plan a walk along them with <b>Hike</b> in Directions: it prefers paths and tracks and accepts hills. Zoom in for the route names.</p>
+      <label class="ck"><input type="checkbox" data-mvpaths ${!window.AtlasMove || AtlasMove.paths.on ? "checked" : ""}> Footpaths, cycleways and bridleways at street zoom (click one for its surface, lighting and access)</label>
+      <p class="ap-note">Click a coloured route on the map for its name, network and length. Plan a walk along them with <b>Hike</b> in Directions: it prefers paths and tracks and accepts hills. Zoom in for the route names.</p>
       <p class="tr-src">Trail maps © waymarkedtrails.org and OpenStreetMap contributors (CC BY-SA). Shown as an overlay; not every right of way is waymarked.</p>`;
   }
   function hubs(ctx, el) {
@@ -234,7 +247,7 @@
     document.addEventListener("mousedown", e => {
       const li = e.target.closest && e.target.closest("[data-trhit]"); if (!li) return;
       e.preventDefault(); const ul = li.closest(".tr-hits"), h = ul._hits[+li.dataset.trhit], which = ul.dataset.trhits; ul.hidden = true;
-      if (which === "iso") { S.iso.from = h; runIso(ctx); } else { S[which] = h; drawEnds(ctx); if (S.from && S.to) route(ctx); else rerender(ctx); }
+      if (which === "iso") { S.iso.from = h; runIso(ctx); } else if (which === "fifteen") { window.AtlasMove && AtlasMove.run15(h); } else { S[which] = h; drawEnds(ctx); if (S.from && S.to) route(ctx); else rerender(ctx); }
     });
     document.addEventListener("click", e => {
       const t = e.target.closest && e.target.closest("[data-trmode],[data-tropt],[data-trswap],[data-trpick],[data-trimode],[data-trmins],[data-trisosel],[data-trpoi],[data-trhub],[data-trmap],[data-trinfo]"); if (!t) return;
@@ -242,6 +255,7 @@
       if (d.trmode) { S.mode = d.trmode; if (S.from && S.to) route(ctx); else rerender(ctx); }
       else if (d.tropt != null) { S.sel = +d.tropt; rerender(ctx); drawRoutes(ctx); }
       else if (t.hasAttribute("data-trswap")) { [S.from, S.to] = [S.to, S.from]; drawEnds(ctx); if (S.from && S.to) route(ctx); else rerender(ctx); }
+      else if (d.trpick === "fifteen") { window.__mvPick = "fifteen"; ctx.map.getCanvas().style.cursor = "crosshair"; ctx.toast("Click the map to choose the place."); }
       else if (d.trpick) { pickFor = d.trpick; ctx.map.getCanvas().style.cursor = "crosshair"; ctx.toast("Click the map to choose the " + (pickFor === "iso" ? "starting point" : pickFor === "from" ? "start" : "end") + "."); }
       else if (d.trimode) { S.iso.mode = d.trimode; runIso(ctx); }
       else if (d.trmins) { S.iso.mins = +d.trmins; runIso(ctx); }
@@ -252,6 +266,7 @@
       else if (d.trinfo) ctx.openInfo(d.trinfo);
     });
     document.addEventListener("change", e => {
+      const rr = e.target.closest && e.target.closest("[data-trroutes]"); if (rr) { S.iso.routes = rr.checked; reachRoutes(ctx); return; }
       const tr = e.target.closest && e.target.closest("[data-trtrail]"); if (tr) { ensureLayers(ctx); S.trails[tr.dataset.trtrail] = tr.checked; ctx.map.setLayoutProperty("tr-wm-" + tr.dataset.trtrail, "visibility", tr.checked ? "visible" : "none"); return; }
       if (e.target.matches && e.target.matches("[data-trwhen]")) { S.when = e.target.value; if (S.from && S.to) route(ctx); }
     });
@@ -267,11 +282,15 @@
 
   window.AtlasApps && AtlasApps.register({
     id: "transport", name: "Atlas Transport", perspective: "transport", accent: "#1d5590", dataNeeds: ["ATLAS_POI"],
-    init(ctx) { bind(ctx); ctx.openPanel("directions"); },
+    noAreas: true,   // 0.12: no area tiles until an area measure is mapped: stations, lines and paths instead
+    onBoot(ctx) { bind(ctx); if (window.AtlasMove) AtlasMove.bind(ctx); },
+    init(ctx) { bind(ctx); ctx.mapOnly(["inf_rail", "inf_ferry"]); ctx.openPanel("directions"); },
     panels: [
       { id: "directions", title: "Directions", render: (ctx, el) => { bind(ctx); PANEL = Object.assign(PANEL || {}, { ctx, el }); directions(ctx, el); }, min: { w: 380, h: 420 } },
       { id: "reach", title: "Reach", blurb: "Everywhere you can get to within a time", render: (ctx, el) => { bind(ctx); PANEL = Object.assign(PANEL || {}, { isoEl: el }); reach(ctx, el); }, min: { w: 360, h: 320 } },
-      { id: "trails", title: "Trails", render: (ctx, el) => { bind(ctx); trails(ctx, el); } },
+      { id: "trails", title: "Trails", menu: false, render: (ctx, el) => { bind(ctx); trails(ctx, el); } },
+      { id: "fifteen", title: "15-minute city", menu: false, blurb: "What everyday needs are within 15 minutes on foot, by bike and by public transport", render: (ctx, el) => { bind(ctx); if (window.AtlasMove) AtlasMove.fifteen(ctx, el); }, min: { w: 420, h: 440 } },
+      { id: "draw", title: "Draw a route", menu: false, blurb: "Click the map to add points; driving, cycling or walking through every one", render: (ctx, el) => { bind(ctx); if (window.AtlasMove) AtlasMove.draw(ctx, el); }, min: { w: 380, h: 320 } },
       { id: "hubs", map: {"level": "council", "metrics": ["rail_usage"]}, title: "Stations & hubs", tabs: [["station", "Stations"], ["airport", "Airports"], ["port", "Ports"]], setTab: k => { hubs.k = k; }, render: (ctx, el) => { bind(ctx); PANEL = Object.assign(PANEL || {}, { hubEl: el }); hubs(ctx, el); }, min: { w: 380, h: 360 } },
       { id: "planner", map: {"metrics": ["inf_rail", "inf_roads"]}, title: "Planner data", render: (ctx, el) => { bind(ctx); PANEL = Object.assign(PANEL || {}, { planEl: el }); planner(ctx, el); } },
     ],

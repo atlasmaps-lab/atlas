@@ -1,0 +1,1 @@
+window.ATLAS_ENVZ_DETAIL && ATLAS_ENVZ_DETAIL("cons", "697_581", {"features":[[{"k":"ramsar","n":"Kintyre Goose Roosts","y":null,"nat":"S"},[[[-565199,5549415,583,-247,129,-213,-60,-73,-332,-9,-864,248,13,51,285,161,246,82]]]],[{"k":"ramsar","n":"Kintyre Goose Roosts","y":null,"nat":"S"},[[[-558089,5546354,153,-47,22,-115,-44,-51,-174,-50,-165,58,-37,148,245,57]]]]]});

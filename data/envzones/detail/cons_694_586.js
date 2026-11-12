@@ -1,0 +1,1 @@
+window.ATLAS_ENVZ_DETAIL && ATLAS_ENVZ_DETAIL("cons", "694_586", {"features":[[{"k":"ramsar","n":"Coll","y":null,"nat":"S"},[[[-649487,5662661,2,-39,-88,-13,86,52]]]],[{"k":"ramsar","n":"Coll","y":null,"nat":"S"},[[[-647004,5665200,33,-19,-58,-5,25,24]]]],[{"k":"ramsar","n":"Coll","y":null,"nat":"S"},[[[-649873,5662605,17,-31,-33,20,16,11]]]]]});

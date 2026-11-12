@@ -45,6 +45,16 @@ def main():
         rep.check(js("() => JSON.parse(localStorage.getItem('atlas-16-ws')).projects[0].items.slice(-1)[0].cfg.controls.length === 3") and n0 >= 0, "the test can be sent to the workspace with its controls")
         js(f"() => {A}.querySelector('[data-anctlclear]').click()"); page.wait_for_timeout(400)
         rep.check(js(f"() => !{A}.querySelector('.an-ctl .chip')"), "clear removes every control")
+        # 0.12: a "(choose …)" metric gets its choice right under it, and the analysis is named by it
+        js("() => AtlasCtx.openAnalyse({ metrics: ['ge_share', 'ge_turnout'], level: 'constituency' })"); page.wait_for_timeout(2500)
+        pk = js(f"() => [...{A}.querySelectorAll('.an-pick select')].map(s => s.options[s.selectedIndex].text)")
+        rep.check(len(pk) == 1, f"Vote share (choose party) has a party to choose right under it ({pk})")
+        t = js(f"() => {A}.querySelector('.an-res').innerText")
+        rep.check("Vote share: Labour".lower() in t.lower() and "650" in t, f"…and the analysis runs for that party ({t[:80]!r})")
+        js(f"() => {{ const s = {A}.querySelector('.an-pick select'); s.value = 'con'; s.dispatchEvent(new Event('change', {{ bubbles: true }})); }}"); page.wait_for_timeout(2000)
+        rep.check("conservative" in js(f"() => {A}.querySelector('.an-res').innerText").lower(), "choosing another party re-runs it")
+        js("() => AtlasCtx.openAnalyse({ metrics: ['cen_ethnic_share', 'imd_score'], level: 'council' })"); page.wait_for_timeout(2500)
+        rep.check(js(f"() => {A}.querySelectorAll('.an-pick select option').length") > 5 and "(share)" in js(f"() => {A}.querySelector('.an-res').innerText"), "a breakdown's category can be chosen too")
         rep.check(not [e for e in page.errors if "favicon" not in e], f"no errors ({page.errors[:2]})")
     rep.done()
 

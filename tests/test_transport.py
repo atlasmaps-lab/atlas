@@ -23,6 +23,8 @@ def main():
         page = open_atlas(b, base, (1440, 900), query="debug#app=transport"); js = page.evaluate
         page.route("**/valhalla1.openstreetmap.de/route**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(VALHALLA)))
         page.route("**/valhalla1.openstreetmap.de/isochrone**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(ISO)))
+        for op in ("**/overpass-api.de/**", "**/overpass.kumi.systems/**", "**/overpass.private.coffee/**"):
+            page.route(op, lambda r: r.fulfill(status=200, content_type="application/json", body='{"elements": []}'))
         page.route("**/api.transitous.org/**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(TRANSIT)))
         nom, pho = [], []   # 0.8.2.1: every request Atlas makes to Nominatim (should be none) and to Photon
         page.route("**/nominatim.openstreetmap.org/**", lambda r: (nom.append(r.request.url), r.fulfill(status=200, content_type="application/json", body="[]")))

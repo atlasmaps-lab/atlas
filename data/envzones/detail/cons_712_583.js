@@ -1,0 +1,1 @@
+window.ATLAS_ENVZ_DETAIL && ATLAS_ENVZ_DETAIL("cons", "712_583", {"features":[[{"k":"ramsar","n":"Northumbria Coast","y":null,"nat":"E"},[[[-198331,5575098,314,-141,15,-20,-20,20,-264,93,-45,48]]]]]});

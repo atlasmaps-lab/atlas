@@ -45,7 +45,7 @@
     sum.innerHTML = `<summary class="pc-pill ed-pill"><span class="ed-st">Summary</span></summary>`; sum.appendChild(sumBody); head.after(sum);
     // notes: the explanations before the first section, and the closing source line, fold into "How to read this · Sources"
     const kids = [...body.children], firstH = kids.findIndex(n => n.tagName === "H4");
-    const intro = kids.filter((n, i) => (firstH < 0 || i < firstH) && n.matches("p.ap-note") && !n.querySelector("button, input, select, a[data-go]"));
+    const intro = kids.filter((n, i) => (firstH < 0 || i < firstH) && n.matches("p.ap-note:not(.ap-keep)") && !n.querySelector("button, input, select, a[data-go]"));   // .ap-keep: instructions stay in view
     const tail = [...body.querySelectorAll(":scope > .ap-note, :scope > .ec-src, :scope > .mo-src")].filter(p => /OGL|Licence|Source|ONS|HMRC|DWP|MHCLG|Treasury|Fingertips|Census|Bank of England|Electoral Commission/.test(p.textContent) && p === body.lastElementChild);
     const fold = [...new Set([...intro, ...tail])];
     if (fold.length || moved.length) { const d = document.createElement("details"); d.className = "ed-notes"; d.innerHTML = `<summary>How to read this · Sources</summary>${moved.map(h => `<p class="ap-note">${h}</p>`).join("")}`; fold.forEach(p => d.appendChild(p)); body.appendChild(d); }

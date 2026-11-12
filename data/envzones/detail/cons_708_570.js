@@ -1,0 +1,1 @@
+window.ATLAS_ENVZ_DETAIL && ATLAS_ENVZ_DETAIL("cons", "708_570", {"features":[[{"k":"ramsar","n":"Midland Meres & Mosses Phase 2","y":null,"nat":"E"},[[[-275660,5274145,310,-87,49,-104,-143,-79,-233,28,-239,-69,-90,16,35,60,-273,182,221,2,52,43,7,-57,120,-45,12,36,161,0,11,74]]]]]});

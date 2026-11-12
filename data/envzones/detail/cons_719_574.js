@@ -1,0 +1,1 @@
+window.ATLAS_ENVZ_DETAIL && ATLAS_ENVZ_DETAIL("cons", "719_574", {"features":[[{"k":"ramsar","n":"Humber Estuary","y":null,"nat":"E"},[[[-23792,5366350,328,-48,425,-289,-246,-86,-232,136,-232,-78,-303,223,260,142]]]],[{"k":"ramsar","n":"Humber Estuary","y":null,"nat":"E"},[[[-24081,5365872,-131,242,144,84,299,-220,-312,-106]]]]]});
