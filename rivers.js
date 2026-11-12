@@ -64,6 +64,8 @@
     if (fl) items.push({ k: "Recorded floods within 3 km", h: fl.n ? `<b>${fl.n}</b> recorded flood${fl.n === 1 ? "" : "s"}${fl.last ? `, the latest in ${fl.last}` : ""}` : "No recorded floods within 3 km", viz: V.big(String(fl.n), fl.n === 1 ? "flood" : "floods"),
       more: fl.list && fl.list.length ? `<table class="mo-tab"><thead><tr><th>Flood</th><th class="num">Year</th><th class="num">Hectares</th></tr></thead><tbody>${fl.list.slice(0, 12).map(x => `<tr><td>${esc(x.n)}</td><td class="num">${x.y || ""}</td><td class="num">${x.ha != null ? Math.round(x.ha).toLocaleString("en-GB") : ""}</td></tr>`).join("")}</tbody></table>` : "", map: { fn: "env-floods" } });
     items.push({ k: "Where it comes from", h: "Ordnance Survey, OS Open Rivers", url: p.n ? `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(name)}` : null, urlLabel: "Look it up", more: "<p>Every watercourse in Great Britain as a network of lines (OGL v3.0; contains OS data © Crown copyright). Northern Ireland's rivers aren't in it yet.</p>" });
+    if (window.AtlasResilience && AtlasResilience.authItem && name && !/^Unnamed/.test(name)) items.splice(Math.max(0, items.length - 1), 0, AtlasResilience.authItem("flood " + name, ll));   // 0.12
+    setTimeout(() => window.AtlasResilience && AtlasResilience.fill(), 50);
     AtlasCard.open({ app: "Environment", title: name, shape: p.r ? "river:" + p.r : null, items, source: "OS Open Rivers", when: "", links: [{ label: "OS Open Rivers", url: "https://www.ordnancesurvey.co.uk/products/os-open-rivers" }] });
   }
   // 0.12: a river in its own right: every stretch with its id (the main file has whole rivers; small ones come from the

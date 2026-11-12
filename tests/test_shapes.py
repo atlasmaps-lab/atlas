@@ -19,11 +19,15 @@ CARD = "() => [...document.querySelectorAll('.pcwin')].filter(w => !w.hidden).po
 def main():
     rep = Report("shapes")
     with server() as base, browser() as b:
-        page = open_atlas(b, base, (1440, 900), query="debug#app=environment"); js = page.evaluate; page.wait_for_timeout(2500)
+        page = open_atlas(b, base, (1440, 900), query="debug#app=environment"); js = page.evaluate
+        page.route("**/www.gov.uk/api/search.json**", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"results": [{"title": "Flood scheme on the Severn", "link": "/government/news/severn", "public_timestamp": "2026-11-01T09:00:00Z", "organisations": [{"acronym": "EA"}], "content_store_document_type": "press_release"}]})))
+        page.wait_for_timeout(2500)
         page.wait_for_function("() => AtlasCtx.map.getLayer('env-floods-fill')", timeout=60000)
         js("() => AtlasCtx.map.jumpTo({ center: [-2.75, 52.71], zoom: 11.5 })"); page.wait_for_timeout(3500)
         name = js(CLICK, ["rivers-hi-line"]); page.wait_for_timeout(700)
         rep.check(js(f"() => !!({CARD})().querySelector('.pc-shape [data-shape^=\"river:\"]')"), f"a river's card offers its whole shape ({name})")
+        page.wait_for_timeout(800)
+        rep.check(js(f"() => {{ const w = ({CARD})(); return /What the authorities are saying/.test(w.innerText) && !!w.querySelector('a[href*=\"/government/news/severn\"]') && !!w.querySelector('a[href*=\"metoffice\"]'); }}"), "…and what the authorities are saying about it, linked")
         js(f"() => ({CARD})().querySelector('.pc-shape [data-shape]:not([data-shape-act])').click()"); page.wait_for_timeout(1500)
         n1 = js("() => AtlasCtx.map.getSource('shape-sel')._data.features.length")
         z = js("() => AtlasCtx.map.getZoom()")

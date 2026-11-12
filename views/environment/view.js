@@ -195,7 +195,10 @@
       spec = { title: "Wildfire burnt area", figs: [{ v: fmt(p.ha) + " ha", l: "burnt" }, { v: String(p.d || "").slice(0, 4), l: longDate(p.d) }], items: [
         { k: "Seen by satellite", h: `About <b>${fmt(p.ha)} ha</b> burnt, seen on ${e(longDate(p.d))}`, open: true, more: "<p>Moorland and heath fires are most common in dry springs and summers; they threaten homes nearby, water supplies and peat that stores carbon.</p>" }] };
     }
+    const R = window.AtlasResilience;   // 0.12: what the authorities are saying, on flood and coast cards
+    if (spec && R && R.authItem && (key === "floods" || key === "coast")) { const ev = key === "floods" ? ((D.floods.events || []).find(x => x.id === p.ev) || {}) : null; spec.items.splice(spec.items.length - 1, 0, R.authItem(key === "floods" ? "flood " + String(ev.n || "").replace(/\s*\d{4}.*$/, "").split(/[,(]/)[0] : "coastal erosion " + (p.smp || ""), at)); }
     if (spec) AtlasCard.open(Object.assign({ app: "Environment", source: "Atlas Environment", when: "" }, spec));
+    if (spec && R && R.fill) setTimeout(() => R.fill(), 50);
   }
   function longDate(d) { try { return CTX.longDate(d); } catch (e) { return d; } }
   function fly(g) { const b = bboxOf(g); CTX.map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 80, maxZoom: 13, duration: 900 }); }
@@ -411,7 +414,8 @@
       const draw = () => ft.map(f => ({ type: "Feature", properties: { _c: !f.properties.y || f.properties.y <= Y() ? c : "#9aa5ab", _fo: !f.properties.y || f.properties.y <= Y() ? 0.25 : 0.06 }, geometry: f.geometry }));
       return { title: n, kind: "park", colour: c, note: `${p0.k === "np" ? "National Park" : "Ramsar wetland"}${p0.y ? `, designated ${p0.y}` : ""}`, features: draw(), live: draw, liveNote: () => p0.y && p0.y > Y() ? `not yet designated in ${Y()} (grey)` : `in ${Y()}` }; });
   }
-  window.AtlasEnv = { floodsNear: (lon, lat, km) => floodsNear(lon, lat, km), floodsAlong, load: k => load(k), get D() { return D; }, get year() { return Y(); } };
+  window.AtlasEnv = { floodsNear: (lon, lat, km) => floodsNear(lon, lat, km), floodsAlong, load: k => load(k), bind: c => bind(c), setOn: o => { Object.assign(S.on, o); apply(); },   // 0.12: Atlas Resilience draws the hazards through these
+    get D() { return D; }, get year() { return Y(); } };
   window.AtlasApps && AtlasApps.register({
     id: "environment", name: "Atlas Environment", perspective: "environment", accent: "#4f772d", dataNeeds: [], rivers: true,
     init(ctx) { bind(ctx); ctx.mapOnly([]); ctx.view([-3.2, 54.6], 5.3); apply(); ctx.openPanel("timeline"); },

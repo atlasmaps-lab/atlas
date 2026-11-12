@@ -262,6 +262,7 @@
     { id: "health", bar: ["#ff8fa3", "#a4133c"], name: "Health", hue: "#c2364b", ready: false, ramp: ["#fbe9ec", "#f3bcc5", "#e48596", "#c94f66", "#8f2338"], planned: ["Life expectancy", "Healthy life expectancy", "Patients per GP", "Obesity rate"], desc: "Not loaded yet." },
     { id: "transport", bar: ["#90e0ef", "#023e8a"], name: "Transportation", hue: "#2b6cb0", ready: !!(window.ATLAS_POI || window.ATLAS_TRANSPORT), ramp: ["#e3eef8", "#b5d0ea", "#7aa9d6", "#3f7fbf", "#1d5590"], planned: ["Commute time", "Households without a car", "Road traffic", "Road casualties"], desc: "Railway stations and how busy they are, airports and ports, bus and tram stops; directions and journey planning in Atlas Transport." },
     { id: "environment", bar: ["#b5d99c", "#31572c"], name: "Environmental", hue: "#4f772d", ready: !!window.ATLAS_ENV, ramp: ["#f1f7e8", "#d3e8b5", "#a9cf7d", "#73a843", "#4a7a22"], planned: window.ATLAS_ENV ? null : ["Greenhouse gas emissions", "Renewable electricity", "Recycling", "Air pollution", "EV chargers"], desc: "Greenhouse gas emissions since 2005, renewable electricity, household recycling (England), fine particle air pollution (England) and public EV chargers." },
+    { id: "resilience", bar: ["#f4a261", "#9c4a0b"], name: "Resilience", hue: "#b45309", ready: true, ramp: ["#fdf0e1", "#f8d2a8", "#eea766", "#cf7a2c", "#93480c"], desc: "Planning for, responding to and understanding emergencies: who is most vulnerable, live flood warnings and what is inside them, past floods and disease." },   // 0.12
     { id: "analysis", name: "Analysis", hue: "#4a4f55", ready: false, hidden: true, ramp: ["#eef0f1", "#cfd4d8", "#a3abb2", "#6f7880", "#3d444b"], planned: [], desc: "Results you put on the map from the Analyse window: clusters, residuals, component scores, hot spots." },
     { id: "markets", bar: ["#8d99ae", "#2b2d42"], name: "Markets", hue: "#a07a12", ready: !!MK, ramp: ["#fbf3d5", "#f1dc93", "#ddb94f", "#b8902a", "#7d5f12"], planned: ["House prices", "Rents", "Business births", "Broadband speed"], desc: "Test case: FTSE 100 companies headquartered in London, and London's financial districts." },
   ];
@@ -2527,7 +2528,7 @@
   }
   function mapOnly(ids) { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.filter(id => M[id]).forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); }
   // ---------- 1.8: perspective apps ----------
-  const APP_FOR = { political: "politics", economic: "economic", social: "social", markets: "markets", health: "health", transport: "transport", environment: "environment" };
+  const APP_FOR = { political: "politics", economic: "economic", social: "social", markets: "markets", health: "health", transport: "transport", environment: "environment", resilience: "resilience" };
   const appHref = pid => location.pathname + "#app=" + (APP_FOR[pid] || pid);
   const appName = pid => { const d = window.AtlasApps && AtlasApps.get(APP_FOR[pid]); return d ? d.name : "Atlas " + PER[pid].name; };
   const APP = (() => { // the open app: its module if there is one, otherwise just the perspective on its own

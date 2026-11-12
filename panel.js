@@ -63,8 +63,9 @@
       const sm = document.createElement("summary"), bd = document.createElement("div"); bd.className = "ed-sbody";
       h.before(d); sm.appendChild(h); d.append(sm, bd);
       let n = d.nextElementSibling; while (n && n.tagName !== "H4" && !n.classList.contains("ed-notes") && !n.classList.contains("ed-sec")) { const nx = n.nextElementSibling; bd.appendChild(n); n = nx; }
-      d.open = allOpen || open.has(t);
-      d.addEventListener("toggle", () => { if (d.open) open.add(t); else open.delete(t); });
+      const shut = body._edShut = body._edShut || new Set();   // 0.12: <h4 class="ed-open"> starts open (the main content of a panel) until closed
+      d.open = allOpen || open.has(t) || (h.classList.contains("ed-open") && !shut.has(t));
+      d.addEventListener("toggle", () => { if (d.open) { open.add(t); shut.delete(t); } else { open.delete(t); shut.add(t); } });
     });
   }
   function sectionSpec(h) {

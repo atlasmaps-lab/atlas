@@ -1504,13 +1504,19 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
   .shape-badge button { border: 0; background: var(--chip); border-radius: 999px; padding: 3px 9px; font: inherit; font-size: 12px; cursor: pointer; } .shape-badge [data-shclear] { background: none; font-size: 16px; color: var(--ink-3); }
   .shape-tile .shape-scale { font-size: 10px; fill: var(--ink-3); }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } .pc-it::details-content { transition: none; } }
+/* 0.12: what the authorities are saying (Resilience, and on Environment's cards) */
+.res-news { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 6px; font-size: 12.5px; }
+.res-news li { display: grid; gap: 1px; }
+.res-news small, .res-msg small { color: var(--ink-3); font-size: 11px; }
+.res-msg { margin: 6px 0; padding: 8px 10px; border-left: 3px solid #d7301f; background: var(--solid); font-size: 12.5px; line-height: 1.45; }
+.res-links { margin: 4px 0 8px; padding-left: 18px; font-size: 12.5px; display: grid; gap: 4px; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=1209">
-<script src="theme.js?v=1209"></script>
-<script src="theme-apply.js?v=1209"></script>
+<link rel="stylesheet" href="fonts.css?v=1212">
+<script src="theme.js?v=1212"></script>
+<script src="theme-apply.js?v=1212"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1631,33 +1637,33 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=1209"></script>
+<script src="data/places_poi.js?v=1212"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=1209"></script>
-<script src="data/representation.js?v=1209"></script>
-<script src="data/trade.js?v=1209"></script>
-<script src="data/investment.js?v=1209"></script>
-<script src="data/industry.js?v=1209"></script>
-<script src="data/census.js?v=1209"></script>
-<script src="data/health_deaths.js?v=1209"></script>
-<script src="data/bd_economy.js?v=1209"></script>
-<script src="data/bd_census.js?v=1209"></script>
-<script src="data/spending.js?v=1209"></script>
-<script src="data/bd_health.js?v=1209"></script>
-<script src="data/people.js?v=1209"></script>
-<script src="data/bd_spending.js?v=1209"></script>
-<script src="data/bd_people.js?v=1209"></script>
-<script src="data/transport.js?v=1209"></script>
-<script src="data/economy.js?v=1209"></script>
-<script src="data/airports.js?v=1209"></script>
+<script src="data/money.js?v=1212"></script>
+<script src="data/representation.js?v=1212"></script>
+<script src="data/trade.js?v=1212"></script>
+<script src="data/investment.js?v=1212"></script>
+<script src="data/industry.js?v=1212"></script>
+<script src="data/census.js?v=1212"></script>
+<script src="data/health_deaths.js?v=1212"></script>
+<script src="data/bd_economy.js?v=1212"></script>
+<script src="data/bd_census.js?v=1212"></script>
+<script src="data/spending.js?v=1212"></script>
+<script src="data/bd_health.js?v=1212"></script>
+<script src="data/people.js?v=1212"></script>
+<script src="data/bd_spending.js?v=1212"></script>
+<script src="data/bd_people.js?v=1212"></script>
+<script src="data/transport.js?v=1212"></script>
+<script src="data/economy.js?v=1212"></script>
+<script src="data/airports.js?v=1212"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="data/environment.js?v=1209"></script>
-<script src="stats.js?v=1209"></script>
-<script src="psephology.js?v=1209"></script>
-<script src="charts.js?v=1209"></script>
-<script src="engine.js?v=1209"></script>
-<script src="xlsx.js?v=1209"></script>
+<script src="data/environment.js?v=1212"></script>
+<script src="stats.js?v=1212"></script>
+<script src="psephology.js?v=1212"></script>
+<script src="charts.js?v=1212"></script>
+<script src="engine.js?v=1212"></script>
+<script src="xlsx.js?v=1212"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1667,23 +1673,23 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=1209"></script>
-<script src="apps.js?v=1209"></script>
-<script src="views/views.js?v=1209"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=1212"></script>
+<script src="apps.js?v=1212"></script>
+<script src="views/views.js?v=1212"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=1209"></script>
-<script src="money.js?v=1209"></script>
-<script src="trade.js?v=1209"></script>
-<script src="narrative.js?v=1209"></script>
-<script src="panel.js?v=1209"></script>
-<script src="data/events.js?v=1209"></script>
-<script src="card.js?v=1209"></script>
-<script src="sort.js?v=1209"></script>
-<script src="rivers.js?v=1209"></script>
-<script src="shape.js?v=1209"></script>
-<script src="menu.js?v=1209"></script>
-<script src="profile.js?v=1209"></script>
-<script src="devdesign.js?v=1209"></script>
-<script src="app.js?v=1209"></script>
+<script src="windows.js?v=1212"></script>
+<script src="money.js?v=1212"></script>
+<script src="trade.js?v=1212"></script>
+<script src="narrative.js?v=1212"></script>
+<script src="panel.js?v=1212"></script>
+<script src="data/events.js?v=1212"></script>
+<script src="card.js?v=1212"></script>
+<script src="sort.js?v=1212"></script>
+<script src="rivers.js?v=1212"></script>
+<script src="shape.js?v=1212"></script>
+<script src="menu.js?v=1212"></script>
+<script src="profile.js?v=1212"></script>
+<script src="devdesign.js?v=1212"></script>
+<script src="app.js?v=1212"></script>
 </body>
 </html>
