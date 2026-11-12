@@ -160,9 +160,9 @@
         viz: viz.bars(top.map((r, i) => ({ v: r.v, c: r.c === code ? "#d0701c" : i ? "#9aa5ab" : "#3b78b5", n: ctx.nameOf(r.c) }))),
         more: `${ctx.CH.ranked(top.concat(hereI >= 5 && hereI < rows.length - 3 ? [rows[hereI]] : []).concat(bot).map(r => ({ name: ctx.nameOf(r.c), v: r.v, hl: r.c === code })), { w: 380, fmt: v => f(v) })}${hereI >= 0 ? `<p>${esc(ctx.nameOf(code))} is ${hereI + 1} of ${rows.length}.</p>` : ""}`, map: { metrics: [id], level: lv } });
     }
-    if (parts.means || parts.trust) items.push({ k: "What it tells us", h: esc(first(parts.means.replace(/<[^>]+>/g, ""))[0] || m.label), viz: "", more: `${parts.means ? `<p>${parts.means}</p>` : ""}${parts.trust ? `<p><b>How far to trust it.</b> ${parts.trust}</p>` : ""}` });
+    if (parts.means) items.push({ k: "What it tells us", h: esc(first(parts.means.replace(/<[^>]+>/g, ""))[0] || m.label), viz: "", more: `<p>${parts.means}</p>` });   // 0.12: only when built from the data
     const src = ctx.sourceOf ? ctx.sourceOf(m) : (m.source || ""), url = (String(src).match(/https?:\/\/[^\s;),]+/) || [])[0] || "";
-    items.push({ k: "Where it comes from", h: esc(String(src).replace(/https?:\/\/\S+/g, "").replace(/\s*[;,(]\s*$/, "").slice(0, 140) || "Atlas"), more: `<p>${esc(src)}</p>${m.how ? `<p><b>How it's worked out.</b> ${esc(m.how)}</p>` : ""}`, url, urlLabel: "Source" });
+    items.push({ k: "Where it comes from", h: esc(String(src).replace(/https?:\/\/\S+/g, "").replace(/\s*[;,(]\s*$/, "").slice(0, 140) || "Atlas"), more: `${N && N.definition(m) ? `<p><b>What it measures.</b> ${esc(N.definition(m))}</p>` : ""}<p>${esc(src)}</p>${m.how ? `<p><b>How it's worked out.</b> ${esc(m.how)}</p>` : ""}`, url, urlLabel: "Source" });
     const rk = rows.length >= 5 ? rows.findIndex(r => r.c === code) : -1, ch = pts.length >= 2 ? (isP ? pts[pts.length - 1][1] - pts[0][1] : pts[0][1] ? (pts[pts.length - 1][1] / pts[0][1] - 1) * 100 : null) : null;
     const figs = [now ? { v: f(now.v), l: `${where}${now.yr ? ", " + now.yr : ""}` } : null, ch != null && isFinite(ch) ? { v: `${ch >= 0 ? "▲" : "▼"} ${Math.abs(ch).toFixed(Math.abs(ch) < 10 ? 1 : 0)}${isP ? " pt" : "%"}`, l: `since ${pts[0][0]}` } : null, rk >= 0 ? { v: `${rk + 1} of ${rows.length}`, l: "highest first" } : null];
     return { app: APPN[m.p] || "", title: m.label, figs, items, source: String(src).split(/[;(]/)[0].replace(/https?:\/\/\S+/, "").trim().slice(0, 60) || "Atlas", when: now && now.yr ? String(now.yr) : ctx.longDate(ctx.date), map: { metrics: [id] }, links: url ? [{ label: "Source", url }] : [] };
@@ -230,7 +230,7 @@
     const src = s.links[0];
     return `<div class="pk-top"><span class="pc-logo">ATLAS</span><span class="pc-app">${esc(s.app)}</span></div><div class="pc-pill">${esc(s.title)}</div>
       <div class="pk-row"><div class="pc-txt"><div class="pc-k">${esc(it.k)}</div><div class="pc-h">${it.h}</div></div>${it.viz ? `<div class="pc-viz">${it.viz}</div>` : ""}</div>
-      ${parts.means ? `<p class="pk-means">${esc(first(parts.means.replace(/<[^>]+>/g, ""))[0])}</p>` : ""}
+      ${parts.means || (N && N.definition(m)) ? `<p class="pk-means">${esc(first((parts.means || N.definition(m)).replace(/<[^>]+>/g, ""))[0])}</p>` : ""}
       <div class="pk-acts"><button type="button" class="btn sm" data-pkmap="${esc(id)}">Put on map</button><button type="button" class="btn sm" data-pkws="${esc(id)}">${STAR} Workspace</button><button type="button" class="btn sm primary" data-pkcard="${esc(id)}">Create card</button>${src ? `<a href="${esc(src.url)}" target="_blank" rel="noopener">Source ↗</a>` : ""}</div>`;
   }
   function showPeek(btn) {

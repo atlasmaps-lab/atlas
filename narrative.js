@@ -120,13 +120,36 @@
       if (bits.filter(Boolean).length) out.push(`Now it is ${bits.filter(Boolean).join(", ")}.`);
     }
     if (now && now.est) out.push(`<span class="nv-est">Some figures here are estimates${now.estWhy ? ": " + esc(now.estWhy) : ""}.</span>`);
-    const mt = MEANS[m.id] || MEANS[m.bd && m.id.replace(/_(share|top|lq)$/, "_share")] || null;
-    const means = mt ? mt[0] : m.desc ? m.desc.replace(/\.?$/, ".") : "";
-    const trust = mt ? mt[1] : (ctx.caveat && ctx.caveat(m.id)) || "";
-    if (!out.length && !means) return "";
-    return `<div class="nv">${out.length ? `<p class="nv-story">${out.join(" ")}</p>` : ""}${means && !opts.short ? `<p class="nv-means"><b>What it tells us.</b> ${esc(means)}</p>` : ""}${trust && !opts.short ? `<p class="nv-trust"><b>How far to trust it.</b> ${esc(trust)}</p>` : ""}</div>`;
+    // 0.12: "What it tells us" only when the numbers say something: the biggest move and what it lines up with, a gap with
+    // the UK closing or widening, a climb or fall in the rankings. Definitions and caveats live in the ⓘ box and Sources.
+    const tells = opts.short ? [] : explain(m, code, pts);
+    if (!out.length && !tells.length) return "";
+    return `<div class="nv">${out.length ? `<p class="nv-story">${out.join(" ")}</p>` : ""}${tells.length ? `<p class="nv-means nv-data"><b>What it tells us.</b> ${tells.join(" ")}</p>` : ""}</div>`;
   }
 
+  function explain(m, code, pts) {
+    const out = [], f = fmtOf(m), isP = isPts(m), where = placeName(code);
+    if (pts.length >= 4 && window.AtlasCard) {   // the biggest move that lines up with an event in Atlas's timeline
+      const w = AtlasCard.why(pts, AtlasCard.topicsOf(m.id, m.label, m.group, m.p), { pts: isP, fmt: f }), mv = w.moves.filter(x => x.ev).sort((a, b) => b.z - a.z)[0];
+      if (mv) { const amt = isP ? `${Math.abs(mv.b - mv.a).toFixed(1)} points` : `${Math.abs((mv.b / mv.a - 1) * 100).toFixed(Math.abs(mv.b / mv.a - 1) < 0.1 ? 1 : 0)}%`;
+        out.push(`The biggest ${mv.b > mv.a ? "rise" : "fall"} (${amt}, ${Math.floor(mv.x1)}) lines up with “${esc(mv.ev.t)}” in Atlas's timeline: ${esc(String(mv.ev.text || "").split(/(?<=\.)\s/)[0].replace(/\.$/, ""))}.`); }
+    }
+    if (code !== ctx.UKC && pts.length >= 3 && m.nature !== "count" && m.nature !== "amount") {   // a gap with the UK closing or widening
+      const U = new Map(series(m, ctx.UKC).map(p => [p[0], p[1]])), both = pts.filter(p => U.has(p[0]) && U.get(p[0]));
+      if (both.length >= 3) {
+        const [ya, va] = both[0], [yb, vb] = both[both.length - 1], ga = isP ? va - U.get(ya) : va / U.get(ya) - 1, gb = isP ? vb - U.get(yb) : vb / U.get(yb) - 1;
+        const say = g => isP ? `${Math.abs(g).toFixed(1)} points ${g >= 0 ? "above" : "below"}` : `${Math.abs(g * 100).toFixed(0)}% ${g >= 0 ? "above" : "below"}`;
+        const big = isP ? Math.abs(gb - ga) >= 0.5 : Math.abs(gb - ga) >= 0.03;
+        if (big) out.push(Math.sign(ga) !== Math.sign(gb) && Math.abs(ga) > 0.005 ? `${esc(where)} has moved from ${say(ga)} the UK in ${ya} to ${say(gb)} it in ${yb}.` : `The gap with the UK has ${Math.abs(gb) < Math.abs(ga) ? "narrowed" : "widened"}: ${say(ga)} the UK in ${ya}, ${say(gb)} in ${yb}.`);
+      }
+    }
+    if (pts.length >= 3) {   // a climb or fall in the rankings
+      const a = rankAt(m, code, `${pts[0][0]}-07-01`), b = rankAt(m, code, ctx.date);
+      if (a && b && a.n === b.n && Math.abs(a.i - b.i) >= Math.max(3, Math.round(b.n * 0.05))) out.push(`It has ${b.i < a.i ? "climbed" : "fallen"} from ${ord(a.i)} to ${ord(b.i)} highest of ${b.n} ${PL[b.lv]} since ${pts[0][0]}.`);
+    }
+    return out;
+  }
+  const definition = m => { const mt = MEANS[m.id] || MEANS[m.bd && m.id.replace(/_(share|top|lq)$/, "_share")] || null; return mt ? mt[0] : m.desc ? m.desc.replace(/\.?$/, ".") : ""; };
   // sentence helpers for panel stories (same wording everywhere)
   const N = {
     change: (a, b, pts) => pts ? `${b - a >= 0 ? "up" : "down"} ${Math.abs(b - a).toFixed(1)} points` : a ? `${b >= a ? "up" : "down"} ${Math.abs((b / a - 1) * 100).toFixed(Math.abs(b / a - 1) < 0.1 ? 1 : 0)}%` : "",
@@ -138,5 +161,5 @@
     share: (part, whole) => whole ? (100 * part / whole).toFixed(part / whole < 0.1 ? 1 : 0) + "%" : "—",
   };
 
-  window.AtlasNarrative = { init(c) { ctx = c; }, story, MEANS, series: (m, code) => series(m, code), fmtOf, isPts, ...N };
+  window.AtlasNarrative = { init(c) { ctx = c; }, story, explain: (m, code) => explain(m, code, series(m, code)), definition, MEANS, series: (m, code) => series(m, code), fmtOf, isPts, ...N };
 })();

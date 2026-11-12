@@ -28,7 +28,7 @@ def main():
         open_panel(page, "support"); page.wait_for_selector(".apppanel:not([hidden]) .nv-story")
         s = js("() => { const b = [...document.querySelectorAll('.apppanel:not([hidden]) .wm-body')].pop(); return ((b.querySelector('.ed-h') || {}).innerText || '') + ' ' + ((b.querySelector('.nv-story') || {}).innerText || ''); }")
         rep.check("claimed out-of-work benefits" in s and "low-income families" in s and "Right to Buy" in s, f"the Housing & support panel tells the story ({s[:160]})")
-        rep.check("Stat-Xplore" in js("() => document.querySelector('.apppanel:not([hidden]) .nv-trust').innerText"), "…and says award levels need Stat-Xplore")
+        rep.check("Stat-Xplore" in js("() => [...document.querySelectorAll('.apppanel:not([hidden]) .ed-notes')].pop().textContent"), "…and says award levels need Stat-Xplore")
         rep.check(not [e for e in page.errors if "favicon" not in e], f"no errors ({page.errors[:2]})")
     rep.done()
 

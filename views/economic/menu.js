@@ -40,7 +40,25 @@
     const s = E().ind[id], Ec = window.AtlasEcon; if (!s || !Ec) return null;
     const lab = {}; const pts = s.pts.map(p => { const x = Ec.xOf(p[0]); lab[x.toFixed(4)] = Ec.periodName(p[0], s.lfs); return [x, p[1]]; });
     return B.series({ title: s.label, app: "Economic", pts, unit: s.unit, fmt: v => fmtV(v, s.unit), topics: TOPICS[s.grp] || [], period: x => lab[x.toFixed(4)] || String(Math.floor(x)),
-      src: s.src, url: s.url, next: s.next, means: (MEANS[id] || [])[0], trust: (MEANS[id] || [])[1] });
+      src: s.src, url: s.url, next: s.next, means: (MEANS[id] || [])[0], tells: tells(id) });
+  }
+  // 0.12: what the latest figure says, read against the indicator's own past and the figures it moves with
+  function tells(id) {
+    const I = E().ind, S = k => (I[k] && I[k].pts.filter(p => p[1] != null)) || [], last = k => S(k).slice(-1)[0], s = I[id]; if (!s) return [];
+    const a = S(id), n = a.length; if (n < 3) return []; const now = a[n - 1][1], u = s.unit, f = v => fmtV(v, u), out = [];
+    const dense = /^\d{4} [A-Z]{3}$|^\d{4}-\d\d-\d\d$/.test(String(a[n - 1][0])), back = /Q/.test(String(a[n - 1][0])) ? 4 : /-/.test(String(a[n - 1][0])) ? 250 : dense ? 12 : 1, yr = a[n - 1 - back];
+    const isP = u === "%", ch = yr ? (isP ? now - yr[1] : yr[1] ? (now / yr[1] - 1) * 100 : null) : null;
+    if (ch != null && isFinite(ch) && Math.abs(ch) > (isP ? 0.05 : 0.5)) out.push(`${isP ? `${Math.abs(ch).toFixed(1)} points` : `${Math.abs(ch).toFixed(1)}%`} ${ch > 0 ? "higher" : "lower"} than a year earlier.`);
+    const win = a.slice(Math.max(0, n - 1 - back * 2), n - 1), avg = win.length ? win.reduce((t, p) => t + p[1], 0) / win.length : null;
+    if (avg != null && /^gdp|retail/.test(id) && Math.abs(now - avg) > (isP ? 0.1 : Math.abs(avg) * 0.01)) out.push(`${now > avg ? "Stronger" : "Weaker"} than its average over the past two years (${f(avg)}).`);
+    const hi = Math.max(...a.map(p => p[1])), lo = Math.min(...a.map(p => p[1])); if (now === hi) out.push("The highest in the series Atlas holds."); else if (now === lo) out.push("The lowest in the series Atlas holds.");
+    const c = last("cpi");
+    if (/^(cpi|cpih|core|services)$/.test(id)) { out.push(now > 2 ? `${(now - 2).toFixed(1)} points above the Bank of England's 2% target.` : now < 2 ? `Below the Bank of England's 2% target.` : "On the 2% target."); if (id === "services" && c && now > c[1] + 0.3) out.push("Services, driven mostly by wages, are rising faster than prices overall."); }
+    if (id === "pay" && c) out.push(now > c[1] ? `Faster than inflation (${fmtV(c[1], "%")}), so pay buys more than a year ago.` : `Slower than inflation (${fmtV(c[1], "%")}), so pay buys less than a year ago.`);
+    if (/^(bankrate|sonia|gilt5|gilt10|mort2)$/.test(id) && c) out.push(now > c[1] ? `Above inflation (${fmtV(c[1], "%")}): borrowing costs more than prices are rising.` : `Below inflation (${fmtV(c[1], "%")}): cheap in real terms.`);
+    if (id === "gilt10") { const b = last("bankrate"); if (b) out.push(now > b[1] ? "Above Bank Rate: markets expect rates to stay higher for longer, or want more to lend for ten years." : "Below Bank Rate: markets expect rates to fall."); }
+    if (id === "unemp") { const v = S("vac"), vn = v[v.length - 1], v12 = v[v.length - 13]; if (vn && v12) { const dv = (vn[1] / v12[1] - 1) * 100; if (Math.abs(dv) > 3) out.push(`Vacancies are ${dv > 0 ? "up" : "down"} ${Math.abs(dv).toFixed(0)}% on a year earlier: the jobs market is ${dv > 0 ? "tightening" : "cooling"}.`); } }
+    return out;
   }
   function tile(ctx, B, id) {
     const s = E().ind[id]; if (!s || !s.pts.length) return null; const n = s.pts.length, a = s.pts[n - 1][1], b = n > 1 ? s.pts[n - 2][1] : null, d = b == null ? null : a - b;

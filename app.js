@@ -1187,7 +1187,7 @@
   const map = new maplibregl.Map({ container: "map", style: key ? osStyle(key) : plainStyle(), center: HOME, zoom: HOME_Z, minZoom: C.minZoom || 4.6, maxZoom: 17,
     dragRotate: false, pitchWithRotate: false, attributionControl: false, preserveDrawingBuffer: true });
   window.atlasMap = map;
-  if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { M, P, METRICS, BD, bdOf: (id, c, d) => bdOf(BD[id], c, d || state.date), resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint(),   // for checks only (index.html?debug)
+  if (/[?&]debug\b/.test(location.search)) window.AtlasDebug = { metricInfoHTML: id => M[id] ? metricInfoHTML(M[id]) : '', M, P, METRICS, BD, bdOf: (id, c, d) => bdOf(BD[id], c, d || state.date), resultFor, previousFor, get PS() { return PS; }, get state() { return state; }, repaint: () => repaint(),   // for checks only (index.html?debug)
     get TB() { return TB; }, setDate: d => setDate(d), metricSpan: id => metricSpan(M[id]), openCmp: () => openCmp(), openAnalyse: o => openAnalyse(o), openChart: o => openChart(o),
     select: codes => codes.forEach(c => P[c] && addCompare({ code: c, level: P[c].level })),
     focus: c => focus(c), unfocus: () => unfocus(), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); if (!on) setLevelOn("auto", true); },
@@ -2200,6 +2200,7 @@
     if (state.iso && state.iso.ch !== "nd" && !curPlan[state.iso.ch === "vbl" ? "hue" : state.iso.ch]) state.iso = null;
     if (map.getSource && map.getSource("councils")) { LEVELS.forEach(paintLevel); syncProtestLayer(); syncCompanyLayer(); syncZones(); syncNetworks(); }
     renderLegend(); renderDock(); renderSup(); renderTNote(); syncFocusColour(); syncNewsSoon();
+    if (map.getLayer && map.getLayer("pf-nation") && noAreas() !== !!applyLevels.na) applyLevels();   // 0.12: area tiles back on (or off) in Atlas Transport
     if (pmOpen) renderPMenu();
     if (state.focus) { renderMind(); refreshPinned(); }
     renderTray(); if (!$("cmp").hidden) renderCmp(); if (!cpanel.hidden && CHART.drawn) renderChartBody();
@@ -2720,8 +2721,17 @@
   const fillIds = l => ["pf-" + l, ...[0, 1, 2, 3, 4].map(k => `pdt-${l}-${k}`), l + "-fill", "pd-" + l, "pb-" + l];
   const LINE_OF = { nation: "nation-line", region: "region-line", council: "council-line", constituency: "constituency-line", ward: "ward-line" };
   const AUTO_LINE = { nation: [0, 0.9], region: [Z.region - 0.3, 0.85], council: [Z.council - 0.3, ["interpolate", ["linear"], ["zoom"], Z.council - 0.3, 0, Z.council, 0.8]], ward: [Z.ward - 0.3, ["interpolate", ["linear"], ["zoom"], Z.ward - 0.3, 0, Z.ward, 0.7]] };
+  // 0.12: an app can work without area tiles (Atlas Transport: stations, lines and paths instead). Until an area
+  // measure is mapped there, area fills, outlines (but a faint nation line), names, hover and clicks are off.
+  function noAreas() { const d = APP_ID && window.AtlasApps && AtlasApps.get(APP_ID); return !!(d && d.noAreas) && !planMetrics().some(m => m.nature !== "line" && m.temporal !== "event"); }
   function applyLevels() {
     if (!map.getLayer || !map.getLayer("pf-nation")) { syncLevel(); return; }
+    applyLevels.na = noAreas();
+    if (applyLevels.na) {
+      LEVELS.forEach(l => { fillIds(l).forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "none"); }); const ln = LINE_OF[l]; if (map.getLayer(ln)) { map.setLayoutProperty(ln, "visibility", l === "nation" ? "visible" : "none"); if (l === "nation") setP(ln, "line-opacity", 0.3); }
+        if (map.getLayer("names-" + l)) map.setLayoutProperty("names-" + l, "visibility", "none"); });
+      clearHover(); syncLevel(); renderLevelPicker(); return;
+    }
     LEVELS.forEach(l => {
       const on = LV.auto ? l !== "constituency" : l === LV.active, range = LV.auto ? VIS[l] : [0, 24];
       fillIds(l).forEach(id => { if (!map.getLayer(id)) return; map.setLayoutProperty(id, "visibility", on ? "visible" : "none"); map.setLayerZoomRange(id, range[0], range[1]); });
@@ -2991,7 +3001,7 @@
   // ---------- hover, click, select ----------
   function pickZone(e) { if (!map.getLayer("zone-fill") || map.getZoom() < ZONE_Z || !marketsInUse()) return null; const f = map.queryRenderedFeatures(e.point, { layers: ["zone-fill"] })[0]; return f ? { code: f.properties.code, level: "zone" } : null; }
   function pickCompany(e) { if (!map.getLayer("co-pts") || map.getLayoutProperty("co-pts", "visibility") === "none") return null; const b = 4, f = map.queryRenderedFeatures([[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]], { layers: ["co-pts"] })[0]; return f ? f.properties.i : null; }
-  function pick(e) { const z = pickZone(e); if (z) return z; const l = state.level; const f = map.queryRenderedFeatures(e.point, { layers: [l + "-fill"] })[0]; return f ? { code: f.properties.code, level: l } : null; }
+  function pick(e) { if (applyLevels.na) return null; const z = pickZone(e); if (z) return z; const l = state.level; const f = map.queryRenderedFeatures(e.point, { layers: [l + "-fill"] })[0]; return f ? { code: f.properties.code, level: l } : null; }
   const pbox = (e, b) => [[e.point.x - b, e.point.y - b], [e.point.x + b, e.point.y + b]];
   function pickProtest(e) {
     if (SPIDER.on) { const f = map.queryRenderedFeatures(pbox(e, 4), { layers: ["pr-sp-pts"] })[0]; if (f) return f.properties.e; }
@@ -3003,7 +3013,17 @@
   function clearHover() { clearTimeout(timer); timer = null; if (hov) setFS(hov, { hover: false }); hov = null; hovCode = null; if (!state.pinned) card.hidden = true; }
   // 0.8.1: the hand pointer means "you can click this": names, symbols, stops, protests and companies. Over plain map or an
   // area's colour the pointer stays as it is (an area is still clickable, as before)
-  const CLICKABLE = () => ["poi-sym", "stops-pt", "pr-pts", "pr-cl", "pr-sp-pts", "co-pts", "soc-pts", "soc-cl", ...LEVELS.map(l => "names-" + l), ...PLACE_LABELS].filter(id => map.getLayer(id) && map.getLayoutProperty(id, "visibility") !== "none");
+  // 0.12: anything on the map can be made clickable: a view or the core registers layers with a card to open.
+  // Points (priority < 20) are checked before place names; lines and zones (20+) after names and protests, before areas.
+  const PICKERS = [];
+  function registerPick(p) { const i = PICKERS.findIndex(x => x.id === p.id); if (i >= 0) PICKERS.splice(i, 1); PICKERS.push(Object.assign({ pad: 3, priority: 30 }, p)); PICKERS.sort((a, b) => a.priority - b.priority); }
+  const pickLayers = p => (typeof p.layers === "function" ? p.layers() : p.layers).filter(id => map.getLayer(id) && map.getLayoutProperty(id, "visibility") !== "none");
+  function pickRegistered(e, lo, hi) {
+    for (const p of PICKERS) { if (p.priority < lo || p.priority >= hi) continue; const ls = pickLayers(p); if (!ls.length) continue;
+      let fs; try { fs = map.queryRenderedFeatures(pbox(e, p.pad), { layers: ls }); } catch (err) { fs = []; } if (fs.length) return { p, f: fs[0], fs }; }
+    return null;
+  }
+  const CLICKABLE = () => ["poi-sym", "stops-pt", "pr-pts", "pr-cl", "pr-sp-pts", "co-pts", "soc-pts", "soc-cl", ...LEVELS.map(l => "names-" + l), ...PLACE_LABELS, ...PICKERS.flatMap(p => typeof p.layers === "function" ? p.layers() : p.layers)].filter(id => map.getLayer(id) && map.getLayoutProperty(id, "visibility") !== "none");
   map.on("mousemove", e => {
     if (!lasso.active && state.tool !== "measure") { const hit = map.queryRenderedFeatures(pbox(e, 2), { layers: CLICKABLE() }).length; map.getCanvas().style.cursor = hit ? "pointer" : ""; }
     lastPt = e.point; if (lasso.active || state.tool === "measure") return;
@@ -3015,7 +3035,10 @@
     if (pc != null && !ecardPinned) { clearHover(); ecard.className = "card"; ecard.innerHTML = companyHTML(pc, false); ecard.hidden = false; place(e.point.x, e.point.y, ecard); return; }
     const pe = pickProtest(e);
     if (pe != null && !ecardPinned) { clearHover(); ecard.className = "card"; ecard.innerHTML = eventHTML(pe, false); ecard.hidden = false; place(e.point.x, e.point.y, ecard); map.getCanvas().style.cursor = "pointer"; return; }
+    const rp = pickRegistered(e, 0, 1e9);   // 0.12: registered lines and zones show their name on hover
+    if (rp && rp.p.hover && !ecardPinned) { const h = rp.p.hover(rp.f, e); if (h) { clearHover(); ecard.className = "card"; ecard.innerHTML = h; ecard.hidden = false; place(e.point.x, e.point.y, ecard); map.getCanvas().style.cursor = "pointer"; return; } }
     if (!ecardPinned) ecard.hidden = true;
+    if (rp && rp.p.priority >= 30) { cand = null; clearHover(); return; }   // over a zone: no area hover underneath
     const t = pick(e);
     if (!t) { cand = null; clearHover(); return; }
     if (!cand || cand.code !== t.code) { clearHover(); cand = t; timer = setTimeout(() => { hov = cand; setFS(hov, { hover: true }); if (!state.pinned) showHover(hov.code, lastPt); }, hoverMs()); }
@@ -3039,6 +3062,8 @@
     const pp = pickPoi(e);
     if (pp) { ecard.hidden = true; ecardPinned = false; openPoiCard(pp); return; }
     const ps = pickStop(e); if (ps) { ecard.hidden = true; ecardPinned = false; openStopCard(ps); return; }
+    const sel = e.originalEvent.shiftKey || state.tool === "select" || state.tool === "lasso";
+    const rpt = !sel && pickRegistered(e, 0, 20); if (rpt) { ecard.hidden = true; ecardPinned = false; rpt.p.open(rpt.f, e, rpt.fs); return; }   // 0.12
     const nm = !e.originalEvent.shiftKey && state.tool !== "select" && state.tool !== "lasso" && pickName(e);
     if (nm) { ecard.hidden = true; if (nm.kind === "area") { if (state.focus !== nm.code) focus(nm.code); } else openPlaceCard(nm); return; }
     const pc = pickCompany(e);
@@ -3055,8 +3080,9 @@
       ecard.hidden = true; ecardPinned = false; openProtestCard(pe); return;
     }
     if (SPIDER.on) unspider();
+    const rpl = !sel && pickRegistered(e, 20, 1e9); if (rpl) { ecard.hidden = true; ecardPinned = false; rpl.p.open(rpl.f, e, rpl.fs); return; }   // 0.12: lines and zones open their card
     const t = pick(e);
-    if (!t) { unfocus(); clearGroup(); cancelAutoGroup(); return; }
+    if (!t) { if (noAreas()) return; unfocus(); clearGroup(); cancelAutoGroup(); return; }
     if (e.originalEvent.shiftKey || state.tool === "select" || state.tool === "lasso") { toggleCompare(t); if (e.originalEvent.shiftKey) armAutoGroup(); return; }
     cancelAutoGroup();
     clearTimeout(timer); if (hov) setFS(hov, { hover: false }); hov = null;
@@ -4130,7 +4156,8 @@
     const row = (k, v) => v ? `<tr><th>${k}</th><td>${v}</td></tr>` : "";
     const src = sourceOf(m);
     const nv = window.AtlasNarrative ? AtlasNarrative.story(m, state.focus && P[state.focus] ? state.focus : UKC) : "";   // 0.10: the story first
-    return `${nv || `<p class="ilead">${esc(m.desc || "")}</p>`}<table class="itab">${row("How it's worked out", esc(m.how || EN.aggregate(m).why))}
+    const def = window.AtlasNarrative ? AtlasNarrative.definition(m) : (m.desc || "");   // 0.12: the definition lives here, not in the story
+    return `${nv || ""}<table class="itab">${row("What it measures", esc(def))}${row("How it's worked out", esc(m.how || EN.aggregate(m).why))}
       ${row("Unit", ex ? `e.g. ${esc((m.fmt || String)(ex.v))}${m.unit ? ` (${esc(m.unit)})` : ""}` : m.unit ? esc(m.unit) : "")}
       ${row("Kind of data", `${esc(m.scale)}, ${esc(m.nature)} · ${esc({ state: "holds until it changes", annual: "one value a year", event: "dated events", static: "one date only", election: "holds from one election to the next" }[m.temporal] || m.temporal)}`)}
       ${row("Where it applies", m.levels ? esc(m.levels.map(pl).join(", ")) + ` <small>(elsewhere: ${esc(NM_TEXT.toLowerCase())})</small>` : "every boundary set with data")}
@@ -4183,13 +4210,7 @@
   function addFctl(el) { WM.decorate(el); }
 
   // ---------- interactive tables: sort by any column, hover a row to find the place, click to focus it ----------
-  document.addEventListener("click", e => {
-    const th = e.target.closest("table.cmp thead th"); if (!th || e.target.closest("button")) return;
-    const table = th.closest("table"), i = [...th.parentNode.children].indexOf(th), tb = table.tBodies[0]; if (!tb) return;
-    const dir = th.dataset.dir === "asc" ? "desc" : "asc"; table.querySelectorAll("thead th").forEach(x => { delete x.dataset.dir; }); th.dataset.dir = dir;
-    const val = tr => { const c = tr.children[i]; if (!c) return ""; const v = c.dataset.v; return v != null && v !== "" && !isNaN(+v) ? +v : c.textContent.trim().toLowerCase(); };
-    [...tb.rows].sort((a, b) => { const x = val(a), y = val(b); return (x < y ? -1 : x > y ? 1 : 0) * (dir === "asc" ? 1 : -1); }).forEach(r => tb.appendChild(r));
-  });
+  // 0.12: sorting every table and list is in sort.js (AtlasSort), for the whole page
   let rowHov = null;
   document.addEventListener("mouseover", e => {
     const tr = e.target.closest("table.cmp tbody tr[data-code]"), code = tr && tr.dataset.code;
@@ -5150,7 +5171,7 @@
     const el = $("lvpick"); if (!el) return;
     $("browse-lv").textContent = PLURAL[state.level] || "Areas"; $("browse-btn").title = "Boundaries: " + (PLURAL[state.level] || "Areas") + " (choose which show, or browse places)";
     const ms = planMetrics();
-    el.innerHTML = `<div class="lvt">Boundaries on the map <small>${LV.auto ? "following the zoom" : "at every zoom"}</small></div>
+    el.innerHTML = `${applyLevels.na ? `<div class="lvt lvna">Areas are off in Atlas Transport: stations, lines and paths come first. Map an area measure (e.g. station usage) to bring them back.</div>` : ""}<div class="lvt">Boundaries on the map <small>${LV.auto ? "following the zoom" : "at every zoom"}</small></div>
       <label class="lvrow lvauto"><input type="checkbox" data-lv="auto" ${LV.auto ? "checked" : ""}><span>Automatic</span><small>switch with zoom</small></label>
       ${["nation", "region", "council", "constituency", "ward"].map(l => { const on = !LV.auto && LV.on.includes(l), act = state.level === l, nd = ms.length && !ms.some(m => avail(m, l).ok); return `<div class="lvrow${act ? " act" : ""}${on ? " on" : ""}${nd ? " lvnd" : ""}"><input type="checkbox" id="lv-${l}" data-lv="${l}" ${on ? "checked" : ""} aria-label="Show ${PLURAL[l]} on the map"><button data-mk="${l}" title="${nd ? "None of the metrics on the map has data for " + PLURAL[l].toLowerCase() + " on this date (the boundaries still show)" : act ? "Colours, hover cards and clicks use this set" : "Use this set for colours, hover cards and clicks"}">${PLURAL[l]}</button>${nd ? `<small class="ndtag">no data for what's on the map</small>` : act ? `<small>colours &amp; hover</small>` : on ? `<small>outline</small>` : ""}</div>${l === "constituency" && window.ATLAS_HEX && (state.level === "constituency" || (!LV.auto && LV.on.includes("constituency"))) ? `<div class="lvrow lvhex"><span class="lvv">View as</span><label><input type="radio" name="pconview" data-hexv="0" ${PS.hex ? "" : "checked"}>Real boundaries</label><label title="Every seat the same size: the whole map turns into hexagons"><input type="radio" name="pconview" data-hexv="1" ${PS.hex ? "checked" : ""}>Hex map</label></div>` : ""}`; }).join("")}`;
   }
@@ -5196,6 +5217,7 @@
   CTX.councilSpend = c => councilSpend(c);
   CTX.sourceOf = m => sourceOf(m);   // 0.11
   CTX.loadPconFor = d => loadPconFor(d);   // 0.11.1
+  CTX.registerPick = p => registerPick(p); CTX.noAreas = () => !!applyLevels.na; CTX.pbox = pbox;   // 0.12
   if (window.AtlasCard) AtlasCard.init(CTX, { openPanel: id => APP ? openFromBar(id) : openMetricInfo(id) });   // 0.11: information cards and the ⓘ peek
 
   // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------

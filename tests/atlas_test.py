@@ -40,14 +40,16 @@ def browser():
             b.close()
 
 
-def open_atlas(b, base, size=(1280, 800), storage=None, query="debug", init_script=None):
-    """A fresh page with Atlas loaded and the map ready. storage: extra localStorage keys (JSON-encodable values)."""
+def open_atlas(b, base, size=(1280, 800), storage=None, query="debug", init_script=None, sections_open=True):
+    """A fresh page with Atlas loaded and the map ready. storage: extra localStorage keys (JSON-encodable values).
+    sections_open: 0.12 panels fold every section but the Summary; tests that read inside panels open them all."""
     import json
     ctx = b.new_context(viewport={"width": size[0], "height": size[1]}, device_scale_factor=1)
     init = {"atlas-uk-plain": True}
     init.update(storage or {})
     ctx.add_init_script("(() => { const s = %s; for (const k in s) localStorage.setItem(k, JSON.stringify(s[k])); })();" % json.dumps(init))
     if init_script: ctx.add_init_script(init_script)
+    if sections_open: ctx.add_init_script("window.ATLAS_SECTIONS_OPEN = 1;")
     page = ctx.new_page()
     page.errors = []
     page.on("console", lambda m: page.errors.append(m.text) if m.type == "error" else None)
