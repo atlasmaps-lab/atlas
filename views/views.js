@@ -17,7 +17,7 @@
 (function () {
   "use strict";
   const VIEWS = {
-    politics: { owner: "", js: ["view.js", "menu.js"], css: ["view.css"] },
+    politics: { owner: "", js: ["integrity.js", "view.js", "menu.js"], css: ["view.css"] },
     economic: { owner: "", js: ["econ.js", "spending.js", "view.js", "menu.js"], css: ["view.css"] },
     social:   { owner: "", js: ["store.js", "social.js", "people.js", "view.js", "menu.js"], css: ["view.css"] },
     health:   { owner: "", js: ["view.js", "menu.js"], css: ["view.css"] },
