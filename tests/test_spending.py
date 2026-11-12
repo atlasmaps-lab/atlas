@@ -28,7 +28,7 @@ def main():
         rep.check("£1,360bn" in s and "Social protection" in s and "per head" in s, f"the panel opens with the story ({s[:140]})")
         js("() => document.querySelector('[data-spf=\"Social protection\"]').click()"); page.wait_for_timeout(400)
         rep.check(js("() => document.querySelectorAll('.sp-sub').length") >= 5, "clicking a function shows its sub-functions (old age, family, sickness…)")
-        rep.check("How far to trust it" in js("() => document.querySelector('.apppanel:not([hidden]) .nv').innerText"), "…and says how far to trust the figures")
+        rep.check("outturn" in js("() => document.querySelector('.apppanel:not([hidden]) .ed-notes').textContent").lower(), "…and the caveats are in How to read this · Sources (0.12)")
         rep.check(not [e for e in page.errors if "favicon" not in e], f"no errors ({page.errors[:2]})")
     rep.done()
 

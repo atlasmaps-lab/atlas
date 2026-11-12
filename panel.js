@@ -28,29 +28,49 @@
     let headline = "", rest = "";
     if (story) { [headline, rest] = firstSentence(story.innerHTML); if (rest) story.innerHTML = rest; else story.remove(); }
     const head = document.createElement("header"); head.className = "ed-head";
-    // 0.11: the card's look: ATLAS and the app as a masthead, the panel's name in the black bar, then the headline
-    head.innerHTML = `<div class="ed-kick ed-mast"><span class="pc-logo">ATLAS</span> <span class="pc-app">${esc(meta.app)}</span><span class="ed-vh"> · ${esc(meta.title)}</span></div><div class="pc-pill ed-pill">${esc(meta.title)}</div>${headline ? `<h2 class="ed-h">${esc(headline.replace(/\.$/, ""))}</h2>` : meta.blurb ? `<p class="ed-dek">${esc(meta.blurb)}</p>` : ""}`;
+    // 0.12: ATLAS and the app, with the panel's name beside it; the black bar below is the Summary, open
+    head.innerHTML = `<div class="ed-kick ed-mast"><span class="pc-logo">ATLAS</span> <span class="pc-app">${esc(meta.app)}</span><span class="ed-ptl"> · ${esc(meta.title)}</span></div>`;
     body.insertBefore(head, body.firstChild);
-    if (nv) { nv.classList.add("ed-story"); head.after(nv); }
-    // figures: the first row of big numbers goes straight after the story
-    const fig = body.querySelector(".tr-head"); if (fig) { fig.classList.add("ed-figs"); (nv || head).after(fig); }
-    // sources: the last note that names a source or licence folds away
-    const notes = [...body.querySelectorAll(":scope > .ap-note")].filter(p => /OGL|Licence|Source|ONS|HMRC|DWP|MHCLG|Treasury|Fingertips|Census/.test(p.textContent));
-    const src = notes[notes.length - 1];
-    if (src && src === body.lastElementChild) { const d = document.createElement("details"); d.className = "ed-notes"; d.innerHTML = `<summary>How to read this · Sources</summary>`; src.replaceWith(d); d.appendChild(src); }
+    // 0.12: definitions ("What it tells us" that only describes the measure) and caveats ("How far to trust it") leave the
+    // Summary for "How to read this · Sources"; a "What it tells us" built from the data (.nv-data) stays
+    const moved = [...body.querySelectorAll(".nv-trust, .nv-means:not(.nv-data)")].map(p => { const h = p.innerHTML.replace(/^\s*<b>[^<]*<\/b>\s*/, ""); p.remove(); return h; }).filter(Boolean);
+    const fig = body.querySelector(":scope > .tr-head");
+    // the Summary: the headline, the story and the big figures, open when the panel opens
+    const sumBody = document.createElement("div"); sumBody.className = "ed-sbody";
+    if (headline) sumBody.insertAdjacentHTML("beforeend", `<h2 class="ed-h">${esc(headline.replace(/\.$/, ""))}</h2>`);
+    else if (meta.blurb) sumBody.insertAdjacentHTML("beforeend", `<p class="ed-dek">${esc(meta.blurb)}</p>`);
+    if (nv) { nv.classList.add("ed-story"); sumBody.appendChild(nv); }
+    if (fig) { fig.classList.add("ed-figs"); sumBody.appendChild(fig); }
+    const sum = document.createElement("details"); sum.className = "ed-sec ed-summary"; sum.open = true;
+    sum.innerHTML = `<summary class="pc-pill ed-pill"><span class="ed-st">Summary</span></summary>`; sum.appendChild(sumBody); head.after(sum);
+    // notes: the explanations before the first section, and the closing source line, fold into "How to read this · Sources"
+    const kids = [...body.children], firstH = kids.findIndex(n => n.tagName === "H4");
+    const intro = kids.filter((n, i) => (firstH < 0 || i < firstH) && n.matches("p.ap-note") && !n.querySelector("button, input, select, a[data-go]"));
+    const tail = [...body.querySelectorAll(":scope > .ap-note, :scope > .ec-src, :scope > .mo-src")].filter(p => /OGL|Licence|Source|ONS|HMRC|DWP|MHCLG|Treasury|Fingertips|Census|Bank of England|Electoral Commission/.test(p.textContent) && p === body.lastElementChild);
+    const fold = [...new Set([...intro, ...tail])];
+    if (fold.length || moved.length) { const d = document.createElement("details"); d.className = "ed-notes"; d.innerHTML = `<summary>How to read this · Sources</summary>${moved.map(h => `<p class="ap-note">${h}</p>`).join("")}`; fold.forEach(p => d.appendChild(p)); body.appendChild(d); }
     sections(body, meta);
   }
-  // 0.11: every section of a panel (a heading and what follows it) can be lifted out as a card or sent to the workspace
+  // 0.12: every section (a heading and what follows it) folds away; Summary stays open. Open sections are remembered while
+  // the panel redraws. Each section can still be lifted out as a card or sent to the workspace (0.11).
   const SEC_BTNS = `<span class="ed-sacts"><button type="button" data-edcard title="Open this section as a card" aria-label="Open as a card"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7.5 8h9M7.5 12h5M7.5 16h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" data-edws title="Send this section to the workspace" aria-label="Send to workspace"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button></span>`;
+  const titleOf = h => { const t = h.cloneNode(true); t.querySelectorAll(".ed-sacts").forEach(x => x.remove()); return t.textContent.trim(); };
   function sections(body, meta) {
-    body.querySelectorAll(":scope > h4").forEach(h => { if (h.querySelector(".ed-sacts")) return; h.insertAdjacentHTML("beforeend", SEC_BTNS); h._edMeta = meta; });
+    const open = body._edOpen = body._edOpen || new Set(), allOpen = !!window.ATLAS_SECTIONS_OPEN;
+    body.querySelectorAll(":scope > h4").forEach(h => {
+      if (!h.querySelector(".ed-sacts")) h.insertAdjacentHTML("beforeend", SEC_BTNS); h._edMeta = meta;
+      const d = document.createElement("details"), t = titleOf(h); d.className = "ed-sec"; d.dataset.sec = t;
+      const sm = document.createElement("summary"), bd = document.createElement("div"); bd.className = "ed-sbody";
+      h.before(d); sm.appendChild(h); d.append(sm, bd);
+      let n = d.nextElementSibling; while (n && n.tagName !== "H4" && !n.classList.contains("ed-notes") && !n.classList.contains("ed-sec")) { const nx = n.nextElementSibling; bd.appendChild(n); n = nx; }
+      d.open = allOpen || open.has(t);
+      d.addEventListener("toggle", () => { if (d.open) open.add(t); else open.delete(t); });
+    });
   }
   function sectionSpec(h) {
-    const meta = h._edMeta || {}, parts = []; let n = h.nextElementSibling;
-    while (n && n.tagName !== "H4" && !n.classList.contains("ed-notes")) { parts.push(n.outerHTML); n = n.nextElementSibling; }
-    const t = h.cloneNode(true); t.querySelectorAll(".ed-sacts").forEach(x => x.remove()); const title = t.textContent.trim();
+    const meta = h._edMeta || {}, sec = h.closest("details.ed-sec"), bd = sec && sec.querySelector(":scope > .ed-sbody"), title = titleOf(h);
     const story = h.closest(".wm-body") && h.closest(".wm-body").querySelector(".ed-h");
-    return { app: meta.app || "", title, items: [{ k: `${meta.title || ""}${story ? " · " + story.textContent : ""}`.slice(0, 120), h: esc(title), more: parts.join(""), open: true }], source: "Atlas", when: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }), panel: meta.id || null };
+    return { app: meta.app || "", title, items: [{ k: `${meta.title || ""}${story ? " · " + story.textContent : ""}`.slice(0, 120), h: esc(title), more: bd ? bd.innerHTML : "", open: true }], source: "Atlas", when: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }), panel: meta.id || null };
   }
   document.addEventListener("click", e => {
     const b = e.target.closest("[data-edcard],[data-edws]"); if (!b || !window.AtlasCard) return; const h = b.closest("h4"); if (!h) return;
@@ -112,5 +132,5 @@
     body._wsObs.observe(body, { childList: true, subtree: true });
     requestAnimationFrame(() => sendable(body));
   }
-  window.AtlasPanel = { dress, watch, firstSentence, watchSends };
+  window.AtlasPanel = { dress, watch, firstSentence, watchSends, openAll: body => (body || document).querySelectorAll("details.ed-sec").forEach(d => { d.open = true; }) };
 })();

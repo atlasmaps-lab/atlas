@@ -17,7 +17,7 @@
   "use strict";
   let ctx = null, APP = null, H = {};
   const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const S = { open: null, pinned: false, sec: 0, spec: null, t: 0, hide: 0, path: [] };
+  const S = { open: null, pinned: false, sec: 0, spec: null, t: 0, hide: 0, path: [], sorts: {} };
   const IC = {
     map: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-6.1-6.5-11A6.5 6.5 0 0 1 18.5 10c0 4.9-6.5 11-6.5 11z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="10" r="2.3" fill="currentColor"/></svg>`,
     ws: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
@@ -49,7 +49,7 @@
     const m = ctx.M[id], f = N() ? N().fmtOf(m) : String;
     return ctx.allCodesAt(lv).map(c => { const r = val(m, c); return r ? { c, v: r.v, t: f(r.v) } : null; }).filter(Boolean).sort((a, b) => b.v - a.v);
   }
-  const placeRow = (id, lv, r, i) => ({ label: ctx.nameOf(r.c), sub: `${i != null ? `${i + 1}. ` : ""}${r.t}`, card: () => C().metric(id, r.c), map: { metrics: [id], level: lv, focus: r.c } });
+  const placeRow = (id, lv, r, i) => ({ v: r.v, label: ctx.nameOf(r.c), sub: `${i != null ? `${i + 1}. ` : ""}${r.t}`, card: () => C().metric(id, r.c), map: { metrics: [id], level: lv, focus: r.c } });
   function metricKids(id) {
     const m = ctx.M[id]; if (!m) return [];
     const lv = m.levels ? (m.levels.includes("council") ? "council" : m.levels[0]) : "council", nm = PLV[lv] || "places";
@@ -85,7 +85,7 @@
       const cats = Object.keys(d).filter(k => d[k] > 0).sort((a, b) => d[b] - d[a]);
       const card = k => () => B.bdCard(id, k);
       return { label: o.label || spec.label, note: o.note || `Largest first, ${where}. Click one to map its share.`,
-        items: cats.slice(0, o.max || 12).map(k => ({ label: spec.name(k), colour: spec.colour(k), sub: `${(100 * d[k] / tot).toFixed(1)}% · ${ctx.bd.fmt(id, d[k])}`, card: card(k), map: { metrics: [id + "_share"], pick: [id, k] },
+        items: cats.slice(0, o.max || 12).map(k => ({ v: d[k], label: spec.name(k), colour: spec.colour(k), sub: `${(100 * d[k] / tot).toFixed(1)}% · ${ctx.bd.fmt(id, d[k])}`, card: card(k), map: { metrics: [id + "_share"], pick: [id, k] },
           children: () => [{ label: `${spec.name(k)}: the card`, sub: `Here, against the UK, and what it tells us`, card: card(k), map: { metrics: [id + "_share"], pick: [id, k] } },
             { label: "Where it's largest", sub: "Councils with the biggest share", children: () => B.bdPlaces(id, k, false) }, { label: "Where it's smallest", sub: "Councils with the smallest share", children: () => B.bdPlaces(id, k, true) }] })),
         figures: cats.slice(0, 4).map(k => ({ label: spec.name(k), value: (100 * d[k] / tot).toFixed(1) + "%", chg: where, colour: spec.colour(k), card: card(k), map: { metrics: [id + "_share"], pick: [id, k] } })), figTitle: "Largest" };
@@ -93,7 +93,7 @@
     bdPlaces(id, k, low) { // councils by their share of one category, each opening that council's card for it
       const sh = x => { if (!x) return null; const t = Object.values(x).reduce((a, b) => a + b, 0); return t ? 100 * (x[k] || 0) / t : null; };
       const rows = ctx.allCodesAt("council").map(c => ({ c, s: sh(ctx.bd.of(id, c)) })).filter(r => r.s != null).sort((a, b) => low ? a.s - b.s : b.s - a.s);
-      return rows.slice(0, 15).map((r, i) => ({ label: ctx.nameOf(r.c), sub: `${i + 1}. ${r.s.toFixed(1)}%`, card: () => B.bdCard(id, k, r.c), map: { metrics: [id + "_share"], pick: [id, k], level: "council", focus: r.c } }));
+      return rows.slice(0, 15).map((r, i) => ({ v: r.s, label: ctx.nameOf(r.c), sub: `${i + 1}. ${r.s.toFixed(1)}%`, card: () => B.bdCard(id, k, r.c), map: { metrics: [id + "_share"], pick: [id, k], level: "council", focus: r.c } }));
     },
     bdCard(id, k, at) { // the card for one category of a breakdown
       const spec = ctx.bd.spec(id), code = at || here(), d = ctx.bd.of(id, code), uk = ctx.bd.of(id, ctx.UKC), V = C().viz;
@@ -104,8 +104,7 @@
         more: s != null && su ? `<p>That is ${(s / su).toFixed(2)} times the UK share: ${s / su > 1.25 ? "more concentrated here than in most places" : s / su < 0.8 ? "less common here than across the UK" : "close to the UK as a whole"}.</p>` : "", map: { metrics: [id + "_share"], pick: [id, k] } }];
       if (rows.length >= 5) items.push({ k: `Where it's largest · ${rows.length} ${lv === "region" ? "regions" : "councils"}`, h: `Highest in ${esc(ctx.nameOf(rows[0].c))} (${rows[0].s.toFixed(1)}%), lowest in ${esc(ctx.nameOf(rows[rows.length - 1].c))} (${rows[rows.length - 1].s.toFixed(1)}%)`,
         viz: V.bars(rows.slice(0, 6).map((r, i) => ({ v: r.s, c: r.c === code ? "#d0701c" : i ? "#9aa5ab" : "#3b78b5", n: ctx.nameOf(r.c) }))), more: ctx.CH.ranked(rows.slice(0, 8).map(r => ({ name: ctx.nameOf(r.c), v: r.s, hl: r.c === code })), { w: 380, fmt: v => v.toFixed(1) + "%" }), map: { metrics: [id + "_share"], pick: [id, k], level: lv } });
-      if (spec.desc || spec.how) items.push({ k: "What it tells us", h: esc((spec.desc || spec.how || "").split(/(?<=\.)\s/)[0]), more: `${spec.desc ? `<p>${esc(spec.desc)}</p>` : ""}${spec.how ? `<p><b>How it's counted.</b> ${esc(spec.how)}</p>` : ""}` });
-      if (spec.source) items.push({ k: "Where it comes from", h: esc(String(spec.source).replace(/https?:\/\/\S+/g, "").slice(0, 140)), url: (String(spec.source).match(/https?:\/\/[^\s;),]+/) || [])[0] });
+      if (spec.source || spec.desc) items.push({ k: "Where it comes from", h: esc(String(spec.source || spec.label).replace(/https?:\/\/\S+/g, "").slice(0, 140)), more: `${spec.desc ? `<p><b>What it measures.</b> ${esc(spec.desc)}</p>` : ""}${spec.how ? `<p><b>How it's counted.</b> ${esc(spec.how)}</p>` : ""}`, url: (String(spec.source || "").match(/https?:\/\/[^\s;),]+/) || [])[0] });
       return { app: APP ? APP.short || APP.name : "", title: name, items, source: String(spec.source || "Atlas").split(/[;(.]/)[0].slice(0, 60), when: spec.yr ? spec.yr(code) : "", map: { metrics: [id + "_share"], pick: [id, k] } };
     },
     // a card for a series that isn't a map metric (the UK's monthly indicators): latest, trend, why it moved, source
@@ -122,8 +121,9 @@
         { k: `The trend · since ${per(pts[0][0])}`, h: esc(`From ${f(pts[0][1])} in ${per(pts[0][0])} to ${f(last[1])} in ${per(last[0])}, ${chgTxt(pts[0][1], last[1], isP)}${hi[0] !== last[0] && hi[0] !== pts[0][0] ? `; highest in ${per(hi[0])} (${f(hi[1])})` : ""}`), viz: "", more: `<div class="pc-chart">${ctx.CH.line([{ name: o.title, colour: "#3b78b5", pts }], { w: 380, h: 200, vfmt: f, yfmt: v => ctx.CH.compact ? ctx.CH.compact(v) : String(v), events: w.events })}</div>${C().evList(w.events)}` },
         { k: "Why it moved", h: w.lines.length ? esc(w.lines[0].replace(/<[^>]+>/g, "").split(/(?<=\.)\s/)[0].replace(/\.$/, "")) : "No sharp moves stand out", viz: V.big(String(w.events.length), w.events.length === 1 ? "event" : "events"), more: C().whyHTML(w) },
       ];
-      if (o.means) items.push({ k: "What it tells us", h: esc(o.means.split(/(?<=\.)\s/)[0].replace(/\.$/, "")), more: `<p>${esc(o.means)}</p>${o.trust ? `<p><b>How far to trust it.</b> ${esc(o.trust)}</p>` : ""}` });
-      if (o.src || o.next) items.push({ k: o.next ? `Next release · ${o.next}` : "Where it comes from", h: esc(o.src || ""), url: o.url, urlLabel: "Source" });
+      // 0.12: "What it tells us" only from the figures (o.tells); the definition sits with the source
+      if ((o.tells || []).length) items.splice(1, 0, { k: "What it tells us", h: esc(o.tells[0].replace(/\.$/, "")), more: `<p>${esc(o.tells.join(" "))}</p>`, open: true });
+      if (o.src || o.next || o.means) items.push({ k: o.next ? `Next release · ${o.next}` : "Where it comes from", h: esc(o.src || ""), more: o.means ? `<p><b>What it measures.</b> ${esc(o.means)}</p>` : "", url: o.url, urlLabel: "Source" });
       const figs = [{ v: f(last[1]), l: per(last[0]) }, d != null && isFinite(d) ? { v: `${d >= 0 ? "▲" : "▼"} ${Math.abs(d).toFixed(isP ? 2 : 1)}${isP ? " pt" : "%"}`, l: `on ${per(prev[0])}` } : null, dy != null && isFinite(dy) ? { v: `${dy >= 0 ? "▲" : "▼"} ${Math.abs(dy).toFixed(isP ? 2 : 1)}${isP ? " pt" : "%"}`, l: "on a year earlier" } : null];
       return { app: o.app, title: o.title, figs, items, source: String(o.src || "Atlas").split(/[;(]/)[0].slice(0, 60), when: per(last[0]), map: o.map || null, links: o.url ? [{ label: "Source", url: o.url }] : [] };
     },
@@ -180,9 +180,11 @@
     const cols = (showSecs ? 1 : 0) + shown.length + 1 + (deep === 1 ? 1 : 0);
     el.innerHTML = `<div class="mg-in" role="menu" aria-label="${esc(x.title)}" style="--mg-cols:${cols}" data-deep="${deep}">
       ${showSecs ? `<nav class="mg-col mg-secs"><div class="mg-h">${esc(x.title)}</div>${s.sections.map((sc, i) => `<button type="button" class="mg-sec${sc === sec ? " on" : ""}" data-msec="${i}" role="menuitem">${esc(sc.label)}</button>`).join("")}</nav>` : ""}
-      ${shown.map((L, j) => { const d = first + j, isNew = d >= prevN && d > 0; return `<div class="mg-col mg-items${isNew ? " mg-new" : ""}" data-depth="${d}">
-        <div class="mg-h">${j === 0 && d > 0 ? `<button type="button" class="mg-back" data-mback="${d}" aria-label="Back to ${esc(d > 0 ? out[d - 1].title : x.title)}">‹ ${esc(d > 0 ? out[d - 1].title : x.title)}</button>` : ""}<span>${esc(L.title)}</span></div>${L.note ? `<p class="mg-note">${esc(L.note)}</p>` : ""}
-        <div class="mg-rows">${L.items.map((it, i) => rowHTML(it, d, i, S.path[d] === i)).join("")}</div></div>`; }).join("")}
+      ${shown.map((L, j) => { const d = first + j, isNew = d >= prevN && d > 0, sk = `${S.sec}:${S.path.slice(0, d).join(".")}`, so = S.sorts[sk] || "", nv = L.items.filter(it => typeof it.v === "number" && isFinite(it.v)).length >= Math.max(3, L.items.length * 0.6);
+        const order = L.items.map((it, i) => i); if (nv && so) order.sort((a, b) => { const x = L.items[a].v, y = L.items[b].v; if (x == null) return 1; if (y == null) return -1; return so === "asc" ? x - y : y - x; });
+        return `<div class="mg-col mg-items${isNew ? " mg-new" : ""}" data-depth="${d}">
+        <div class="mg-h">${j === 0 && d > 0 ? `<button type="button" class="mg-back" data-mback="${d}" aria-label="Back to ${esc(d > 0 ? out[d - 1].title : x.title)}">‹ ${esc(d > 0 ? out[d - 1].title : x.title)}</button>` : ""}<span>${esc(L.title)}</span>${nv ? `<span class="mg-sort" role="group" aria-label="Sort ${esc(L.title)}"><button type="button" data-msort="${sk}|desc" class="${so === "desc" ? "on" : ""}" title="Highest first" aria-label="Highest first">↓</button><button type="button" data-msort="${sk}|asc" class="${so === "asc" ? "on" : ""}" title="Lowest first" aria-label="Lowest first">↑</button></span>` : ""}</div>${L.note ? `<p class="mg-note">${esc(L.note)}</p>` : ""}
+        <div class="mg-rows">${order.map(i => rowHTML(L.items[i], d, i, S.path[d] === i)).join("")}</div></div>`; }).join("")}
       <div class="mg-col mg-figs">${figs.length ? `<div class="mg-h">${esc(figTitle || "Key figures")}</div><div class="mg-tiles">${figs.map((f, i) => `<button type="button" class="mg-tile" data-mfig="${i}" title="${esc(f.label)}: open its card">${f.colour ? `<i class="mg-sw" style="background:${esc(f.colour)}"></i>` : ""}<span class="mg-tl">${esc(f.label)}</span><b class="mg-tv">${esc(f.value)}</b>${f.chg ? `<span class="mg-tc ${f.tone || (/^▲/.test(f.chg) ? "up" : /^▼/.test(f.chg) ? "down" : "")}">${esc(f.chg)}</span>` : ""}</button>`).join("")}</div>` : ""}</div>
       ${deep === 1 ? `<aside class="mg-col mg-side"><p>${esc(s.lede || x.blurb || `Everything in ${x.title}, by category. Each row opens a card you can put on the map or send to the workspace.`)}</p>
         <button type="button" class="mg-cta" data-mfull>${IC.card}<span>Open the full panel</span></button>${x.map || x.onOpen ? `<button type="button" class="mg-cta ghost" data-mmap>${IC.map}<span>Put on map</span></button>` : ""}</aside>` : ""}</div>`;
@@ -264,8 +266,9 @@
     }, true);
     el.addEventListener("click", e => {
       if (!S.spec) return;
-      const t = e.target.closest("[data-msec],[data-mit],[data-mact],[data-mfig],[data-mfull],[data-mmap],[data-mback]"); if (!t) return;
+      const t = e.target.closest("[data-msec],[data-mit],[data-mact],[data-mfig],[data-mfull],[data-mmap],[data-mback],[data-msort]"); if (!t) return;
       clearTimeout(S.st);
+      if (t.dataset.msort) { const [k, dir] = t.dataset.msort.split("|"); S.sorts[k] = S.sorts[k] === dir ? "" : dir; S.pinned = true; render(); return; }   // 0.12
       if (t.dataset.msec != null) { S.sec = +t.dataset.msec; S.path = []; S.pinned = true; render(); return; }
       if (t.dataset.mback != null) { S.path = S.path.slice(0, Math.max(0, S.path.length - 1)); S.pinned = true; render(); return; }
       if (t.hasAttribute("data-mfull")) { const id = S.open.id; close(); H.openFull(id); return; }

@@ -26,7 +26,7 @@
     const code = ctx.focused, cs = code && ctx.councilSpend ? ctx.councilSpend(code) : null, LA = S.la;
     el.innerHTML = `<div class="nv"><p class="nv-story">${story}</p>
         <p class="nv-means"><b>What it tells us.</b> Where public money goes, by purpose (the UN's COFOG functions), for the whole public sector: central government, devolved governments, councils and public corporations.</p>
-        <p class="nv-trust"><b>How far to trust it.</b> These are outturns, the audited spending, not plans. Regional figures cover only spending that benefits people in a place (about 85% of the total); defence, debt interest and aid can't be placed. Current prices unless it says real terms.</p></div>
+        <p class="nv-trust">These are outturns, the audited spending, not plans. Regional figures cover only spending that benefits people in a place (about 85% of the total); defence, debt interest and aid can't be placed. Current prices unless it says real terms.</p></div>
       <h4>By function, ${esc(y)} <small>(click one for the detail)</small></h4>
       <table class="tr-t">${fns.map(([k, v, v0, f]) => `<tr data-spf="${esc(k)}"><td class="tr-n">${esc(k)}</td><td class="tr-b"><i style="width:${(100 * v / mx).toFixed(1)}%;background:#13876b"></i></td><td class="num">${bn(v)}</td><td class="num tr-x">${N ? N.change(v0, v) : ""} since ${esc(y0)}</td></tr>
         ${ST.open === k ? sub(f).map(([s, sv]) => `<tr class="sp-sub"><td class="tr-n">${esc(s)}</td><td class="tr-b"><i style="width:${(100 * sv / mx).toFixed(1)}%;background:#7fc4ae"></i></td><td class="num">${bn(sv)}</td><td></td></tr>`).join("") : ""}`).join("")}</table>

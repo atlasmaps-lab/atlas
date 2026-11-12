@@ -87,7 +87,7 @@
   const seatsBy = (g, sortFn) => g.filter(x => x.r.cl && x.r.cl[1]).map(({ c, r }) => ({ c, w: r.cl[0][0], m: r.cl[0][2] - r.cl[1][2] })).sort(sortFn);
   // the deeper columns under one general election
   function geKids(ctx, day) {
-    const seatRow = x => ({ label: ctx.nameOf(x.c), colour: ctx.partyCol(x.w), sub: `${ctx.partyName(x.w)} · majority ${pc(x.m)}`, card: () => seatCard(ctx, x.c, day), map: { date: day, level: "constituency", metrics: ["ge_winner"], focus: x.c } });
+    const seatRow = x => ({ v: x.m, label: ctx.nameOf(x.c), colour: ctx.partyCol(x.w), sub: `${ctx.partyName(x.w)} · majority ${pc(x.m)}`, card: () => seatCard(ctx, x.c, day), map: { date: day, level: "constituency", metrics: ["ge_winner"], focus: x.c } });
     return [{ label: "The result", sub: "Seats, votes, turnout, fairness", card: () => resultCard(ctx, day), map: geMap(day) },
       { label: "Seats that changed hands", sub: "From who to whom", card: () => changedCard(ctx, day), map: geMap(day), children: () => changedKids(ctx, day) },
       { label: "Nation by nation", sub: "England, Scotland, Wales, Northern Ireland", children: () => ["E92000001", "S92000003", "W92000004", "N92000002"].map(n => { const r = ctx.resultFor(n, day); return r ? { label: ctx.nameOf(n), sub: seatsLine(ctx, r), card: () => resultCard(ctx, day, n), map: Object.assign(geMap(day), { focus: n }) } : null; }).filter(Boolean) },
@@ -152,7 +152,7 @@
         { label: "Loans", sub: "Registered loans", card: () => later("Loans", d => { const L = d.loans.filter(l => l[2] === k); return { app: "Politics", title: `${Mo.partyName(k)}: loans`, items: L.length ? L.slice(0, 20).map(l => ({ k: Mo.day(l[0]), h: `${esc(l[3])}: <b>${g(l[1])}</b>`, more: l[4] ? `<p>${esc(l[4])}</p>` : "" })) : [{ k: "Loans", h: "No registered loans" }], source: SRC, when: D.built }; }) },
         { label: "The party's full card", sub: "Everything in one window", isPanel: true, fn: () => Mo.openParty(k) }];
     }
-    const partyRow = k => { const P = D.parties[k]; return { label: Mo.partyName(k), key: k, colour: Mo.partyCol(k), sub: `${g(t5(P))} in ${Y - 4}–${Y} · ${g(tot(P))} since ${Object.keys(P.y)[0]}`, card: () => partyCard(k), map: mapSeat, children: () => partyKids(k) }; };
+    const partyRow = k => { const P = D.parties[k]; return { v: t5(P), label: Mo.partyName(k), key: k, colour: Mo.partyCol(k), sub: `${g(t5(P))} in ${Y - 4}–${Y} · ${g(tot(P))} since ${Object.keys(P.y)[0]}`, card: () => partyCard(k), map: mapSeat, children: () => partyKids(k) }; };
     // a donor
     function donorCard(id) {
       const d0 = D.donors[id]; if (!d0) return null;
@@ -172,7 +172,7 @@
       out.push({ label: "The donor's full card", isPanel: true, fn: () => Mo.openDonor(id) });
       return out;
     }
-    const donorRow = (id, sub) => ({ label: dn(id), key: id, sub: sub || `${st(id)} · ${g((D.donors[id] || [])[3])}`, card: () => donorCard(id), children: () => donorKids(id) });
+    const donorRow = (id, sub) => ({ v: (D.donors[id] || [])[3], label: dn(id), key: id, sub: sub || `${st(id)} · ${g((D.donors[id] || [])[3])}`, card: () => donorCard(id), children: () => donorKids(id) });
     // a list of donations as a card
     function listCard(title, rows, byRecipient) {
       const tot2 = rows.reduce((s2, r) => s2 + r[1], 0), rec = r => r[2] === "P" ? Mo.partyName(r[3]) : r[2] === "M" ? ((D.mps[r[3]] || {}).n || "an MP") : r[3];

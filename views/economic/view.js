@@ -43,7 +43,7 @@
     const f = n => Math.round(n).toLocaleString("en-GB"), e = ctx.esc, codes = Object.keys(CM.out);
     const inn = k => (CM.in[k] || {}).n || 0, out = k => (CM.out[k] || {}).n || 0, net = k => inn(k) - out(k);
     const res = k => out(k) + (CM.within[k] || 0) + (CM.home[k] || 0);
-    const trust = `<p class="nv-trust"><b>How far to trust it.</b> Census 2021 counted where people worked on 21 March 2021, during a lockdown, so home working is far higher and travel lower than in a normal year. Only each council's largest flows are listed. England and Wales only (Scotland's census was a year later, Northern Ireland's is published separately).</p>`;
+    const trust = `<p class="nv-trust">Census 2021 counted where people worked on 21 March 2021, during a lockdown, so home working is far higher and travel lower than in a normal year. Only each council's largest flows are listed. England and Wales only (Scotland's census was a year later, Northern Ireland's is published separately).</p>`;
     const means = `<p class="nv-means"><b>What it tells us.</b> Which places draw workers in and which send them out: job centres against commuter towns, and how far labour markets cross council borders.</p>`;
     if (!c) {
       const tot = codes.reduce((t, k) => t + out(k), 0), byNet = codes.slice().sort((a, b) => net(b) - net(a));
