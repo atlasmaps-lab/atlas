@@ -1105,10 +1105,10 @@
   // A number is a single-date figure (Census 2021); an array is one value per year from the metric's first year.
   // 0.8.3: data/environment.js (pipeline/build_environment.py) has the same format, so its metrics join these.
   const EX = (() => {
-    const a = window.ATLAS_EXTRA || null, b = window.ATLAS_ENV || null;
-    if (!a || !b) return a || b;
-    if (a.y0 !== b.y0) { console.warn("Atlas: data/environment.js starts in a different year from data/extra.js, so it is not loaded"); return a; }
-    return { y0: a.y0, metrics: a.metrics.concat(b.metrics), v: Object.assign({}, a.v, b.v) };
+    // 0.12: data/airquality.js (pipeline/build_airquality.py: PM10, NO2 and PM2.5 from Defra's 1 km maps) joins the same way
+    const parts = [window.ATLAS_EXTRA, window.ATLAS_ENV, window.ATLAS_ENV_AQ].filter(Boolean); if (!parts.length) return null;
+    const a = parts[0], ok = parts.filter(b => { if (b.y0 === a.y0) return true; console.warn("Atlas: an extra data file starts in a different year from data/extra.js, so it is not loaded"); return false; });
+    return ok.length === 1 ? a : { y0: a.y0, metrics: [].concat(...ok.map(b => b.metrics)), v: Object.assign({}, ...ok.map(b => b.v)) };
   })(), EXW = window.ATLAS_EXTRA_W || null;
   const EXW_AT = EXW ? Object.fromEntries(EXW.codes.map((c, i) => [c, i])) : {};
   const fmtMoney = v => Math.abs(v) >= 1e6 ? (v < 0 ? "−" : "") + fmtGDP(Math.abs(v)) : (v < 0 ? "−£" : "£") + fmtInt(Math.abs(v));
