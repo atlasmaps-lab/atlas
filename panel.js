@@ -65,9 +65,34 @@
       let n = d.nextElementSibling; while (n && n.tagName !== "H4" && !n.classList.contains("ed-notes") && !n.classList.contains("ed-sec")) { const nx = n.nextElementSibling; bd.appendChild(n); n = nx; }
       const shut = body._edShut = body._edShut || new Set();   // 0.12: <h4 class="ed-open"> starts open (the main content of a panel) until closed
       d.open = allOpen || open.has(t) || (h.classList.contains("ed-open") && !shut.has(t));
-      d.addEventListener("toggle", () => { if (d.open) { open.add(t); shut.delete(t); } else { open.delete(t); shut.add(t); } });
+      // 0.13: a closed section is a tile: its title, its first sentence and its first rows; opened, it grows to fill the
+      // panel with "‹ All of …" to go back (Atlas design/panels/Panels (final).md)
+      tilePreview(d, bd, sm);
+      if (!bd.querySelector(":scope > .ed-tback")) bd.insertAdjacentHTML("afterbegin", `<button type="button" class="ed-tback" data-edback>‹ All of ${esc(meta.title || "this panel")}</button>`);
+      d.addEventListener("toggle", () => { if (d.open) { open.add(t); shut.delete(t); } else { open.delete(t); shut.add(t); }
+        if (body.dataset.cols && body.dataset.cols !== "1" && !window.ATLAS_SECTIONS_OPEN) { body.querySelectorAll(":scope > .ed-sec.ed-cur").forEach(x => { if (x !== d) x.classList.remove("ed-cur"); }); d.classList.toggle("ed-cur", d.open && !d.classList.contains("ed-summary")); body.classList.toggle("ed-one", !!body.querySelector(":scope > .ed-sec.ed-cur")); } });
     });
+    tiles(body);
   }
+  function tilePreview(d, bd, sm) {
+    if (sm.querySelector(".ed-tprev")) return;
+    const p = bd.querySelector("p:not(.ap-note), .nv-story, .ed-dek"), first = p ? (firstSentence(p.innerHTML)[0] || "").replace(/<[^>]+>/g, "") : "";
+    let rows = "";
+    const tb = bd.querySelector("table"); if (tb) { const rs = [...tb.querySelectorAll("tbody tr, tr")].filter(r => r.cells.length >= 2 && !r.closest("thead")).slice(0, 4); rows = rs.map(r => `<span class="ed-trow"><span>${esc(r.cells[0].textContent.trim().slice(0, 48))}</span><b>${esc(r.cells[r.cells.length - 1].textContent.trim().slice(0, 16))}</b></span>`).join(""); }
+    else { const li = [...bd.querySelectorAll("li")].slice(0, 4); rows = li.map(x => `<span class="ed-trow"><span>${esc(x.textContent.trim().slice(0, 64))}</span></span>`).join(""); }
+    if (!first && !rows) return;
+    sm.insertAdjacentHTML("beforeend", `<span class="ed-tprev">${first ? `<span class="ed-tlead">${esc(first.slice(0, 180))}</span>` : ""}${rows}</span>`);
+  }
+  // 0.13: the panel's width sets the layout: three columns from 1040 px, two from 760 px, otherwise one scrolling column
+  function tiles(body) {
+    body.classList.add("ed-tiles");
+    const set = () => { const w = body.clientWidth, c = w >= 1040 ? "3" : w >= 760 ? "2" : "1"; if (body.dataset.cols !== c) { body.dataset.cols = c; if (c === "1") { body.classList.remove("ed-one"); body.querySelectorAll(".ed-cur").forEach(x => x.classList.remove("ed-cur")); } } };
+    set(); if (!body._edRO && window.ResizeObserver) { body._edRO = new ResizeObserver(set); body._edRO.observe(body); }
+  }
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-edback]"); if (!b) return; e.preventDefault(); e.stopPropagation();
+    const d = b.closest("details.ed-sec"), body = b.closest(".ed"); if (d) d.open = false; if (body) { body.classList.remove("ed-one"); body.querySelectorAll(".ed-cur").forEach(x => x.classList.remove("ed-cur")); }
+  }, true);
   function sectionSpec(h) {
     const meta = h._edMeta || {}, sec = h.closest("details.ed-sec"), bd = sec && sec.querySelector(":scope > .ed-sbody"), title = titleOf(h);
     const story = h.closest(".wm-body") && h.closest(".wm-body").querySelector(".ed-h");
