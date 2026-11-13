@@ -1,0 +1,1 @@
+window.ATLAS_ENVZ_DETAIL && ATLAS_ENVZ_DETAIL("cons", "701_568", {"features":[[{"k":"np","n":"Pembrokeshire Coast","y":1951,"nat":"W"},[[[-474828,5210350,3,6,7,0,-10,-6]]]],[{"k":"np","n":"Pembrokeshire Coast","y":1951,"nat":"W"},[[[-474845,5210315,18,5,18,-12,-22,7,-14,0]]]]]});

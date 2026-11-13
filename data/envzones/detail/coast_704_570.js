@@ -1,0 +1,1 @@
+window.ATLAS_ENVZ_DETAIL && ATLAS_ENVZ_DETAIL("coast", "704_570", {"features":[[{"e":2105,"d":"1.7 - 3.3 metres","smp":"SMP21 (St Ann's Head to Great Orme Head)","pol":null},[[[-393175,5255284,304,84,115,50,124,95,-121,-96,-116,-51,-306,-82]]]]]});

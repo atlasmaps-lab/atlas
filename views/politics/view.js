@@ -339,6 +339,7 @@
 
   window.AtlasApps && AtlasApps.register({
     id: "politics", name: "Atlas Politics", perspective: "political", accent: "#7b4fa6", dataNeeds: ["ATLAS_POL", "ATLAS_EL"],
+    onBoot(ctx) { if (window.AtlasIntegrity) AtlasIntegrity.define(ctx); },   // 0.12: the Integrity measures exist before their panel opens
     init(ctx) { ctx.setHex(false); electionOpen(ctx); ctx.openPanel("election"); },
     panels: [
       { id: "election", title: "Election", live: true, render: election, onOpen: electionOpen, min: { w: 400, h: 300 } },
@@ -347,6 +348,7 @@
       { id: "projection", map: {"level": "constituency", "metrics": ["proj_winner"]}, title: "Projection", render: projection, min: { w: 420, h: 320 } },
       { id: "news", title: "News", render: news, min: { w: 420, h: 320 } },
       { id: "money", map: {"level": "constituency", "metrics": ["money_received"]}, title: "Money", blurb: "Donations, loans, MPs' interests and donors with public contracts", tabs: MFTABS, setTab: k => { MF.tab = k; }, render: moneyPanel, min: { w: 460, h: 380 } },
+      { id: "integrity", map: { level: "council", metrics: ["int_cri"] }, title: "Integrity", blurb: "Indicators of corruption risk: red flags in public contracts, electoral competition, section 114 notices", live: true, render: (c, el) => window.AtlasIntegrity ? AtlasIntegrity.render(c, el) : null, min: { w: 460, h: 380 } },   // 0.12
       { id: "referendums", map: {"level": "council", "metrics": ["eu_leave"]}, title: "Referendums", render: referendums },
       { id: "protests", map: {"level": "council", "metrics": ["control", "protest_events"]}, title: "Protests", render: protests },
     ],

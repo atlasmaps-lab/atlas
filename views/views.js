@@ -17,15 +17,16 @@
 (function () {
   "use strict";
   const VIEWS = {
-    politics: { owner: "", js: ["view.js", "menu.js"], css: ["view.css"] },
+    politics: { owner: "", js: ["integrity.js", "view.js", "menu.js"], css: ["view.css"] },
     economic: { owner: "", js: ["econ.js", "spending.js", "view.js", "menu.js"], css: ["view.css"] },
     social:   { owner: "", js: ["store.js", "social.js", "people.js", "view.js", "menu.js"], css: ["view.css"] },
     health:   { owner: "", js: ["view.js", "menu.js"], css: ["view.css"] },
     markets:  { owner: "", js: ["view.js", "menu.js"], css: ["view.css"] },
-    transport: { owner: "", js: ["view.js"], css: ["view.css"] },
+    transport: { owner: "", js: ["move.js", "view.js"], css: ["view.css"] },
     environment: { owner: "", js: ["view.js"], css: ["view.css"] },
+    resilience: { owner: "", js: ["view.js"], css: ["view.css"] },   // 0.12
   };
-  const V = "1202";   // bump with the ?v= numbers in index.html so browsers fetch fresh copies
+  const V = "1220";   // bump with the ?v= numbers in index.html so browsers fetch fresh copies
 
   window.ATLAS_VIEWS = VIEWS;
   const m = location.hash.match(/app=([a-z]+)/), open = m && VIEWS[m[1]] ? m[1] : null;

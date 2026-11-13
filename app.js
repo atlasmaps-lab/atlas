@@ -262,6 +262,7 @@
     { id: "health", bar: ["#ff8fa3", "#a4133c"], name: "Health", hue: "#c2364b", ready: false, ramp: ["#fbe9ec", "#f3bcc5", "#e48596", "#c94f66", "#8f2338"], planned: ["Life expectancy", "Healthy life expectancy", "Patients per GP", "Obesity rate"], desc: "Not loaded yet." },
     { id: "transport", bar: ["#90e0ef", "#023e8a"], name: "Transportation", hue: "#2b6cb0", ready: !!(window.ATLAS_POI || window.ATLAS_TRANSPORT), ramp: ["#e3eef8", "#b5d0ea", "#7aa9d6", "#3f7fbf", "#1d5590"], planned: ["Commute time", "Households without a car", "Road traffic", "Road casualties"], desc: "Railway stations and how busy they are, airports and ports, bus and tram stops; directions and journey planning in Atlas Transport." },
     { id: "environment", bar: ["#b5d99c", "#31572c"], name: "Environmental", hue: "#4f772d", ready: !!window.ATLAS_ENV, ramp: ["#f1f7e8", "#d3e8b5", "#a9cf7d", "#73a843", "#4a7a22"], planned: window.ATLAS_ENV ? null : ["Greenhouse gas emissions", "Renewable electricity", "Recycling", "Air pollution", "EV chargers"], desc: "Greenhouse gas emissions since 2005, renewable electricity, household recycling (England), fine particle air pollution (England) and public EV chargers." },
+    { id: "resilience", bar: ["#f4a261", "#9c4a0b"], name: "Resilience", hue: "#b45309", ready: true, ramp: ["#fdf0e1", "#f8d2a8", "#eea766", "#cf7a2c", "#93480c"], desc: "Planning for, responding to and understanding emergencies: who is most vulnerable, live flood warnings and what is inside them, past floods and disease." },   // 0.12
     { id: "analysis", name: "Analysis", hue: "#4a4f55", ready: false, hidden: true, ramp: ["#eef0f1", "#cfd4d8", "#a3abb2", "#6f7880", "#3d444b"], planned: [], desc: "Results you put on the map from the Analyse window: clusters, residuals, component scores, hot spots." },
     { id: "markets", bar: ["#8d99ae", "#2b2d42"], name: "Markets", hue: "#a07a12", ready: !!MK, ramp: ["#fbf3d5", "#f1dc93", "#ddb94f", "#b8902a", "#7d5f12"], planned: ["House prices", "Rents", "Business births", "Broadband speed"], desc: "Test case: FTSE 100 companies headquartered in London, and London's financial districts." },
   ];
@@ -1104,10 +1105,10 @@
   // A number is a single-date figure (Census 2021); an array is one value per year from the metric's first year.
   // 0.8.3: data/environment.js (pipeline/build_environment.py) has the same format, so its metrics join these.
   const EX = (() => {
-    const a = window.ATLAS_EXTRA || null, b = window.ATLAS_ENV || null;
-    if (!a || !b) return a || b;
-    if (a.y0 !== b.y0) { console.warn("Atlas: data/environment.js starts in a different year from data/extra.js, so it is not loaded"); return a; }
-    return { y0: a.y0, metrics: a.metrics.concat(b.metrics), v: Object.assign({}, a.v, b.v) };
+    // 0.12: data/airquality.js (pipeline/build_airquality.py: PM10, NO2 and PM2.5 from Defra's 1 km maps) joins the same way
+    const parts = [window.ATLAS_EXTRA, window.ATLAS_ENV, window.ATLAS_ENV_AQ].filter(Boolean); if (!parts.length) return null;
+    const a = parts[0], ok = parts.filter(b => { if (b.y0 === a.y0) return true; console.warn("Atlas: an extra data file starts in a different year from data/extra.js, so it is not loaded"); return false; });
+    return ok.length === 1 ? a : { y0: a.y0, metrics: [].concat(...ok.map(b => b.metrics)), v: Object.assign({}, ...ok.map(b => b.v)) };
   })(), EXW = window.ATLAS_EXTRA_W || null;
   const EXW_AT = EXW ? Object.fromEntries(EXW.codes.map((c, i) => [c, i])) : {};
   const fmtMoney = v => Math.abs(v) >= 1e6 ? (v < 0 ? "−" : "") + fmtGDP(Math.abs(v)) : (v < 0 ? "−£" : "£") + fmtInt(Math.abs(v));
@@ -1434,7 +1435,7 @@
     map.addLayer({ id: "tool-fill", type: "fill", source: "tool", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#3b78b5", "fill-opacity": 0.12 } });
     map.addLayer({ id: "tool-line", type: "line", source: "tool", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": "#1f2a2e", "line-width": 2, "line-dasharray": [2, 1.5] } });
     map.addLayer({ id: "tool-pts", type: "circle", source: "tool", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5.5, "circle-color": "#ffffff", "circle-stroke-color": "#1f2a2e", "circle-stroke-width": 2 } });
-    applyMapFonts(); addAreaNames(); addPoi(); addStops(); addNetworks(); addPlacePin();
+    applyMapFonts(); addAreaNames(); addPoi(); addStops(); addNetworks(); registerCorePicks(); addPlacePin();
     applyLook(true); applyLevels(); applyTools();
     const at = document.querySelector(".maplibregl-ctrl-attrib"); if (at) at.classList.remove("maplibregl-compact-show"); // credits folded into the ⓘ button
     map.on("moveend", loadVisibleWards);
@@ -1712,6 +1713,48 @@
   const lazy = {};
   function loadData(file, global) { if (window[global]) return Promise.resolve(window[global]); return lazy[file] || (lazy[file] = new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = file + "?v=" + (window.ATLAS_POI ? ATLAS_POI.built : ""); sc.onload = () => res(window[global]); sc.onerror = rej; document.head.appendChild(sc); })); }
   const zw = (a, b, c) => ["interpolate", ["linear"], ["zoom"], 5, a, 10, b, 15, c];
+  // 0.12: the core's clickable lines and green spaces: railway lines, ferry routes, parks and National Parks. Each opens a
+  // card with what matters about it (nearest stations and their use, the crossing, the park's name and what it is).
+  const kmBetween = (a, b) => { const R = 6371, t = Math.PI / 180, dl = (b[1] - a[1]) * t, dg = (b[0] - a[0]) * t, x = Math.sin(dl / 2) ** 2 + Math.cos(a[1] * t) * Math.cos(b[1] * t) * Math.sin(dg / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
+  function nearPoi(ll, kind, km, n) { return POIDATA ? POIDATA.items.filter(p => p.k === kind && p.lon != null).map(p => [p, kmBetween([p.lon, p.lat], [ll.lng, ll.lat])]).filter(x => x[1] <= km).sort((a, b) => a[1] - b[1]).slice(0, n || 6) : []; }
+  function nearLabel(layers, ll) { // the name of the nearest label of these layers on screen (parks don't carry their name on the fill)
+    const ls = layers.filter(id => map.getLayer(id)); if (!ls.length) return null; const pt = map.project(ll);
+    const fs = map.queryRenderedFeatures(undefined, { layers: ls }).map(f => { const c = f.geometry.type === "Point" ? f.geometry.coordinates : null; if (!c) return null; const q = map.project(c); return [f, Math.hypot(q.x - pt.x, q.y - pt.y)]; }).filter(Boolean).sort((a, b) => a[1] - b[1]);
+    return fs[0] && fs[0][1] < 260 ? (fs[0][0].properties.name || fs[0][0].properties.name1 || fs[0][0].properties.text || null) : null;
+  }
+  function railCard(f, ll) {
+    const p = f.properties || {}, st = nearPoi(ll, "station", 10, 6), V = AtlasCard.viz, type = p.type && p.type !== "Tunnel" ? p.type : p.u === "main" ? "Main line" : p.u === "branch" ? "Branch line" : p.type === "Tunnel" ? "In a tunnel" : "Railway";
+    return { app: APP ? APP.short || "" : "", title: "Railway line", figs: [{ v: type, l: "track" }, st[0] ? { v: `${st[0][1].toFixed(1)} km`, l: `to ${st[0][0].n}` } : null], items: [
+      { k: "The line", h: `${esc(type)}${st[0] ? `, ${st[0][1].toFixed(1)} km from <b>${esc(st[0][0].n)}</b> station` : ""}`, viz: V.bars(st.map(([q]) => ({ v: q.v || 0.001, c: "#b03a2e", n: q.n }))), open: true,
+        more: st.length ? `<table class="mo-tab"><thead><tr><th>Station</th><th class="num">km</th><th class="num">Entries and exits</th></tr></thead><tbody>${st.map(([q, d]) => `<tr><td><button class="linkish" data-poi="${esc(q.id)}">${esc(q.n)}</button></td><td class="num" data-v="${d}">${d.toFixed(1)}</td><td class="num" data-v="${q.v || 0}">${q.v ? fmtInt(q.v) + (q.vy ? ` (${esc(q.vy)})` : "") : "—"}</td></tr>`).join("")}</tbody></table>` : "<p>No stations within 10 km.</p>", map: { metrics: ["inf_rail"] } },
+      { k: "Where it comes from", h: "Ordnance Survey Open Zoomstack and OpenStreetMap; station use from the Office of Rail and Road", url: "https://dataportal.orr.gov.uk/statistics/usage/estimates-of-station-usage/", urlLabel: "Station usage" }],
+      source: "OS, OSM, ORR", when: "", map: { metrics: ["inf_rail"] } };
+  }
+  function ferryCard(f) {
+    const p = f.properties || {}, V = AtlasCard.viz, carries = [p.foot ? "foot passengers" : "", p.car ? "cars" : "", p.bike ? "bikes" : ""].filter(Boolean);
+    return { app: APP ? APP.short || "" : "", title: p.n || "Ferry route", shape: p.n ? "ferry:" + p.n : null, figs: [p.dur ? { v: String(p.dur), l: "crossing time" } : null, p.km ? { v: `${Math.round(p.km)} km`, l: "route length" } : null, p.op ? { v: p.op, l: "operator" } : null], items: [
+      { k: "Ferry route", h: `<b>${esc(p.n || "Ferry")}</b>${p.op ? ` (${esc(p.op)})` : ""}${carries.length ? `: carries ${esc(carries.join(", "))}` : ""}`, viz: V.big(p.km ? `${Math.round(p.km)} km` : "—", "route"), open: true, more: p.site ? `<p><a href="${esc(p.site)}" target="_blank" rel="noopener">Operator's site ↗</a></p>` : "" },
+      { k: "Where it comes from", h: "OpenStreetMap ferry routes", url: "https://www.openstreetmap.org/", urlLabel: "OpenStreetMap" }], source: "OpenStreetMap", when: "", map: { metrics: ["inf_ferry"] } };
+  }
+  function parkCard(f, ll, np) {
+    const p = f.properties || {}, name = nearLabel(np ? ["national park names"] : ["greenspace names", "national park names"], ll) || (np ? "National Park" : (p.type || "Green space")), st = nearPoi(ll, "station", 8, 3);
+    const spec = w => ({ app: APP ? APP.short || "" : "", title: name, figs: [{ v: np ? "National Park" : (p.type || "Green space"), l: "kind" }, st[0] ? { v: `${st[0][1].toFixed(1)} km`, l: `to ${st[0][0].n} station` } : null], items: [
+      { k: np ? "National Park" : (p.type || "Green space"), h: `<b>${esc(name)}</b>`, open: true,
+        more: `${w && w.extract ? `<p>${esc(w.extract)}</p>` : ""}<p>${np ? "Protected for its landscape, wildlife and heritage, and for people to enjoy; planning is controlled by its own authority." : "Open space people can use: parks, gardens, playing fields, allotments, play areas, churchyards and more (OS Open Greenspace types)."}</p>`, url: w && w.url, urlLabel: "Wikipedia" },
+      { k: "Getting there", h: st.length ? `Nearest station: <b>${esc(st[0][0].n)}</b>, ${st[0][1].toFixed(1)} km` : "No railway station within 8 km", more: st.length ? `<ul>${st.map(([q, d]) => `<li><button class="linkish" data-poi="${esc(q.id)}">${esc(q.n)}</button> <small>${d.toFixed(1)} km</small></li>`).join("")}</ul>` : "" },
+      { k: "Where it comes from", h: np ? "Ordnance Survey Open Zoomstack (National Parks)" : "Ordnance Survey Open Greenspace (via Open Zoomstack)", url: "https://www.ordnancesurvey.co.uk/products/os-open-greenspace", urlLabel: "OS Open Greenspace" }], source: "Ordnance Survey", when: "" });
+    return wikiFor(name, [ll.lng, ll.lat]).then(w => spec(w), () => spec(null));
+  }
+  document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("button[data-poi]"); if (b && POI_BY[b.dataset.poi]) { e.preventDefault(); openPoiCard(b.dataset.poi); } });   // stations named in cards
+  function registerCorePicks() {
+    if (!window.AtlasCard) return;
+    if (window.AtlasShape) AtlasShape.register("ferry", n => { const fs = map.getSource("net-ferry") ? map.querySourceFeatures("net-ferry").filter(f => f.properties.n === n) : []; return fs.length ? { title: n, kind: "ferry", colour: "#0f6b7a", features: fs.map(f => ({ type: "Feature", properties: { _c: "#0f6b7a" }, geometry: f.geometry })), note: "Ferry route (OpenStreetMap)" } : null; });
+    registerPick({ id: "core-rail", layers: ["net-rail", "net-rail-tun", "net-osm-rail", "net-rail-omt", "rail", "rail tunnel"], pad: 4, priority: 26,
+      hover: f => `<div class="poi-h"><b>Railway line</b><div class="poi-sub">${esc((f.properties || {}).type || ((f.properties || {}).u === "main" ? "Main line" : "Railway"))} · click for the nearest stations</div></div>`, open: (f, e) => AtlasCard.open(railCard(f, e.lngLat)) });
+    registerPick({ id: "core-ferry", layers: ["net-ferry"], pad: 4, priority: 24, hover: f => `<div class="poi-h"><b>${esc((f.properties || {}).n || "Ferry")}</b><div class="poi-sub">Ferry route · click for more</div></div>`, open: f => AtlasCard.open(ferryCard(f)) });
+    registerPick({ id: "core-np", layers: ["national-parks"], pad: 1, priority: 60, minzoom: 10, open: (f, e) => AtlasCard.open(parkCard(f, e.lngLat, true)) });
+    registerPick({ id: "core-green", layers: ["greenspace"], pad: 1, priority: 55, minzoom: 13, hover: f => `<div class="poi-h"><b>${esc((f.properties || {}).type || "Green space")}</b><div class="poi-sub">Click for more</div></div>`, open: (f, e) => AtlasCard.open(parkCard(f, e.lngLat, false)) });
+  }
   function addNetworks() {
     const bf = map.getLayer("names-nation") ? "names-nation" : map.getLayer("pr-heat") ? "pr-heat" : undefined, hide = { visibility: "none", "line-cap": "round", "line-join": "round" };
     if (!plain && map.getSource("composite")) {
@@ -2215,6 +2258,7 @@
     if (m.pick === "party") { const r = resultFor(UKC, state.date) || resultFor(UKC, TODAY); const ps = r ? r.t.list.filter(x => !MINOR(x[0])).slice(0, 14).map(x => x[0]) : ["lab", "con"]; const cur = pickOf(m.id); if (!ps.includes(cur)) ps.unshift(cur);
       return `<select class="as" data-pick="${m.id}" aria-label="Party">${ps.map(p => `<option value="${p}" ${p === cur ? "selected" : ""}>${esc(partyName(p))}</option>`).join("")}</select>`; }
     if (m.pick === "pair") { const cur = pickOf(m.id); return `<select class="as" data-pick="${m.id}" aria-label="Pair of parties">${PAIRS.map(([k, l]) => `<option value="${k}" ${k === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`; }
+    if (m.pick === "bd" && BD[m.bd]) { const B = BD[m.bd], cur = pickOf(m.id); return `<select class="as" data-pick="${m.id}" aria-label="${esc(B.label)}">${B.cats().map(k => `<option value="${esc(k)}" ${k === cur ? "selected" : ""}>${esc(B.name(k))}</option>`).join("")}</select>`; }   // 0.12
     return "";
   }
   // 0.7.1: choose the colour a metric is drawn in, from the key (shades are worked out from it); "reset" goes back
@@ -2484,7 +2528,7 @@
   }
   function mapOnly(ids) { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.filter(id => M[id]).forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); }
   // ---------- 1.8: perspective apps ----------
-  const APP_FOR = { political: "politics", economic: "economic", social: "social", markets: "markets", health: "health", transport: "transport", environment: "environment" };
+  const APP_FOR = { political: "politics", economic: "economic", social: "social", markets: "markets", health: "health", transport: "transport", environment: "environment", resilience: "resilience" };
   const appHref = pid => location.pathname + "#app=" + (APP_FOR[pid] || pid);
   const appName = pid => { const d = window.AtlasApps && AtlasApps.get(APP_FOR[pid]); return d ? d.name : "Atlas " + PER[pid].name; };
   const APP = (() => { // the open app: its module if there is one, otherwise just the perspective on its own
@@ -3019,7 +3063,7 @@
   function registerPick(p) { const i = PICKERS.findIndex(x => x.id === p.id); if (i >= 0) PICKERS.splice(i, 1); PICKERS.push(Object.assign({ pad: 3, priority: 30 }, p)); PICKERS.sort((a, b) => a.priority - b.priority); }
   const pickLayers = p => (typeof p.layers === "function" ? p.layers() : p.layers).filter(id => map.getLayer(id) && map.getLayoutProperty(id, "visibility") !== "none");
   function pickRegistered(e, lo, hi) {
-    for (const p of PICKERS) { if (p.priority < lo || p.priority >= hi) continue; const ls = pickLayers(p); if (!ls.length) continue;
+    for (const p of PICKERS) { if (p.priority < lo || p.priority >= hi || (p.minzoom && map.getZoom() < p.minzoom)) continue; const ls = pickLayers(p); if (!ls.length) continue;
       let fs; try { fs = map.queryRenderedFeatures(pbox(e, p.pad), { layers: ls }); } catch (err) { fs = []; } if (fs.length) return { p, f: fs[0], fs }; }
     return null;
   }
@@ -4302,7 +4346,11 @@
     timeline: "The metrics over time in one place, each on its own scale.",
     lag: "Whether the metrics move together over the years, and whether one leads the other. Uses year-on-year changes, because two things that both grow over time look related even when they aren't.",
   };
-  function anRows(cfg) { return withDate(cfg.date || state.date, () => { const codes = anCodes(cfg), ms = cfg.metrics.map(id => M[id]).filter(Boolean); return { codes, ms, cols: ms.map(m => vals(m, codes, cfg.date || state.date)) }; }); }
+  // 0.12: a metric that asks you to choose (a party, a pair, a category) is named by the choice in Analyse ("Vote share: Labour")
+  const choiceName = m => { const k = pickOf(m.id); if (m.pick === "party") return partyName(k); if (m.pick === "pair") return (PAIRS.find(p => p[0] === k) || [0, k])[1]; if (m.pick === "bd" && BD[m.bd]) return BD[m.bd].name(k); return k; };
+  const anLabel = m => !m.pick ? m.label : m.pick === "bd" && BD[m.bd] ? `${BD[m.bd].label} · ${choiceName(m)} (${/_lq$/.test(m.id) ? "specialisation" : "share"})` : `${m.label.replace(/\s*\(choose[^)]*\)/i, "").replace(/:\s*$/, "")}: ${choiceName(m)}`;
+  const anM = m => m && m.pick ? Object.assign(Object.create(m), { label: anLabel(m) }) : m;
+  function anRows(cfg) { return withDate(cfg.date || state.date, () => { const codes = anCodes(cfg), ms = cfg.metrics.map(id => anM(M[id])).filter(Boolean); return { codes, ms, cols: ms.map(m => vals(m, codes, cfg.date || state.date)) }; }); }
   // 0.11: a test with controls: is the factor still linked to the outcome once the chosen factors are held fixed?
   function ctlPicks(cfg, ms) {
     const ids = ms.map(m => m.id), yi = Math.max(0, ids.indexOf(cfg.outcome)), t = ids.indexOf(cfg.test), xi = t >= 0 && t !== yi ? t : yi === 0 ? 1 : 0;
@@ -4545,7 +4593,7 @@
   // of the outcome are flagged and set aside. For the strongest, a partial correlation holds density and deprivation fixed.
   const EXPL = {};
   const EXF = { p: null, raw: false };   // 0.10.1: the table's significance filter (corrected p unless raw)
-  function explainKey(cfg) { return [cfg.metrics[0], cfg.level, cfg.within, (cfg.custom || []).join(","), cfg.date, (cfg.controls || []).join(",")].join("|"); }
+  function explainKey(cfg) { return [cfg.metrics[0], cfg.metrics[0] && M[cfg.metrics[0]] && M[cfg.metrics[0]].pick ? pickOf(cfg.metrics[0]) : "", cfg.level, cfg.within, (cfg.custom || []).join(","), cfg.date, (cfg.controls || []).join(",")].join("|"); }
   const explainCtl = cfg => { const o = cfg.metrics[0], ch = (cfg.controls || []).filter(id => M[id] && id !== o); return ch.length ? ch : ["density", "imd_score"].filter(id => M[id] && id !== o); };
   function explainRun(cfg) {
     const k = explainKey(cfg); if (EXPL[k]) return EXPL[k];
@@ -4576,7 +4624,7 @@
   function explainHTML(cfg) {
     if (cfg.mode === "time" || !cfg.metrics.length || !M[cfg.metrics[0]]) return "";
     const lab = m => m.bd && BD[m.bd] ? `${BD[m.bd].label}: ${BD[m.bd].name(pickOf(m.id))}` : m.label;   // breakdowns name the chosen category
-    const o = M[cfg.metrics[0]], st = explainRun(cfg), unit = (LEVEL_OPTS().find(x => x[0] === cfg.level) || [0, "places"])[1].toLowerCase();
+    const o = anM(M[cfg.metrics[0]]), st = explainRun(cfg), unit = (LEVEL_OPTS().find(x => x[0] === cfg.level) || [0, "places"])[1].toLowerCase();
     const same = r => r.m.p === o.p && r.m.group === o.group;   // other measures of the same thing (e.g. other life expectancies)
     const real = st.rows.filter(r => !r.dup && !same(r)), kin = st.rows.filter(r => !r.dup && same(r)), dup = st.rows.filter(r => r.dup), pOf = r => EXF.raw ? r.p : (r.q != null ? r.q : r.p), top = real.filter(r => EXF.p == null || (pOf(r) != null && pOf(r) < EXF.p)), say = r => {
       const a = esc(lab(r.m).toLowerCase()), b = esc(lab(o).toLowerCase());
@@ -4603,7 +4651,7 @@
     if (anEl.hidden) return;
     const cfg = Object.assign({}, AN, { date: state.date }), methods = anMethods(cfg), okM = methods.filter(m => m[2]);
     if (!okM.some(m => m[0] === AN.method)) AN.method = okM.length && cfg.metrics.length ? okM[0][0] : null; cfg.method = AN.method;
-    const pers = mtree("an", anMetricsAll().filter(m => m.p !== "analysis"), m => `<label style="--c:${PER[m.p].hue}"><input type="checkbox" data-anm="${m.id}" ${AN.metrics.includes(m.id) ? "checked" : ""}>${esc(m.label)}</label>`, { isOn: m => AN.metrics.includes(m.id) });
+    const pers = mtree("an", anMetricsAll().filter(m => m.p !== "analysis"), m => `<label style="--c:${PER[m.p].hue}"><input type="checkbox" data-anm="${m.id}" ${AN.metrics.includes(m.id) ? "checked" : ""}>${esc(m.label)}</label>${m.pick && AN.metrics.includes(m.id) && picker(m) ? `<div class="an-pick"><span>Choose</span>${picker(m)}</div>` : ""}`, { isOn: m => AN.metrics.includes(m.id) });   // 0.12: a "(choose …)" metric gets its choice right under it
     const res = cfg.method ? anResult(cfg, Math.max(360, Math.min(900, anEl.offsetWidth - 330))) : null;
     anEl.innerHTML = `<div class="an-head"><b>Analyse</b><span class="cp-sub">How metrics relate across places, within an area, or over time. No need to pick places.</span>${helpBtn("methods", "Help: analysis methods")}<button class="x" data-anx aria-label="Close">×</button></div>
       <div class="an-body"><div class="an-side">
@@ -4656,6 +4704,7 @@
   anEl.addEventListener("click", e => { const r = e.target.closest("[data-anrmp]"); if (r) { AN.custom = AN.custom.filter(c => c !== r.dataset.anrmp); saveAN(); renderAnalyse(); } if (e.target.closest("[data-anrmall]")) { AN.custom = []; saveAN(); renderAnalyse(); } });
   anEl.addEventListener("change", e => { const t = e.target, ds = t.dataset;
     if (ds.anm) AN.metrics = t.checked ? AN.metrics.concat(ds.anm) : AN.metrics.filter(x => x !== ds.anm);
+    else if (ds.pick) { const m = M[ds.pick]; PS.pick[m ? pickKeyOf(m) : ds.pick] = t.value; for (const k in qCache) delete qCache[k]; savePS(); repaint(); }   // 0.12: the choice for a "(choose …)" metric
     else if (ds.anlevel != null) AN.level = t.value; else if (ds.anwithin != null) AN.within = t.value; else if (ds.anplace != null) AN.place = t.value;
     else if (ds.anoutcome != null) AN.outcome = t.value; else if (ds.antest != null) AN.test = t.value; else if (ds.ank != null) AN.k = +t.value; else if (ds.ansplit != null) AN.split = t.value; else return;
     saveAN(); renderAnalyse(); });
@@ -4700,6 +4749,7 @@
       case "analysis": { const r = withDate(it.cfg.date || it.date, () => anResult(it.cfg, w)); return `<div class="an-res">${it.cfg.trim ? (r.trim || "").replace(/<button[^>]*>.*?<\/button>/g, "") : ""}${r.html}</div>`; }
       case "card": return `<div class="wscard">${it.html}</div>`;
       case "tile": return tileSVG(it.codes, it.fills, w, Math.max(160, it.h - 120)) + `<div class="wsmeta">${it.codes.map(c => esc(nameOf(c))).join(" · ")}${it.lines ? `</div><ul class="extra">${it.lines}</ul>` : "</div>"}`;
+      case "shape": return window.AtlasShape ? AtlasShape.svg(it.shape, w, Math.max(160, it.h - 70)) : "";   // 0.12: a river, flood, coast or park as its own tile
       case "shot": return `<img class="wsshot" src="${it.src}" alt="${esc(it.title)}">`;
       case "note": return `<div class="wsnote" contenteditable="true" data-note="${it.id}">${it.html || ""}</div>`;
       case "stack": return it.children.map(ch => `<div class="wsstack"><div class="wsst">${esc(ch.title)}</div>${itemBody(ch, w)}</div>`).join("");
@@ -5218,6 +5268,7 @@
   CTX.sourceOf = m => sourceOf(m);   // 0.11
   CTX.loadPconFor = d => loadPconFor(d);   // 0.11.1
   CTX.registerPick = p => registerPick(p); CTX.noAreas = () => !!applyLevels.na; CTX.pbox = pbox;   // 0.12
+  if (window.AtlasShape) AtlasShape.init(CTX);   // 0.12: features as shapes in their own right
   if (window.AtlasCard) AtlasCard.init(CTX, { openPanel: id => APP ? openFromBar(id) : openMetricInfo(id) });   // 0.11: information cards and the ⓘ peek
 
   // ---------- 0.8: Stats for nerds and News buttons (bottom right) ----------
@@ -5356,7 +5407,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.11.1</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.12</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));
@@ -5400,6 +5451,8 @@
     bar.addEventListener("mouseleave", () => { clearTimeout(tabMenuT); tabMenuT = setTimeout(hideTabMenu, 220); });
     bar.addEventListener("focusin", e => { const b = e.target.closest("[data-apanel]"); if (b && !b.classList.contains("has-menu")) showTabMenu(b); });
     requestAnimationFrame(() => { const h = $("apphead").offsetHeight; document.documentElement.style.setProperty("--ahh", h + "px"); WM.setTop(h + 8); map.resize(); });
+    if (APP.onBoot) { const b = () => { try { APP.onBoot(CTX); } catch (e) { console.error(e); } }; map.loaded() ? b() : map.once("load", b); }   // 0.12: a view's own map layers, every time it opens
+    if (APP.rivers && window.AtlasRivers) { const r = () => AtlasRivers.show(CTX); map.loaded() ? r() : map.once("load", r); }   // 0.12
     dockOpenP = APP.perspective; setFold(false);
     if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) map.loaded() ? APP.init(CTX) : map.once("load", () => APP.init(CTX)); }
   }

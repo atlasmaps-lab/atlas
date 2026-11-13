@@ -1,6 +1,50 @@
-# Atlas 0.10.1 — United Kingdom
+# Atlas 0.12 — United Kingdom
 
 Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
+
+## What's new in 0.12
+
+- **Cleaner panels.**
+  - Every panel opens on a **Summary**; every other section is a dropdown, and Atlas remembers which you opened.
+  - "How far to trust it" is gone. Caveats that matter sit under "How to read this · Sources".
+  - "What it tells us" appears only when the data says something: the biggest move and the event behind it, a widening or narrowing gap, a rise or fall in rank.
+- **Sort anything.** Every table sorts high→low or low→high from its header, and every list of figures (cards, menus, panels) has a sort switch.
+- **Markets: exports and imports together.** Both by default, with both route maps at once. Route lines open the partner.
+- **A clickable map.**
+  - Railway lines, ferries, National Parks, parks and green spaces, stations, rivers and every environmental zone open cards with what matters about them.
+  - Rivers are drawn as rivers from OS Open Rivers, with more detail as you zoom, and flood, coast and conservation outlines sharpen to about 5 m.
+- **Features as shapes.**
+  - Click a river (the whole Thames, not just the stretch you clicked), a flood, a stretch of coast or a park, and show its whole outline, or send it to the workspace as a tile.
+  - Shapes follow Environment's timeline: a river carries the floods recorded along it up to the year shown. The place tiles are left alone.
+- **Air quality.** PM10, NO2 and PM2.5 for every council, constituency, region and nation, 2018–2024, from Defra's 1 km maps.
+- **Atlas Transport is about getting from A to B.**
+  - No area tiles until you map an area measure. Rail, ferries, footpaths, cycleways and walking and cycling routes are clickable.
+  - **15-minute city**: what everyday needs are within 15 minutes on foot, by bike and by public transport.
+  - **Draw a route** (driving, cycling, walking) through points you click, with distance, time and climb.
+  - **Routes within reach.**
+- **Politics › Integrity.** Indicators of corruption *risk*, never evidence of wrongdoing:
+  - red flags in public contracts from Find a Tender (single bidding, awards without competition, a risk index after Fazekas, Tóth and King);
+  - electoral competition on each council;
+  - section 114 notices;
+  - the UK in Transparency International's Corruption Perceptions Index.
+- **Atlas Resilience**, a new app for people who plan for, respond to and try to understand emergencies (`index.html#app=resilience`):
+  - **Prepare**: hazards over a council vulnerability index whose seven parts are always shown.
+  - **Respond**: live Environment Agency flood warnings. Each opens a situation report: the EA's own message, homes and facilities inside, people estimated, the latest releases.
+  - **Understand**: recorded floods by year; COVID-19 for the council in focus; flu and measles for England (UKHSA).
+  - **Near me**: is there a warning near a place, and how to prepare.
+  - What the authorities are saying (EA, Met Office, UKHSA, Defra, Cabinet Office, via GOV.UK) appears wherever alerts are shown, with links.
+- **Stats for nerds**: measures that need a choice (a category, a party) get a dropdown under them.
+- Live services (no keys, all open to browsers, cached, failing plainly):
+  - Environment Agency flood monitoring;
+  - UKHSA data dashboard;
+  - GOV.UK search;
+  - Overpass, Valhalla, Transitous, Photon and Waymarked Trails.
+- Known limits:
+  - EA warnings cover England only (links for Wales, Scotland and NI).
+  - Park cards need the MapTiler basemap.
+  - Short-advertising red flags can't be read from award notices.
+  - Smaller contracts (Contracts Finder) aren't counted yet.
+  - Ward-level exposure needs ward centroids Atlas doesn't have yet.
 
 ## What's new in 0.10.1
 

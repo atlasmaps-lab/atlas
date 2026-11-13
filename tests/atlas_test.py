@@ -54,7 +54,7 @@ def open_atlas(b, base, size=(1280, 800), storage=None, query="debug", init_scri
     page.errors = []
     page.on("console", lambda m: page.errors.append(m.text) if m.type == "error" else None)
     page.on("pageerror", lambda e: page.errors.append(str(e)))
-    page.on("requestfailed", lambda r: page.errors.append(f"request failed: {r.url} ({r.failure})"))
+    page.on("requestfailed", lambda r: None if "ERR_ABORTED" in str(r.failure) else page.errors.append(f"request failed: {r.url} ({r.failure})"))  # a cancelled request (map moved on) is not an error
     page.goto(base + "index.html?" + query, wait_until="load", timeout=120000)
     page.wait_for_function("window.atlasMap && window.atlasMap.getSource && window.atlasMap.getSource('councils') && window.AtlasDebug", timeout=120000)
     page.wait_for_timeout(800)

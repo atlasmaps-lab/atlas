@@ -1,0 +1,11 @@
+/* Atlas Resilience (0.12): styles for this view only */
+.res-haz { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; margin: 6px 0 8px; }
+.res-haz label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.apppanel .ap-row button, .apppanel .ap-row .btn { border: 1px solid var(--rule); background: var(--solid); color: var(--ink); border-radius: 14px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.apppanel .ap-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+.res-wt tr.clk { cursor: pointer; }
+.res-wt tr.clk:hover td { background: var(--hover, rgba(127,127,127,.08)); }
+.mo-tab i.sw, .res-wt i.sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.res-links { margin: 4px 0 8px; padding-left: 18px; font-size: 12.5px; display: grid; gap: 4px; }
+.apppanel .linkish { border: 0; background: none; padding: 0; color: var(--ink); font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 2px; }
+.apppanel [data-resq] { flex: 1; min-width: 0; border: 1px solid var(--rule); background: var(--solid); color: var(--ink); border-radius: 8px; padding: 6px 9px; font: inherit; font-size: 13px; }

@@ -43,7 +43,10 @@ def main():
         rep.check(js("() => document.querySelectorAll('#cmp .cmp-it').length") == 3, "the three tables stay in the list on the left")
         # sorting
         page.click("#cmp table.ctab thead th:nth-child(2)"); page.wait_for_timeout(100)
-        rep.check(js("() => document.querySelector('#cmp table.ctab thead th:nth-child(2)').dataset.dir") == "asc", "columns sort")
+        d1 = js("() => document.querySelector('#cmp table.ctab thead th:nth-child(2)').dataset.dir")
+        page.click("#cmp table.ctab thead th:nth-child(2)"); page.wait_for_timeout(100)
+        d2 = js("() => document.querySelector('#cmp table.ctab thead th:nth-child(2)').dataset.dir")
+        rep.check({d1, d2} == {"asc", "desc"}, f"columns sort both ways ({d1}, then {d2}; numbers start high→low)")
         # a chart, inside the page, beside the table
         page.click("#cmp [data-kmk=chart]"); page.wait_for_timeout(300)
         rep.check(js("() => !!document.querySelector('#cmp .cmp-cpane .sty-pick')"), "Make chart opens the style picker inside Compare")

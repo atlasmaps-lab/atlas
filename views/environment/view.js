@@ -6,7 +6,7 @@
  */
 (function () {
   "use strict";
-  const V = "0920", P = "env-";
+  const V = "1200", P = "env-";
   const FILE = { floods: "floods", coast: "coast", heat: "heat", cons: "conservation", fire: "fire" };
   const D = {}, WAIT = {};
   const SRC_COL = { river: "#1f6fb4", sea: "#11888f", surface: "#7b4fa6", ground: "#8a6a3b", other: "#6b7480" };
@@ -25,6 +25,24 @@
   function unpack([props, polys]) {
     const rings = polys.map(poly => poly.map(flat => { const out = []; let x = 0, y = 0; for (let i = 0; i < flat.length; i += 2) { x += flat[i]; y += flat[i + 1]; out.push([x / 1e4, y / 1e4]); } return out; }));
     return { type: "Feature", properties: props, geometry: rings.length === 1 ? { type: "Polygon", coordinates: rings[0] } : { type: "MultiPolygon", coordinates: rings } };
+  }
+  // 0.12: the detailed tier (about 5 m), loaded 0.25-degree square by square when zoomed in (pipeline/build_envzones_detail.py)
+  const DET = { floods: new Map(), coast: new Map(), cons: new Map() }, DETZ = { floods: 11, coast: 12, cons: 10 }, detLoading = new Set();
+  let DIDX = null;
+  const unpack5 = ([props, polys]) => { const rings = polys.map(poly => poly.map(flat => { const out = []; let x = 0, y = 0; for (let i = 0; i < flat.length; i += 2) { x += flat[i]; y += flat[i + 1]; out.push([x / 1e5, y / 1e5]); } return out; })); return { type: "Feature", properties: props, geometry: rings.length === 1 ? { type: "Polygon", coordinates: rings[0] } : { type: "MultiPolygon", coordinates: rings } }; };
+  const detQ = {};   // squares arrive in bursts: redraw each theme once per burst
+  window.ATLAS_ENVZ_DETAIL = (theme, key, data) => { DET[theme].set(key, data.features.map(unpack5)); detLoading.delete(theme + key); clearTimeout(detQ[theme]);
+    detQ[theme] = setTimeout(() => { const m = CTX && CTX.map, src = m && m.getSource(P + theme + "-hi"); if (src) src.setData({ type: "FeatureCollection", features: [...DET[theme].values()].flat() }); }, 150); };
+  function detailInView() {
+    const m = CTX && CTX.map; if (!m) return;
+    if (!DIDX) { if (window.ATLAS_ENVZ_DETAIL_INDEX) DIDX = window.ATLAS_ENVZ_DETAIL_INDEX; else { if (!detLoading.has("idx")) { detLoading.add("idx"); const s = document.createElement("script"); s.src = `data/envzones/detail/index.js?v=${V}`; s.onload = () => { DIDX = window.ATLAS_ENVZ_DETAIL_INDEX; detailInView(); }; document.head.appendChild(s); } return; } }
+    const b = m.getBounds(), z = m.getZoom(), q = DIDX.q;
+    Object.keys(DET).forEach(theme => {
+      if (!S.on[theme] || z < DETZ[theme] || !m.getSource(P + theme + "-hi")) return;
+      (DIDX.themes[theme] || []).filter(t => t[1] + q >= b.getWest() && t[1] <= b.getEast() && t[2] + q >= b.getSouth() && t[2] <= b.getNorth()).slice(0, 24).forEach(t => {
+        if (DET[theme].has(t[0]) || detLoading.has(theme + t[0])) return; detLoading.add(theme + t[0]);
+        const s = document.createElement("script"); s.src = `data/envzones/detail/${theme}_${t[0]}.js?v=${V}`; s.onerror = () => detLoading.delete(theme + t[0]); document.head.appendChild(s); });
+    });
   }
   function load(key) {
     if (D[key]) return Promise.resolve(D[key]);
@@ -63,12 +81,20 @@
         "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(31,111,180,0)", 0.2, "rgba(120,180,230,.55)", 0.45, "rgba(31,111,180,.75)", 0.7, "rgba(18,60,140,.85)", 1, "rgba(10,25,80,.92)"],
         "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 8.5, 0.9, 11, 0] } }, b);
       m.addLayer({ id: P + "floods-fill", type: "fill", source: P + "floods", minzoom: 8, paint: { "fill-color": ["match", ["get", "s"], "river", SRC_COL.river, "sea", SRC_COL.sea, "surface", SRC_COL.surface, "ground", SRC_COL.ground, SRC_COL.other], "fill-opacity": 0.55 } }, b);
-      m.addLayer({ id: P + "floods-line", type: "line", source: P + "floods", minzoom: 10, paint: { "line-color": "#0b3d6e", "line-width": 0.6, "line-opacity": 0.6 } }, b);
+      m.addLayer({ id: P + "floods-line", type: "line", source: P + "floods", minzoom: 10, maxzoom: 11, paint: { "line-color": "#0b3d6e", "line-width": 0.6, "line-opacity": 0.6 } }, b);
+      m.setLayerZoomRange(P + "floods-fill", 8, 11);
+      m.addSource(P + "floods-hi", { type: "geojson", data: { type: "FeatureCollection", features: [...DET.floods.values()].flat() } });
+      m.addLayer({ id: P + "floods-hi-fill", type: "fill", source: P + "floods-hi", minzoom: 11, paint: { "fill-color": ["match", ["get", "s"], "river", SRC_COL.river, "sea", SRC_COL.sea, "surface", SRC_COL.surface, "ground", SRC_COL.ground, SRC_COL.other], "fill-opacity": 0.5 } }, b);
+      m.addLayer({ id: P + "floods-hi-line", type: "line", source: P + "floods-hi", minzoom: 11, paint: { "line-color": "#0b3d6e", "line-width": 0.7, "line-opacity": 0.55 } }, b);
     }
     if (key === "coast") {
       m.addSource(P + "coast", { type: "geojson", data: { type: "FeatureCollection", features: D.coast.features } });
       m.addLayer({ id: P + "coast-fill", type: "fill", source: P + "coast", paint: { "fill-color": ["case", ["==", ["get", "e"], 2055], "#c0392b", "#f08a5d"], "fill-opacity": 0.6 } }, b);
-      m.addLayer({ id: P + "coast-line", type: "line", source: P + "coast", paint: { "line-color": ["case", ["==", ["get", "e"], 2055], "#8e1f14", "#c0392b"], "line-width": ["interpolate", ["linear"], ["zoom"], 5, 2.5, 10, 1.2], "line-opacity": 0.9 } }, b);
+      m.addLayer({ id: P + "coast-line", type: "line", source: P + "coast", maxzoom: 12, paint: { "line-color": ["case", ["==", ["get", "e"], 2055], "#8e1f14", "#c0392b"], "line-width": ["interpolate", ["linear"], ["zoom"], 5, 2.5, 10, 1.2], "line-opacity": 0.9 } }, b);
+      m.setLayerZoomRange(P + "coast-fill", 0, 12);
+      m.addSource(P + "coast-hi", { type: "geojson", data: { type: "FeatureCollection", features: [...DET.coast.values()].flat() } });
+      m.addLayer({ id: P + "coast-hi-fill", type: "fill", source: P + "coast-hi", minzoom: 12, paint: { "fill-color": ["case", ["==", ["get", "e"], 2055], "#c0392b", "#f08a5d"], "fill-opacity": 0.6 } }, b);
+      m.addLayer({ id: P + "coast-hi-line", type: "line", source: P + "coast-hi", minzoom: 12, paint: { "line-color": ["case", ["==", ["get", "e"], 2055], "#8e1f14", "#c0392b"], "line-width": 1, "line-opacity": 0.9 } }, b);
     }
     if (key === "heat") {
       m.addSource(P + "heat", { type: "geojson", data: { type: "FeatureCollection", features: D.heat.features } });
@@ -77,7 +103,11 @@
     if (key === "cons") {
       m.addSource(P + "cons", { type: "geojson", data: { type: "FeatureCollection", features: D.cons.features } });
       m.addLayer({ id: P + "cons-fill", type: "fill", source: P + "cons", paint: { "fill-color": ["case", ["==", ["get", "k"], "np"], "#4f772d", "#2a9d8f"], "fill-opacity": ["case", ["==", ["get", "k"], "np"], 0.16, 0.3] } }, b);
-      m.addLayer({ id: P + "cons-line", type: "line", source: P + "cons", paint: { "line-color": ["case", ["==", ["get", "k"], "np"], "#31572c", "#1d6f66"], "line-width": ["case", ["==", ["get", "k"], "np"], 1.8, 1], "line-dasharray": ["case", ["==", ["get", "y"], null], ["literal", [2, 1.5]], ["literal", [1, 0]]] } }, b);
+      m.setLayerZoomRange(P + "cons-fill", 0, 10);
+      m.addSource(P + "cons-hi", { type: "geojson", data: { type: "FeatureCollection", features: [...DET.cons.values()].flat() } });
+      m.addLayer({ id: P + "cons-hi-fill", type: "fill", source: P + "cons-hi", minzoom: 10, paint: { "fill-color": ["case", ["==", ["get", "k"], "np"], "#4f772d", "#2a9d8f"], "fill-opacity": ["case", ["==", ["get", "k"], "np"], 0.16, 0.3] } }, b);
+      m.addLayer({ id: P + "cons-hi-line", type: "line", source: P + "cons-hi", minzoom: 10, paint: { "line-color": ["case", ["==", ["get", "k"], "np"], "#31572c", "#1d6f66"], "line-width": ["case", ["==", ["get", "k"], "np"], 1.8, 1] } }, b);
+      m.addLayer({ id: P + "cons-line", type: "line", source: P + "cons", maxzoom: 10, paint: { "line-color": ["case", ["==", ["get", "k"], "np"], "#31572c", "#1d6f66"], "line-width": ["case", ["==", ["get", "k"], "np"], 1.8, 1], "line-dasharray": ["case", ["==", ["get", "y"], null], ["literal", [2, 1.5]], ["literal", [1, 0]]] } }, b);
     }
     if (key === "fire") {
       m.addSource(P + "fire", { type: "geojson", data: { type: "FeatureCollection", features: D.fire.features } });
@@ -86,7 +116,7 @@
     }
     bindClicks(key);
   }
-  const LAYERS = { floods: ["floods-heat", "floods-fill", "floods-line"], coast: ["coast-fill", "coast-line"], heat: ["heat-fill"], cons: ["cons-fill", "cons-line"], fire: ["fire-fill", "fire-pt"] };
+  const LAYERS = { floods: ["floods-heat", "floods-fill", "floods-line", "floods-hi-fill", "floods-hi-line"], coast: ["coast-fill", "coast-line", "coast-hi-fill", "coast-hi-line"], heat: ["heat-fill"], cons: ["cons-fill", "cons-line", "cons-hi-fill", "cons-hi-line"], fire: ["fire-fill", "fire-pt"] };
   function shown(key) { return S.on[key] && (key === "coast" ? (!!S.fut || S.year >= TODAY_Y) : key === "fire" ? Y() >= 2026 : true); }   // coast: today ("under threat") and the future
   function apply() {
     const m = CTX && CTX.map; if (!m) return;
@@ -97,41 +127,78 @@
     });
     const y = Y();
     const past = ["<=", ["get", "y"], y];
-    ["floods-heat", "floods-fill", "floods-line"].forEach(id => m.getLayer(P + id) && m.setFilter(P + id, past));
-    if (m.getLayer(P + "floods-fill")) m.setPaintProperty(P + "floods-fill", "fill-opacity", ["interpolate", ["linear"], ["-", y, ["get", "y"]], 0, 0.8, 5, 0.55, 25, 0.3]);
-    if (m.getLayer(P + "coast-fill")) ["coast-fill", "coast-line"].forEach(id => m.setFilter(P + id, ["<=", ["get", "e"], S.fut || 2105]));   // today: every stretch under threat
+    ["floods-heat", "floods-fill", "floods-line", "floods-hi-fill", "floods-hi-line"].forEach(id => m.getLayer(P + id) && m.setFilter(P + id, past));
+    ["floods-fill", "floods-hi-fill"].forEach(id => m.getLayer(P + id) && m.setPaintProperty(P + id, "fill-opacity", ["interpolate", ["linear"], ["-", y, ["get", "y"]], 0, 0.8, 5, 0.55, 25, 0.3]));
+    ["coast-fill", "coast-line", "coast-hi-fill", "coast-hi-line"].forEach(id => m.getLayer(P + id) && m.setFilter(P + id, ["<=", ["get", "e"], S.fut || 2105]));   // today: every stretch under threat
     if (m.getLayer(P + "heat-fill")) m.setPaintProperty(P + "heat-fill", "fill-color", ["interpolate", ["linear"], ["coalesce", ["at", heatIdx(), ["get", "v"]], 0], ...HEAT_RAMP]);
     const cons = ["any", ["==", ["get", "y"], null], ["<=", ["get", "y"], y]];
-    ["cons-fill", "cons-line"].forEach(id => m.getLayer(P + id) && m.setFilter(P + id, cons));
+    ["cons-fill", "cons-line", "cons-hi-fill", "cons-hi-line"].forEach(id => m.getLayer(P + id) && m.setFilter(P + id, cons));
+    detailInView();
+    if (window.AtlasShape) AtlasShape.refresh();   // a shape on the map follows the timeline
   }
+  // 0.12: zones open a card (not a popup) through the core's click registry, so a click on a zone never also focuses the
+  // area under it. Each card says what matters about what you clicked.
   let bound = {};
+  const PICK = { floods: [P + "floods-fill", P + "floods-line", P + "floods-hi-fill"], coast: [P + "coast-fill", P + "coast-line", P + "coast-hi-fill"], heat: [P + "heat-fill"], cons: [P + "cons-fill", P + "cons-line", P + "cons-hi-fill"], fire: [P + "fire-fill", P + "fire-pt"] };
+  const PRIO = { fire: 31, coast: 32, floods: 33, cons: 35, heat: 38 };
   function bindClicks(key) {
-    if (bound[key]) return; bound[key] = true;
-    const m = CTX.map, ids = { floods: P + "floods-fill", coast: P + "coast-fill", heat: P + "heat-fill", cons: P + "cons-fill", fire: P + "fire-fill" };
-    m.on("click", ids[key], ev => { const f = ev.features && ev.features[0]; if (f) popup(key, f, ev.lngLat); ev.originalEvent && (ev.originalEvent._envHandled = true); });
-    m.on("mouseenter", ids[key], () => { m.getCanvas().style.cursor = "pointer"; });
-    m.on("mouseleave", ids[key], () => { m.getCanvas().style.cursor = ""; });
+    if (bound[key] || !CTX.registerPick) return; bound[key] = true;
+    CTX.registerPick({ id: "env-" + key, layers: PICK[key], pad: 2, priority: PRIO[key], hover: f => hoverHTML(key, f), open: (f, e) => card(key, f, e.lngLat) });
   }
-  let POP = null;
-  function popup(key, f, at) {
-    if (!window.maplibregl) return;
+  const SMP = { "hold the line": "Defences are kept where they are: the coast is held, at a cost, and the forecast assumes they're maintained.", "managed realignment": "The coastline is allowed to move back in a planned way, often creating new marsh or beach, with defences set further inland.", "no active intervention": "No new defences are planned: the coast is left to erode naturally.", "advance the line": "New defences are built seaward of the present line." };
+  const smpSay = pol => { const k = String(pol || "").toLowerCase(); const hit = Object.keys(SMP).find(x => k.includes(x)); return hit ? SMP[hit] : ""; };
+  function hoverHTML(key, f) {
     const p = f.properties, e = CTX.esc;
-    let h = "";
+    if (key === "floods") { const ev = (D.floods.events || []).find(x => x.id === p.ev) || {}; return `<div class="poi-h"><b>${e(ev.n || "Recorded flood")}</b><div class="poi-sub">${e(String(ev.d || p.y || "").slice(0, 4))} · ${e(SRC_NAME[p.s] || "")} · click for more</div></div>`; }
+    if (key === "coast") return `<div class="poi-h"><b>Coastal erosion by ${p.e}</b><div class="poi-sub">${typeof p.d === "number" ? `up to ${fmt(p.d)} m lost` : e(p.d || "")} · click for more</div></div>`;
+    if (key === "cons") return `<div class="poi-h"><b>${e(p.n)}</b><div class="poi-sub">${p.k === "np" ? "National Park" : "Ramsar wetland"} · click for more</div></div>`;
+    if (key === "fire") return `<div class="poi-h"><b>Wildfire burnt area</b><div class="poi-sub">${e(longDate(p.d))} · click for more</div></div>`;
+    return "";
+  }
+  const kmBetween = (a, b) => { const R = 6371, t = Math.PI / 180, dl = (b[1] - a[1]) * t, dg = (b[0] - a[0]) * t, x = Math.sin(dl / 2) ** 2 + Math.cos(a[1] * t) * Math.cos(b[1] * t) * Math.sin(dg / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
+  let FCEN = null;
+  function floodsNear(lon, lat, km) { // events with an outline within km of a point (centres of outlines), newest first
+    if (!D.floods) return null; if (!FCEN) FCEN = D.floods.features.map(f => [centre(f.geometry), f.properties.ev]);
+    const ids = new Set(FCEN.filter(([c]) => kmBetween(c, [lon, lat]) <= km).map(x => x[1])), byId = new Map((D.floods.events || []).map(x => [x.id, x]));
+    const list = [...ids].map(id => byId.get(id)).filter(Boolean).map(x => ({ n: x.n || "Recorded flood", y: String(x.d || "").slice(0, 4), ha: x.ha, d: x.d })).sort((a, b) => String(b.d).localeCompare(String(a.d)));
+    return { n: list.length, last: list[0] ? list[0].y : null, list };
+  }
+  function card(key, f, at) {
+    if (!window.AtlasCard) return; const p = f.properties, e = CTX.esc, V = AtlasCard.viz; let spec;
     if (key === "floods") {
-      const ev = (D.floods.events || []).find(x => x.id === p.ev) || {};
-      h = `<b>${e(ev.n || "Recorded flood")}</b><br>${e(longDate(ev.d))} · ${e(SRC_NAME[p.s] || p.s)}<br>${fmt(ev.ha)} ha flooded${ev.k > 1 ? ` (${ev.k} outlines)` : ""} · ${NAT[ev.nat] || ""}`;
+      const ev = (D.floods.events || []).find(x => x.id === p.ev) || {}, near = floodsNear(at.lng, at.lat, 3), others = near ? near.list.filter(x => x.n !== ev.n) : [];
+      spec = { title: ev.n || "Recorded flood", shape: "flood:" + p.ev, figs: [{ v: String(ev.d || p.y || "").slice(0, 4), l: longDate(ev.d) }, { v: fmt(ev.ha) + " ha", l: "flooded" }, { v: SRC_NAME[p.s] || "—", l: "source of the water" }], items: [
+        { k: `Recorded flood · ${NAT[ev.nat] || ""}`, h: `${e(SRC_NAME[p.s] || "Water")} flooding on ${e(longDate(ev.d))}, about <b>${fmt(ev.ha)} ha</b>`, viz: V.big(fmt(ev.ha), "hectares"), open: true,
+          more: `<p>${p.s === "river" ? "A river burst its banks onto the land beside it." : p.s === "sea" ? "The sea came over or through the defences, usually in a storm surge at high tide." : p.s === "surface" ? "Heavy rain that couldn't drain away fast enough, from roads, drains and fields." : p.s === "ground" ? "Water rising up from the ground after a long wet spell." : "The source isn't recorded."}${ev.k > 1 ? ` The outline joins ${ev.k} recorded patches of this flood.` : ""}</p>` },
+        { k: "Other floods recorded within 3 km", h: others.length ? `<b>${others.length}</b> other flood${others.length === 1 ? "" : "s"}, the latest in ${e(others[0].y)}` : "No other floods recorded within 3 km", viz: V.big(String(others.length), "others"),
+          more: others.length ? `<table class="mo-tab"><thead><tr><th>Flood</th><th class="num">Year</th><th class="num">Hectares</th></tr></thead><tbody>${others.slice(0, 15).map(x => `<tr><td>${e(x.n)}</td><td class="num">${e(x.y)}</td><td class="num">${fmt(x.ha)}</td></tr>`).join("")}</tbody></table>` : "" },
+        { k: "Where it comes from", h: ev.nat === "W" ? "Natural Resources Wales, Historic Flood Map" : "Environment Agency, Recorded Flood Outlines", url: ev.nat === "W" ? "https://datamap.gov.wales/layers/inspire-nrw:NRW_HISTORIC_FLOODMAP" : "https://www.data.gov.uk/dataset/16e32c53-35a6-4d54-a111-ca09031eaaaf/recorded-flood-outlines", urlLabel: "Dataset", more: "<p>Outlines of floods the agencies recorded; a place with no outline may still have flooded. Shapes are simplified for the map.</p>" }] };
     } else if (key === "coast") {
-      h = `<b>Coastal erosion by ${p.e}</b><br>${typeof p.d === "number" ? `Up to ${fmt(p.d)} m of land lost` : e(p.d || "")}<br><small>${e(p.smp || "")}${p.pol ? " · policy: " + e(p.pol) : ""}</small><br><small>Forecast with shoreline management plans delivered (higher central sea level rise)</small>`;
+      const say = smpSay(p.pol);
+      spec = { title: `Coastal erosion by ${p.e}`, shape: p.smp ? "coast:" + p.smp : null, figs: [{ v: typeof p.d === "number" ? `${fmt(p.d)} m` : "—", l: "land lost, at most" }, { v: String(p.e), l: "by" }, { v: p.pol || "—", l: "shoreline plan" }], items: [
+        { k: "What could be lost", h: typeof p.d === "number" ? `Up to <b>${fmt(p.d)} m</b> of land could be lost here by ${p.e}` : e(p.d || "Land could be lost here"), viz: V.big(typeof p.d === "number" ? `${fmt(p.d)} m` : "—", `by ${p.e}`), open: true,
+          more: "<p>The forecast assumes the shoreline management plan is carried out, and a higher central estimate of sea-level rise. The shaded strip is the land between today's cliff or shore and where it's forecast to be.</p>" },
+        { k: "The plan for this coast", h: e(p.pol || "No policy recorded"), more: `<p>${e(say || "")}</p>${p.smp ? `<p>Shoreline management plan: ${e(p.smp)}.</p>` : ""}` },
+        { k: "Where it comes from", h: "Environment Agency, National Coastal Erosion Risk Mapping 2024", url: "https://www.gov.uk/government/publications/national-coastal-erosion-risk-mapping-ncerm", urlLabel: "About NCERM" }] };
     } else if (key === "heat") {
-      const v = typeof p.v === "string" ? JSON.parse(p.v) : p.v;
-      h = `<b>Days above 30 °C a year</b><table class="env-mini">${D.heat.steps.map((s, i) => `<tr class="${i === heatIdx() ? "on" : ""}"><td>${e(s[1])}</td><td>${fmt(v[i])}</td></tr>`).join("")}</table><small>12 km square, UKCP18 median</small>`;
+      const v = typeof p.v === "string" ? JSON.parse(p.v) : p.v, st = D.heat.steps;
+      spec = { title: "Hot summer days", figs: [{ v: fmt(v[heatIdx()]), l: `days over 30 °C, ${st[heatIdx()][1]}` }, { v: fmt(v[0]), l: st[0][1] }, { v: fmt(v[v.length - 1]), l: st[st.length - 1][1] }], items: [
+        { k: "Days above 30 °C a year, here", h: `<b>${fmt(v[heatIdx()])}</b> a year (${e(st[heatIdx()][1])}), against ${fmt(v[0])} in ${e(st[0][1])}`, viz: V.bars(v.map((x, i) => ({ v: x || 0.01, c: i === heatIdx() ? "#b8202b" : "#f99d4b", n: st[i][1] }))), open: true,
+          more: `<table class="mo-tab"><thead><tr><th>Period or warming</th><th class="num">Days a year</th></tr></thead><tbody>${st.map((s2, i) => `<tr><td>${e(s2[1])}</td><td class="num">${fmt(v[i])}</td></tr>`).join("")}</tbody></table><p>Heat above 30 °C strains health (older people, those with heart and lung conditions), rail lines, roads and power.</p>` },
+        { k: "Where it comes from", h: "Met Office, UKCP18 projections (12 km squares, median)", url: "https://climatedataportal.metoffice.gov.uk/", urlLabel: "Climate Data Portal" }] };
     } else if (key === "cons") {
-      h = `<b>${e(p.n)}</b><br>${p.k === "np" ? "National Park" : "Ramsar wetland of international importance"} · ${NAT[p.nat] || ""}<br>${p.y ? "Designated " + p.y : "Designation date not published in the open boundary data"}`;
+      spec = { title: p.n, shape: "park:" + p.n, figs: [{ v: p.k === "np" ? "National Park" : "Ramsar site", l: NAT[p.nat] || "" }, { v: p.y ? String(p.y) : "—", l: "designated" }], items: [
+        { k: p.k === "np" ? "National Park" : "Wetland of international importance (Ramsar)", h: `<b>${e(p.n)}</b>${p.y ? `, designated in ${p.y}` : ""}`, open: true,
+          more: p.k === "np" ? "<p>Protected for its landscape, wildlife and heritage, and for people to enjoy; planning is controlled by its own authority. People live and work inside it.</p>" : "<p>A wetland listed under the Ramsar Convention for its birds, plants or habitats; protected in planning and managed for conservation.</p>" },
+        { k: "Read more", h: e(p.n), url: `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(p.n)}`, urlLabel: "Look it up" }] };
     } else if (key === "fire") {
-      h = `<b>Wildfire burnt area</b><br>Seen by satellite on ${e(longDate(p.d))}<br>${fmt(p.ha)} ha`;
+      spec = { title: "Wildfire burnt area", figs: [{ v: fmt(p.ha) + " ha", l: "burnt" }, { v: String(p.d || "").slice(0, 4), l: longDate(p.d) }], items: [
+        { k: "Seen by satellite", h: `About <b>${fmt(p.ha)} ha</b> burnt, seen on ${e(longDate(p.d))}`, open: true, more: "<p>Moorland and heath fires are most common in dry springs and summers; they threaten homes nearby, water supplies and peat that stores carbon.</p>" }] };
     }
-    if (POP) POP.remove();
-    POP = new maplibregl.Popup({ closeButton: true, maxWidth: "280px", className: "env-pop" }).setLngLat(at).setHTML(h).addTo(CTX.map);
+    const R = window.AtlasResilience;   // 0.12: what the authorities are saying, on flood and coast cards
+    if (spec && R && R.authItem && (key === "floods" || key === "coast")) { const ev = key === "floods" ? ((D.floods.events || []).find(x => x.id === p.ev) || {}) : null; spec.items.splice(spec.items.length - 1, 0, R.authItem(key === "floods" ? "flood " + String(ev.n || "").replace(/\s*\d{4}.*$/, "").split(/[,(]/)[0] : "coastal erosion " + (p.smp || ""), at)); }
+    if (spec) AtlasCard.open(Object.assign({ app: "Environment", source: "Atlas Environment", when: "" }, spec));
+    if (spec && R && R.fill) setTimeout(() => R.fill(), 50);
   }
   function longDate(d) { try { return CTX.longDate(d); } catch (e) { return d; } }
   function fly(g) { const b = bboxOf(g); CTX.map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 80, maxZoom: 13, duration: 900 }); }
@@ -319,13 +386,38 @@
   const PANELS = { timeline, floods, coast, heat, conservation, sources };
   function bind(ctx) {
     if (CTX) return; CTX = ctx;
+    if (window.AtlasRivers) AtlasRivers.show(ctx);   // 0.12: rivers drawn as rivers, more detail as you zoom
+    regShapes();
+    if (ctx.map) ctx.map.on("moveend", detailInView);
     TODAY_Y = +String(ctx.today || "2026").slice(0, 4) || 2026; if (S.year == null) S.year = TODAY_Y;
     const m = ctx.map; if (!m) return;
     m.on("styledata", () => { Object.keys(FILE).forEach(k => { if (D[k] && !m.getSource(P + k)) { bound[k] = false; ensure(k); } }); apply(); });
   }
 
+  // 0.12: features as shapes (shape.js): a flood event, a stretch of coast, a park; each redraws as the timeline moves
+  function floodsAlong(lines, kmMax) { // flood outlines with their centre within kmMax of a river, up to the year shown
+    if (!D.floods) return []; const pts = []; lines.forEach(f => { const g = f.geometry, ls = g.type === "LineString" ? [g.coordinates] : g.coordinates; ls.forEach(l => l.forEach((c, i) => { if (i % 3 === 0) pts.push(c); })); });
+    if (!pts.length) return []; let b = [180, 90, -180, -90]; pts.forEach(([x, y]) => { b = [Math.min(b[0], x), Math.min(b[1], y), Math.max(b[2], x), Math.max(b[3], y)]; }); const pad = kmMax / 70;
+    if (!FCEN) FCEN = D.floods.features.map(f => [centre(f.geometry), f.properties.ev]);
+    return D.floods.features.filter((f, i) => { const c = FCEN[i][0]; if (f.properties.y > Y() || c[0] < b[0] - pad || c[0] > b[2] + pad || c[1] < b[1] - pad || c[1] > b[3] + pad) return false; return pts.some(p => kmBetween(p, c) <= kmMax); });
+  }
+  const shapeFeats = (theme, pred) => { const lo = (D[theme] ? D[theme].features : []).filter(pred), hi = DET[theme] ? [...DET[theme].values()].flat().filter(pred) : []; return hi.length ? hi : lo; };
+  function regShapes() {   // called when the view starts (shape.js loads after the views)
+    if (!window.AtlasShape || regShapes.done) return; regShapes.done = true;
+    AtlasShape.register("flood", ev => { const ft = shapeFeats("floods", f => f.properties.ev === ev); if (!ft.length) return null; const e = (D.floods.events || []).find(x => x.id === ev) || {};
+      return { title: e.n || "Recorded flood", kind: "flood", colour: SRC_COL[ft[0].properties.s] || SRC_COL.other, note: `${longDate(e.d)} · ${fmt(e.ha)} ha`, features: ft.map(f => ({ type: "Feature", properties: { _c: SRC_COL[f.properties.s] || SRC_COL.other, _fo: 0.35 }, geometry: f.geometry })) }; });
+    AtlasShape.register("coast", smp => { const ft = shapeFeats("coast", f => f.properties.smp === smp); if (!ft.length) return null;
+      const pick = () => ft.filter(f => f.properties.e <= (S.fut || 2105));
+      return { title: `Coastal erosion: ${smp}`, kind: "coast", colour: "#c0392b", note: "Land forecast to be lost", features: pick().map(f => ({ type: "Feature", properties: { _c: f.properties.e === 2055 ? "#c0392b" : "#f08a5d", _fo: 0.45 }, geometry: f.geometry })),
+        live: () => pick().map(f => ({ type: "Feature", properties: { _c: f.properties.e === 2055 ? "#c0392b" : "#f08a5d", _fo: 0.45 }, geometry: f.geometry })), liveNote: () => S.fut ? `by ${S.fut}` : "by 2055 (dark) and 2105 (light)" }; });
+    AtlasShape.register("park", n => { const ft = shapeFeats("cons", f => f.properties.n === n); if (!ft.length) return null; const p0 = ft[0].properties, c = p0.k === "np" ? "#31572c" : "#1d6f66";
+      const draw = () => ft.map(f => ({ type: "Feature", properties: { _c: !f.properties.y || f.properties.y <= Y() ? c : "#9aa5ab", _fo: !f.properties.y || f.properties.y <= Y() ? 0.25 : 0.06 }, geometry: f.geometry }));
+      return { title: n, kind: "park", colour: c, note: `${p0.k === "np" ? "National Park" : "Ramsar wetland"}${p0.y ? `, designated ${p0.y}` : ""}`, features: draw(), live: draw, liveNote: () => p0.y && p0.y > Y() ? `not yet designated in ${Y()} (grey)` : `in ${Y()}` }; });
+  }
+  window.AtlasEnv = { floodsNear: (lon, lat, km) => floodsNear(lon, lat, km), floodsAlong, load: k => load(k), bind: c => bind(c), setOn: o => { Object.assign(S.on, o); apply(); },   // 0.12: Atlas Resilience draws the hazards through these
+    get D() { return D; }, get year() { return Y(); } };
   window.AtlasApps && AtlasApps.register({
-    id: "environment", name: "Atlas Environment", perspective: "environment", accent: "#4f772d", dataNeeds: [],
+    id: "environment", name: "Atlas Environment", perspective: "environment", accent: "#4f772d", dataNeeds: [], rivers: true,
     init(ctx) { bind(ctx); ctx.mapOnly([]); ctx.view([-3.2, 54.6], 5.3); apply(); ctx.openPanel("timeline"); },
     panels: [
       { id: "timeline", map: ctx => mine(ctx), title: "Timeline", blurb: "Zones on a timeline, from recorded history into official forecasts", render: (ctx, el) => { bind(ctx); timeline(ctx, el); }, min: { w: 380, h: 440 } },
