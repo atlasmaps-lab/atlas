@@ -9,7 +9,8 @@
 (function () {
   "use strict";
   const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const PALETTE = ["#3b78b5", "#d55e00", "#009e73", "#cc79a7", "#e69f00", "#56b4e9", "#7a5195", "#999933", "#882255", "#44aa99"];
+  // 0.13: categories never use green or red (those mean rise and fall) or the app's gold
+  const PALETTE = ["#3f6596", "#b06a35", "#8a5a9e", "#3d8aa1", "#6a62b0", "#9c6b77", "#5c6f85", "#4f8fc0", "#a0784e", "#7d868e"];
   const colourOf = (s, i) => s.colour || PALETTE[i % PALETTE.length];
   const REG = {}; let seq = 0;
   function nice(lo, hi, n) {
@@ -71,7 +72,12 @@
     // 0.11: o.events [{x, n, label}]: numbered dashed lines for what plausibly moved the series (data/events.js)
     let lastX = -99, lane = 0;   // markers closer than 15px step down a lane so their numbers don't overlap
     const evs = (o.events || []).filter(e => e.x >= f.x0 && e.x <= f.x1).map(e => { const xv = f.sx(e.x), x = xv.toFixed(1); lane = xv - lastX < 15 ? (lane + 1) % 3 : 0; lastX = xv; const cy = f.T + 6 + lane * 15; return `<g class="ev" ${tip(e.label)}><line x1="${x}" x2="${x}" y1="${cy + 6}" y2="${f.H - f.B}" stroke="currentColor" stroke-opacity=".45" stroke-dasharray="3 3"/><circle cx="${x}" cy="${cy}" r="6.5" fill="var(--ink,#1f2a2e)"/><text x="${x}" y="${cy + 3}" text-anchor="middle" fill="var(--solid,#fff)" style="font-size:9px;font-weight:700">${esc(String(e.n))}</text></g>`; }).join("");
-    return svg(f.W, f.H, f.axes + evs + `<rect class="hit" x="${f.L}" y="${f.T}" width="${f.W - f.L - f.R}" height="${f.H - f.T - f.B}"/>` + paths, "", { kind: "xy", series: series.map((s, i) => ({ name: s.name, colour: colourOf(s, i), pts: s.pts })), f: { L: f.L, R: f.R, T: f.T, B: f.B, W: f.W, H: f.H, x0: f.x0, x1: f.x1, y0: f.y0, y1: f.y1 }, vfmt: o.vfmt, xlab: o.xlab || yearLab }) + legend(series);
+    // 0.13: o.hilo: on a one-series chart, the highest point green and the lowest red, each named
+    let hl = "";
+    if (o.hilo && series.length === 1) { const ok = series[0].pts.filter(p => p[1] != null && isFinite(p[1])); if (ok.length > 2) { let hi = ok[0], lo = ok[0]; ok.forEach(p => { if (p[1] > hi[1]) hi = p; if (p[1] < lo[1]) lo = p; });
+      const lab = (p, cls, up) => { const x = f.sx(p[0]), y = f.sy(p[1]), right = x < (f.L + f.W - f.R) / 2; if (!up && y + 13 > f.H - f.B - 2) up = true; if (up && y - 7 < f.T + 8) up = false; return `<circle class="${cls}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" stroke="var(--solid,#fff)" stroke-width="1.5"/><text class="${cls} hl" x="${(x + (right ? 7 : -7)).toFixed(1)}" y="${(y + (up ? -7 : 13)).toFixed(1)}" text-anchor="${right ? "start" : "end"}">${esc((o.vfmt || compact)(p[1]))}, ${esc((o.xlab || yearLab)(p[0]))}</text>`; };
+      hl = lab(hi, "hi", true) + lab(lo, "lo", false); } }
+    return svg(f.W, f.H, f.axes + evs + `<rect class="hit" x="${f.L}" y="${f.T}" width="${f.W - f.L - f.R}" height="${f.H - f.T - f.B}"/>` + paths + hl, "", { kind: "xy", series: series.map((s, i) => ({ name: s.name, colour: colourOf(s, i), pts: s.pts })), f: { L: f.L, R: f.R, T: f.T, B: f.B, W: f.W, H: f.H, x0: f.x0, x1: f.x1, y0: f.y0, y1: f.y1 }, vfmt: o.vfmt, xlab: o.xlab || yearLab }) + legend(series);
   }
   function bars(series, o) {
     o = o || {}; const pts = allPts(series); if (!pts.length) return empty();

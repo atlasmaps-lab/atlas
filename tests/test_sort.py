@@ -2,7 +2,7 @@
 Atlas 0.12: every table and list of figures sorts high→low and low→high.   python tests/test_sort.py
 
 Tables with headings: click a heading (numbers go highest first, click again for lowest first). Tables without headings
-and lists of figures get a Sort switch (High→low, Low→high, As shown). Columns of places in the menus have ↓ ↑.
+and lists of figures get a Sort switch (Largest first, Smallest first, A–Z, As shown). Columns of places in the menus have ↓ ↑.
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

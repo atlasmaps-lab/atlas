@@ -108,8 +108,19 @@
   // size: "lead" (bigger, first), "half" (two side by side), or full width. k (the small kicker) is optional.
   const DEEP = new Map(); let deepSeq = 0;
   function deepRef(fn, title) { const id = "d" + (++deepSeq); DEEP.set(id, { fn, title }); if (DEEP.size > 4000) DEEP.delete(DEEP.keys().next().value); return id; }
-  const deepRow = r => `<li><button type="button" class="pc-dr" data-pcdeep="${deepRef(r.fn, r.label)}"><span class="pc-drl">${r.c ? `<i style="background:${esc(r.c)}"></i>` : ""}<span>${esc(r.label)}${r.sub ? `<small>${esc(r.sub)}</small>` : ""}</span></span>${r.v != null && r.v !== "" ? `<b>${esc(r.v)}</b>` : ""}<span class="pc-chev" aria-hidden="true">›</span></button></li>`;
-  const deepList = (rows, title) => rows && rows.length ? `${title ? `<div class="pc-dt">${esc(title)}</div>` : ""}<ul class="pc-deep" data-nosort>${rows.filter(Boolean).map(deepRow).join("")}</ul>` : "";
+  // 0.13: lists are complete (the first 15 show, then "See all N ›"), keep their rank numbers, and sort on the full list
+  const numOf = v => window.AtlasSort && v != null ? AtlasSort.num(v) : null;
+  const deepRow = (r, i) => { const n = r.n != null ? r.n : numOf(r.v); return `<li${i >= 15 ? ' class="pc-more" hidden' : ""} data-rank="${i + 1}"${n != null ? ` data-v="${n}"` : ""} data-l="${esc(String(r.label).toLowerCase())}"><button type="button" class="pc-dr" data-pcdeep="${deepRef(r.fn, r.label)}"><span class="pc-rk">${i + 1}</span><span class="pc-drl">${r.c ? `<i style="background:${esc(r.c)}"></i>` : ""}<span>${esc(r.label)}${r.sub ? `<small>${esc(r.sub)}</small>` : ""}</span></span>${r.v != null && r.v !== "" ? `<b>${esc(r.v)}</b>` : ""}<span class="pc-chev" aria-hidden="true">›</span></button></li>`; };
+  const deepList = (rows, title) => { rows = (rows || []).filter(Boolean); if (!rows.length) return ""; const nums = rows.filter(r => (r.n != null ? r.n : numOf(r.v)) != null).length >= rows.length * 0.6;
+    return `<div class="pc-dhead">${title ? `<span class="pc-dt">${esc(title)}</span>` : "<span></span>"}${rows.length > 3 ? `<span class="pc-sorts" role="group" aria-label="Sort this list">${nums ? `<button type="button" data-pcsort="desc" class="on">Largest first</button><button type="button" data-pcsort="asc">Smallest first</button>` : ""}<button type="button" data-pcsort="az"${nums ? "" : ' class="on"'}>A–Z</button></span>` : ""}</div><ul class="pc-deep" data-nosort>${rows.map(deepRow).join("")}</ul>${rows.length > 15 ? `<button type="button" class="pc-seeall" data-pcseeall>See all ${rows.length} ›</button>` : ""}`; };
+  // 0.13: the lead is the card's headline, summary and main chart, always shown (not a row to open)
+  const ZACTS = `<span class="pc-zacts"><button type="button" data-pczoom title="Make this chart bigger" aria-label="Make this chart bigger">⤢</button></span>`;
+  function lead(it) {
+    const mapA = it.map ? ` data-pcmapspec="${js(it.map)}"` : "";
+    const more = String(it.more || "").replace(/<div class="pc-chart">/g, `<div class="pc-chart pc-zoomable">${VACTS}${ZACTS}`);
+    const hasChart = /pc-chart/.test(more);
+    return `<div class="pc-it pc-lead"${mapA}>${it.k ? `<div class="pc-k pc-leadk">${esc(it.k)}</div>` : ""}<h2 class="pc-h pc-head">${it.h}</h2>${it.sub ? `<p class="pc-sum">${it.sub}</p>` : ""}${hasChart ? "" : it.viz ? `<div class="pc-viz pc-leadviz">${it.viz}</div>` : ""}${more ? `<div class="pc-body">${more}</div>` : ""}${it.cap ? `<p class="pc-cap">${it.cap}</p>` : ""}${deepList(it.deep, it.deepTitle)}${it.go ? `<button type="button" class="pc-gob pc-leadgo" data-pcdeep="${deepRef(it.go, it.goTitle || "")}">Go deeper ›</button>` : ""}</div>`;
+  }
   function item(it, i) {
     if (!it) return "";
     const size = it.size || (i === 0 && it.size !== "" ? "lead" : ""), cls = `pc-it${size ? " pc-" + size : ""}`;
@@ -124,15 +135,26 @@
     return `<details class="${cls}"${it.open ? " open" : ""}${mapA}><summary>${txt}${vz}<span class="pc-tog" aria-hidden="true"></span></summary>
       <div class="pc-body">${body}<div class="pc-iacts">${acts}</div></div></details>`;
   }
+  // 0.13: the time-range switch (12 months, 5 years, 10 years, all) re-tells the whole card for that range
+  const rangeBar = spec => spec.ranges && spec.ranges.length > 1 && spec.range ? `<div class="pc-ranges" role="group" aria-label="Time range">${spec.ranges.map(r => `<button type="button" class="${r.k === spec.rangeAt ? "on" : ""}" aria-pressed="${r.k === spec.rangeAt}" data-pcrange="${deepRef(() => spec.range(r.k), spec.title)}">${esc(r.l)}</button>`).join("")}</div>` : "";
+  const toneOf = t => t === "good" || t === "up" ? "up" : t === "bad" || t === "down" ? "down" : t || "";
   function html(spec) {
     const id = "pc" + (++seq) + "-" + Date.now().toString(36);
     const links = (spec.links || []).filter(l => l && l.url);
-    return `<article class="pcard" data-pcard="${id}"${spec.map ? ` data-pcmapspec="${js(spec.map)}"` : ""}${spec.panel ? ` data-pcpanelid="${esc(spec.panel)}"` : ""}>
-      <header class="pc-top"><div class="pc-brand"><span class="pc-logo">ATLAS</span>${spec.app ? `<span class="pc-app">${esc(spec.app)}</span>` : ""}</div>
-        <button type="button" class="pc-follow" data-pcws title="Send this card to the workspace">${STAR}<span>Workspace</span></button></header>
-      ${spec._back ? `<button type="button" class="pc-back" data-pcback="${esc(spec._back)}">‹ ${esc(spec._backTitle || "Back")}</button>` : ""}<div class="pc-pill">${esc(spec.title)}</div>${spec.shape && window.AtlasShape ? AtlasShape.buttons(spec.shape) : ""}${(spec.figs || []).filter(f => f && f.v != null && f.v !== "").length ? `<div class="pc-figs">${spec.figs.filter(f => f && f.v != null && f.v !== "").slice(0, 3).map(f => (f.at != null ? `<button type="button" class="pc-fig" data-pcfig="${f.at}" title="What lies behind this figure">` : `<div class="pc-fig">`) + `<b class="${f.tone || ""}">${esc(f.v)}</b><span>${esc(f.l || "")}</span>` + (f.at != null ? "</button>" : "</div>")).join("")}</div>` : ""}${spec.lede ? `<p class="pc-lede">${spec.lede}</p>` : ""}
-      <div class="pc-items">${(spec.items || []).map((it, i) => item(it, spec.flatLead ? 1 : i)).join("")}</div>
-      <footer class="pc-foot"><span class="pc-fav" aria-hidden="true">A</span><span class="pc-src">${esc(spec.source || "Atlas")}</span>${spec.when ? `<span class="pc-dot">•</span><span class="pc-when">${esc(spec.when)}</span>` : ""}
+    const crumbs = (spec.crumbs || [spec.app, spec.title]).filter(Boolean);
+    const items = spec.items || [], hasLead = !!items[0] && !spec.flatLead && items[0].size !== "" && items[0].size !== "half";
+    const figs = (spec.figs || []).filter(f => f && f.v != null && f.v !== "").slice(0, 3);
+    const figHTML = figs.length ? `<div class="pc-figs">${figs.map(f => (f.at != null ? `<button type="button" class="pc-fig" data-pcfig="${f.at}" title="What lies behind this figure">` : `<div class="pc-fig">`) + `<b class="${toneOf(f.tone)}">${esc(f.v)}</b><span>${esc(f.l || "")}</span>` + (f.at != null ? "</button>" : "</div>")).join("")}</div>` : "";
+    const notes = (spec.notes || []).filter(Boolean);
+    return `<article class="pcard" data-pcard="${id}"${spec.map ? ` data-pcmapspec="${js(spec.map)}"` : ""}${spec.panel ? ` data-pcpanelid="${esc(spec.panel)}"` : ""}${spec.track ? ` data-pctrack="${js(spec.track)}"` : ""}${spec.accent ? ` style="--pc-acc:${esc(spec.accent)}"` : ""}>
+      <div class="pc-crumbs"><nav aria-label="Where you are">${crumbs.map((c, i) => `<span${i === crumbs.length - 1 ? ' class="on"' : ""}>${esc(c)}</span>`).join('<span class="pc-csep" aria-hidden="true">›</span>')}</nav>
+        <button type="button" class="pc-follow" data-pcws title="Send this card to the workspace">${STAR}<span>Workspace</span></button></div>
+      <header class="pc-top"><div class="pc-brand"><span class="pc-logo">ATLAS</span>${spec.app ? `<span class="pc-app">${esc(spec.app)}</span>` : ""}</div>${rangeBar(spec)}</header>
+      ${spec._back ? `<button type="button" class="pc-back" data-pcback="${esc(spec._back)}">‹ ${esc(spec._backTitle || "Back")}</button>` : ""}<div class="pc-kick"><span class="pc-pill">${esc(spec.title)}</span>${(spec.kicker || []).map(k => `<span class="vr"></span><span>${esc(k)}</span>`).join("")}${spec.when ? `<span class="vr"></span><span class="pc-kwhen">${esc(spec.when)}</span>` : ""}</div>${spec.shape && window.AtlasShape ? AtlasShape.buttons(spec.shape) : ""}
+      ${hasLead ? `<div class="pc-items pc-leadbox">${lead(items[0])}</div>` : ""}${spec.lede ? `<p class="pc-lede">${spec.lede}</p>` : ""}${figHTML}
+      <div class="pc-items pc-secs">${items.slice(hasLead ? 1 : 0).map((it, i) => item(it, 1 + i)).join("")}</div>
+      ${notes.length ? `<ol class="pc-notes">${notes.map(n => `<li>${n}</li>`).join("")}</ol>` : ""}
+      <footer class="pc-foot"><span class="pc-fav" aria-hidden="true">A</span><span class="pc-src">${esc(spec.source || "Atlas")}</span>${spec.when ? `<span class="vr"></span><span class="pc-when">${esc(spec.when)}</span>` : ""}
         <button type="button" class="pc-dots" data-pcmenu aria-label="More actions" title="More actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>
         <div class="pc-menu" hidden>${spec.map ? `<button type="button" data-pcmap>Put on map</button>` : ""}<button type="button" data-pcws>Send to workspace</button><button type="button" data-pcopen>Open as a card</button><button type="button" data-pcopenall>Open every item</button><button type="button" data-pccopy>Copy the text</button>${spec.panel ? `<button type="button" data-pcpanel="${esc(spec.panel)}">Open the full panel</button>` : ""}${links.map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label || "Source")} ↗</a>`).join("")}</div></footer></article>`;
   }
@@ -153,18 +175,24 @@
   function val(m, c, d) { try { const r = m.get(c, d || ctx.date); return r && r.v != null && !r.nm && isFinite(r.v) ? r : null; } catch (e) { return null; } }
   function splitStory(h) { const d = document.createElement("div"); d.innerHTML = h || ""; const q = s => d.querySelector(s); return { story: q(".nv-story") ? q(".nv-story").innerHTML : "", means: q(".nv-means") ? q(".nv-means").innerHTML.replace(/^<b>[^<]*<\/b>\s*/, "") : "", trust: q(".nv-trust") ? q(".nv-trust").innerHTML.replace(/^<b>[^<]*<\/b>\s*/, "") : "" }; }
   const first = h => { const P = window.AtlasPanel; return P ? P.firstSentence(h) : [h, ""]; };
-  function metric(id, code) {
+  function metric(id, code, range) {
     const m = ctx && ctx.M[id]; if (!m) return null; const N = window.AtlasNarrative;
     code = code && ctx.P[code] ? code : ctx.focused && ctx.P[ctx.focused] ? ctx.focused : ctx.UKC;
     const where = code === ctx.UKC ? "the UK" : ctx.nameOf(code), f = N ? N.fmtOf(m) : String, isP = N ? N.isPts(m) : false;
     let pts = N && m.temporal !== "election" ? N.series(m, code) : [];
+    // 0.13: the time range: 12 months (monthly data), 5 years, 10 years, or everything, offered only where the data reaches
+    const span = pts.length > 1 ? pts[pts.length - 1][0] - pts[0][0] : 0, gapM = pts.length > 2 ? (pts[pts.length - 1][0] - pts[0][0]) / (pts.length - 1) : 1;
+    const ranges = []; if (gapM < 0.2 && span > 1.2) ranges.push({ k: "1y", l: "12 months" }); if (span > 5.5) ranges.push({ k: "5y", l: "5 years" }); if (span > 10.5) ranges.push({ k: "10y", l: "10 years" });
+    if (pts.length > 1) ranges.push({ k: "all", l: `Since ${Math.floor(pts[0][0])}` });
+    const rangeAt = ranges.some(r => r.k === range) ? range : "all", yrs = { "1y": 1, "5y": 5, "10y": 10 }[rangeAt];
+    if (yrs && pts.length) { const end = pts[pts.length - 1][0]; pts = pts.filter(p => p[0] > end - yrs - 1e-6); }
     const now = val(m, code), parts = splitStory(N ? N.story(m, code) : ""), topics = topicsOf(m.id, m.label, m.group, m.p);
     const w = why(pts, topics, { pts: isP, fmt: f });
     const items = [];
     const [head, rest] = parts.story ? first(parts.story) : [now ? `${esc(m.label)} in ${esc(where)}: <b>${esc(f(now.v))}</b>${now.yr ? ` (${esc(now.yr)})` : ""}` : `No figure for ${esc(where)} on this date.`, ""];
     const colour = "var(--pc-acc, currentColor)";
     items.push({ k: code === ctx.UKC ? "" : where, h: head.replace(/\.$/, ""), viz: pts.length > 1 ? viz.spark(pts, colour) : now ? viz.big(f(now.v), now.yr || "") : "", open: true,
-      more: `${rest ? `<p>${rest}</p>` : ""}${pts.length > 2 ? `<div class="pc-chart">${ctx.CH.line([{ name: where, colour: "#3b78b5", pts }], { w: 380, h: 190, vfmt: f, yfmt: v => ctx.CH.compact ? ctx.CH.compact(v) : String(v), events: w.events })}</div>${evList(w.events)}` : ""}`, map: { metrics: [id] } });
+      more: `${rest ? `<p>${rest}</p>` : ""}${pts.length > 2 ? `<div class="pc-chart">${ctx.CH.line([{ name: where, colour: "var(--ink-2,#56656b)", pts }], { w: 380, h: 190, vfmt: f, yfmt: v => ctx.CH.compact ? ctx.CH.compact(v) : String(v), events: w.events, hilo: true })}</div>${evList(w.events)}` : ""}`, cap: hiloCap(pts, f), map: { metrics: [id] } });
     if (pts.length > 2) items.push({ k: "Why it moved", h: w.lines.length ? first(w.lines[0])[0].replace(/<[^>]+>/g, "").replace(/\.$/, "") : "No sharp moves stand out", viz: viz.big(String(w.events.length), w.events.length === 1 ? "event" : "events"), more: whyHTML(w) });
     // across the map: the place's own boundary set (wards and seats compare with their own kind)
     const lv = ctx.P[code] && ["council", "region", "nation", "constituency"].includes(ctx.P[code].level) ? ctx.P[code].level : (m.levels && m.levels[0]) || "council";
@@ -194,7 +222,16 @@
     items.push({ k: "Where it comes from", h: esc(String(src).replace(/https?:\/\/\S+/g, "").replace(/\s*[;,(]\s*$/, "").slice(0, 140) || "Atlas"), more: `${N && N.definition(m) ? `<p><b>What it measures.</b> ${esc(N.definition(m))}</p>` : ""}<p>${esc(src)}</p>${m.how ? `<p><b>How it's worked out.</b> ${esc(m.how)}</p>` : ""}`, url, urlLabel: "Source" });
     const rk = rows.length >= 5 ? rows.findIndex(r => r.c === code) : -1, ch = pts.length >= 2 ? (isP ? pts[pts.length - 1][1] - pts[0][1] : pts[0][1] ? (pts[pts.length - 1][1] / pts[0][1] - 1) * 100 : null) : null;
     const figs = [now ? { v: f(now.v), l: `${where}${now.yr ? ", " + now.yr : ""}` } : null, ch != null && isFinite(ch) ? { v: `${ch >= 0 ? "▲" : "▼"} ${Math.abs(ch).toFixed(Math.abs(ch) < 10 ? 1 : 0)}${isP ? " pt" : "%"}`, l: `since ${pts[0][0]}` } : null, rk >= 0 ? { v: `${rk + 1} of ${rows.length}`, l: "highest first" } : null];
-    return { app: APPN[m.p] || "", title: m.label, figs, items, source: String(src).split(/[;(]/)[0].replace(/https?:\/\/\S+/, "").trim().slice(0, 60) || "Atlas", when: now && now.yr ? String(now.yr) : ctx.longDate(ctx.date), map: { metrics: [id] }, links: url ? [{ label: "Source", url }] : [] };
+    const crumbs = [APPN[m.p] || "Atlas", m.group, m.label].filter((x, i, a) => x && a.indexOf(x) === i);
+    return { app: APPN[m.p] || "", title: m.label, crumbs, kicker: code === ctx.UKC ? [] : [where], ranges, rangeAt, range: r => metric(id, code, r), track: { metric: id, code }, figs, items, source: String(src).split(/[;(]/)[0].replace(/https?:\/\/\S+/, "").trim().slice(0, 60) || "Atlas", when: now && now.yr ? String(now.yr) : ctx.longDate(ctx.date), map: { metrics: [id] }, links: url ? [{ label: "Source", url }] : [] };
+  }
+
+  // 0.13: the caption under a series: which point was highest (green on the chart) and which lowest (red)
+  function hiloCap(pts, f) {
+    pts = (pts || []).filter(p => p[1] != null && isFinite(p[1])); if (pts.length < 3) return "";
+    let hi = pts[0], lo = pts[0]; pts.forEach(p => { if (p[1] > hi[1]) hi = p; if (p[1] < lo[1]) lo = p; });
+    const dense = (pts[pts.length - 1][0] - pts[0][0]) / (pts.length - 1) < 0.9, when = x => whenOf(x, dense);
+    return `Highest ${esc(f(hi[1]))} in ${esc(when(hi[0]))} (green); lowest ${esc(f(lo[1]))} in ${esc(when(lo[0]))} (red).`;
   }
 
   // ---------- 0.12.1: what a measure's card adds beyond the figure ----------
@@ -274,13 +311,39 @@
   }
   // 0.12.1: going deeper inside a card's own window, and back again
   const BACK = new Map();
-  function swapCard(card, spec, backId) {
+  function swapCard(card, spec, backId, backTitle) {
     const ttl = card.closest(".wm-win, .pcwin") && card.closest(".pcwin") ? card.closest(".pcwin").querySelector(".wm-title") : null;
     const place = sp => { const d = document.createElement("div"); d.innerHTML = html(sp); const n = d.firstElementChild; card.replaceWith(n); if (ttl) ttl.textContent = sp.title; const sc = n.closest(".wm-body"); if (sc) sc.scrollTop = 0; if (window.AtlasSort) AtlasSort.enhance && AtlasSort.enhance(n); return n; };
     if (typeof spec.then === "function") { card.classList.add("pc-loading"); spec.then(sp => { if (sp) place(Object.assign(sp, { _back: backId, _backTitle: (card.querySelector(".pc-pill") || {}).textContent })); else card.classList.remove("pc-loading"); }, () => card.classList.remove("pc-loading")); return; }
-    place(Object.assign(spec, { _back: backId, _backTitle: (card.querySelector(".pc-pill") || {}).textContent }));
+    place(Object.assign(spec, { _back: backId, _backTitle: backTitle != null ? backTitle : (card.querySelector(".pc-pill") || {}).textContent }));
+  }
+  // 0.13: sort a list (largest, smallest, A–Z) on the full list, ranks kept; See all; a chart made bigger
+  function sortList(btn) {
+    const head = btn.closest(".pc-dhead"), ul = head && head.nextElementSibling; if (!ul || !ul.classList.contains("pc-deep")) return;
+    const dir = btn.dataset.pcsort, lis = [...ul.children];
+    lis.sort((a, b) => dir === "az" ? a.dataset.l.localeCompare(b.dataset.l) : ((+b.dataset.v || 0) - (+a.dataset.v || 0)) * (dir === "asc" ? -1 : 1)).forEach(li => ul.appendChild(li));
+    const all = ul.dataset.all === "1"; [...ul.children].forEach((li, i) => { li.hidden = !all && i >= 15; });
+    head.querySelectorAll("[data-pcsort]").forEach(x => x.classList.toggle("on", x === btn));
+  }
+  function seeAll(btn) { const ul = btn.previousElementSibling; if (!ul) return; ul.dataset.all = "1"; [...ul.children].forEach(li => { li.hidden = false; li.classList.add("atl-rise"); }); btn.remove(); }
+  function zoom(btn) {
+    const ch = btn.closest(".pc-chart"); if (!ch) return;
+    let back = document.getElementById("pc-zoomback");
+    if (ch.classList.contains("pc-big")) { ch.classList.remove("pc-big"); if (back) back.hidden = true; return; }
+    if (!back) { back = document.createElement("div"); back.id = "pc-zoomback"; back.className = "pc-zoomback"; document.body.appendChild(back); back.addEventListener("click", () => { document.querySelectorAll(".pc-chart.pc-big").forEach(x => x.classList.remove("pc-big")); back.hidden = true; }); }
+    back.hidden = false; ch.classList.add("pc-big");
+    if (!ch.querySelector(".pc-bigacts")) { const card = ch.closest(".pcard"), tr = card && card.dataset.pctrack; ch.insertAdjacentHTML("beforeend", `<div class="pc-bigacts"><button type="button" data-pcvws>${STAR} Send to workspace</button>${tr ? `<button type="button" data-pcpin>Pin to track</button>` : ""}<button type="button" data-pczoom>Close</button></div>`); }
+  }
+  function pin(card) {
+    let t = null; try { t = JSON.parse(card.dataset.pctrack); } catch (e) {} if (!t || !ctx) return;
+    ctx.sendToWS(Object.assign({ type: "track", title: (card.querySelector(".pc-pill") || {}).textContent || "Tracked", w: 300, h: 190 }, t));
   }
   function deepClick(e) {
+    const s0 = e.target.closest && e.target.closest("[data-pcsort],[data-pcseeall],[data-pczoom],[data-pcpin]");
+    if (s0 && s0.closest(".pcard")) { e.preventDefault(); e.stopPropagation(); if (s0.dataset.pcsort) sortList(s0); else if (s0.hasAttribute("data-pcseeall")) seeAll(s0); else if (s0.hasAttribute("data-pczoom")) zoom(s0); else pin(s0.closest(".pcard")); return true; }
+    const rg = e.target.closest && e.target.closest("[data-pcrange]");
+    if (rg) { const card = rg.closest(".pcard"), r = DEEP.get(rg.dataset.pcrange); if (!card || !r) return false; e.preventDefault(); e.stopPropagation(); let sp = null; try { sp = r.fn(); } catch (err) { console.error(err); } if (!sp) return true;
+      const back = card.querySelector(".pc-back"); swapCard(card, sp, back ? back.dataset.pcback : null, back ? back.textContent.replace(/^‹\s*/, "") : null); return true; }
     const t = e.target.closest && e.target.closest("[data-pcdeep],[data-pcback],[data-pcfig]"); if (!t) return false;
     const card = t.closest(".pcard"); if (!card) return false;
     e.preventDefault(); e.stopPropagation();

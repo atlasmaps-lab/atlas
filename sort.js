@@ -39,7 +39,7 @@
     sortRows(table, i, dir);
   });
   // ---------- a switch above header-less tables and lists ----------
-  const SW = `<span class="srt-l">Sort</span><button type="button" data-srt="desc" title="Highest first">High→low</button><button type="button" data-srt="asc" title="Lowest first">Low→high</button><button type="button" data-srt="orig" class="on" title="As first shown">As shown</button>`;
+  const SW = `<button type="button" data-srt="desc" title="Largest first">Largest first</button><button type="button" data-srt="asc" title="Smallest first">Smallest first</button><button type="button" data-srt="az" title="Alphabetical">A–Z</button><button type="button" data-srt="orig" class="on" title="As first shown">As shown</button>`;   // 0.13: the agreed wording
   function addSwitch(target, kind) {
     if (target._srt || target.hasAttribute("data-nosort")) return; target._srt = 1;
     const bar = document.createElement("div"); bar.className = "srt-bar"; bar.setAttribute("role", "group"); bar.setAttribute("aria-label", "Sort this " + kind); bar.innerHTML = SW; bar._for = target;
@@ -50,9 +50,10 @@
   document.addEventListener("click", e => {
     const b = e.target.closest && e.target.closest("[data-srt]"); if (!b) return; const bar = b.closest(".srt-bar"), t = bar && bar._for; if (!t) return;
     e.preventDefault(); e.stopPropagation(); bar.querySelectorAll("[data-srt]").forEach(x => x.classList.toggle("on", x === b)); const dir = b.dataset.srt;
-    if (t.tagName === "TABLE") { const rows = rowsOf(t), i = numericCol(t, rows); if (i >= 0) sortRows(t, i, dir); return; }
+    if (t.tagName === "TABLE") { const rows = rowsOf(t); if (dir === "az") { sortRows(t, 0, "asc"); return; } const i = numericCol(t, rows); if (i >= 0) sortRows(t, i, dir); return; }
     const items = listItems(t); if (!t._orig) t._orig = items.slice();
-    (dir === "orig" ? t._orig : items.slice().sort((a, c) => { const x = listVal(a), y = listVal(c); if (x == null) return 1; if (y == null) return -1; return dir === "asc" ? x - y : y - x; })).forEach(li => t.appendChild(li));
+    const txt = li => li.textContent.trim().toLowerCase();
+    (dir === "orig" ? t._orig : dir === "az" ? items.slice().sort((a, c) => txt(a).localeCompare(txt(c))) : items.slice().sort((a, c) => { const x = listVal(a), y = listVal(c); if (x == null) return 1; if (y == null) return -1; return dir === "asc" ? x - y : y - x; })).forEach(li => t.appendChild(li));
   }, true);
   // ---------- find what needs it ----------
   function enhance(root) {

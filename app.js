@@ -4749,6 +4749,8 @@
       case "ctable": return `<div class="wsmeta">${esc(LAYOUTS[it.spec.layout])}${it.spec.layout === "pm" && it.spec.when === "bar" ? " · values on " + esc(longDate(it.date)) : ""}</div><div class="wstab">${withDate(it.date, () => cmpTableHTML(it.spec))}</div>`;
       case "analysis": { const r = withDate(it.cfg.date || it.date, () => anResult(it.cfg, w)); return `<div class="an-res">${it.cfg.trim ? (r.trim || "").replace(/<button[^>]*>.*?<\/button>/g, "") : ""}${r.html}</div>`; }
       case "card": return `<div class="wscard">${it.html}</div>`;
+      case "track": { const sp = window.AtlasCard && M[it.metric] ? withDate(TODAY, () => AtlasCard.metric(it.metric, it.code)) : null; if (!sp) return `<div class="aempty">This measure isn't loaded in this app.</div>`;   // 0.13: a figure you pinned, always at its latest
+        return `<div class="wstrack">${sp.figs.filter(Boolean).map(x => `<div><b class="${/▲/.test(x.v) ? "up" : /▼/.test(x.v) ? "down" : ""}">${esc(x.v)}</b><span>${esc(x.l)}</span></div>`).join("")}</div><div class="wsmeta">${esc(sp.source || "")}${sp.when ? ` · ${esc(sp.when)}` : ""}</div>`; }
       case "tile": return tileSVG(it.codes, it.fills, w, Math.max(160, it.h - 120)) + `<div class="wsmeta">${it.codes.map(c => esc(nameOf(c))).join(" · ")}${it.lines ? `</div><ul class="extra">${it.lines}</ul>` : "</div>"}`;
       case "shape": return window.AtlasShape ? AtlasShape.svg(it.shape, w, Math.max(160, it.h - 70)) : "";   // 0.12: a river, flood, coast or park as its own tile
       case "shot": return `<img class="wsshot" src="${it.src}" alt="${esc(it.title)}">`;
@@ -4757,7 +4759,7 @@
     }
     return "";
   }
-  const LIVE = { chart: 1, table: 1, ctable: 1, analysis: 1 };
+  const LIVE = { chart: 1, table: 1, ctable: 1, analysis: 1, track: 1 };
   function renderWS() {
     const p = proj();
     wsEl.innerHTML = `<div class="ws-bar"><select data-wsproj aria-label="Project">${WS.projects.map(q => `<option value="${q.id}" ${q.id === p.id ? "selected" : ""}>${esc(q.name)}</option>`).join("")}</select>

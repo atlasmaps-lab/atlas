@@ -27,7 +27,7 @@ def main():
         rep.check(sum(1 for x in sp if x[2] == "half") >= 4, "…and smaller items side by side")
         t = js(f"() => ({CARD})().innerText")
         rep.check("of all UK goods exports" in t and "Jet engines" in t, "the lead says what share it is; products have plain names")
-        rep.check(js(f"() => !({CARD})().querySelector('.pc-items > .pc-it:first-child .pc-k')"), "the lead has no needless kicker")
+        rep.check(js(f"() => !({CARD})().querySelector('.pc-leadbox .pc-k')"), "the lead has no needless kicker")
         # deeper and back
         js(f"() => {{ const w = ({CARD})(); const it = [...w.querySelectorAll('.pc-it')].find(d => /What's in it/.test(d.textContent)); it.open = true; [...it.querySelectorAll('.pc-dr')].find(b => /Vehicles/.test(b.textContent)).click(); }}"); page.wait_for_timeout(1500)
         t2 = js(f"() => ({CARD})().innerText")
