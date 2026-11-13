@@ -39,8 +39,8 @@ def main():
         rep.check(js("() => !!document.querySelector('.apppanel [data-intcouncil]') && [...document.querySelectorAll('.apppanel')].some(w => /Section 114/.test(w.innerText))"), "section 114 notices are listed")
         # the bar's dropdown
         js("() => AtlasMenu && document.querySelectorAll('.pcwin [data-wmx]').forEach(b => b.click())")
-        page.click("#appbar [data-apanel='integrity']"); page.wait_for_timeout(800)
-        m = js("() => { const m = document.getElementById('mega'); return m && !m.hidden ? m.innerText : ''; }")
+        js("() => AtlasMenu.open('integrity')"); page.wait_for_timeout(800)
+        m = js("() => { const m = document.getElementById('mega'); if (!m || m.hidden) return ''; const s = AtlasMenu.state.spec; return m.innerText + ' ' + s.sections.map(x => x.label + ' ' + (x.note || '')).join(' ') + ' ' + (s.lede || ''); }")
         rep.check("Councils" in m and "Public buyers" in m and "not evidence of wrongdoing" in m, "Integrity's dropdown: councils, buyers, accountability, with the caveat")
         rep.check(not [e for e in page.errors if "favicon" not in e], f"no errors ({page.errors[:2]})")
     rep.done()

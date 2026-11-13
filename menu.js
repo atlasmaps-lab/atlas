@@ -17,7 +17,7 @@
   "use strict";
   let ctx = null, APP = null, H = {};
   const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const S = { open: null, pinned: false, sec: 0, spec: null, t: 0, hide: 0, path: [], sorts: {} };
+  const S = { open: null, pinned: false, sec: 0, spec: null, t: 0, hide: 0, path: [], sorts: {}, cols: new Set(), sel: null };
   const IC = {
     map: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-6.1-6.5-11A6.5 6.5 0 0 1 18.5 10c0 4.9-6.5 11-6.5 11z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="10" r="2.3" fill="currentColor"/></svg>`,
     ws: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
@@ -180,23 +180,56 @@
   }
   const rowHTML = (it, d, i, chosen) => it.loading ? `<div class="mg-it mg-loading"><span class="mg-go"><span class="mg-l">${esc(it.label)}</span>${it.sub ? `<small>${esc(it.sub)}</small>` : ""}</span></div>` : `<div class="mg-it${it.isPanel ? " mg-full" : ""}${chosen ? " on" : ""}${kidsOf(it) || it.children ? " has-kids" : ""}"><button type="button" class="mg-go" data-mit="${d}:${i}"${it.key ? ` data-mkey="${esc(it.key)}"` : ""}${it.children ? ` aria-haspopup="true" aria-expanded="${chosen ? "true" : "false"}"` : ""} role="menuitem">${it.colour ? `<i class="mg-dot" style="background:${esc(it.colour)}"></i>` : ""}<span class="mg-l">${esc(it.label)}</span>${it.sub ? `<small>${esc(it.sub)}</small>` : ""}</button>
     ${it.isPanel ? "" : `<span class="mg-acts">${it.map || it.metric ? `<button type="button" data-mact="map" data-mi="${d}:${i}" title="Put on map" aria-label="Put ${esc(it.label)} on the map">${IC.map}</button>` : ""}${it.card || it.metric ? `<button type="button" data-mact="ws" data-mi="${d}:${i}" title="Send to workspace" aria-label="Send ${esc(it.label)} to the workspace">${IC.ws}</button><button type="button" data-mact="card" data-mi="${d}:${i}" title="Create an information card" aria-label="Card for ${esc(it.label)}">${IC.card}</button>` : ""}</span>`}${it.children ? `<span class="mg-more" aria-hidden="true">›</span>` : ""}</div>`;
+  // ---------- 0.13: the contents page (Atlas design/menus/Menus (final).md) ----------
+  // A heading is a group of panels. Its dropdown: a plain sentence and the headline figures; one column per section,
+  // closed until clicked (name, count, arrow), opening in place to its summary, a share bar, its top five and See all;
+  // below, the chosen section's full list (sortable) and a preview of the chosen row with its next steps as chips.
+  const groupSpec = g => { // every section of every panel in the group, each knowing its panel
+    const secs = [], figs = [], links = [];
+    g.panels.forEach(x => { if (!hasMenu(x)) { links.push(x); return; } const sp = specFor(x); links.push(x); const own = sp.lede || x.blurb; let firstOf = true; (sp.sections || []).forEach(sc => { if (firstOf && own && g.lede && own !== g.lede) { sc = Object.assign({}, sc, { note: sc.note ? `${own} ${sc.note}` : own }); } firstOf = false; const items = (sc.items || []).filter(it => it && !it.isPanel); if (!items.length && !(sc.figures || []).length) return; secs.push(Object.assign({}, sc, { items: items.length ? items : sc.items, panel: x })); }); (sp.sections || []).forEach(sc => (sc.figures || []).forEach(f => f && figs.push(f))); if (!g.lede && (sp.lede || x.blurb)) g.lede = sp.lede || x.blurb; });
+    // panels that are forms or tools (Directions, Feed, Floods…) are rows of their own section, each opening its panel
+    const forms = g.panels.filter(x => !hasMenu(x));
+    if (forms.length) secs.push({ label: g.panels.length === forms.length ? `In ${g.label}` : "More here", note: "Each opens its own panel.", items: forms.map(x => ({ label: x.title, sub: x.blurb || "", fn: () => H.openFull(x.id) })), panel: forms[0] });
+    // sections with the same name from two panels become one, holding both lists (no row repeated)
+    const by = new Map(), merged = []; secs.forEach(sc => { const t = by.get(sc.label); if (!t) { by.set(sc.label, sc); merged.push(sc); return; } const have = new Set((t.items || []).map(it => it.label)); t.items = (t.items || []).concat((sc.items || []).filter(it => !have.has(it.label))); });
+    const seenF = new Set(), figsU = figs.filter(f => { const k = f.label; if (seenF.has(k)) return false; seenF.add(k); return true; });
+    return { sections: merged, figures: figsU, links, lede: g.lede || "" };
+  };
+  const short = t => String(t == null ? "" : t).replace(/\s*\(.*$/, "").replace(/\s+(a person|a head|businesses|people)$/i, "").trim();
+  const valOf = it => short(it.vt || (it.sub ? String(it.sub).split(" · ")[0].replace(/^\d+\.\s+/, "") : ""));
+  const numOf = it => typeof it.v === "number" && isFinite(it.v) ? it.v : null;
   function render() {
-    const x = S.open, s = S.spec; if (!x || !s) return;
-    const { sec, out, figs, figTitle } = lists(), deep = out.length, phone = matchMedia("(max-width: 760px)").matches;
-    const shown = phone ? out.slice(-1) : out.slice(-3), first = out.length - shown.length, showSecs = !phone || deep === 1;   // the categories stay put, so nothing shifts under the pointer
-    const prevN = el._cols || 0; el._cols = deep;
+    const g = S.open, s = S.spec; if (!g || !s) return;
     el.style.setProperty("--app", APP.accent);
-    const cols = (showSecs ? 1 : 0) + shown.length + 1 + (deep === 1 ? 1 : 0);
-    el.innerHTML = `<div class="mg-in" role="menu" aria-label="${esc(x.title)}" style="--mg-cols:${cols}" data-deep="${deep}">
-      ${showSecs ? `<nav class="mg-col mg-secs"><div class="mg-h">${esc(x.title)}</div>${s.sections.map((sc, i) => `<button type="button" class="mg-sec${sc === sec ? " on" : ""}" data-msec="${i}" role="menuitem">${esc(sc.label)}</button>`).join("")}</nav>` : ""}
-      ${shown.map((L, j) => { const d = first + j, isNew = d >= prevN && d > 0, sk = `${S.sec}:${S.path.slice(0, d).join(".")}`, so = S.sorts[sk] || "", nv = L.items.filter(it => typeof it.v === "number" && isFinite(it.v)).length >= Math.max(3, L.items.length * 0.6);
-        const order = L.items.map((it, i) => i); if (nv && so) order.sort((a, b) => { const x = L.items[a].v, y = L.items[b].v; if (x == null) return 1; if (y == null) return -1; return so === "asc" ? x - y : y - x; });
-        return `<div class="mg-col mg-items${isNew ? " mg-new" : ""}" data-depth="${d}">
-        <div class="mg-h">${j === 0 && d > 0 ? `<button type="button" class="mg-back" data-mback="${d}" aria-label="Back to ${esc(d > 0 ? out[d - 1].title : x.title)}">‹ ${esc(d > 0 ? out[d - 1].title : x.title)}</button>` : ""}<span>${esc(L.title)}</span>${nv ? `<span class="mg-sort" role="group" aria-label="Sort ${esc(L.title)}"><button type="button" data-msort="${sk}|desc" class="${so === "desc" ? "on" : ""}" title="Highest first" aria-label="Highest first">↓</button><button type="button" data-msort="${sk}|asc" class="${so === "asc" ? "on" : ""}" title="Lowest first" aria-label="Lowest first">↑</button></span>` : ""}</div>${L.note ? `<p class="mg-note">${esc(L.note)}</p>` : ""}
-        <div class="mg-rows">${order.map(i => rowHTML(L.items[i], d, i, S.path[d] === i)).join("")}</div></div>`; }).join("")}
-      <div class="mg-col mg-figs">${figs.length ? `<div class="mg-h">${esc(figTitle || "Key figures")}</div><div class="mg-tiles">${figs.map((f, i) => `<button type="button" class="mg-tile" data-mfig="${i}" title="${esc(f.label)}: open its card">${f.colour ? `<i class="mg-sw" style="background:${esc(f.colour)}"></i>` : ""}<span class="mg-tl">${esc(f.label)}</span><b class="mg-tv">${esc(f.value)}</b>${f.chg ? `<span class="mg-tc ${f.tone || (/^▲/.test(f.chg) ? "up" : /^▼/.test(f.chg) ? "down" : "")}">${esc(f.chg)}</span>` : ""}</button>`).join("")}</div>` : ""}</div>
-      ${deep === 1 ? `<aside class="mg-col mg-side"><p>${esc(s.lede || x.blurb || `Everything in ${x.title}, by category. Each row opens a card you can put on the map or send to the workspace.`)}</p>
-        <button type="button" class="mg-cta" data-mfull>${IC.card}<span>Open the full panel</span></button>${x.map || x.onOpen ? `<button type="button" class="mg-cta ghost" data-mmap>${IC.map}<span>Put on map</span></button>` : ""}</aside>` : ""}</div>`;
+    const k = S.anim = (S.anim || 0) + (S.bump ? 1 : 0); S.bump = false;
+    const figs = s.figures.slice(0, 4), cols = s.sections, openSet = S.cols;
+    const figHTML = figs.map((f, i) => `<button type="button" class="mgc-fig" data-mfig="${i}" style="animation-delay:${i * 50}ms" title="${esc(f.label + ": " + f.value)}"><b>${esc(short(f.value))}</b><span>${esc(f.label)}</span>${f.chg ? `<em class="${f.tone === "good" ? "up" : f.tone === "bad" ? "down" : ""}">${esc(f.chg)}</em>` : ""}</button>`).join("");
+    const colHTML = cols.map((sc, i) => { const on = openSet.has(i), items = (sc.items || []).filter(Boolean), nums = items.filter(it => numOf(it) != null && numOf(it) > 0), tot = nums.reduce((a, it) => a + numOf(it), 0), share = nums.length >= 2 && nums.length >= items.length * 0.6 && items.some(it => it.colour);
+      const top = items.slice(0, 5);
+      return `<section class="mgc-col${on ? " on" : ""}${i === S.sec && on ? " cur" : ""}" style="animation-delay:${80 + i * 60}ms" data-msec="${i}">
+        <button type="button" class="mgc-h" data-mcol="${i}" aria-expanded="${on}"><span>${esc(sc.label)}</span><small>${on ? "" : items.length}</small><i class="mgc-arr" aria-hidden="true">›</i></button>
+        ${on ? `<div class="mgc-body">${sc.note ? `<p class="mgc-sum">${esc(sc.note)}</p>` : ""}${share ? `<div class="mgc-stack">${nums.slice(0, 8).map(it => `<i class="atl-fill" style="width:${(100 * numOf(it) / tot).toFixed(2)}%;background:${esc(it.colour || "var(--cat1)")}"></i>`).join("")}</div>` : ""}
+          ${top.map((it, j) => `<button type="button" class="mgc-row" data-mtop="${i}:${j}">${it.colour ? `<i class="mg-dot" style="background:${esc(it.colour)}"></i>` : ""}<span>${esc(it.label)}</span><b>${esc(valOf(it).slice(0, 22))}</b></button>`).join("")}
+          ${items.length > 5 ? `<button type="button" class="mgc-see" data-mcol="${i}" data-msee="1">See all ${items.length} ›</button>` : ""}</div>` : ""}</section>`; }).join("");
+    let detail = "";
+    if (openSet.size && cols[S.sec]) {
+      const { out } = lists(), d = out.length - 1, L = out[d], sk = `${S.sec}:${S.path.join(".")}`, so = S.sorts[sk] || "", nv = L.items.filter(it => numOf(it) != null).length >= Math.max(3, L.items.length * 0.6);
+      const order = L.items.map((it, i) => i); if (so === "az") order.sort((a, b) => String(L.items[a].label).localeCompare(String(L.items[b].label))); else if (nv && so) order.sort((a, b) => { const x = numOf(L.items[a]), y = numOf(L.items[b]); if (x == null) return 1; if (y == null) return -1; return so === "asc" ? x - y : y - x; });
+      const mx = Math.max(1e-9, ...L.items.map(it => Math.abs(numOf(it) || 0))), sel = S.sel != null ? L.items[S.sel] : null;
+      const crumbs = [APP.short || APP.name.replace(/^Atlas /, ""), g.label, cols[S.sec].label].concat(out.slice(1).map(o => o.title));
+      const kids = sel ? kidsOf(sel) : null;
+      detail = `<div class="mgc-detail"><div class="mgc-list"><div class="mgc-dh"><span class="mgc-kick">${crumbs.map(esc).join('<span class="vr"></span>')}</span>${d > 0 ? `<button type="button" class="mg-back" data-mback="${d}">‹ ${esc(out[d - 1].title)}</button>` : ""}<span style="flex:1"></span>
+          <span class="mgc-sorts" role="group" aria-label="Sort">${nv ? `<button type="button" data-msort="${sk}|desc" class="${so === "desc" || !so ? "on" : ""}">Largest first</button><button type="button" data-msort="${sk}|asc" class="${so === "asc" ? "on" : ""}">Smallest first</button>` : ""}<button type="button" data-msort="${sk}|az" class="${so === "az" ? "on" : ""}">A–Z</button></span></div>
+        <div class="mgc-rows">${order.map((i, n) => { const it = L.items[i], v = numOf(it); return `<div class="mg-it mgc-it${S.sel === i ? " on" : ""}${it.children ? " has-kids" : ""}" style="animation-delay:${Math.min(n, 12) * 25}ms"><span class="mgc-rk">${n + 1}</span><button type="button" class="mg-go" data-mit="${d}:${i}"${it.key ? ` data-mkey="${esc(it.key)}"` : ""} role="menuitem">${it.colour ? `<i class="mg-dot" style="background:${esc(it.colour)}"></i>` : ""}<span class="mg-l">${esc(it.label)}</span>${it.sub ? `<small>${esc(it.sub)}</small>` : ""}</button>${v != null ? `<span class="mgc-bar"><i class="atl-fill" style="width:${(100 * Math.abs(v) / mx).toFixed(1)}%"></i></span>` : ""}${it.children ? `<span class="mg-more" aria-hidden="true">›</span>` : ""}</div>`; }).join("")}</div></div>
+        <aside class="mgc-pv">${sel ? `<div class="mgc-pvk">${esc(L.title)}</div><div class="mgc-pvt">${esc(sel.label)}</div>${sel.sub ? `<div class="mgc-pvs">${esc(sel.sub)}</div>` : ""}
+          ${kids ? `<div class="mgc-chips">${kids.slice(0, 8).map((c, j) => `<button type="button" class="mgc-chip" data-mkid="${j}">${esc(c.label)} <b>›</b></button>`).join("")}${kids.length > 8 || kids.some(c => c.children) ? `<button type="button" class="mgc-chip go" data-mdeep="1">Go deeper ›</button>` : ""}</div>` : ""}
+          <div class="mgc-acts">${sel.card || sel.metric ? `<button type="button" data-mact="card" data-mi="${d}:${S.sel}">Open its card</button>` : ""}${sel.map || sel.metric ? `<button type="button" data-mact="map" data-mi="${d}:${S.sel}">Put it on the map</button>` : ""}${sel.card || sel.metric ? `<button type="button" data-mact="ws" data-mi="${d}:${S.sel}">☆ Workspace</button>` : ""}</div>`
+          : `<div class="mgc-pvs">Choose a row to see what it is and where it leads.</div>`}</aside></div>`;
+    }
+    el.innerHTML = `<div class="mg-in mgc" role="menu" aria-label="${esc(g.label)}" data-k="${k}">
+      <div class="mgc-top"><div class="mgc-l"><div class="mgc-kick">${esc(APP.short || APP.name.replace(/^Atlas /, ""))}<span class="vr"></span>${esc(g.label)}</div><p class="mgc-lede">${esc(s.lede)}</p></div><div class="mgc-figs">${figHTML}</div></div>
+      ${cols.length ? `<div class="mgc-cols" style="--n:${Math.min(4, cols.length)}">${colHTML}</div>` : ""}${detail}
+      <div class="mgc-foot">${s.links.map(x => `<button type="button" class="mgc-open" data-mfull="${esc(x.id)}">Open the ${esc(x.title)} panel ›</button>`).join("")}</div></div>`;
     el._figs = figs;
   }
   function itemCard(it) {
@@ -217,30 +250,36 @@
     close();   // the card opens in front of the map; the menu comes back on hover
     C().open(spec);
   }
-  function choose(d, i, viaHover) { // open row i of column d: its children in a new column, or (a leaf, clicked) its card
+  function choose(d, i, viaHover) { // 0.13: a row with more behind it is chosen (its preview and next steps); a leaf opens its card
     const { out } = lists(), it = out[d] && out[d].items[i]; if (!it) return;
+    if (viaHover) return;
+    if (it.children) { S.sel = i; S.pinned = true; render(); return; }
+    act(it, "go"); return;
     if (it.children && kidsOf(it)) { if (!viaHover && it.map) C().applyMap(it.map); S.path = S.path.slice(0, d).concat(i); S.pinned = S.pinned || !viaHover; render(); const c = el.querySelector(`.mg-items[data-depth="${d + 1}"] .mg-go`); if (c && !viaHover && document.activeElement && el.contains(document.activeElement)) c.focus(); return; }
     if (viaHover) { if (S.path.length > d) { S.path = S.path.slice(0, d); render(); } return; }
     act(it, "go");
   }
+  const groups = () => (H.groups && H.groups()) || [...APP.panels].map(x => ({ label: x.title, panels: [x] }));
+  const groupOf = x => x && x.panels ? x : groups().find(g => g.panels.includes(x)) || { label: x.title, panels: [x] };
   function open(x, pin) {
-    if (!el) return; clearTimeout(S.hide);
-    if (S.open !== x) { S.open = x; S.sec = 0; S.path = []; S.spec = specFor(x); el._cols = 0; }
+    if (!el) return; clearTimeout(S.hide); x = groupOf(x);
+    if (S.open !== x) { S.open = x; S.sec = 0; S.path = []; S.sel = null; S.cols = new Set(); S.spec = groupSpec(x); S.bump = true; el._cols = 0; }
     S.pinned = S.pinned && S.open === x ? true : !!pin;
     const was = el.hidden; render(); el.hidden = false; document.body.classList.add("mega-on");
-    document.querySelectorAll("#appbar [data-apanel]").forEach(b => { const on = b.dataset.apanel === x.id; b.classList.toggle("mopen", on); if (b.hasAttribute("aria-haspopup")) b.setAttribute("aria-expanded", on ? "true" : "false"); });
+    const gi = groups().indexOf(x); document.querySelectorAll("#appbar [data-agroup]").forEach(b => { const on = +b.dataset.agroup === gi; b.classList.toggle("mopen", on); if (b.hasAttribute("aria-haspopup")) b.setAttribute("aria-expanded", on ? "true" : "false"); });
   }
   function close() {
     if (!el || el.hidden) return false; el.hidden = true; S.open = null; S.pinned = false; S.spec = null; S.path = []; document.body.classList.remove("mega-on");
-    document.querySelectorAll("#appbar [data-apanel]").forEach(b => { b.classList.remove("mopen"); if (b.hasAttribute("aria-haspopup")) b.setAttribute("aria-expanded", "false"); });
+    document.querySelectorAll("#appbar [data-agroup]").forEach(b => { b.classList.remove("mopen"); if (b.hasAttribute("aria-haspopup")) b.setAttribute("aria-expanded", "false"); });
     return true;
   }
   const panelOf = id => [...APP.panels, ...APP.tools].find(p => p.id === id);
   // open a heading's menu at a path of keys or labels: AtlasMenu.openAt("money", "Parties", ["con", "Biggest donors"])
   function openAt(id, secLabel, keys) {
     const x = panelOf(id); if (!x) return false; S.pinned = false; open(x, true);
-    const si = S.spec.sections.findIndex(sc => sc.label === secLabel || sc.key === secLabel); if (si < 0) return false; S.sec = si; S.path = [];
+    const si = S.spec.sections.findIndex(sc => sc.panel === x && (sc.label === secLabel || sc.key === secLabel)); if (si < 0) return false; S.sec = si; S.path = []; S.sel = null; S.cols.add(si);
     (keys || []).forEach((k, d) => { const { out } = lists(), L = out[d]; if (!L) return; const i = L.items.findIndex(it => it.key === k || it.label === k); if (i >= 0) { S.path = S.path.slice(0, d).concat(i); } });
+    if (S.path.length) S.sel = S.path.pop();   // the last key is chosen (its preview and next steps), not opened
     render(); return true;
   }
 
@@ -249,10 +288,11 @@
     const bar = document.getElementById("appbar"), head = document.getElementById("apphead"); if (!bar || !head) return;
     el = document.createElement("div"); el.id = "mega"; el.className = "mega"; el.hidden = true; document.body.appendChild(el);
     // the bar: a chevron on headings that have a menu
-    bar.querySelectorAll("[data-apanel]").forEach(b => { const x = panelOf(b.dataset.apanel); if (x && hasMenu(x)) { b.insertAdjacentHTML("beforeend", IC.chev); b.setAttribute("aria-haspopup", "true"); b.setAttribute("aria-expanded", "false"); b.classList.add("has-menu"); } });
+    const gOf = b => groups()[+b.dataset.agroup];
+    bar.querySelectorAll("[data-agroup]").forEach(b => { const g = gOf(b); if (g && (g.panels.length > 1 || g.panels.some(hasMenu))) { b.insertAdjacentHTML("beforeend", IC.chev); b.setAttribute("aria-haspopup", "true"); b.setAttribute("aria-expanded", "false"); b.classList.add("has-menu"); } });
     const fine = matchMedia("(hover: hover) and (pointer: fine)").matches;
     if (fine) {
-      bar.addEventListener("pointerover", e => { const b = e.target.closest("[data-apanel].has-menu"); if (!b) return; const x = panelOf(b.dataset.apanel); clearTimeout(S.t); clearTimeout(S.hide);
+      bar.addEventListener("pointerover", e => { const b = e.target.closest("[data-agroup].has-menu"); if (!b) return; const x = gOf(b); clearTimeout(S.t); clearTimeout(S.hide);
         if (S.open === x) return; S.t = setTimeout(() => { if (S.pinned && S.open && S.open !== x) S.pinned = false; open(x, false); }, S.open ? 60 : 160); });
       const leave = () => { clearTimeout(S.t); if (S.pinned) return; clearTimeout(S.hide); S.hide = setTimeout(close, 320); };
       bar.addEventListener("pointerleave", leave); el.addEventListener("pointerleave", leave);
@@ -261,26 +301,26 @@
       let lastXY = "";
       el.addEventListener("pointermove", e => {
         const xy = e.clientX + "," + e.clientY; if (xy === lastXY) return; lastXY = xy;
-        const s = e.target.closest("[data-msec]"); if (s) { if (+s.dataset.msec === S.sec) return; clearTimeout(S.st); const k = +s.dataset.msec; S.st = setTimeout(() => { S.sec = k; S.path = []; render(); }, 110); return; }
-        const r = e.target.closest(".mg-it"); if (!r) { clearTimeout(S.st); return; } const g = r.querySelector("[data-mit]"); if (!g) return; const [d, i] = g.dataset.mit.split(":").map(Number);
-        if (S.path[d] === i) { clearTimeout(S.st); return; } clearTimeout(S.st); S.st = setTimeout(() => choose(d, i, true), 160);   // resting on a row with children opens them
       });
     }
     // click a heading: put it on the map and pin its menu (click again to close); tools open straight away
     bar.addEventListener("click", e => {
-      const b = e.target.closest("[data-apanel]"); if (!b) return; e.stopImmediatePropagation(); const x = panelOf(b.dataset.apanel); if (!x) return;
-      if (!hasMenu(x)) { close(); H.openFull(x.id); return; }
-      if (S.open === x && S.pinned) { close(); return; }
-      H.applyMap(x); H.mark && H.mark(x.id); open(x, true);
+      const b = e.target.closest("[data-agroup]"); if (!b) return; e.stopImmediatePropagation(); const g = gOf(b); if (!g) return;
+      if (g.panels.length === 1 && !hasMenu(g.panels[0])) { close(); H.openFull(g.panels[0].id); return; }
+      if (S.open === g && S.pinned) { close(); return; }
+      const x = g.panels.find(hasMenu) || g.panels[0]; H.applyMap(x); H.mark && H.mark(x.id); open(g, true);
     }, true);
     el.addEventListener("click", e => {
       if (!S.spec) return;
-      const t = e.target.closest("[data-msec],[data-mit],[data-mact],[data-mfig],[data-mfull],[data-mmap],[data-mback],[data-msort]"); if (!t) return;
+      const t = e.target.closest("[data-mcol],[data-mtop],[data-mkid],[data-mdeep],[data-mit],[data-mact],[data-mfig],[data-mfull],[data-mmap],[data-mback],[data-msort]"); if (!t) return;
       clearTimeout(S.st);
       if (t.dataset.msort) { const [k, dir] = t.dataset.msort.split("|"); S.sorts[k] = S.sorts[k] === dir ? "" : dir; S.pinned = true; render(); return; }   // 0.12
-      if (t.dataset.msec != null) { S.sec = +t.dataset.msec; S.path = []; S.pinned = true; render(); return; }
-      if (t.dataset.mback != null) { S.path = S.path.slice(0, Math.max(0, S.path.length - 1)); S.pinned = true; render(); return; }
-      if (t.hasAttribute("data-mfull")) { const id = S.open.id; close(); H.openFull(id); return; }
+      if (t.dataset.mcol != null) { const i = +t.dataset.mcol; if (S.cols.has(i) && !t.dataset.msee) { S.cols.delete(i); if (S.sec === i) { S.sec = [...S.cols].pop() ?? 0; S.path = []; S.sel = null; } } else { S.cols.add(i); S.sec = i; S.path = []; S.sel = null; S.hist = []; } S.pinned = true; render(); if (t.dataset.msee) { const d = el.querySelector(".mgc-detail"); if (d) d.scrollIntoView({ block: "nearest", behavior: "smooth" }); } return; }
+      if (t.dataset.mtop != null) { const [i, j] = t.dataset.mtop.split(":").map(Number); S.cols.add(i); S.sec = i; S.path = []; S.sel = j; S.pinned = true; render(); const it = (S.spec.sections[i].items || [])[j]; if (it && !it.children) act(it, "go"); return; }
+      if (t.dataset.mkid != null) { const { out } = lists(), d = out.length - 1, sel = out[d].items[S.sel], kid = (kidsOf(sel) || [])[+t.dataset.mkid]; if (!kid) return; if (kid.children) { (S.hist = S.hist || []).push({ path: S.path.slice(), sel: S.sel }); S.path = S.path.concat(S.sel, +t.dataset.mkid); S.sel = null; S.pinned = true; render(); return; } act(kid, "go"); return; }
+      if (t.hasAttribute("data-mdeep")) { if (S.sel == null) return; (S.hist = S.hist || []).push({ path: S.path.slice(), sel: S.sel }); S.path = S.path.concat(S.sel); S.sel = null; S.pinned = true; render(); return; }
+      if (t.dataset.mback != null) { const h = (S.hist || []).pop(); if (h) { S.path = h.path; S.sel = h.sel; } else { const last = S.path[S.path.length - 1]; S.path = S.path.slice(0, Math.max(0, S.path.length - 1)); S.sel = last != null ? last : null; } S.pinned = true; render(); return; }
+      if (t.dataset.mfull) { const id = t.dataset.mfull; close(); H.openFull(id); return; }
       if (t.hasAttribute("data-mmap")) { H.applyMap(S.open); return; }
       if (t.dataset.mit != null) { const [d, i] = t.dataset.mit.split(":").map(Number); return choose(d, i, false); }
       if (t.dataset.mact) { const [d, i] = t.dataset.mi.split(":").map(Number), it = lists().out[d].items[i]; return act(it, t.dataset.mact); }
@@ -295,8 +335,8 @@
       else if (e.key === "ArrowLeft" && d > 0) { e.preventDefault(); S.path = S.path.slice(0, d - 1); render(); const p = el.querySelector(`[data-mit="${d - 1}:${S.path[d - 1] != null ? S.path[d - 1] : 0}"]`); if (p) p.focus(); }
       else if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); const n = el.querySelector(`[data-mit="${d}:${i + (e.key === "ArrowDown" ? 1 : -1)}"]`); if (n) n.focus(); }
     }, true);
-    bar.addEventListener("keydown", e => { const b = e.target.closest("[data-apanel].has-menu"); if (b && e.key === "ArrowDown") { e.preventDefault(); open(panelOf(b.dataset.apanel), true); const f = el.querySelector(".mg-sec, .mg-go"); if (f) f.focus(); } });
-    if (ctx.onDate) ctx.onDate(() => { if (S.open && !el.hidden) { const p = S.path.slice(); S.spec = specFor(S.open); S.path = p; render(); } });
+    bar.addEventListener("keydown", e => { const b = e.target.closest("[data-agroup].has-menu"); if (b && e.key === "ArrowDown") { e.preventDefault(); open(gOf(b), true); const f = el.querySelector(".mgc-h, .mg-go"); if (f) f.focus(); } });
+    if (ctx.onDate) ctx.onDate(() => { if (S.open && !el.hidden) { const p = S.path.slice(); S.spec = groupSpec(S.open); S.path = p; render(); } });
   }
-  window.AtlasMenu = { init, B, refresh, full: id => { close(); H.openFull(id); }, open: id => { const x = panelOf(id); if (x) open(x, true); }, openAt, close, get state() { return S; }, specFor: id => specFor(panelOf(id)), act: (it, k) => act(it, k), kidsOf };
+  window.AtlasMenu = { groupSpecAt: i => groupSpec(groups()[i]), groupHas: (i, id) => { const g = groups()[i]; return !!g && g.panels.some(p => p.id === id); }, init, B, refresh, full: id => { close(); H.openFull(id); }, open: id => { const x = panelOf(id); if (x) open(x, true); }, openAt, close, get state() { return S; }, specFor: id => specFor(panelOf(id)), act: (it, k) => act(it, k), kidsOf };
 })();

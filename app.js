@@ -5438,6 +5438,22 @@
     const fitTop = () => { const h = head.offsetHeight; document.documentElement.style.setProperty("--ahh", h + "px"); if (WM.setTop) WM.setTop(h + 8); map.resize(); };
     requestAnimationFrame(fitTop); window.addEventListener("resize", fitTop); setTimeout(fitTop, 600);
   }
+  // 0.13: how each app's panels are grouped under its headings (Atlas design/menus/Menus (final).md)
+  const GROUPS_BY_APP = {
+    markets: [["Trade", ["trade", "products", "partners", "ports"]], ["Investment", ["investment", "income"]], ["Markets & companies", ["overview", "companies", "places", "rates", "traders", "marketplace"]], ["Political money", ["money"]]],
+    economic: [["The economy", ["indicators", "forecasts", "calendar", "rankings", "dashboard"]], ["Places & regions", ["regions", "industries", "commuting"]], ["Public spending", ["spending"]], ["Rates & sterling", ["rates"]]],
+    politics: [["Elections", ["election", "seat", "projection", "referendums"]], ["Councils", ["councils"]], ["Money & integrity", ["money", "integrity"]], ["Protests & news", ["protests", "news"]]],
+    social: [["Community", ["feed", "post", "events", "market", "messages", "profile"]], ["People", ["people", "change", "migration", "census"]], ["Deprivation & support", ["deprivation", "support"]]],
+    health: [["Health here", ["overview", "deaths", "spine"]], ["Inequality", ["inequality", "rankings", "local"]]],
+    transport: [["Getting around", ["directions", "reach", "fifteen", "draw", "trails"]], ["Stations & data", ["hubs", "planner"]]],
+    environment: [["Hazards", ["floods", "coast", "heat", "timeline"]], ["Nature", ["conservation"]], ["Climate & air", ["climate"]], ["Sources", ["sources"]]],
+  };
+  function appGroups(app) {
+    const spec = app.groups || GROUPS_BY_APP[app.id], used = new Set(), out = [];
+    (spec || []).forEach(g => { const label = g.label || g[0], ids = g.panels || g[1], ps = ids.map(id => app.panels.find(p => p.id === id)).filter(Boolean); ps.forEach(p => used.add(p.id)); if (ps.length) out.push({ label, panels: ps }); });
+    app.panels.filter(p => !used.has(p.id)).forEach(p => out.push({ label: p.title, panels: [p] }));
+    return out;
+  }
   function bootApp() {
     if (!APP_ID) return;
     if (!APP) { toast("There's no such app: showing Atlas Multi."); return; }
@@ -5448,11 +5464,16 @@
       const w = WM.make({ type: "app-na", title: APP.name + ": not available yet", html: `<p>No ${esc(PER[APP.perspective].name.toLowerCase())} data is loaded yet, so this app has nothing to show.</p>${(PER[APP.perspective].planned || []).length ? `<p>Planned:</p><ul>${PER[APP.perspective].planned.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}<p><a href="${location.pathname}">Back to Atlas Multi</a></p>` });
       WM.open(w.el); return;
     }
-    bar.innerHTML = [...APP.panels, ...APP.tools].map(x => `<button class="ah-link${APP.tools.includes(x) ? " tool" : ""}" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("");
+    // 0.13: headings are groups of panels (Markets: Trade · Investment · Markets & companies · Political money); every panel
+    // stays reachable: a panel not named in a group gets its own heading. A group of one panel keeps data-apanel.
+    const GROUPS = appGroups(APP);
+    bar.innerHTML = GROUPS.map((g, i) => `<button class="ah-link ah-group" data-agroup="${i}"${g.panels.length === 1 ? ` data-apanel="${g.panels[0].id}"` : ""} title="${esc(g.panels.map(x => x.title).join(", "))}">${esc(g.label)}</button>`).join("")
+      + APP.tools.map(x => `<button class="ah-link tool" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("");
+    APP.groupsNow = GROUPS;
     bar.hidden = false;
     // 0.11: headings drop down menus (menu.js), which include a panel's own tabs (0.10.1); forms and tools still open
     // their panel straight away, and those with tabs keep the small tab menu on hover
-    if (window.AtlasMenu) AtlasMenu.init(CTX, APP, { openFull: id => { hideTabMenu(); openFromBar(id); }, applyMap: x => { if (x.map) applyPanelMap(x); else if (x.onOpen) { try { x.onOpen(CTX); } catch (e) { console.error(e); } } }, mark: id => bar.querySelectorAll("[data-apanel]").forEach(b => b.classList.toggle("cur", b.dataset.apanel === id)), tabs: x => tabsOf(x), openTab: (id, k) => openPanelTab(id, k) });
+    if (window.AtlasMenu) AtlasMenu.init(CTX, APP, { groups: () => APP.groupsNow, openFull: id => { hideTabMenu(); openFromBar(id); }, applyMap: x => { if (x.map) applyPanelMap(x); else if (x.onOpen) { try { x.onOpen(CTX); } catch (e) { console.error(e); } } }, mark: id => bar.querySelectorAll("[data-apanel]").forEach(b => b.classList.toggle("cur", b.dataset.apanel === id)), tabs: x => tabsOf(x), openTab: (id, k) => openPanelTab(id, k) });
     bar.addEventListener("click", e => { const b = e.target.closest("[data-apanel]"); if (b) { hideTabMenu(); openFromBar(b.dataset.apanel); } });   // headings with a dropdown never get here (menu.js handles them first)
     bar.querySelectorAll("[data-apanel]").forEach(b => { const x = [...APP.panels, ...APP.tools].find(p => p.id === b.dataset.apanel); if (x && tabsOf(x) && !b.classList.contains("has-menu")) b.classList.add("has-tabs"); });
     bar.addEventListener("mouseover", e => { const b = e.target.closest("[data-apanel]"); if (b && !b.classList.contains("has-menu")) showTabMenu(b); else hideTabMenu(); });

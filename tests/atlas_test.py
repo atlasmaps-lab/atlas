@@ -80,7 +80,14 @@ class Report:
 def open_panel(page, pid):
     """0.11: a heading in an app's bar drops down a menu; open its full panel from there (tools open straight away)."""
     pid = str(pid).strip("'\"")
-    page.click(f"#appbar [data-apanel='{pid}']")
+    # 0.13: headings are groups of panels; a panel is opened from its group's menu ("Open the … panel ›")
+    if page.locator(f"#appbar [data-apanel='{pid}']").count():
+        page.click(f"#appbar [data-apanel='{pid}']")
+    else:
+        g = page.evaluate("id => { const gs = (window.AtlasMenu && AtlasMenu.state && document.querySelectorAll('#appbar [data-agroup]')) || []; for (const b of gs) { if ((b.title || '').length && AtlasMenu.groupHas && AtlasMenu.groupHas(+b.dataset.agroup, id)) return b.dataset.agroup; } return null; }", pid)
+        if g is None:
+            page.evaluate("id => AtlasMenu.full(id)", pid); page.wait_for_timeout(200); return
+        page.click(f"#appbar [data-agroup='{g}']")
     page.wait_for_timeout(120)
     if page.evaluate("() => { const m = document.getElementById('mega'); return !!m && !m.hidden; }"):
-        page.click("#mega [data-mfull]")
+        page.click(f"#mega [data-mfull='{pid}']")
