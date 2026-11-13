@@ -1822,14 +1822,19 @@
     return out.filter(r => r.v > 0 && TRD.cty[r.c] && TRD.cty[r.c].ll);
   }
   let tradeAnim = null, tradeKey = "";
+  const TRK = { rg: null, sum: {} };   // 0.13: the key's route regions: value by region, and the one picked out
+  function tradePick() { const c = TRK.rg ? TR_COL[TRK.rg] : null;
+    [["trade-exp", 0.72], ["trade-imp", 0.6]].forEach(([l, o]) => map.getLayer(l) && map.setPaintProperty(l, "line-opacity", c ? ["case", ["==", ["get", "col"], c], 0.9, 0.05] : o));
+    if (map.getLayer("trade-dots")) map.setPaintProperty("trade-dots", "circle-opacity", c ? ["case", ["==", ["get", "col"], c], 1, 0.08] : 1); }
   function syncTrade(on) {
     const flows = ["exp", "imp"].filter(f => on.has("trade_routes_" + f));
     ["trade-ports", "trade-dots"].forEach(l => map.getLayer(l) && map.setLayoutProperty(l, "visibility", flows.length ? "visible" : "none"));
-    if (!flows.length || !TRD) { if (tradeAnim) { clearTimeout(tradeAnim); tradeAnim = null; } tradeKey = ""; return; }
+    if (!flows.length || !TRD) { if (tradeAnim) { clearTimeout(tradeAnim); tradeAnim = null; } tradeKey = ""; if (TRK.rg) { TRK.rg = null; tradePick(); } return; }
     const need = TRADE.code && TRADE.code.length > 2 && !window.ATLAS_TRADE_DETAIL;
     if (need) { loadData("data/trade_detail.js", "ATLAS_TRADE_DETAIL").then(() => syncNetworks()); return; }
     const key = flows.join() + "|" + (TRADE.code || ""); if (key === tradeKey) return; tradeKey = key;
-    const R = tradeRoutes(flows), feats = R.map(r => { const a = TRD.ports[r.p].ll, b = TRD.cty[r.c].ll, g = r.f === "exp" ? arc(a, b, 36) : arc(b, a, 36);
+    const R = tradeRoutes(flows); TRK.sum = {}; R.forEach(r => { const g = TRD.cty[r.c].rg || "Other", o = TRK.sum[r.f] = TRK.sum[r.f] || {}; o[g] = (o[g] || 0) + r.v; });
+    const feats = R.map(r => { const a = TRD.ports[r.p].ll, b = TRD.cty[r.c].ll, g = r.f === "exp" ? arc(a, b, 36) : arc(b, a, 36);
       return { type: "Feature", properties: { f: r.f, v: r.v, col: TR_COL[TRD.cty[r.c].rg] || TR_COL.Other, p: r.p, c: r.c }, geometry: { type: "LineString", coordinates: g } }; });
     map.getSource("trade-lines").setData({ type: "FeatureCollection", features: feats });
     const pv = {}; R.forEach(r => { pv[r.p] = (pv[r.p] || 0) + r.v; });
@@ -2214,13 +2219,13 @@
     const fillMs = [PL.hue, PL.shade, PL.grid, PL.diverge].filter(Boolean), hatch = PS.hatch !== false;
     let smax = 0; const sv = PL.size ? codes.map(c => { const v = val(PL.size, c); if (v > smax) smax = v; return v; }) : null;
     (LAST.smax = LAST.smax || {})[level] = smax;   // 0.8.2: the key labels its circles with real values
-    const present = new Set(), presentB = new Set(), isoS = state.iso;
+    const present = new Set(), presentB = new Set(), isoS = state.iso, hcnt = {};
     codes.forEach((c, i) => {
       const hv = val(PL.hue, c), shv = val(PL.shade, c), grv = val(PL.grid, c), dvv = val(PL.diverge, c), dtv = val(PL.dots, c), bgv = val(PL.badge, c);
       const k = { hue: hv, bg: bgv, sh: shv != null ? EN.classOf(shv, shB) : null, gr: grv != null ? EN.classOf(grv, grB) : null, dv: dvv != null ? EN.classOf(dvv, dvB) : null, dt: dtv != null && (PL.dots.nature !== "count" || dtv > 0) ? EN.classOf(dtv, dtB) : null };
       let fc = "";
       const fills = !!(PL.hue || PL.grid || PL.shade || PL.diverge);
-      if (PL.hue) { if (hv != null) { present.add(hv); const b = PL.hue.colour(hv); fc = PL.shade ? (k.sh != null ? shadeOf(b, k.sh, 5) : mix(b, "#ffffff", 0.88)) : b; } }
+      if (PL.hue) { if (hv != null) { present.add(hv); hcnt[hv] = (hcnt[hv] || 0) + 1; const b = PL.hue.colour(hv); fc = PL.shade ? (k.sh != null ? shadeOf(b, k.sh, 5) : mix(b, "#ffffff", 0.88)) : b; } }
       else if (PL.grid) { if (k.sh != null && k.gr != null) fc = grid[k.gr][k.sh]; }
       else if (PL.shade) { if (k.sh != null) fc = rampOf(PL.shade)[k.sh]; }
       else if (PL.diverge) { if (k.dv != null) fc = DIV[k.dv]; }
@@ -2237,7 +2242,7 @@
         try { map.setFeatureState({ source: "pt-" + level, id: c }, { dr: v != null && v > 0 && smax > 0 ? 3 + 19 * Math.sqrt(v / smax) : 0, dc: PL.size ? PER[PL.size.p].hue : "#000", br: bgv != null ? 5.5 : 0, bc: bgv != null ? PL.badge.colour(bgv) : "#000", dim }); } catch (e) {}
       }
     });
-    LAST.present[level] = present; LAST.presentB[level] = presentB;
+    LAST.present[level] = present; LAST.presentB[level] = presentB; (LAST.cnt = LAST.cnt || {})[level] = hcnt;
   }
   function repaint() {
     curPlan = EN.plan(planMetrics(), PS.prefs); syncRange();
@@ -2266,7 +2271,12 @@
   const rampOf = m => { const c = PS.mcol && PS.mcol[m.id]; return c ? [mix(c, "#ffffff", 0.86), mix(c, "#ffffff", 0.6), mix(c, "#ffffff", 0.32), c, mix(c, "#000000", 0.32)] : PER[m.p].ramp; };
   const colPick = m => EN.isNum(m) ? `<label class="mcol" title="Choose the colour ${esc(m.label)} is drawn in"><input type="color" data-mcol="${m.id}" value="${(PS.mcol && PS.mcol[m.id]) || PER[m.p].ramp[3]}"><span class="mcol-sw" style="background:${(PS.mcol && PS.mcol[m.id]) || PER[m.p].ramp[3]}"></span></label>${PS.mcol && PS.mcol[m.id] ? `<button class="lnk" data-mcolreset="${m.id}" title="Back to the perspective's colour">reset</button>` : ""}` : "";
   const lhead = (m, extra) => `<h5 style="--c:${PER[m.p].hue}">${svgIcon(m.p)}<span>${esc(m.label)}</span>${infoBtn(m.id)}${colPick(m)}${picker(m)}${chooser(m)}${extra || ""}<button class="lrm" data-lrm="${m.id}" title="Take ${esc(m.label)} off the map" aria-label="Remove ${esc(m.label)}">×</button></h5>`;
-  const isoAttr = (ch, v) => { const on = state.iso && state.iso.ch === ch && JSON.stringify(state.iso.v) === JSON.stringify(v); return `data-iso='${esc(JSON.stringify({ ch, v }))}' class="iso${on ? " on" : ""}"`; };
+  const isoAttr = (ch, v, cls) => { const on = state.iso && state.iso.ch === ch && JSON.stringify(state.iso.v) === JSON.stringify(v); return `data-iso='${esc(JSON.stringify({ ch, v }))}' class="iso${cls ? " " + cls : ""}${on ? " on" : ""}"`; };
+  // 0.13: the interactive key. A row per category: swatch, name, a bar that fills in, the figure and its share; click picks it out
+  const keyRows = (rows, note) => { const tot = rows.reduce((a, r) => a + (r.v || 0), 0), mx = Math.max(1e-9, ...rows.map(r => r.v || 0));
+    return `<div class="keyr${rows.some(r => r.on) ? " picking" : ""}">${rows.map((r, i) => `<div ${r.attr} role="button" tabindex="0" style="--i:${i}" title="${esc(r.on ? "Click again to show everything" : "Pick out " + r.name + " on the map")}">
+      <i class="sw${r.line ? " ln" + (r.dash ? " dash" : "") : ""}" style="${r.line ? "--c" : "background"}:${r.col}"></i><span class="key-n">${esc(r.name)}</span>
+      ${r.v != null ? `<span class="key-bar"><i class="atl-fill" style="width:${(100 * r.v / mx).toFixed(1)}%;background:${r.col}"></i></span><span class="key-v">${esc(r.fv ? r.fv(r.v) : fmtInt(r.v))}</span><span class="key-s">${tot ? (r.v > 0 && 100 * r.v / tot < 0.5 ? "<1%" : Math.round(100 * r.v / tot) + "%") : ""}</span>` : ""}</div>`).join("")}</div>${note ? `<div class="note">${esc(note)}</div>` : ""}`; };
   function ticks(m, level, n) {
     const b = breaksFor(m, level, n); const f = m.fmt || String;
     const compact = v => { const pre = String(f(v)).startsWith("£") ? "£" : "", a = Math.abs(v); return pre + (a >= 1e9 ? (v / 1e9).toFixed(1) + "bn" : a >= 1e6 ? (v / 1e6).toFixed(1) + "m" : a >= 1e4 ? Math.round(v / 1e3) + "k" : a >= 1e3 ? (v / 1e3).toFixed(1) + "k" : null); };
@@ -2344,7 +2354,8 @@
         ${ticks(PL.shade, level, 5)}<div class="note">Colour = ${esc(PL.hue.label.toLowerCase())}; lighter or darker = ${esc(PL.shade.label.toLowerCase())}. Click a square to show only those areas.</div></div></div>`);
     } else if (PL.hue) {
       const ks = cats(PL.hue, LAST.present[level]);
-      parts.push(`<div class="lg">${lhead(PL.hue)}${mpNote(PL.hue)}<div class="cats2">${ks.map(k => `<span ${isoAttr("hue", k)}><i class="sw" style="background:${PL.hue.colour(k)}"></i>${esc(PL.hue.catName(k))}</span>`).join("") || `<span style="color:var(--ink-3)">No records at this date</span>`}</div></div>`);
+      const cnt = (LAST.cnt || {})[level] || {}, on = k => !!state.iso && state.iso.ch === "hue" && JSON.stringify(state.iso.v) === JSON.stringify(k);
+      parts.push(`<div class="lg">${lhead(PL.hue)}${mpNote(PL.hue)}${ks.length ? keyRows(ks.map(k => ({ attr: isoAttr("hue", k, "key-r"), col: PL.hue.colour(k), name: PL.hue.catName(k), v: cnt[k] || 0, on: on(k), fv: v => fmtInt(v) + (v === 1 ? " area" : " areas") })).sort((a, b) => b.v - a.v), "Click a row to pick it out on the map; click again to show all.") : `<div class="cats2"><span style="color:var(--ink-3)">No records at this date</span></div>`}</div>`);
     }
     if (PL.grid && PL.shade) {
       const n = PS.biv.n, g = bivGrid(PS.biv.pal, n), bx = breaksFor(PL.shade, level, n), by = breaksFor(PL.grid, level, n);
@@ -2373,7 +2384,8 @@
         commute_lines: [["#13876b", "Going out to work"], ["#7b4fa6", "Coming in to work"]],
         trade_routes_exp: Object.entries(TR_COL).filter(([k]) => k !== "Other").map(([k, c]) => [c, k]), trade_routes_imp: Object.entries(TR_COL).filter(([k]) => k !== "Other").map(([k, c]) => [c, k, 1]),
         inf_freight: Object.entries((window.ATLAS_FREIGHT || {}).colours || { EU: "#2b6cb0", "Other Europe & Mediterranean": "#7b4fa6", Americas: "#c0392b", Asia: "#e08a1e", Africa: "#2e8b57", Australasia: "#0f8b8d" }).map(([k, c]) => [c, k]) };
-      PL.lines.forEach(m => parts.push(`<div class="lg">${lhead(m)}<div class="cats2">${(SW[m.id] || []).map(([c, l, dash]) => `<span><i class="sw ln${dash ? " dash" : ""}" style="--c:${c}"></i>${esc(l)}</span>`).join("")}</div>${m.id.startsWith("trade_routes_") ? tradeLegend(m) : ""}${m.id === "commute_lines" ? commuteLegend() : ""}${m.id === "inf_freight" ? `<div class="note">Lines run to each partner country's main port; moving dots show the flow (more dots, more tonnes). ${esc((window.ATLAS_FREIGHT || {}).year || "")}, DfT.</div>` : ""}${plain && m.valid && m.valid() ? `<div class="note">${esc(m.valid())}</div>` : ""}</div>`));
+      const trRows = m => { const f = m.id.slice(-3), sum = (TRK.sum[f] || {}); return keyRows((SW[m.id] || []).map(([c, l, dash]) => ({ attr: `data-trrg="${esc(l)}" class="key-r${TRK.rg === l ? " on" : ""}"`, col: c, name: l, line: 1, dash, v: sum[l] || 0, on: TRK.rg === l, fv: fmtGBP })).sort((a, b) => b.v - a.v), "Click a region to pick out its routes; click again to show all."); };
+      PL.lines.forEach(m => parts.push(`<div class="lg">${lhead(m)}${m.id.startsWith("trade_routes_") && TRD ? trRows(m) : `<div class="cats2">${(SW[m.id] || []).map(([c, l, dash]) => `<span><i class="sw ln${dash ? " dash" : ""}" style="--c:${c}"></i>${esc(l)}</span>`).join("")}</div>`}${m.id.startsWith("trade_routes_") ? tradeLegend(m) : ""}${m.id === "commute_lines" ? commuteLegend() : ""}${m.id === "inf_freight" ? `<div class="note">Lines run to each partner country's main port; moving dots show the flow (more dots, more tonnes). ${esc((window.ATLAS_FREIGHT || {}).year || "")}, DfT.</div>` : ""}${plain && m.valid && m.valid() ? `<div class="note">${esc(m.valid())}</div>` : ""}</div>`));
     }
     if (PL.heat && PL.heat.id === "protest_crowd") {   // 0.8.2: crowd size heat, with the numbers
       parts.push(`<div class="lg">${lhead(PL.heat)}<div class="seg sm" role="group" aria-label="Time window">${[[365, "1y"], [1826, "5y"], [3652, "10y"], [99999, "All"]].map(([w, l]) => `<button data-win="${w}" class="${PS.win === w ? "on" : ""}">${l}</button>`).join("")}</div>
@@ -2479,6 +2491,7 @@
     const ba = e.target.closest("[data-bdall]"); if (ba) { BDK.all[ba.dataset.bdall] = !BDK.all[ba.dataset.bdall]; renderLegend(); return; }
     const vp = e.target.closest("[data-vskpick]"); if (vp) { PS.pick[vp.dataset.vskpick] = vp.dataset.p; for (const k in qCache) if (k.startsWith(vp.dataset.vskpick + "|")) delete qCache[k]; repaint(); return; }
     if (e.target.closest("[data-trclear]")) { setTradeProduct(null); return; }
+    const trg = e.target.closest("[data-trrg]"); if (trg) { TRK.rg = TRK.rg === trg.dataset.trrg ? null : trg.dataset.trrg; tradePick(); renderLegend(); toast(TRK.rg ? `Showing routes to ${TRK.rg}. Click again to show all.` : "Showing every route."); return; }
     const pc = e.target.closest("[data-prcard]"); if (pc) { openProtestCard(+pc.dataset.prcard); return; }
     const i = e.target.closest("[data-iso]");
     if (i) { const v = JSON.parse(i.dataset.iso); state.iso = state.iso && JSON.stringify(state.iso) === JSON.stringify(v) ? null : v; LEVELS.forEach(paintLevel); renderLegend(); toast(state.iso ? "Showing only those areas. Click again to show all." : "Showing all areas."); return; }
@@ -2489,6 +2502,7 @@
     if (e.target.closest("[data-bivswap]")) { const a = curPlan.shade, b = curPlan.grid; if (a && b) { PS.prefs[a.id] = "grid"; PS.prefs[b.id] = "shade"; repaint(); toast("Axes swapped."); } return; }
     const w = e.target.closest("[data-win]"); if (w) { PS.win = +w.dataset.win; for (const k in qCache) if (k.includes("|") && /protest/.test(k)) delete qCache[k]; repaint(); }
   });
+  legend.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target.closest(".key-r")) { e.preventDefault(); e.target.closest(".key-r").click(); } });   // 0.13
   legend.addEventListener("input", e => {   // 0.9: find a category in a long breakdown
     const q = e.target.closest("[data-bdq]"); if (!q) return; BDK.q[q.dataset.bdq] = q.value; const pos = q.selectionStart;
     clearTimeout(legend._bdq); legend._bdq = setTimeout(() => { renderLegend(); const n = legend.querySelector(`[data-bdq="${q.dataset.bdq}"]`); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 180);
@@ -4755,7 +4769,8 @@
       case "analysis": { const r = withDate(it.cfg.date || it.date, () => anResult(it.cfg, w)); return `<div class="an-res">${it.cfg.trim ? (r.trim || "").replace(/<button[^>]*>.*?<\/button>/g, "") : ""}${r.html}</div>`; }
       case "card": return `<div class="wscard">${it.html}</div>`;
       case "track": { const sp = window.AtlasCard && M[it.metric] ? withDate(TODAY, () => AtlasCard.metric(it.metric, it.code)) : null; if (!sp) return `<div class="aempty">This measure isn't loaded in this app.</div>`;   // 0.13: a figure you pinned, always at its latest
-        return `<div class="wstrack">${sp.figs.filter(Boolean).map(x => `<div><b class="${/▲/.test(x.v) ? "up" : /▼/.test(x.v) ? "down" : ""}">${esc(x.v)}</b><span>${esc(x.l)}</span></div>`).join("")}</div><div class="wsmeta">${esc(sp.source || "")}${sp.when ? ` · ${esc(sp.when)}` : ""}</div>`; }
+        const ls = sp.lastStep, lsd = ls && ls.d != null && isFinite(ls.d) ? ls.d : null;
+        return `<div class="wstrack">${sp.figs.filter(Boolean).map(x => `<div><b class="${/▲/.test(x.v) ? "up" : /▼/.test(x.v) ? "down" : ""}">${esc(x.v)}</b><span>${esc(x.l)}</span></div>`).join("")}</div>${ls ? `<div class="wstrack-rel">${lsd != null ? `<b class="${lsd > 0 ? "up" : lsd < 0 ? "down" : ""}">${lsd > 0 ? "▲" : lsd < 0 ? "▼" : ""} ${Math.abs(lsd).toFixed(Math.abs(lsd) < 10 ? 1 : 0)}${ls.isP ? " pt" : "%"}</b> on the last release (${esc(ls.from)} to ${esc(ls.at)})<span class="vr"></span>` : ""}Next: the figure for ${esc(ls.next)}</div>` : ""}<div class="wsmeta">${esc(sp.source || "")}${sp.when ? ` · ${esc(sp.when)}` : ""}</div>`; }
       case "tile": return tileSVG(it.codes, it.fills, w, Math.max(160, it.h - 120)) + `<div class="wsmeta">${it.codes.map(c => esc(nameOf(c))).join(" · ")}${it.lines ? `</div><ul class="extra">${it.lines}</ul>` : "</div>"}`;
       case "shape": return window.AtlasShape ? AtlasShape.svg(it.shape, w, Math.max(160, it.h - 70)) : "";   // 0.12: a river, flood, coast or park as its own tile
       case "shot": return `<img class="wsshot" src="${it.src}" alt="${esc(it.title)}">`;
