@@ -2668,7 +2668,7 @@
       state.date = nd; dateIn.value = dmy(nd); syncPcon();
       if (!quiet) toast(`The date moved to ${longDate(nd)}: what's on the map has data from ${shortDate(TB.lo)} to ${TB.hi >= TODAY ? "today" : shortDate(TB.hi)}.`);
     }
-    slider.value = monthIdx(state.date); renderMarks();
+    slider.value = monthIdx(state.date); renderMarks(); if (window.AtlasTimebar) AtlasTimebar.update();
   }
   function setDate(d, opts) {
     d = d < viewLo() ? viewLo() : d > viewHi() ? viewHi() : d;
@@ -2681,7 +2681,7 @@
     if (!cpanel.hidden && CHART.drawn) renderChartBody();
     renderTray(); if (!$("cmp").hidden) renderCmp(); refreshGroupCards();
     if (pmOpen) renderPMenu(); if (!$("browse").hidden) renderLevelPicker();
-    notifyApps();
+    notifyApps(); if (window.AtlasTimebar) AtlasTimebar.update();
   }
   slider.addEventListener("input", () => { let d = +slider.value >= +slider.max ? viewHi() : +slider.value <= +slider.min ? viewLo() : fromMonthIdx(+slider.value); if (PS.step > 1 && d !== viewHi() && d !== viewLo()) d = Math.round(+d.slice(0, 4) / PS.step) * PS.step + "-07-01"; setDate(d); });
   dateIn.addEventListener("keydown", e => { if (e.key === "Escape") { dateIn.blur(); return; } if (e.key === "Enter") { const d = parseDMY(dateIn.value); if (d) { setDate(d); dateIn.blur(); } else { dateIn.classList.add("bad"); toast("Type the date as dd/mm/yy, e.g. 07/05/15"); } } });
@@ -2701,7 +2701,7 @@
       state.playing = setInterval(() => { const n = days.find(d => d > state.date); if (!n) stopPlay(); else setDate(n); }, 900);
       return;
     }
-    state.playing = setInterval(() => { const n = addYears(state.date, PS.step); if (n >= viewHi()) { setDate(viewHi()); stopPlay(); } else setDate(n); }, PS.step === 1 ? 850 : 1300);
+    state.playing = setInterval(() => { const n = PS.step === 0 ? fromMonthIdx(monthIdx(state.date) + 1) : addYears(state.date, PS.step); if (n >= viewHi()) { setDate(viewHi()); stopPlay(); } else setDate(n); }, PS.step === 1 ? 850 : 1300);
   });
   $("steps").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; PS.step = +b.dataset.step; renderSteps(); savePS(); });
   function renderSteps() { document.querySelectorAll("#steps button").forEach(b => b.classList.toggle("on", +b.dataset.step === PS.step)); renderMarks(); }
@@ -2741,6 +2741,11 @@
   dateIn.addEventListener("blur", () => timebar.classList.remove("typing"));
   $("tb-full").addEventListener("click", () => { TB.full = !TB.full; store.set("atlas-18-tb-full", TB.full); syncRange(); if (TB.full) toast("Full range: 1974 to today. Hatched years have no data for what's on the map."); });
   if (window.ResizeObserver) new ResizeObserver(() => renderMarks()).observe($("marks"));
+  // 0.13: the time bar's expanded form and its nine other styles (timebar.js) read the date, range and what's on the map from here
+  if (window.AtlasTimebar) AtlasTimebar.init({ lo: viewLo, hi: viewHi, date: () => state.date, set: d => { stopPlay(); setDate(d); }, play: () => playBtn.click(), playing: () => !!state.playing, monthIdx, fromMonthIdx,
+    measure: () => { const N = window.AtlasNarrative; if (!N) return null; const m = curPlan.notes.filter(n => n.ch).map(n => M[n.id]).find(x => x && x.temporal !== "static" && x.temporal !== "event" && x.nature !== "text"); if (!m) return null;
+      const code = state.focus && P[state.focus] ? state.focus : UKC; let pts = []; try { pts = N.series(m, code) || []; } catch (e) {}
+      return { label: m.label, fmt: N.fmtOf(m), pts, annual: m.temporal === "annual", where: code === UKC ? "the UK" : nameOf(code), topics: window.AtlasCard ? AtlasCard.topicsOf(m.id, m.label, m.group, m.p) : [] }; } });
   function renderTNote() {
     const ms = curPlan.notes.filter(n => n.ch).map(n => M[n.id]), note = $("tnote"), bits = [];
     if (!isNow()) bits.push(`Showing ${longDate(state.date)}`);
