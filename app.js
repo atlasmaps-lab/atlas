@@ -2708,7 +2708,7 @@
   // Labels fit the bar's width: full dates → years → every 2nd, 5th or 10th year → only the start and end. The current date
   // always shows in a label above the handle, and no label overlaps another or runs off the bar.
   const tbCtx = document.createElement("canvas").getContext("2d");
-  const tbW = t => { tbCtx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace"; return Math.ceil(tbCtx.measureText(t).width) + 4; };
+  const tbW = t => { tbCtx.font = "10px \"PT Serif\", Georgia, serif"; return Math.ceil(tbCtx.measureText(t).width) + 4; };
   const monYr = s => new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
   function renderMarks() {
     const marks = $("marks"), W = marks.clientWidth; if (!W) return;
@@ -3267,7 +3267,7 @@
   let MM = null;
   const mk = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
   const ctx2d = document.createElement("canvas").getContext("2d");
-  const textW = (t, bold) => { ctx2d.font = `${bold ? "600 " : ""}12px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`; return ctx2d.measureText(t).width; };
+  const textW = (t, bold) => { ctx2d.font = `${bold ? "600 " : ""}12px "PT Serif", Georgia, serif`; return ctx2d.measureText(t).width; };
   const groupsOf = pid => byGroupOrder([...new Set(METRICS.filter(m => m.p === pid).map(m => m.group))]);
   function actionsFor(m) {
     return [m.nature !== "text" && { id: "map", label: isMapped(m.id) ? "✓ On the map (click to remove)" : "Add to the map" },
@@ -3921,7 +3921,7 @@
     out.width = Math.round((x1 - x0) * sc); out.height = Math.round((y1 - y0) * sc) + Math.round(22 * sc);
     const g = out.getContext("2d"); g.fillStyle = "#ffffff"; g.fillRect(0, 0, out.width, out.height);
     g.drawImage(cv, x0 * sc, y0 * sc, (x1 - x0) * sc, (y1 - y0) * sc, 0, 0, (x1 - x0) * sc, (y1 - y0) * sc);
-    g.fillStyle = "#56656b"; g.font = `${Math.round(11 * sc)}px system-ui, sans-serif`;
+    g.fillStyle = "#56656b"; g.font = `${Math.round(11 * sc)}px "PT Serif", Georgia, serif`;
     const layers = curPlan.notes.filter(n => n.ch).map(n => M[n.id].label).join(", ");
     g.fillText(`Atlas · ${longDate(state.date)}${layers ? " · " + layers : ""} · ONS, Wikipedia, © OpenStreetMap, OS`, 6 * sc, out.height - 7 * sc);
     return out;
@@ -4913,7 +4913,7 @@
     const p = proj(), css = [...document.querySelectorAll("style")].map(s => s.textContent).join("\n");
     const slides = [`<section class="slide"><h1>${esc(p.name)}</h1><p>Atlas · ${esc(longDate(TODAY))}</p></section>`].concat(p.items.slice().sort((a, b) => a.y - b.y || a.x - b.x).map(it => `<section class="slide"><h2>${esc(it.title)}</h2><div class="sbody">${itemBody(Object.assign({}, it, { w: 1000, h: 620 }), 1000)}</div></section>`));
     const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(p.name)}</title><style>${css}
-      body{overflow:hidden;background:#111} .slide{position:absolute;inset:0;display:none;background:#fff;color:#1f2a2e;padding:40px 60px;box-sizing:border-box;overflow:auto} .slide.on{display:block} .slide h1{font-size:44px;margin-top:20vh} .slide h2{font-size:26px;margin:0 0 14px} .sbody{max-width:1040px} .slide .cp-styles,.slide [data-tip]{pointer-events:none} #nav{position:fixed;right:16px;bottom:12px;color:#888;font:12px system-ui;z-index:9}</style></head>
+      body{overflow:hidden;background:#111} .slide{position:absolute;inset:0;display:none;background:#fff;color:#1f2a2e;padding:40px 60px;box-sizing:border-box;overflow:auto} .slide.on{display:block} .slide h1{font-size:44px;margin-top:20vh} .slide h2{font-size:26px;margin:0 0 14px} .sbody{max-width:1040px} .slide .cp-styles,.slide [data-tip]{pointer-events:none} #nav{position:fixed;right:16px;bottom:12px;color:#888;font:12px \"PT Serif\",Georgia,serif;z-index:9}</style></head>
       <body>${slides.join("")}<div id="nav"></div><script>let i=0;const S=[...document.querySelectorAll('.slide')];function go(n){i=Math.max(0,Math.min(S.length-1,n));S.forEach((s,k)=>s.classList.toggle('on',k===i));document.getElementById('nav').textContent=(i+1)+' / '+S.length+'  ← → to move · F full screen';}document.addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key))go(i+1);if(['ArrowLeft','PageUp'].includes(e.key))go(i-1);if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();}if(e.key==='Home')go(0);if(e.key==='End')go(S.length-1);});document.addEventListener('click',e=>go(i+(e.clientX>innerWidth/3?1:-1)));go(0);<\/script></body></html>`;
     download(new Blob([html], { type: "text/html" }), `atlas-${p.name.replace(/\W+/g, "-")}-slides.html`);
     toast("Presentation saved: open the HTML file and use the arrow keys.");
