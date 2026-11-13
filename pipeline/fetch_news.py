@@ -5,8 +5,11 @@ Atlas is a public site, so it only republishes news it is allowed to: official f
   GOV.UK news stories            GOV.UK search API, Open Government Licence v3.0
   Written ministerial statements UK Parliament questions-statements API, Open Parliament Licence v3.0
   Bills and their stages         UK Parliament bills API, Open Parliament Licence v3.0
-Newspapers and broadcasters (BBC, Guardian, etc.) are not scraped: their terms don't allow republishing their articles.
-Each item keeps a title, date, source, link and a short summary (at most about 240 characters).
+  News outlets (0.13)            the outlets' own public RSS feeds (BBC News, The Guardian, Sky News): headline, link,
+                                 date, the feed's short standfirst and its thumbnail, always shown with the outlet's name
+                                 and linking to the original. Articles themselves are never copied.
+Each item keeps a title, date, source, link, a short summary (at most about 240 characters) and, where the source gives
+one, a picture (i).
 
 Rules, applied to the title and summary, tag each item so Atlas can show it in the right places:
   places   any council, 2024 constituency, region or nation named (case-sensitive whole words; a few names that are
@@ -16,7 +19,7 @@ Rules, applied to the title and summary, tag each item so Atlas can show it in t
            education, immigration, defence and foreign affairs
 Standard library only. Run it daily (see .github/workflows/news.yml) or by hand.
 """
-import datetime, html, json, os, re, urllib.parse, urllib.request
+import datetime, email.utils, html, json, os, re, subprocess, urllib.parse, urllib.request, xml.etree.ElementTree as ET
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -39,8 +42,44 @@ PARTIES = {"lab": r"\bLabour\b", "con": r"\bConservatives?\b|\bTor(y|ies)\b", "r
 AMBIGUOUS = {"Reading", "Sale", "Bury", "Wells", "Rugby", "Hyde", "Street", "Deal", "Stone", "March", "Ware", "Bath", "Wigan", "Mole Valley", "Eastleigh", "Copeland", "Richmond"}
 
 
+def fetch(url):
+    try:
+        return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60).read()
+    except Exception:   # e.g. a Python without certificates: fall back to curl
+        return subprocess.run(["curl", "-sL", "-m", "60", "-A", UA["User-Agent"], url], capture_output=True, check=True).stdout
+
+
 def get(url):
-    return json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60))
+    return json.loads(fetch(url))
+
+
+RSS = [("BBC News", "https://feeds.bbci.co.uk/news/politics/rss.xml"), ("BBC News", "https://feeds.bbci.co.uk/news/business/rss.xml"),
+       ("BBC News", "https://feeds.bbci.co.uk/news/uk/rss.xml"), ("BBC News", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml"),
+       ("BBC News", "https://feeds.bbci.co.uk/news/health/rss.xml"), ("BBC News", "https://feeds.bbci.co.uk/news/education/rss.xml"),
+       ("The Guardian", "https://www.theguardian.com/politics/rss"), ("The Guardian", "https://www.theguardian.com/uk/business/rss"),
+       ("The Guardian", "https://www.theguardian.com/uk/environment/rss"), ("The Guardian", "https://www.theguardian.com/society/rss"),
+       ("The Guardian", "https://www.theguardian.com/uk-news/rss"), ("The Guardian", "https://www.theguardian.com/uk/money/rss"),
+       ("Sky News", "https://feeds.skynews.com/feeds/rss/politics.xml"), ("Sky News", "https://feeds.skynews.com/feeds/rss/business.xml"),
+       ("Sky News", "https://feeds.skynews.com/feeds/rss/uk.xml")]
+MEDIA = "{http://search.yahoo.com/mrss/}"
+
+
+def rss_items(outlet, url):
+    out = []
+    for it in ET.fromstring(fetch(url)).iter("item"):
+        t, u = (it.findtext("title") or "").strip(), (it.findtext("link") or "").strip()
+        if not t or not u:
+            continue
+        try:
+            d = email.utils.parsedate_to_datetime(it.findtext("pubDate")).date().isoformat()
+        except Exception:
+            d = datetime.date.today().isoformat()
+        pics = [(int(m.get("width") or 0), m.get("url")) for m in it.findall(MEDIA + "content") + it.findall(MEDIA + "thumbnail") if m.get("url")]
+        pics.sort(key=lambda p: (p[0] > 500, -p[0] if p[0] <= 500 else p[0]))   # the largest up to 500 px wide
+        img = pics[0][1] if pics else ""
+        img = img.replace("/standard/240/", "/standard/480/") if "ichef.bbci.co.uk" in img else img
+        out.append({"d": d, "t": clean(t, 200), "s": outlet, "u": re.sub(r"\?at_medium=RSS.*$", "", u), "x": clean(it.findtext("description")), "i": img})
+    return out
 
 
 def clean(t, n=240):
@@ -69,10 +108,10 @@ def place_rules():
 def main():
     items = []
     try:
-        q = urllib.parse.urlencode({"filter_content_store_document_type": "news_story", "count": 200, "order": "-public_timestamp", "fields": "title,link,description,public_timestamp,organisations"})
+        q = urllib.parse.urlencode({"filter_content_store_document_type": "news_story", "count": 200, "order": "-public_timestamp", "fields": "title,link,description,public_timestamp,organisations,image_url"})
         for r in get("https://www.gov.uk/api/search.json?" + q)["results"]:
             org = (r.get("organisations") or [{}])[0].get("title", "") if r.get("organisations") else ""
-            items.append({"d": r["public_timestamp"][:10], "t": clean(r["title"], 200), "s": "GOV.UK" + (f" · {org}" if org else ""), "u": "https://www.gov.uk" + r["link"], "x": clean(r.get("description"))})
+            items.append({"d": r["public_timestamp"][:10], "t": clean(r["title"], 200), "s": "GOV.UK" + (f" · {org}" if org else ""), "u": "https://www.gov.uk" + r["link"], "x": clean(r.get("description")), "i": r.get("image_url") or ""})
     except Exception as e:
         print("GOV.UK failed:", e)
     try:
@@ -87,6 +126,11 @@ def main():
                                                                "x": f"{st.get('description', 'In progress')} in the {st.get('house', b.get('currentHouse', ''))}" + (" · now an Act" if b.get("isAct") else "") + (" · withdrawn" if b.get("billWithdrawn") else "")})
     except Exception as e:
         print("bills failed:", e)
+    for outlet, url in RSS:   # 0.13: news outlets' public feeds, headline and link only
+        try:
+            items += rss_items(outlet, url)
+        except Exception as e:
+            print(outlet, url, "failed:", e)
     rules, topics, parties = place_rules(), {k: re.compile(v, re.I) for k, v in TOPICS.items()}, {k: re.compile(v) for k, v in PARTIES.items()}
     seen = set(); out = []
     for it in sorted(items, key=lambda x: x["d"], reverse=True):
@@ -97,8 +141,8 @@ def main():
         it["pa"] = [k for k, rx in parties.items() if rx.search(txt)]
         it["tp"] = [k for k, rx in topics.items() if rx.search(txt)]
         out.append(it)
-    data = {"built": datetime.date.today().isoformat(), "sources": "GOV.UK news stories (Open Government Licence v3.0); UK Parliament written statements and bills (Open Parliament Licence v3.0). Tags are added by Atlas's keyword rules.",
-            "topics": list(TOPICS), "items": out[:400]}
+    data = {"built": datetime.date.today().isoformat(), "sources": "GOV.UK news stories (Open Government Licence v3.0); UK Parliament written statements and bills (Open Parliament Licence v3.0); headlines and links from the public RSS feeds of BBC News, The Guardian and Sky News, each linking to the original. Tags are added by Atlas's keyword rules.",
+            "topics": list(TOPICS), "items": out[:1200]}
     with open(os.path.join(ROOT, "data", "news.js"), "w", encoding="utf-8") as fh:
         fh.write("// Generated by pipeline/fetch_news.py. Do not edit by hand.\nwindow.ATLAS_NEWS = ")
         json.dump(data, fh, ensure_ascii=False, separators=(",", ":"))

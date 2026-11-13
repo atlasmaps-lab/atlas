@@ -5331,7 +5331,7 @@
   function syncNewsBubble() { const b = $("news-bubble"), n = newsNow().items.length; b.hidden = !n; b.querySelector(".n").textContent = n > 99 ? "99+" : n; if (newsWin && !newsWin.el.hidden) renderNewsWin(); }
   function renderNewsWin() {
     const { items, why } = newsNow(), N = window.ATLAS_NEWS || {};
-    newsWin.setBody(`<p class="nw2-why">${items.length} items about <b>${esc(why || "this view")}</b>, newest first. Official sources (GOV.UK, UK Parliament), refreshed daily${N.built ? ` (${esc(longDate(N.built))})` : ""}.</p>
+    newsWin.setBody(`<p class="nw2-why">${items.length} items about <b>${esc(why || "this view")}</b>, newest first, from GOV.UK, UK Parliament, BBC News, The Guardian and Sky News (each links to the original), refreshed daily${N.built ? ` (${esc(longDate(N.built))})` : ""}.</p>
       <ul class="nw2-list">${items.map(it => `<li><div class="nw2-meta">${esc(longDate(it.d))} · ${esc(it.s)}</div><a href="${esc(it.u)}" target="_blank" rel="noopener">${esc(it.t)}</a>${it.x ? `<p>${esc(it.x)}</p>` : ""}</li>`).join("")}</ul>`);
   }
   $("news-bubble").addEventListener("click", () => {

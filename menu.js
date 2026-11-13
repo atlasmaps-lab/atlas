@@ -192,6 +192,9 @@
     if (forms.length) secs.push({ label: g.panels.length === forms.length ? `In ${g.label}` : "More here", note: "Each opens its own panel.", items: forms.map(x => ({ label: x.title, sub: x.blurb || "", fn: () => H.openFull(x.id) })), panel: forms[0] });
     // sections with the same name from two panels become one, holding both lists (no row repeated)
     const by = new Map(), merged = []; secs.forEach(sc => { const t = by.get(sc.label); if (!t) { by.set(sc.label, sc); merged.push(sc); return; } const have = new Set((t.items || []).map(it => it.label)); t.items = (t.items || []).concat((sc.items || []).filter(it => !have.has(it.label))); });
+    // 0.13: sections holding exactly the same rows under different names (Export partners, Who buys from us) become one
+    const sig = sc => (sc.items || []).filter(Boolean).map(it => it.label).join("|"), seenSig = new Set();
+    for (let i = 0; i < merged.length; i++) { const k = sig(merged[i]); if (!k) continue; if (seenSig.has(k)) merged.splice(i--, 1); else seenSig.add(k); }
     const seenF = new Set(), figsU = figs.filter(f => { const k = f.label; if (seenF.has(k)) return false; seenF.add(k); return true; });
     return { sections: merged, figures: figsU, links, lede: g.lede || "" };
   };
@@ -204,13 +207,16 @@
     const k = S.anim = (S.anim || 0) + (S.bump ? 1 : 0); S.bump = false;
     const figs = s.figures.slice(0, 4), cols = s.sections, openSet = S.cols;
     const figHTML = figs.map((f, i) => `<button type="button" class="mgc-fig" data-mfig="${i}" style="animation-delay:${i * 50}ms" title="${esc(f.label + ": " + f.value)}"><b>${esc(short(f.value))}</b><span>${esc(f.label)}</span>${f.chg ? `<em class="${f.tone === "good" ? "up" : f.tone === "bad" ? "down" : ""}">${esc(f.chg)}</em>` : ""}</button>`).join("");
+    const focus = openSet.size ? [...openSet].pop() : null;   // 0.13: one section open: it grows to the left over two columns, its news beside it
     const colHTML = cols.map((sc, i) => { const on = openSet.has(i), items = (sc.items || []).filter(Boolean), nums = items.filter(it => numOf(it) != null && numOf(it) > 0), tot = nums.reduce((a, it) => a + numOf(it), 0), share = nums.length >= 2 && nums.length >= items.length * 0.6 && items.some(it => it.colour);
       const top = items.slice(0, 5);
-      return `<section class="mgc-col${on ? " on" : ""}${i === S.sec && on ? " cur" : ""}" style="animation-delay:${80 + i * 60}ms" data-msec="${i}">
+      if (focus != null && i !== focus) return "";
+      return `<section class="mgc-col${on ? " on" : ""}${i === S.sec && on ? " cur" : ""}${focus === i ? " mgc-wide" : ""}" style="animation-delay:${focus === i ? 0 : 80 + i * 60}ms" data-msec="${i}">
         <button type="button" class="mgc-h" data-mcol="${i}" aria-expanded="${on}"><span>${esc(sc.label)}</span><small>${on ? "" : items.length}</small><i class="mgc-arr" aria-hidden="true">›</i></button>
         ${on ? `<div class="mgc-body">${sc.note ? `<p class="mgc-sum">${esc(sc.note)}</p>` : ""}${share ? `<div class="mgc-stack">${nums.slice(0, 8).map(it => `<i class="atl-fill" style="width:${(100 * numOf(it) / tot).toFixed(2)}%;background:${esc(it.colour || "var(--cat1)")}"></i>`).join("")}</div>` : ""}
-          ${top.map((it, j) => `<button type="button" class="mgc-row" data-mtop="${i}:${j}">${it.colour ? `<i class="mg-dot" style="background:${esc(it.colour)}"></i>` : ""}<span>${esc(it.label)}</span><b>${esc(valOf(it).slice(0, 22))}</b></button>`).join("")}
-          ${items.length > 5 ? `<button type="button" class="mgc-see" data-mcol="${i}" data-msee="1">See all ${items.length} ›</button>` : ""}</div>` : ""}</section>`; }).join("");
+          ${(focus === i ? items.slice(0, 8) : top).map((it, j) => `<button type="button" class="mgc-row" data-mtop="${i}:${j}">${it.colour ? `<i class="mg-dot" style="background:${esc(it.colour)}"></i>` : ""}<span>${esc(it.label)}</span><b>${esc(valOf(it).slice(0, 22))}</b></button>`).join("")}
+          ${items.length > (focus === i ? 8 : 5) ? `<button type="button" class="mgc-see" data-mcol="${i}" data-msee="1">See all ${items.length} ›</button>` : ""}</div>` : ""}</section>`; }).join("")
+      + (focus != null ? `<aside class="mgc-news" data-mnews aria-live="polite"><div class="mgc-nh">News<span class="vr"></span><span class="mgc-nabout"></span></div><div class="mgc-nbody"><p class="mgc-nwait">Finding news…</p></div></aside>` : "");
     let detail = "";
     if (openSet.size && cols[S.sec]) {
       const { out } = lists(), d = out.length - 1, L = out[d], sk = `${S.sec}:${S.path.join(".")}`, so = S.sorts[sk] || "", nv = L.items.filter(it => numOf(it) != null).length >= Math.max(3, L.items.length * 0.6);
@@ -228,9 +234,27 @@
     }
     el.innerHTML = `<div class="mg-in mgc" role="menu" aria-label="${esc(g.label)}" data-k="${k}">
       <div class="mgc-top"><div class="mgc-l"><div class="mgc-kick">${esc(APP.short || APP.name.replace(/^Atlas /, ""))}<span class="vr"></span>${esc(g.label)}</div><p class="mgc-lede">${esc(s.lede)}</p></div><div class="mgc-figs">${figHTML}</div></div>
-      ${cols.length ? `<div class="mgc-cols" style="--n:${Math.min(4, cols.length)}">${colHTML}</div>` : ""}${detail}
+      ${cols.length ? `<div class="mgc-cols${focus != null ? " mgc-focus" : ""}" style="--n:${Math.min(4, cols.length)}">${colHTML}</div>` : ""}${detail}
       <div class="mgc-foot">${s.links.map(x => `<button type="button" class="mgc-open" data-mfull="${esc(x.id)}">Open the ${esc(x.title)} panel ›</button>`).join("")}</div></div>`;
     el._figs = figs;
+    if (focus != null) news(g, cols[focus]);
+  }
+  // 0.13: three stories about the open section (or the row chosen in it): the most relevant with its picture, two more
+  // below, smaller and without pictures. Each names its source and links to the original.
+  function news(g, sc) {
+    const box = el.querySelector("[data-mnews]"); if (!box || !window.AtlasNews) { if (box) box.hidden = true; return; }
+    const { out } = lists(), sel = S.sel != null ? (out[out.length - 1].items || [])[S.sel] : null;
+    const strong = [sel && sel.label, out.length > 1 ? out[out.length - 1].title : null, sc.label].filter(Boolean), q = { strong, context: [g.label, APP.short || APP.name.replace(/^Atlas /, "")] };
+    box.querySelector(".mgc-nabout").textContent = strong[0];
+    const key = JSON.stringify(q); box.dataset.q = key;
+    const ago = d => { const n = Math.round((Date.now() - Date.parse(d)) / 864e5); return !isFinite(n) ? "" : n <= 0 ? "Today" : n === 1 ? "Yesterday" : n < 14 ? n + " days ago" : new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
+    const src = it => String(it.s || "").split(" · ").slice(0, 2).join(" · ");
+    const draw = list => { if (box.dataset.q !== key || !box.isConnected) return; const L = list.slice(0, 3);
+      box.querySelector(".mgc-nbody").innerHTML = L.length ? L.map((it, i) => `<a class="mgc-ns${i ? "" : " lead"}" href="${esc(it.u)}" target="_blank" rel="noopener" style="animation-delay:${i * 70}ms">
+          ${!i && it.i ? `<span class="mgc-nimg"><img src="${esc(it.i)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></span>` : ""}<span class="mgc-ntx"><b>${esc(it.t)}</b>${!i && it.x ? `<span class="mgc-nx">${esc(it.x)}</span>` : ""}<small>${esc(src(it))}<span class="vr"></span>${esc(ago(it.d))} ↗</small></span></a>`).join("")
+        : `<p class="mgc-nwait">No recent news found about ${esc(strong[0])}.</p>`; };
+    S.news = S.news || new Map(); if (S.news.has(key)) { draw(S.news.get(key)); return; }
+    AtlasNews.find(q).then(list => { S.news.set(key, list); draw(list); });
   }
   function itemCard(it) {
     if (!it) return null;
@@ -277,7 +301,7 @@
   // open a heading's menu at a path of keys or labels: AtlasMenu.openAt("money", "Parties", ["con", "Biggest donors"])
   function openAt(id, secLabel, keys) {
     const x = panelOf(id); if (!x) return false; S.pinned = false; open(x, true);
-    const si = S.spec.sections.findIndex(sc => sc.panel === x && (sc.label === secLabel || sc.key === secLabel)); if (si < 0) return false; S.sec = si; S.path = []; S.sel = null; S.cols.add(si);
+    const si = S.spec.sections.findIndex(sc => sc.panel === x && (sc.label === secLabel || sc.key === secLabel)); if (si < 0) return false; S.sec = si; S.path = []; S.sel = null; S.cols = new Set([si]);
     (keys || []).forEach((k, d) => { const { out } = lists(), L = out[d]; if (!L) return; const i = L.items.findIndex(it => it.key === k || it.label === k); if (i >= 0) { S.path = S.path.slice(0, d).concat(i); } });
     if (S.path.length) S.sel = S.path.pop();   // the last key is chosen (its preview and next steps), not opened
     render(); return true;
@@ -315,8 +339,8 @@
       const t = e.target.closest("[data-mcol],[data-mtop],[data-mkid],[data-mdeep],[data-mit],[data-mact],[data-mfig],[data-mfull],[data-mmap],[data-mback],[data-msort]"); if (!t) return;
       clearTimeout(S.st);
       if (t.dataset.msort) { const [k, dir] = t.dataset.msort.split("|"); S.sorts[k] = S.sorts[k] === dir ? "" : dir; S.pinned = true; render(); return; }   // 0.12
-      if (t.dataset.mcol != null) { const i = +t.dataset.mcol; if (S.cols.has(i) && !t.dataset.msee) { S.cols.delete(i); if (S.sec === i) { S.sec = [...S.cols].pop() ?? 0; S.path = []; S.sel = null; } } else { S.cols.add(i); S.sec = i; S.path = []; S.sel = null; S.hist = []; } S.pinned = true; render(); if (t.dataset.msee) { const d = el.querySelector(".mgc-detail"); if (d) d.scrollIntoView({ block: "nearest", behavior: "smooth" }); } return; }
-      if (t.dataset.mtop != null) { const [i, j] = t.dataset.mtop.split(":").map(Number); S.cols.add(i); S.sec = i; S.path = []; S.sel = j; S.pinned = true; render(); const it = (S.spec.sections[i].items || [])[j]; if (it && !it.children) act(it, "go"); return; }
+      if (t.dataset.mcol != null) { const i = +t.dataset.mcol; if (S.cols.has(i) && !t.dataset.msee) { S.cols.delete(i); if (S.sec === i) { S.sec = [...S.cols].pop() ?? 0; S.path = []; S.sel = null; } } else { S.cols = new Set([i]); S.sec = i; S.path = []; S.sel = null; S.hist = []; } S.pinned = true; render(); if (t.dataset.msee) { const d = el.querySelector(".mgc-detail"); if (d) d.scrollIntoView({ block: "nearest", behavior: "smooth" }); } return; }
+      if (t.dataset.mtop != null) { const [i, j] = t.dataset.mtop.split(":").map(Number); S.cols = new Set([i]); S.sec = i; S.path = []; S.sel = j; S.pinned = true; render(); const it = (S.spec.sections[i].items || [])[j]; if (it && !it.children) act(it, "go"); return; }
       if (t.dataset.mkid != null) { const { out } = lists(), d = out.length - 1, sel = out[d].items[S.sel], kid = (kidsOf(sel) || [])[+t.dataset.mkid]; if (!kid) return; if (kid.children) { (S.hist = S.hist || []).push({ path: S.path.slice(), sel: S.sel }); S.path = S.path.concat(S.sel, +t.dataset.mkid); S.sel = null; S.pinned = true; render(); return; } act(kid, "go"); return; }
       if (t.hasAttribute("data-mdeep")) { if (S.sel == null) return; (S.hist = S.hist || []).push({ path: S.path.slice(), sel: S.sel }); S.path = S.path.concat(S.sel); S.sel = null; S.pinned = true; render(); return; }
       if (t.dataset.mback != null) { const h = (S.hist || []).pop(); if (h) { S.path = h.path; S.sel = h.sel; } else { const last = S.path[S.path.length - 1]; S.path = S.path.slice(0, Math.max(0, S.path.length - 1)); S.sel = last != null ? last : null; } S.pinned = true; render(); return; }
