@@ -77,7 +77,7 @@ def main():
         page.click("#mega [data-mkey='con']"); page.wait_for_timeout(400)
         page.click("#mega .mg-items[data-depth='1'] .mg-go:has-text('Biggest donors')"); page.wait_for_timeout(400)
         page.click("#mega .mg-items[data-depth='2'] .mg-go >> nth=0"); page.wait_for_timeout(400)
-        cols = js("() => [...document.querySelectorAll('#mega .mg-items .mg-h span')].map(x => x.textContent)")
+        cols = js("() => [...document.querySelectorAll('#mega .mg-items .mg-h > span:not(.mg-sort)')].map(x => x.textContent)")
         rep.check(len(cols) == 3 and cols[0] == "Conservative" and cols[1] == "Biggest donors", f"Parties › Conservative › Biggest donors › a donor, column by column ({cols})")
         rep.check(js("() => !!document.querySelector('#mega .mg-back')"), "…with ‹ Back when the first columns fold away")
         dk = js("() => [...document.querySelectorAll('#mega .mg-items[data-depth=\"3\"] .mg-l')].map(x => x.textContent)")
