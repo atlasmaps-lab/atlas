@@ -127,7 +127,7 @@ def main():
         js("() => document.querySelector('#pc-peek [data-pkcard]').click()"); page.wait_for_timeout(700)
         js("() => [...document.querySelectorAll('.pcwin')].filter(w => !w.hidden).pop().querySelectorAll('.pc-it').forEach(d => d.open = true)"); page.wait_for_timeout(450)
         t = js(CARD)
-        rep.check("The story" in t and "Across the map" in t and "Why it moved" in t and "Global financial crisis" in t, f"Create card: the story, across the map, and why it moved ({t[:120]!r})")
+        rep.check("GDP per head" in t and "Across the map" in t and "Why it moved" in t and "Global financial crisis" in t, f"Create card: the story, across the map, and why it moved ({t[:120]!r})")
         # the number box fits, and charts in panels can become cards
         js("() => AtlasCard.open(AtlasCard.metric('ge_turnout') || AtlasCard.metric('gdp_per_head'))"); page.wait_for_timeout(500)
         rep.check(js("() => [...document.querySelectorAll('.pc-bign b')].every(b => b.scrollWidth <= b.clientWidth + 1)"), "big numbers fit their box")

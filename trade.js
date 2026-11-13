@@ -337,5 +337,6 @@
         open: f => openPartner(f.properties.c) });
     }, 0); },
     overview, products, partners, ports: portsPanel, firms, investment, income, openProduct, openPartner, openPort, showRoutes, PARTNER_EXTRA, gbp,
+    _: { T, node, kids, detail, level, cty, port, gbp, chg, ym, monthAt, short: (t, n) => short(t, n), get D() { return D; } },   // 0.12.1: for trade_story.js
   };
 })();

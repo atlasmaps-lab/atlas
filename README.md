@@ -1,6 +1,40 @@
-# Atlas 0.12 — United Kingdom
+# Atlas 0.12.1 — United Kingdom
 
 Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
+
+## What's new in 0.12.1
+
+Cards that tell a story you can go deeper into, across Atlas.
+
+- **A hierarchy in every card.**
+  - The first item is the lead: bigger, and saying what matters, e.g. "2nd lowest of 294 councils, though up 3.9 years since 2001" rather than repeating the title.
+  - Smaller items sit side by side, and kickers appear only where they add something.
+- **Honest clicks.**
+  - An item is clickable only when something is behind it: more to read, or a way deeper. Otherwise it's flat.
+  - Headline figures lead to the item that explains them.
+- **Going deeper in the same window.** Rows inside an item open the next card in place, with ‹ Back.
+- **Trade, the worked example.** A product group such as Markets › Exports by product › Machinery and transport now says:
+  - what it is worth and its share of everything the UK sells;
+  - what's in it, chapter by chapter, down to single products (jet engines, cars, computers…);
+  - the biggest products, and what moved on the year and so why the total changed;
+  - who buys it, which ports it leaves through, the busiest months and where in the UK it comes from;
+  - what that adds up to: reliance on one product or buyer, the balance with imports, the trend since 2019.
+
+  Every product, at every level, has the same card. HMRC's long names become plain ones ("Jet engines and gas turbines", not "Turbojets, turbopropellers and other gas turbines").
+- **Menus that answer what, who, where and how.** Under a product group:
+  - the full story;
+  - What's in it (down to single products);
+  - Top 15 products;
+  - Who buys it;
+  - What moved most;
+  - Where in the UK.
+- **Every measure's card goes further:**
+  - compared with the region, nation and UK it sits in;
+  - related measures for the same place;
+  - **what goes with it**: the structural conditions (deprivation, health, age, density…) that track it across councils, and whether this place fits the pattern or bucks it;
+  - every place in "Across the map" opens its own card.
+- **Breakdown cards:** everything else in the total, each its own card; regions-only breakdowns list regions (the list was empty).
+- **Menus never show two sections with the same name.** Investment's two "The full panel" sections are one.
 
 ## What's new in 0.12
 

@@ -83,27 +83,34 @@
       const code = o.code || here(), d = ctx.bd.of(id, code) || ctx.bd.of(id, ctx.UKC); if (!d) return null;
       const tot = Object.values(d).reduce((a, b) => a + b, 0), where = ctx.bd.of(id, code) ? (code === ctx.UKC ? "UK" : ctx.nameOf(code)) : "UK";
       const cats = Object.keys(d).filter(k => d[k] > 0).sort((a, b) => d[b] - d[a]);
-      const card = k => () => B.bdCard(id, k);
+      const lvN = !spec.levels || spec.levels.includes("council") ? "Councils" : "Regions and nations";
+      const card = k => () => (spec.cardFor && spec.cardFor(k)) || B.bdCard(id, k);   // 0.12.1: a breakdown can have its own story and paths
       return { label: o.label || spec.label, note: o.note || `Largest first, ${where}. Click one to map its share.`,
         items: cats.slice(0, o.max || 12).map(k => ({ v: d[k], label: spec.name(k), colour: spec.colour(k), sub: `${(100 * d[k] / tot).toFixed(1)}% · ${ctx.bd.fmt(id, d[k])}`, card: card(k), map: { metrics: [id + "_share"], pick: [id, k] },
-          children: () => [{ label: `${spec.name(k)}: the card`, sub: `Here, against the UK, and what it tells us`, card: card(k), map: { metrics: [id + "_share"], pick: [id, k] } },
-            { label: "Where it's largest", sub: "Councils with the biggest share", children: () => B.bdPlaces(id, k, false) }, { label: "Where it's smallest", sub: "Councils with the smallest share", children: () => B.bdPlaces(id, k, true) }] })),
+          children: () => (spec.kidsFor && spec.kidsFor(k)) || [{ label: `${spec.name(k)}: the card`, sub: `Here, against the UK, and what it tells us`, card: card(k), map: { metrics: [id + "_share"], pick: [id, k] } },
+            { label: "Where it's largest", sub: `${lvN} with the biggest share`, children: () => B.bdPlaces(id, k, false) }, { label: "Where it's smallest", sub: `${lvN} with the smallest share`, children: () => B.bdPlaces(id, k, true) }] })),
         figures: cats.slice(0, 4).map(k => ({ label: spec.name(k), value: (100 * d[k] / tot).toFixed(1) + "%", chg: where, colour: spec.colour(k), card: card(k), map: { metrics: [id + "_share"], pick: [id, k] } })), figTitle: "Largest" };
     },
     bdPlaces(id, k, low) { // councils by their share of one category, each opening that council's card for it
       const sh = x => { if (!x) return null; const t = Object.values(x).reduce((a, b) => a + b, 0); return t ? 100 * (x[k] || 0) / t : null; };
-      const rows = ctx.allCodesAt("council").map(c => ({ c, s: sh(ctx.bd.of(id, c)) })).filter(r => r.s != null).sort((a, b) => low ? a.s - b.s : b.s - a.s);
-      return rows.slice(0, 15).map((r, i) => ({ v: r.s, label: ctx.nameOf(r.c), sub: `${i + 1}. ${r.s.toFixed(1)}%`, card: () => B.bdCard(id, k, r.c), map: { metrics: [id + "_share"], pick: [id, k], level: "council", focus: r.c } }));
+      const spec = ctx.bd.spec(id), lv = !spec.levels || spec.levels.includes("council") ? "council" : "region";   // 0.12.1: breakdowns published for regions only list regions (it was empty)
+      const rows = ctx.allCodesAt(lv).concat(lv === "region" ? ["S92000003", "W92000004", "N92000002"] : []).map(c => ({ c, s: sh(ctx.bd.of(id, c)) })).filter(r => r.s != null).sort((a, b) => low ? a.s - b.s : b.s - a.s);
+      return rows.slice(0, 15).map((r, i) => ({ v: r.s, label: ctx.nameOf(r.c), sub: `${i + 1}. ${r.s.toFixed(1)}%`, card: () => B.bdCard(id, k, r.c), map: { metrics: [id + "_share"], pick: [id, k], level: lv, focus: r.c } }));
     },
     bdCard(id, k, at) { // the card for one category of a breakdown
       const spec = ctx.bd.spec(id), code = at || here(), d = ctx.bd.of(id, code), uk = ctx.bd.of(id, ctx.UKC), V = C().viz;
       const sh = (x, key) => { if (!x) return null; const t = Object.values(x).reduce((a, b) => a + b, 0); return t ? 100 * (x[key] || 0) / t : null; };
       const s = sh(d, k), su = sh(uk, k), name = spec.name(k), where = code === ctx.UKC ? "the UK" : ctx.nameOf(code);
       const lv = ctx.P[code] && ctx.P[code].level === "region" ? "region" : "council", rows = ctx.allCodesAt(lv).map(c => ({ c, s: sh(ctx.bd.of(id, c), k) })).filter(r => r.s != null).sort((a, b) => b.s - a.s);
-      const items = [{ k: `${spec.label} · ${where}`, h: s != null ? `${esc(name)} is <b>${s.toFixed(1)}%</b> of ${esc(spec.label.toLowerCase())} in ${esc(where)}${su != null && code !== ctx.UKC ? `, against ${su.toFixed(1)}% in the UK` : ""}` : `No figures for ${esc(where)}`, viz: d ? V.stack(Object.keys(d).sort((a, b) => d[b] - d[a]).slice(0, 12).map(x => ({ v: d[x], c: x === k ? "#d0701c" : spec.colour(x), n: spec.name(x) }))) : "", open: true,
+      const items = [{ k: code === ctx.UKC ? "" : where, h: s != null ? `${esc(name)} is <b>${s.toFixed(1)}%</b> of ${esc(spec.label.toLowerCase())} in ${esc(where)}${su != null && code !== ctx.UKC ? `, against ${su.toFixed(1)}% in the UK` : ""}` : `No figures for ${esc(where)}`, viz: d ? V.stack(Object.keys(d).sort((a, b) => d[b] - d[a]).slice(0, 12).map(x => ({ v: d[x], c: x === k ? "#d0701c" : spec.colour(x), n: spec.name(x) }))) : "", open: true,
         more: s != null && su ? `<p>That is ${(s / su).toFixed(2)} times the UK share: ${s / su > 1.25 ? "more concentrated here than in most places" : s / su < 0.8 ? "less common here than across the UK" : "close to the UK as a whole"}.</p>` : "", map: { metrics: [id + "_share"], pick: [id, k] } }];
       if (rows.length >= 5) items.push({ k: `Where it's largest · ${rows.length} ${lv === "region" ? "regions" : "councils"}`, h: `Highest in ${esc(ctx.nameOf(rows[0].c))} (${rows[0].s.toFixed(1)}%), lowest in ${esc(ctx.nameOf(rows[rows.length - 1].c))} (${rows[rows.length - 1].s.toFixed(1)}%)`,
-        viz: V.bars(rows.slice(0, 6).map((r, i) => ({ v: r.s, c: r.c === code ? "#d0701c" : i ? "#9aa5ab" : "#3b78b5", n: ctx.nameOf(r.c) }))), more: ctx.CH.ranked(rows.slice(0, 8).map(r => ({ name: ctx.nameOf(r.c), v: r.s, hl: r.c === code })), { w: 380, fmt: v => v.toFixed(1) + "%" }), map: { metrics: [id + "_share"], pick: [id, k], level: lv } });
+        viz: V.bars(rows.slice(0, 6).map((r, i) => ({ v: r.s, c: r.c === code ? "#d0701c" : i ? "#9aa5ab" : "#3b78b5", n: ctx.nameOf(r.c) }))), more: "", map: { metrics: [id + "_share"], pick: [id, k], level: lv },
+        deep: rows.slice(0, 8).concat(rows.slice(-3)).filter((r, i, a) => a.indexOf(r) === i).map(r => ({ label: ctx.nameOf(r.c), sub: `${rows.indexOf(r) + 1} of ${rows.length}`, v: r.s.toFixed(1) + "%", fn: () => B.bdCard(id, k, r.c) })), deepTitle: "Highest, then lowest" });
+      // 0.12.1: what else makes up the total here, each its own card
+      if (d) { const ks = Object.keys(d).filter(x => d[x] > 0).sort((a, b) => d[b] - d[a]), tt = ks.reduce((a, x) => a + d[x], 0);
+        if (ks.length > 2) items.splice(1, 0, { k: `Everything in ${spec.label.toLowerCase()} · ${where}`, h: `${esc(name)} is ${ks.indexOf(k) + 1} of ${ks.length}; the largest is ${esc(spec.name(ks[0]))} (${(100 * d[ks[0]] / tt).toFixed(1)}%)`, viz: V.stack(ks.slice(0, 12).map(x => ({ v: d[x], c: x === k ? "#d0701c" : spec.colour(x), n: spec.name(x) }))),
+          deep: ks.slice(0, 15).map(x => ({ label: spec.name(x), sub: x === k ? "this one" : "", v: (100 * d[x] / tt).toFixed(1) + "%", c: spec.colour(x), fn: () => (spec.cardFor && code === ctx.UKC && spec.cardFor(x)) || B.bdCard(id, x, code) })) }); }
       if (spec.source || spec.desc) items.push({ k: "Where it comes from", h: esc(String(spec.source || spec.label).replace(/https?:\/\/\S+/g, "").slice(0, 140)), more: `${spec.desc ? `<p><b>What it measures.</b> ${esc(spec.desc)}</p>` : ""}${spec.how ? `<p><b>How it's counted.</b> ${esc(spec.how)}</p>` : ""}`, url: (String(spec.source || "").match(/https?:\/\/[^\s;),]+/) || [])[0] });
       return { app: APP ? APP.short || APP.name : "", title: name, items, source: String(spec.source || "Atlas").split(/[;(.]/)[0].slice(0, 60), when: spec.yr ? spec.yr(code) : "", map: { metrics: [id + "_share"], pick: [id, k] } };
     },
@@ -141,6 +148,8 @@
   function specFor(x) {
     let f = x.menu || ((window.AtlasMenus || {})[APP.id] || {})[x.id];
     let s; try { s = f ? f(ctx, B) : auto(x); if (s && s.sections) s.sections = s.sections.filter(sc => sc && ((sc.items || []).length || (sc.figures || []).length)); if (!(s && s.sections && s.sections.length)) s = auto(x); } catch (e) { console.error(e); s = auto(x); }
+    // 0.12.1: two sections with the same name (two "The full panel"s) become one, holding both
+    if (s && s.sections) { const by = new Map(); s.sections = s.sections.filter(sc => { const t = by.get(sc.label); if (!t) { by.set(sc.label, sc); return true; } t.items = (t.items || []).concat(sc.items || []); if (sc.figures) t.figures = (t.figures || []).concat(sc.figures); return false; }); }
     // 0.10.1: a panel with tabs of its own (Money's Parties, Donors, …) lists them, to open the panel at that tab
     const tabs = H.tabs ? H.tabs(x) : null;
     if (tabs && !s.noTabs) s.sections.unshift({ label: `${x.title}: its tabs`, note: "Opens the full panel at that tab.", items: tabs.map(([k, l]) => ({ label: l, sub: `${x.title} › ${l}`, isPanel: true, key: k, fn: () => H.openTab(x.id, k) })) });
