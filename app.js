@@ -923,7 +923,8 @@
     const pcol = k => pcols[k] || (pcols[k] = PALETTE[Object.keys(pcols).length % PALETTE.length]);
     [["exp", "Exports"], ["imp", "Imports"]].forEach(([f, F]) => {
       defBreakdown({ id: "trd_sitc_" + f, p: "markets", group: GTR, label: `${F} by product group`, unit: "£", levels: RLV, nmText: RNM, cats: () => Object.keys(SITC), name: k => SITC[k] || "Section " + k, colour: k => SITC_COL[k] || "#999",
-        of: code => sumItl2(TRR.sitc || {}, f, code), yr: () => String(TRR.year), source: TRR.source, how: "HMRC regional trade in goods, by SITC section, " + TRR.year, desc: `What the area's businesses ${f === "exp" ? "sell abroad" : "buy from abroad"}, by product group` });
+        of: code => sumItl2(TRR.sitc || {}, f, code), yr: () => String(TRR.year), source: TRR.source, how: "HMRC regional trade in goods, by SITC section, " + TRR.year, desc: `What the area's businesses ${f === "exp" ? "sell abroad" : "buy from abroad"}, by product group`,
+        cardFor: k => window.AtlasTradeStory ? AtlasTradeStory.sectionSpec(f, k) : null, kidsFor: k => window.AtlasTradeStory ? AtlasTradeStory.sectionKids(f, k) : null });   // 0.12.1: a product group's own story and paths
       defBreakdown({ id: "trd_ptn_" + f, p: "markets", group: GTR, label: `${F} by partner country`, unit: "£", levels: RLV, nmText: RNM, cats: () => [...new Set(Object.values(TRR.partners || {}).flatMap(x => Object.keys(x[f] || {})))], name: k => k, colour: pcol,
         of: code => sumItl2(TRR.partners || {}, f, code), yr: () => String(TRR.year), source: TRR.source, how: "HMRC regional trade in goods with the main partner countries (the rest grouped by HMRC), " + TRR.year, desc: `Where the area's goods ${f === "exp" ? "go" : "come from"}` });
     });
@@ -5407,7 +5408,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.12</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.12.1</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));

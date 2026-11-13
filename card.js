@@ -103,11 +103,26 @@
   const ICC = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7.5 8h9M7.5 12h5M7.5 16h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
   // every picture and chart in a card can become its own card or go to the workspace
   const VACTS = `<span class="pc-vacts"><button type="button" data-pcvcard title="Open this chart as its own card" aria-label="Open this chart as a card">${ICC}</button><button type="button" data-pcvws title="Send this chart to the workspace" aria-label="Send this chart to the workspace">${STAR}</button></span>`;
-  function item(it) {
+  // 0.12.1: an item is only clickable when something is behind it: more to read (more), a way deeper (deep: rows that
+  // open the next card in the same window, or go: one deeper card). Otherwise it is flat: no underline, no click.
+  // size: "lead" (bigger, first), "half" (two side by side), or full width. k (the small kicker) is optional.
+  const DEEP = new Map(); let deepSeq = 0;
+  function deepRef(fn, title) { const id = "d" + (++deepSeq); DEEP.set(id, { fn, title }); if (DEEP.size > 4000) DEEP.delete(DEEP.keys().next().value); return id; }
+  const deepRow = r => `<li><button type="button" class="pc-dr" data-pcdeep="${deepRef(r.fn, r.label)}"><span class="pc-drl">${r.c ? `<i style="background:${esc(r.c)}"></i>` : ""}<span>${esc(r.label)}${r.sub ? `<small>${esc(r.sub)}</small>` : ""}</span></span>${r.v != null && r.v !== "" ? `<b>${esc(r.v)}</b>` : ""}<span class="pc-chev" aria-hidden="true">›</span></button></li>`;
+  const deepList = (rows, title) => rows && rows.length ? `${title ? `<div class="pc-dt">${esc(title)}</div>` : ""}<ul class="pc-deep" data-nosort>${rows.filter(Boolean).map(deepRow).join("")}</ul>` : "";
+  function item(it, i) {
     if (!it) return "";
+    const size = it.size || (i === 0 && it.size !== "" ? "lead" : ""), cls = `pc-it${size ? " pc-" + size : ""}`;
+    const kick = it.k ? `<div class="pc-k">${esc(it.k)}</div>` : "";
+    const vz = it.viz ? `<div class="pc-viz">${it.viz}${/<svg/.test(it.viz) ? VACTS : ""}</div>` : "";
+    const txt = `<div class="pc-txt">${kick}<div class="pc-h">${it.h}${it.go ? ` <span class="pc-chev" aria-hidden="true">›</span>` : ""}</div>${it.sub ? `<div class="pc-sub">${it.sub}</div>` : ""}</div>`;
+    const mapA = it.map ? ` data-pcmapspec="${js(it.map)}"` : "";
+    if (it.go) return `<div class="${cls} pc-go"${mapA}><button type="button" class="pc-gob" data-pcdeep="${deepRef(it.go, it.goTitle || "")}">${txt}${vz}</button></div>`;
+    const body = String(it.more || "").replace(/<div class="pc-chart">/g, `<div class="pc-chart">${VACTS}`) + deepList(it.deep, it.deepTitle);
+    if (!body.trim()) return `<div class="${cls} pc-flat"${mapA}><div class="pc-sum">${txt}${vz}</div></div>`;
     const acts = `${it.map ? `<button type="button" data-pcmap>Put on map</button>` : ""}<button type="button" data-pcwsi>Send to workspace</button>${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.urlLabel || "Read more")} ↗</a>` : ""}`;
-    return `<details class="pc-it"${it.open ? " open" : ""}${it.map ? ` data-pcmapspec="${js(it.map)}"` : ""}><summary><div class="pc-txt">${it.k ? `<div class="pc-k">${esc(it.k)}</div>` : ""}<div class="pc-h">${it.h}</div></div>${it.viz ? `<div class="pc-viz">${it.viz}${/<svg/.test(it.viz) ? VACTS : ""}</div>` : ""}</summary>
-      <div class="pc-body">${String(it.more || "").replace(/<div class="pc-chart">/g, `<div class="pc-chart">${VACTS}`)}<div class="pc-iacts">${acts}</div></div></details>`;
+    return `<details class="${cls}"${it.open ? " open" : ""}${mapA}><summary>${txt}${vz}<span class="pc-tog" aria-hidden="true"></span></summary>
+      <div class="pc-body">${body}<div class="pc-iacts">${acts}</div></div></details>`;
   }
   function html(spec) {
     const id = "pc" + (++seq) + "-" + Date.now().toString(36);
@@ -115,8 +130,8 @@
     return `<article class="pcard" data-pcard="${id}"${spec.map ? ` data-pcmapspec="${js(spec.map)}"` : ""}${spec.panel ? ` data-pcpanelid="${esc(spec.panel)}"` : ""}>
       <header class="pc-top"><div class="pc-brand"><span class="pc-logo">ATLAS</span>${spec.app ? `<span class="pc-app">${esc(spec.app)}</span>` : ""}</div>
         <button type="button" class="pc-follow" data-pcws title="Send this card to the workspace">${STAR}<span>Workspace</span></button></header>
-      <div class="pc-pill">${esc(spec.title)}</div>${spec.shape && window.AtlasShape ? AtlasShape.buttons(spec.shape) : ""}${(spec.figs || []).filter(f => f && f.v != null && f.v !== "").length ? `<div class="pc-figs">${spec.figs.filter(f => f && f.v != null && f.v !== "").slice(0, 3).map(f => `<div class="pc-fig"><b class="${f.tone || ""}">${esc(f.v)}</b><span>${esc(f.l || "")}</span></div>`).join("")}</div>` : ""}${spec.lede ? `<p class="pc-lede">${spec.lede}</p>` : ""}
-      <div class="pc-items">${(spec.items || []).map(item).join("")}</div>
+      ${spec._back ? `<button type="button" class="pc-back" data-pcback="${esc(spec._back)}">‹ ${esc(spec._backTitle || "Back")}</button>` : ""}<div class="pc-pill">${esc(spec.title)}</div>${spec.shape && window.AtlasShape ? AtlasShape.buttons(spec.shape) : ""}${(spec.figs || []).filter(f => f && f.v != null && f.v !== "").length ? `<div class="pc-figs">${spec.figs.filter(f => f && f.v != null && f.v !== "").slice(0, 3).map(f => (f.at != null ? `<button type="button" class="pc-fig" data-pcfig="${f.at}" title="What lies behind this figure">` : `<div class="pc-fig">`) + `<b class="${f.tone || ""}">${esc(f.v)}</b><span>${esc(f.l || "")}</span>` + (f.at != null ? "</button>" : "</div>")).join("")}</div>` : ""}${spec.lede ? `<p class="pc-lede">${spec.lede}</p>` : ""}
+      <div class="pc-items">${(spec.items || []).map((it, i) => item(it, spec.flatLead ? 1 : i)).join("")}</div>
       <footer class="pc-foot"><span class="pc-fav" aria-hidden="true">A</span><span class="pc-src">${esc(spec.source || "Atlas")}</span>${spec.when ? `<span class="pc-dot">•</span><span class="pc-when">${esc(spec.when)}</span>` : ""}
         <button type="button" class="pc-dots" data-pcmenu aria-label="More actions" title="More actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>
         <div class="pc-menu" hidden>${spec.map ? `<button type="button" data-pcmap>Put on map</button>` : ""}<button type="button" data-pcws>Send to workspace</button><button type="button" data-pcopen>Open as a card</button><button type="button" data-pcopenall>Open every item</button><button type="button" data-pccopy>Copy the text</button>${spec.panel ? `<button type="button" data-pcpanel="${esc(spec.panel)}">Open the full panel</button>` : ""}${links.map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label || "Source")} ↗</a>`).join("")}</div></footer></article>`;
@@ -148,7 +163,7 @@
     const items = [];
     const [head, rest] = parts.story ? first(parts.story) : [now ? `${esc(m.label)} in ${esc(where)}: <b>${esc(f(now.v))}</b>${now.yr ? ` (${esc(now.yr)})` : ""}` : `No figure for ${esc(where)} on this date.`, ""];
     const colour = "var(--pc-acc, currentColor)";
-    items.push({ k: `The story · ${where}`, h: head.replace(/\.$/, ""), viz: pts.length > 1 ? viz.spark(pts, colour) : now ? viz.big(f(now.v), now.yr || "") : "", open: true,
+    items.push({ k: code === ctx.UKC ? "" : where, h: head.replace(/\.$/, ""), viz: pts.length > 1 ? viz.spark(pts, colour) : now ? viz.big(f(now.v), now.yr || "") : "", open: true,
       more: `${rest ? `<p>${rest}</p>` : ""}${pts.length > 2 ? `<div class="pc-chart">${ctx.CH.line([{ name: where, colour: "#3b78b5", pts }], { w: 380, h: 190, vfmt: f, yfmt: v => ctx.CH.compact ? ctx.CH.compact(v) : String(v), events: w.events })}</div>${evList(w.events)}` : ""}`, map: { metrics: [id] } });
     if (pts.length > 2) items.push({ k: "Why it moved", h: w.lines.length ? first(w.lines[0])[0].replace(/<[^>]+>/g, "").replace(/\.$/, "") : "No sharp moves stand out", viz: viz.big(String(w.events.length), w.events.length === 1 ? "event" : "events"), more: whyHTML(w) });
     // across the map: the place's own boundary set (wards and seats compare with their own kind)
@@ -158,15 +173,70 @@
       const top = rows.slice(0, 5), bot = rows.slice(-3), hereI = rows.findIndex(r => r.c === code);
       items.push({ k: `Across the map · ${rows.length} ${({ council: "councils", region: "regions", nation: "nations", constituency: "seats" })[lv] || "places"}`, h: `Highest in ${esc(ctx.nameOf(top[0].c))} (${esc(top[0].t)}), lowest in ${esc(ctx.nameOf(rows[rows.length - 1].c))} (${esc(rows[rows.length - 1].t)})`,
         viz: viz.bars(top.map((r, i) => ({ v: r.v, c: r.c === code ? "#d0701c" : i ? "#9aa5ab" : "#3b78b5", n: ctx.nameOf(r.c) }))),
-        more: `${ctx.CH.ranked(top.concat(hereI >= 5 && hereI < rows.length - 3 ? [rows[hereI]] : []).concat(bot).map(r => ({ name: ctx.nameOf(r.c), v: r.v, hl: r.c === code })), { w: 380, fmt: v => f(v) })}${hereI >= 0 ? `<p>${esc(ctx.nameOf(code))} is ${hereI + 1} of ${rows.length}.</p>` : ""}`, map: { metrics: [id], level: lv } });
+        more: `${ctx.CH.ranked(top.concat(hereI >= 5 && hereI < rows.length - 3 ? [rows[hereI]] : []).concat(bot).map(r => ({ name: ctx.nameOf(r.c), v: r.v, hl: r.c === code })), { w: 380, fmt: v => f(v) })}${hereI >= 0 ? `<p>${esc(ctx.nameOf(code))} is ${hereI + 1} of ${rows.length}.</p>` : ""}`, map: { metrics: [id], level: lv },
+        // 0.12.1: each place opens its own card for this measure
+        deep: top.concat(hereI >= 5 && hereI < rows.length - 3 ? [rows[hereI]] : []).concat(bot).map(r => ({ label: ctx.nameOf(r.c), sub: `${rows.indexOf(r) + 1} of ${rows.length}`, v: r.t, fn: () => metric(id, r.c) })), deepTitle: "Highest, then lowest" });
     }
-    if (parts.means) items.push({ k: "What it tells us", h: esc(first(parts.means.replace(/<[^>]+>/g, ""))[0] || m.label), viz: "", more: `<p>${parts.means}</p>` });   // 0.12: only when built from the data
+    // 0.12.1: compared with the places it sits in; the related measures here; what goes with it across councils
+    // 0.12.1: the lead says what matters (where it ranks, which way it's going); the generated sentence goes under it
+    { const L = items[0], hi = rows.findIndex(r => r.c === code), nR = rows.length, ord = n => n + (n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th");
+      const plural = ({ council: "councils", region: "regions", nation: "nations", constituency: "seats" })[lv] || "places";
+      const rank = hi < 0 || nR < 5 || m.scale === "nominal" ? "" : hi === 0 ? `Highest of ${nR} ${plural}` : hi === nR - 1 ? `Lowest of ${nR} ${plural}` : hi < 3 ? `${cap1(ord(hi + 1))} highest of ${nR} ${plural}` : hi >= nR - 3 ? `${cap1(ord(nR - hi))} lowest of ${nR} ${plural}` : hi < nR / 4 ? `In the top quarter of ${nR} ${plural}` : hi >= 3 * nR / 4 ? `In the bottom quarter of ${nR} ${plural}` : `Near the middle of ${nR} ${plural}`;
+      let trend = ""; if (pts.length >= 3) { const a = pts[0], b = pts[pts.length - 1], abs = isP || m.nature === "rate" || m.nature === "share", d = abs ? b[1] - a[1] : a[1] ? (b[1] / a[1] - 1) * 100 : null;
+        if (d != null && isFinite(d)) { const small = abs ? Math.abs(d) < Math.abs(a[1] || 1) * 0.01 : Math.abs(d) < 1; trend = small ? `about where it was in ${Math.floor(a[0])}` : `${d > 0 ? "up" : "down"} ${abs ? (isP ? Math.abs(d).toFixed(1) + " points" : f(Math.abs(d))) : Math.abs(d).toFixed(Math.abs(d) < 10 ? 1 : 0) + "%"} since ${Math.floor(a[0])}`; } }
+      if (rank || trend) { const good = rank && trend && /^(Highest|In the top)/.test(rank) === /^up/.test(trend) ? ", and " : rank && trend ? ", though " : "";
+        L.sub = L.h + "."; L.h = rank && trend ? `${rank}${good}${trend}` : rank || cap1(trend); } }
+    const cmp = compareItem(m, code, f); if (cmp) items.push(cmp);
+    const rel = relatedItem(m, code); if (rel) items.push(rel);
+    const gw = goesWithItem(m, code, f); if (gw) items.push(gw);
+    if (parts.means) { const t = first(parts.means.replace(/<[^>]+>/g, ""))[0] || m.label, cut = t.indexOf(": ") > 20 ? t.slice(0, t.indexOf(": ")) : t; items.push({ k: "What it tells us", h: esc(cut), viz: "", more: `<p>${parts.means}</p>` }); }   // 0.12: only when built from the data
     const src = ctx.sourceOf ? ctx.sourceOf(m) : (m.source || ""), url = (String(src).match(/https?:\/\/[^\s;),]+/) || [])[0] || "";
     items.push({ k: "Where it comes from", h: esc(String(src).replace(/https?:\/\/\S+/g, "").replace(/\s*[;,(]\s*$/, "").slice(0, 140) || "Atlas"), more: `${N && N.definition(m) ? `<p><b>What it measures.</b> ${esc(N.definition(m))}</p>` : ""}<p>${esc(src)}</p>${m.how ? `<p><b>How it's worked out.</b> ${esc(m.how)}</p>` : ""}`, url, urlLabel: "Source" });
     const rk = rows.length >= 5 ? rows.findIndex(r => r.c === code) : -1, ch = pts.length >= 2 ? (isP ? pts[pts.length - 1][1] - pts[0][1] : pts[0][1] ? (pts[pts.length - 1][1] / pts[0][1] - 1) * 100 : null) : null;
     const figs = [now ? { v: f(now.v), l: `${where}${now.yr ? ", " + now.yr : ""}` } : null, ch != null && isFinite(ch) ? { v: `${ch >= 0 ? "▲" : "▼"} ${Math.abs(ch).toFixed(Math.abs(ch) < 10 ? 1 : 0)}${isP ? " pt" : "%"}`, l: `since ${pts[0][0]}` } : null, rk >= 0 ? { v: `${rk + 1} of ${rows.length}`, l: "highest first" } : null];
     return { app: APPN[m.p] || "", title: m.label, figs, items, source: String(src).split(/[;(]/)[0].replace(/https?:\/\/\S+/, "").trim().slice(0, 60) || "Atlas", when: now && now.yr ? String(now.yr) : ctx.longDate(ctx.date), map: { metrics: [id] }, links: url ? [{ label: "Source", url }] : [] };
   }
+
+  // ---------- 0.12.1: what a measure's card adds beyond the figure ----------
+  const chain = code => { const out = []; let c = code, i = 0; while (c && i++ < 5) { const p = ctx.parentOf ? ctx.parentOf(c) : null; if (!p || p === c || out.includes(p)) break; out.push(p); c = p; } if (code !== ctx.UKC && !out.includes(ctx.UKC)) out.push(ctx.UKC); return out; };
+  function compareItem(m, code, f) {
+    const here = val(m, code); if (!here || code === ctx.UKC || m.scale === "nominal") return null;
+    const ups = chain(code).map(c => ({ c, r: val(m, c) })).filter(x => x.r); if (!ups.length) return null;
+    const uk = ups[ups.length - 1], d = here.v - uk.r.v, big = Math.abs(d) / (Math.abs(uk.r.v) || 1);
+    const word = big < 0.03 ? "about the same as" : d > 0 ? "above" : "below";
+    return { size: "half", k: "Compared with", h: `${word === "about the same as" ? "About the same as" : cap1(word)} ${esc(ctx.nameOf(uk.c) === "United Kingdom" ? "the UK" : ctx.nameOf(uk.c))}${word === "about the same as" ? "" : ` (${esc(f(uk.r.v))})`}`,
+      viz: viz.bars([{ c: code, r: here }, ...ups].map((x, i) => ({ v: x.r.v, c: i ? "#9aa5ab" : "#d0701c", n: `${ctx.nameOf(x.c)}: ${f(x.r.v)}` }))),
+      more: `<p>${esc(ctx.nameOf(code))}: <b>${esc(f(here.v))}</b>.</p>`, deep: ups.map(x => ({ label: ctx.nameOf(x.c), v: f(x.r.v), fn: () => metric(m.id, x.c) })) };
+  }
+  const cap1 = t => t.charAt(0).toUpperCase() + t.slice(1);
+  function relatedItem(m, code) {
+    const ms = ctx.METRICS.filter(x => x.id !== m.id && x.group === m.group && x.p === m.p && !/_(lq|top|share)$/.test(x.id) && x.scale !== "nominal" && x.nature !== "line" && x.nature !== "event").map(x => ({ x, r: val(x, code) })).filter(o => o.r).slice(0, 8);
+    if (ms.length < 2) return null; const N = window.AtlasNarrative, fm = x => N ? N.fmtOf(x) : (v => String(v));
+    return { size: "half", k: `More on ${m.group.toLowerCase()}`, h: `${ms.length} related measure${ms.length === 1 ? "" : "s"} for ${esc(code === ctx.UKC ? "the UK" : ctx.nameOf(code))}`,
+      deep: ms.map(o => ({ label: o.x.label, v: fm(o.x)(o.r.v), fn: () => metric(o.x.id, code) })) };
+  }
+  // structural conditions that go with most local outcomes (rank correlation across councils)
+  const WITH = ["imd_score", "gdp_per_head", "density", "average_age", "child_poverty", "claimant_rate", "c_bad_health", "c_social", "c_private", "smoking", "inactive", "pop_change"];
+  const VEC = new Map();
+  function vec(id) { const k = id + "|" + ctx.date; if (VEC.has(k)) return VEC.get(k); const m = ctx.M[id], o = new Map(); if (m) ctx.allCodesAt("council").forEach(c => { const r = val(m, c); if (r) o.set(c, r.v); }); VEC.set(k, o); return o; }
+  function goesWithItem(m, code, f) {
+    if (!window.AtlasStats || m.scale === "nominal" || (m.levels && !m.levels.includes("council"))) return null;
+    const base = vec(m.id); if (base.size < 60) return null; const N = window.AtlasNarrative;
+    const res = WITH.filter(id => id !== m.id && ctx.M[id] && ctx.M[id].group !== m.group).map(id => { const v = vec(id), cs = [...base.keys()].filter(c => v.has(c)); if (cs.length < 60) return null;
+      const r = AtlasStats.spearman(cs.map(c => v.get(c)), cs.map(c => base.get(c))); return r && r.r != null && Math.abs(r.r) >= 0.4 && Math.abs(r.r) < 0.97 ? { id, r: r.r, n: cs.length, v } : null; }).filter(Boolean).sort((a, b) => Math.abs(b.r) - Math.abs(a.r)).slice(0, 3);
+    if (!res.length) return null;
+    const pctl = (map, c) => { if (!map.has(c)) return null; const x = map.get(c), all = [...map.values()]; return 100 * all.filter(y => y < x).length / (all.length - 1 || 1); };
+    const lab = id => ctx.M[id].label.toLowerCase().replace(/\s*\(.*\)$/, ""), ml = m.label.toLowerCase().replace(/\s*\(.*\)$/, "");
+    const lines = res.map(x => `Where ${lab(x.id)} is higher, ${ml} tends to be ${x.r > 0 ? "higher" : "lower"} (ρ = ${x.r.toFixed(2)} across ${x.n} councils).`);
+    let fit = ""; const c0 = res[0], pb = pctl(base, code), px = pctl(c0.v, code);
+    if (pb != null && px != null && ctx.P[code] && ctx.P[code].level === "council") { const agree = (px - 50) * (pb - 50) * Math.sign(c0.r) > 0, strong = Math.abs(px - 50) > 25;
+      fit = `${esc(ctx.nameOf(code))} ${strong ? (agree ? "fits the pattern" : "bucks the trend") : "sits near the middle"}: ${lab(c0.id)} in the ${pctWord(px)}, ${ml} in the ${pctWord(pb)}.`; }
+    return { k: "What goes with it", h: `${cap1(lab(res[0].id))} ${Math.abs(res[0].r) >= 0.7 ? "goes closely with it" : "goes with it"}${res[1] ? `, then ${esc(lab(res[1].id))}` : ""}`, sub: fit,
+      viz: viz.bars(res.map(x => ({ v: Math.abs(x.r), c: x.r > 0 ? "#2e9d6a" : "#c0392b", n: `${ctx.M[x.id].label}: ρ ${x.r.toFixed(2)}` }))),
+      more: `<ul class="pc-why">${lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul><p class="pc-fine">Going together across places isn't proof that one causes the other: both can follow something else (age, income, how urban a place is). Green bars: rise together; red: one rises as the other falls.</p>`,
+      deep: res.map(x => ({ label: ctx.M[x.id].label, sub: `ρ ${x.r.toFixed(2)}${ctx.P[code] && ctx.P[code].level === "council" && x.v.has(code) ? ` · here: ${pctWord(pctl(x.v, code))}` : ""}`, v: x.v.has(code) && N ? N.fmtOf(ctx.M[x.id])(x.v.get(code)) : "", fn: () => metric(x.id, code) })) };
+  }
+  const pctWord = p => p == null ? "—" : p >= 90 ? "top 10%" : p >= 75 ? "top quarter" : p <= 10 ? "bottom 10%" : p <= 25 ? "bottom quarter" : p >= 50 ? "upper half" : "lower half";
 
   // ---------- actions (delegated, so cards keep working in the workspace) ----------
   function applyMap(s) {
@@ -202,7 +272,28 @@
     return { app: app ? app.textContent : "", title: `${pill ? pill.textContent : "Chart"}${h ? "" : ""}`, items: [{ k: k ? k.textContent : "", h: h ? h.innerHTML : "", more: `<div class="pc-chart">${c.innerHTML}</div>${evs ? evs.outerHTML : ""}`, open: true }],
       source: (card.querySelector(".pc-src") || {}).textContent || "Atlas", when: (card.querySelector(".pc-when") || {}).textContent || "" };
   }
+  // 0.12.1: going deeper inside a card's own window, and back again
+  const BACK = new Map();
+  function swapCard(card, spec, backId) {
+    const ttl = card.closest(".wm-win, .pcwin") && card.closest(".pcwin") ? card.closest(".pcwin").querySelector(".wm-title") : null;
+    const place = sp => { const d = document.createElement("div"); d.innerHTML = html(sp); const n = d.firstElementChild; card.replaceWith(n); if (ttl) ttl.textContent = sp.title; const sc = n.closest(".wm-body"); if (sc) sc.scrollTop = 0; if (window.AtlasSort) AtlasSort.enhance && AtlasSort.enhance(n); return n; };
+    if (typeof spec.then === "function") { card.classList.add("pc-loading"); spec.then(sp => { if (sp) place(Object.assign(sp, { _back: backId, _backTitle: (card.querySelector(".pc-pill") || {}).textContent })); else card.classList.remove("pc-loading"); }, () => card.classList.remove("pc-loading")); return; }
+    place(Object.assign(spec, { _back: backId, _backTitle: (card.querySelector(".pc-pill") || {}).textContent }));
+  }
+  function deepClick(e) {
+    const t = e.target.closest && e.target.closest("[data-pcdeep],[data-pcback],[data-pcfig]"); if (!t) return false;
+    const card = t.closest(".pcard"); if (!card) return false;
+    e.preventDefault(); e.stopPropagation();
+    if (t.dataset.pcfig != null) { const it = card.querySelectorAll(".pc-items > .pc-it")[+t.dataset.pcfig]; if (!it) return true; if (it.tagName === "DETAILS") it.open = true; const b = it.querySelector(".pc-gob"); if (b) { b.click(); return true; } it.scrollIntoView({ block: "nearest", behavior: "smooth" }); it.classList.add("pc-flash"); setTimeout(() => it.classList.remove("pc-flash"), 900); return true; }
+    if (t.dataset.pcback) { const prev = BACK.get(t.dataset.pcback); if (!prev) return true; const d = document.createElement("div"); d.innerHTML = prev.html; const n = d.firstElementChild; card.replaceWith(n); const ttl = n.closest(".pcwin") && n.closest(".pcwin").querySelector(".wm-title"); if (ttl) ttl.textContent = prev.title; return true; }
+    const r = DEEP.get(t.dataset.pcdeep); if (!r) { ctx && ctx.toast && ctx.toast("Open this from Atlas to go deeper."); return true; }
+    let spec = null; try { spec = r.fn(); } catch (err) { console.error(err); }
+    if (!spec) return true;   // the row did its own thing (opened a panel, put something on the map)
+    const id = "b" + (++deepSeq); BACK.set(id, { html: card.outerHTML, title: (card.querySelector(".pc-pill") || {}).textContent || "" });
+    swapCard(card, spec, id); return true;
+  }
   function bind() {
+    document.addEventListener("click", e => { if (deepClick(e)) return; }, true);
     document.addEventListener("click", e => {
       const v = e.target.closest("[data-pcvws],[data-pcvcard]");
       if (v) { e.preventDefault(); e.stopPropagation(); const sp = chartSpec(v); if (!sp) return; if (v.hasAttribute("data-pcvcard")) open(sp); else { const d = document.createElement("div"); d.innerHTML = html(sp); ctx.sendToWS({ type: "card", title: sp.title, html: d.firstElementChild.outerHTML, w: 440, h: 460 }); } return; }
@@ -260,5 +351,5 @@
     document.addEventListener("keydown", e => { if (e.key === "Escape" && peekEl && !peekEl.hidden) hidePeek(); });
   }
 
-  window.AtlasCard = { init(c, h) { ctx = c; Object.assign(hooks, h || {}); bind(); }, html, open, metric, why, whyHTML, evList, viz, applyMap, topicsOf, item, esc, hidePeek, showPeek: id => { const b = document.querySelector(`.ib-i[data-info="${id}"]`); if (b) showPeek(b); } };
+  window.AtlasCard = { deepRef, deepList, init(c, h) { ctx = c; Object.assign(hooks, h || {}); bind(); }, html, open, metric, why, whyHTML, evList, viz, applyMap, topicsOf, item, esc, hidePeek, showPeek: id => { const b = document.querySelector(`.ib-i[data-info="${id}"]`); if (b) showPeek(b); } };
 })();

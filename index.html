@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atlas 0.12 · UK</title>
+<title>Atlas 0.12.1 · UK</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
 <style>
 /* Layout: the map is the whole window.
@@ -1504,6 +1504,52 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
   .shape-badge button { border: 0; background: var(--chip); border-radius: 999px; padding: 3px 9px; font: inherit; font-size: 12px; cursor: pointer; } .shape-badge [data-shclear] { background: none; font-size: 16px; color: var(--ink-3); }
   .shape-tile .shape-scale { font-size: 10px; fill: var(--ink-3); }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } .pc-it::details-content { transition: none; } }
+
+  /* ---------- 0.12.1: cards with a hierarchy, honest clicks, and depth ---------- */
+  .pc-items { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
+  .pc-items > .pc-it { grid-column: 1 / -1; min-width: 0; }
+  .pc-items > .pc-half { grid-column: auto; }
+  .pc-half > summary, .pc-half > .pc-sum { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 8px; }
+  .pc-half .pc-viz { width: 100%; height: 64px; }
+  .pc-half .pc-h { font-size: 15.5px; }
+  .pc-lead > summary, .pc-lead > .pc-sum, .pc-lead .pc-gob { padding-top: 16px; padding-bottom: 16px; }
+  .pc-lead .pc-h { font-size: 21px; line-height: 1.28; }
+  .pc-lead .pc-viz { width: 140px; height: 96px; }
+  .pc-sub { font-size: 13px; color: var(--ink-2); margin-top: 5px; line-height: 1.45; }
+  .pc-flat > .pc-sum { display: flex; align-items: center; gap: 14px; padding: 14px 4px; }
+  .pc-flat .pc-h { cursor: default; }
+  .pc-it > summary { position: relative; }
+  .pc-tog { flex: none; width: 18px; height: 18px; align-self: center; border-radius: 50%; display: grid; place-items: center; color: var(--ink-3); }
+  .pc-tog::before { content: ""; width: 6px; height: 6px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .2s var(--ease); }
+  .pc-it[open] > summary .pc-tog::before { transform: translateY(1px) rotate(-135deg); }
+  .pc-half > summary .pc-tog { position: absolute; right: 2px; top: 14px; } .pc-half .pc-txt { padding-right: 20px; }
+  .pc-go { padding: 0; }
+  .pc-gob { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 4px; cursor: pointer; border-radius: 10px; }
+  .pc-gob:hover { background: color-mix(in srgb, var(--hover) 60%, transparent); } .pc-gob:hover .pc-h { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  .pc-gob:focus-visible { outline: 2px solid var(--pc-acc); outline-offset: 2px; }
+  .pc-chev { color: var(--ink-3); font-weight: 400; }
+  .pc-dt { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); margin: 12px 0 4px; }
+  .pc-deep { list-style: none; margin: 4px 0 8px; padding: 0; border-top: 1px solid var(--pc-line); }
+  .pc-deep li { border-bottom: 1px solid var(--pc-line); }
+  .pc-dr { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 4px; cursor: pointer; font-size: 13.5px; border-radius: 6px; }
+  .pc-dr:hover { background: color-mix(in srgb, var(--hover) 60%, transparent); }
+  .pc-dr:focus-visible { outline: 2px solid var(--pc-acc); }
+  .pc-drl { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: baseline; }
+  .pc-drl > span { min-width: 0; } .pc-drl small { display: block; color: var(--ink-3); font-size: 11.5px; margin-top: 1px; }
+  .pc-drl i { flex: none; width: 9px; height: 9px; border-radius: 2px; transform: translateY(1px); }
+  .pc-dr > b { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
+  .pc-back { all: unset; cursor: pointer; font-size: 12.5px; color: var(--ink-2); margin: 2px 0 8px; display: inline-block; }
+  .pc-back:hover { color: var(--ink); text-decoration: underline; }
+  button.pc-fig { all: unset; box-sizing: border-box; padding: 10px 10px 9px 0; min-width: 0; cursor: pointer; }
+  button.pc-fig + .pc-fig, .pc-fig + button.pc-fig { padding-left: 12px; border-left: 1px solid var(--pc-line); }
+  button.pc-fig:hover b { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  .pc-flash > summary, .pc-flash > .pc-sum { animation: pcFlash .9s ease-out; } @keyframes pcFlash { from { background: color-mix(in srgb, var(--pc-acc) 18%, transparent); } to { background: transparent; } }
+  .pc-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 6px 0; }
+  .pc-tab th { text-align: left; font-size: 11px; color: var(--ink-3); font-weight: 600; padding: 3px 4px; } .pc-tab th.num, .pc-tab td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pc-tab td { padding: 4px; border-top: 1px solid var(--pc-line); vertical-align: top; }
+  .pc-up { color: #1a7f4b; } .pc-dn { color: #b3261e; } :root[data-mode="dark"] .pc-up { color: #6fd39b; } :root[data-mode="dark"] .pc-dn { color: #ff8a80; }
+  @media (max-width: 420px) { .pc-items { grid-template-columns: 1fr; } .pc-items > .pc-half { grid-column: 1 / -1; } .pc-lead .pc-h { font-size: 18px; } .pc-lead .pc-viz { width: 96px; height: 70px; } }
+
 /* 0.12: what the authorities are saying (Resilience, and on Environment's cards) */
 .res-news { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 6px; font-size: 12.5px; }
 .res-news li { display: grid; gap: 1px; }
@@ -1514,9 +1560,9 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,300&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&text=0123456789&display=swap">
-<link rel="stylesheet" href="fonts.css?v=1220">
-<script src="theme.js?v=1220"></script>
-<script src="theme-apply.js?v=1220"></script>
+<link rel="stylesheet" href="fonts.css?v=1230">
+<script src="theme.js?v=1230"></script>
+<script src="theme-apply.js?v=1230"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -1637,34 +1683,34 @@ a.ent { color: #1a5fb4; text-decoration: none; border-bottom: 1px solid rgba(26,
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=1220"></script>
+<script src="data/places_poi.js?v=1230"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=1220"></script>
-<script src="data/representation.js?v=1220"></script>
-<script src="data/trade.js?v=1220"></script>
-<script src="data/investment.js?v=1220"></script>
-<script src="data/industry.js?v=1220"></script>
-<script src="data/census.js?v=1220"></script>
-<script src="data/health_deaths.js?v=1220"></script>
-<script src="data/bd_economy.js?v=1220"></script>
-<script src="data/bd_census.js?v=1220"></script>
-<script src="data/spending.js?v=1220"></script>
-<script src="data/bd_health.js?v=1220"></script>
-<script src="data/people.js?v=1220"></script>
-<script src="data/bd_spending.js?v=1220"></script>
-<script src="data/bd_people.js?v=1220"></script>
-<script src="data/transport.js?v=1220"></script>
-<script src="data/economy.js?v=1220"></script>
-<script src="data/airports.js?v=1220"></script>
+<script src="data/money.js?v=1230"></script>
+<script src="data/representation.js?v=1230"></script>
+<script src="data/trade.js?v=1230"></script>
+<script src="data/investment.js?v=1230"></script>
+<script src="data/industry.js?v=1230"></script>
+<script src="data/census.js?v=1230"></script>
+<script src="data/health_deaths.js?v=1230"></script>
+<script src="data/bd_economy.js?v=1230"></script>
+<script src="data/bd_census.js?v=1230"></script>
+<script src="data/spending.js?v=1230"></script>
+<script src="data/bd_health.js?v=1230"></script>
+<script src="data/people.js?v=1230"></script>
+<script src="data/bd_spending.js?v=1230"></script>
+<script src="data/bd_people.js?v=1230"></script>
+<script src="data/transport.js?v=1230"></script>
+<script src="data/economy.js?v=1230"></script>
+<script src="data/airports.js?v=1230"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="data/environment.js?v=1220"></script>
-<script src="data/airquality.js?v=1220"></script>
-<script src="stats.js?v=1220"></script>
-<script src="psephology.js?v=1220"></script>
-<script src="charts.js?v=1220"></script>
-<script src="engine.js?v=1220"></script>
-<script src="xlsx.js?v=1220"></script>
+<script src="data/environment.js?v=1230"></script>
+<script src="data/airquality.js?v=1230"></script>
+<script src="stats.js?v=1230"></script>
+<script src="psephology.js?v=1230"></script>
+<script src="charts.js?v=1230"></script>
+<script src="engine.js?v=1230"></script>
+<script src="xlsx.js?v=1230"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -1674,23 +1720,24 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=1220"></script>
-<script src="apps.js?v=1220"></script>
-<script src="views/views.js?v=1220"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=1230"></script>
+<script src="apps.js?v=1230"></script>
+<script src="views/views.js?v=1230"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=1220"></script>
-<script src="money.js?v=1220"></script>
-<script src="trade.js?v=1220"></script>
-<script src="narrative.js?v=1220"></script>
-<script src="panel.js?v=1220"></script>
-<script src="data/events.js?v=1220"></script>
-<script src="card.js?v=1220"></script>
-<script src="sort.js?v=1220"></script>
-<script src="rivers.js?v=1220"></script>
-<script src="shape.js?v=1220"></script>
-<script src="menu.js?v=1220"></script>
-<script src="profile.js?v=1220"></script>
-<script src="devdesign.js?v=1220"></script>
-<script src="app.js?v=1220"></script>
+<script src="windows.js?v=1230"></script>
+<script src="money.js?v=1230"></script>
+<script src="trade.js?v=1230"></script>
+<script src="trade_story.js?v=1230"></script>
+<script src="narrative.js?v=1230"></script>
+<script src="panel.js?v=1230"></script>
+<script src="data/events.js?v=1230"></script>
+<script src="card.js?v=1230"></script>
+<script src="sort.js?v=1230"></script>
+<script src="rivers.js?v=1230"></script>
+<script src="shape.js?v=1230"></script>
+<script src="menu.js?v=1230"></script>
+<script src="profile.js?v=1230"></script>
+<script src="devdesign.js?v=1230"></script>
+<script src="app.js?v=1230"></script>
 </body>
 </html>
