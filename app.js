@@ -4775,11 +4775,22 @@
       case "shape": return window.AtlasShape ? AtlasShape.svg(it.shape, w, Math.max(160, it.h - 70)) : "";   // 0.12: a river, flood, coast or park as its own tile
       case "shot": return `<img class="wsshot" src="${it.src}" alt="${esc(it.title)}">`;
       case "note": return `<div class="wsnote" contenteditable="true" data-note="${it.id}">${it.html || ""}</div>`;
+      case "heading": return `<div class="wsheading" contenteditable="true" data-note="${it.id}">${it.html || esc(it.title)}</div>`;   // 0.13
       case "stack": return it.children.map(ch => `<div class="wsstack"><div class="wsst">${esc(ch.title)}</div>${itemBody(ch, w)}</div>`).join("");
     }
     return "";
   }
   const LIVE = { chart: 1, table: 1, ctable: 1, analysis: 1, track: 1 };
+  // 0.13: the sidebar's "In this project" list: every piece with its kind; click one to find it on the board
+  const WS_KIND = { chart: "Chart", table: "Table", ctable: "Table", analysis: "Analysis", card: "Card", track: "Tracking", tile: "Map", shot: "Map", shape: "Map", note: "Note", heading: "Heading", stack: "Group" };
+  let wsSel = null;
+  const wsSide = p => `<aside class="ws-side" aria-label="In this project"><div class="ws-oh">In this project <span>${p.items.length}</span></div>
+    <div class="ws-ol">${p.items.map((it, i) => `<button type="button" class="ws-oi${it.id === wsSel ? " on" : ""}" data-wspick="${it.id}" style="--i:${i}"><span class="ws-kind">${WS_KIND[it.type] || "Item"}</span><span class="ws-ot">${esc(it.title || WS_KIND[it.type] || "")}</span>${LIVE[it.type] ? `<span class="ws-live" title="Live: ↻ refreshes it to the time bar's date">↻</span>` : ""}</button>`).join("") || `<div class="ws-onone">Nothing here yet.</div>`}</div>
+    <div class="ws-oh">Add</div><div class="ws-adds"><button type="button" class="btn sm" data-wsnote>Note</button><button type="button" class="btn sm" data-wshead>Heading</button><button type="button" class="btn sm" data-wsshot>Map picture</button></div>
+    <div class="ws-sfoot">Click a piece to find it on the board. ↻ refreshes it to the time bar’s date.</div></aside>`;
+  function wsPick(id) { wsSel = id; const it = wsItem(id), cv = wsEl.querySelector(".ws-canvas"); wsEl.querySelectorAll(".wsi").forEach(el => el.classList.toggle("wsi-sel", el.dataset.wsi === id));
+    wsEl.querySelectorAll(".ws-oi").forEach(el => el.classList.toggle("on", el.dataset.wspick === id));
+    if (it && cv) cv.scrollTo({ left: Math.max(0, it.x * wsZoom() - 40), top: Math.max(0, it.y * wsZoom() - 40), behavior: "smooth" }); }
   function renderWS() {
     const p = proj();
     wsEl.innerHTML = `<div class="ws-bar"><select data-wsproj aria-label="Project">${WS.projects.map(q => `<option value="${q.id}" ${q.id === p.id ? "selected" : ""}>${esc(q.name)}</option>`).join("")}</select>
@@ -4787,8 +4798,8 @@
         <span class="ws-sep"></span><button class="btn" data-wsnote>+ Note</button><button class="btn" data-wsshot>Capture map</button><button class="btn" data-wstidy>Tidy</button>
         <span class="ws-sep"></span><div class="ws-exp"><button class="btn primary" data-wsexp>Export ▾</button><div class="ws-menu" hidden><button data-wspdf>PDF (print)</button><button data-wsslides>Presentation (HTML slides)</button><button data-wsjson>Project file (.json)</button><label>Import a project file<input type="file" accept=".json" data-wsimp hidden></label><button data-wsdel class="danger">Delete this project</button></div></div>
         <span class="ws-grow"></span><span class="ws-zoom" title="Make the whole board bigger or smaller"><button class="btn" data-wsz="-1" aria-label="Zoom the board out">−</button><button class="btn ws-zoom-v" data-wsz="0" title="Back to 100%">100%</button><button class="btn" data-wsz="1" aria-label="Zoom the board in">+</button></span><div class="seg sm"><button data-view="split" class="${VIEW.mode === "split" ? "on" : ""}" title="Map and workspace side by side">Split</button><button data-view="ws" class="${VIEW.mode === "ws" ? "on" : ""}" title="Workspace only">Full</button><button data-view="map" title="Back to the map">Map</button></div></div>
-      <div class="ws-canvas" id="ws-canvas"><div class="ws-inner" style="transform:scale(${wsZoom()})">${p.items.length ? "" : `<div class="ws-empty"><h3>${esc(p.name)} is empty</h3><p>Send things here with <b>Send to workspace</b>: charts (chart panel and tabs), tables (comparison page), analyses (Analyse), area cards and tiles (a pinned card's ⋯), and pictures of the map (Capture map). Then drag them around, resize them from the corner, and drop one onto another to combine them.</p></div>`}
-        ${p.items.map(it => `<div class="wsi${it.id === wsNew ? " wsi-new" : ""}" data-wsi="${it.id}" style="left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;z-index:${it.z || 1}"><div class="wsi-head"><span class="wsi-t" title="Double-click to rename">${esc(it.title)}</span>
+      ${wsSide(p)}<div class="ws-canvas" id="ws-canvas"><div class="ws-inner" style="transform:scale(${wsZoom()})">${p.items.length ? "" : `<div class="ws-empty"><h3>${esc(p.name)} is empty</h3><p>Send things here with <b>Send to workspace</b>: charts (chart panel and tabs), tables (comparison page), analyses (Analyse), area cards and tiles (a pinned card's ⋯), and pictures of the map (Capture map). Then drag them around, resize them from the corner, and drop one onto another to combine them.</p></div>`}
+        ${p.items.map(it => `<div class="wsi${it.id === wsNew ? " wsi-new" : ""}${it.id === wsSel ? " wsi-sel" : ""}" data-wsi="${it.id}" style="left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;z-index:${it.z || 1}"><div class="wsi-head"><span class="wsi-t" title="Double-click to rename">${esc(it.title)}</span>
           ${LIVE[it.type] ? `<button data-wsref="${it.id}" title="Refresh to the time bar's date (${esc(dmy(state.date))})">↻</button>` : ""}${it.type === "chart" ? `<button data-wstab="${it.id}" title="Open in its own tab">⧉</button>` : ""}${it.parts || it.type === "stack" ? `<button data-wssep="${it.id}" title="Separate: split this back into the items it was made from">⇲ Separate</button>` : ""}<button data-wsdup="${it.id}" title="Duplicate">⎘</button><button data-wsx="${it.id}" title="Remove">×</button></div>
           <div class="wsi-body">${itemBody(it)}</div><div class="rgrip" data-wsrs="${it.id}" title="Drag to resize"></div></div>`).join("")}</div></div>`;
     wsEl.querySelector(".ws-zoom-v").textContent = Math.round(wsZoom() * 100) + "%";
@@ -4847,7 +4858,7 @@
   }, true);
   wsEl.addEventListener("pointerdown", e => {
     const h = e.target.closest(".wsi-head"); if (!h || e.button || e.target.closest("button")) return;
-    const el = h.parentNode, it = wsItem(el.dataset.wsi); if (!it) return; e.preventDefault();
+    const el = h.parentNode, it = wsItem(el.dataset.wsi); if (!it) return; e.preventDefault(); wsSel = it.id; wsEl.querySelectorAll(".wsi-sel").forEach(x => x.classList.remove("wsi-sel")); el.classList.add("wsi-sel"); wsEl.querySelectorAll(".ws-oi").forEach(x => x.classList.toggle("on", x.dataset.wspick === it.id));
     it.z = maxZ() + 1; el.style.zIndex = it.z; const z = wsZoom(), sx = e.clientX, sy = e.clientY, x0 = it.x, y0 = it.y; h.setPointerCapture(e.pointerId); el.classList.add("dragging");
     let target = null;
     const mv = ev => { it.x = Math.max(0, Math.round(x0 + (ev.clientX - sx) / z)); it.y = Math.max(0, Math.round(y0 + (ev.clientY - sy) / z)); el.style.left = it.x + "px"; el.style.top = it.y + "px";
@@ -4883,8 +4894,12 @@
     else if (b.hasAttribute("data-wsren")) { const n = prompt("Rename the project", p.name); if (!n) return; p.name = n.trim(); }
     else if (b.hasAttribute("data-wsdel")) { if (!confirm(`Delete the project “${p.name}” and everything in it? This can't be undone (export it first to keep a copy).`)) return; WS.projects = WS.projects.filter(q => q !== p); if (!WS.projects.length) WS.projects.push({ id: "p" + Date.now(), name: "My project", items: [] }); WS.current = WS.projects[0].id; }
     else if (b.hasAttribute("data-wsnote")) { sendToWS({ type: "note", title: "Note", html: "", w: 320, h: 200 }); return; }
+    else if (b.hasAttribute("data-wshead")) { sendToWS({ type: "heading", title: "Heading", html: "", w: 560, h: 90 }); return; }
+    else if (ds.wspick) { wsPick(ds.wspick); return; }
     else if (b.hasAttribute("data-wsshot")) { captureMap(); return; }
-    else if (b.hasAttribute("data-wstidy")) { let x = 16, y = 16, rowH = 0; const W = wsEl.offsetWidth - 24; p.items.forEach(it => { if (x + it.w > W && x > 16) { x = 16; y += rowH + 16; rowH = 0; } it.x = x; it.y = y; x += it.w + 16; rowH = Math.max(rowH, it.h); }); }
+    else if (b.hasAttribute("data-wstidy")) { const cv = wsEl.querySelector(".ws-canvas"); let x = 16, y = 16, rowH = 0; const W = ((cv && cv.clientWidth) || wsEl.offsetWidth) / wsZoom() - 24; p.items.forEach(it => { if (x + it.w > W && x > 16) { x = 16; y += rowH + 16; rowH = 0; } it.x = x; it.y = y; x += it.w + 16; rowH = Math.max(rowH, it.h); });
+      const inner = wsEl.querySelector(".ws-inner"); if (inner) { inner.classList.add("ws-tidying"); p.items.forEach(it => { const el = inner.querySelector(`[data-wsi="${it.id}"]`); if (el) { el.style.left = it.x + "px"; el.style.top = it.y + "px"; } }); }   // 0.13: pieces glide into the grid
+      saveWS(); clearTimeout(wsEl._tidy); wsEl._tidy = setTimeout(() => { renderWS(); renderTabs(); }, 470); return; }
     else if (b.hasAttribute("data-wspdf")) return exportPDF();
     else if (b.hasAttribute("data-wsslides")) return exportSlides();
     else if (b.hasAttribute("data-wsjson")) return download(new Blob([JSON.stringify(p, null, 1)], { type: "application/json" }), `atlas-project-${p.name.replace(/\W+/g, "-")}.json`);
