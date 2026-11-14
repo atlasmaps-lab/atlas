@@ -4107,7 +4107,7 @@
     const st = spec.style, D = chartData(spec), m = D.m, o = { w, h: Math.round(w * 0.48), vfmt: D.fmt, yfmt: v => CH.compact(v), mid: m.mid, now: yearNow() };
     const numItems = D.items.filter(i => i.v != null && typeof i.v === "number");
     switch (st) {
-      case "line": return CH.line(D.series, o);
+      case "line": return CH.line(D.series, Object.assign({ hilo: D.series.length <= 3 }, o));   // 0.13: the chart rules: each line's highest and lowest marked
       case "area": return CH.area(D.series, o);
       case "bars": return CH.bars(D.series, o);
       case "slope": return CH.slope(D.series, o);
