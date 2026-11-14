@@ -3596,12 +3596,12 @@
         <p class="cmv-line">${esc(nameOf(hi[0]))} is highest at ${esc(f(hi[1]))}${vs.length > 1 ? `; ${esc(nameOf(lo[0]))} is lowest at ${esc(f(lo[1]))}` : ""}.${uk != null ? ` The UK: ${esc(f(uk))} (dashed).` : ""}</p></div>`; }).join("")}</div>`;
   }
   function h2hSentence(m, a, b, va, vb) {
-    const f = cmpFmt(m), A = nameOf(a), B = nameOf(b), pts = window.AtlasNarrative && AtlasNarrative.isPts(m);
-    if (va === vb) return `${A} and ${B} are level on ${m.label.toLowerCase()}, at ${f(va)}.`;
+    const f = cmpFmt(m), A = nameOf(a), B = nameOf(b), pts = window.AtlasNarrative && AtlasNarrative.isPts(m), lab = /^[A-Z]{2,}/.test(m.label) ? m.label : m.label.charAt(0).toLowerCase() + m.label.slice(1);   // acronyms keep their capitals
+    if (va === vb) return `${A} and ${B} are level on ${lab}, at ${f(va)}.`;
     const [hi, lo, vh, vl] = va > vb ? [A, B, va, vb] : [B, A, vb, va];
-    if (!pts && vl > 0 && vh / vl >= 1.5) return `${hi}'s ${m.label.toLowerCase()} is ${(vh / vl).toFixed(vh / vl >= 10 ? 0 : 1)} times ${lo}'s (${f(vh)} against ${f(vl)}).`;
+    if (!pts && vl > 0 && vh / vl >= 1.5) return `${hi}'s ${lab} is ${(vh / vl).toFixed(vh / vl >= 10 ? 0 : 1)} times ${lo}'s (${f(vh)} against ${f(vl)}).`;
     const d = vh - vl, ds = pts ? `${d.toFixed(1)} points` : String(f(d)).match(/^[£$€-]|\d/) ? f(d) : d.toLocaleString("en-GB");
-    return `${hi} is ${ds} higher than ${lo} on ${m.label.toLowerCase()} (${f(vh)} against ${f(vl)}).`;
+    return `${hi} is ${ds} higher than ${lo} on ${lab} (${f(vh)} against ${f(vl)}).`;
   }
   function cmpH2H(codes, ms) {
     const [a, b] = CMP.ab;
