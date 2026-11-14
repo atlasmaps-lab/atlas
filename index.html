@@ -515,6 +515,29 @@ body.focused #legend:hover { opacity: 1; z-index: 5; }
 .tb-tools button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .tb-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; }
 .tb-slider { display: grid; grid-template-columns: 1fr 52px; gap: 0 8px; align-items: center; font-size: 12.5px; }
+/* 0.13 · the Toolbox: five sections, closed until clicked */
+#tools { width: 420px; box-sizing: border-box; max-width: calc(100vw - 24px); padding: 0 !important; }
+.tbx-h { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px 10px; border-bottom: 1px solid var(--rule); }
+.tbx-h b { font-size: 16px; } .tbx-h i { font-size: 12.5px; color: var(--ink-3); }
+.tbx-sec { border-bottom: 1px solid var(--rule); animation: atl-rise .3s var(--ease) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.tbx-sec:last-child { border-bottom: 0; }
+.tbx-sh { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 16px; background: none; border: 0; font: inherit; color: var(--ink); cursor: pointer; text-align: left; }
+.tbx-sh:hover { background: var(--hover); }
+.tbx-sh span { font-weight: 700; font-size: 14px; flex: none; }
+.tbx-sh i { flex: 1; min-width: 0; text-align: right; font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tbx-sh .mgc-arr { flex: none; width: 22px; height: 22px; border: 1px solid var(--rule); border-radius: 50%; display: grid; place-items: center; font-weight: 400; transition: transform .25s var(--ease); }
+.tbx-sec.on .tbx-sh .mgc-arr { transform: rotate(90deg); border-color: var(--app, var(--ink)); color: var(--app, var(--ink)); }
+.tbx-sb { padding: 2px 16px 14px; display: flex; flex-direction: column; gap: 10px; animation: atl-rise .28s var(--ease) both; }
+.tbx-sb .tb-tools { grid-template-columns: repeat(2, 1fr); }
+.tbx-sb .tb-tools button { grid-template-columns: auto 1fr; justify-items: start; align-items: center; text-align: left; padding: 8px 10px; font-size: 12.5px; }
+.tb-apps { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.tb-apps button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; border: 1px solid var(--rule); background: var(--solid); border-radius: 8px; padding: 8px 10px; font: inherit; color: var(--ink); cursor: pointer; }
+.tb-app { display: flex; flex-direction: column; gap: 4px; } .tb-app > button { width: 100%; }
+.tb-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding-left: 10px; } .tb-tabs button { border: 1px solid var(--rule); background: none; border-radius: 999px; padding: 2px 9px; font: inherit; font-size: 11.5px; color: var(--ink-2); cursor: pointer; } .tb-tabs button:hover { border-color: var(--app, var(--ink-3)); color: var(--ink); }
+.tb-apps button:hover { border-color: var(--app, var(--ink-3)); } .tb-apps small { color: var(--ink-3); font-size: 11.5px; }
+.tb-styles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.tb-styles button { display: flex; flex-direction: column; gap: 4px; align-items: stretch; border: 1px solid var(--rule); background: var(--solid); border-radius: 8px; padding: 6px; font: inherit; font-size: 12px; color: var(--ink-2); cursor: pointer; text-align: left; }
+.tb-styles button.on { border-color: var(--app, var(--ink)); box-shadow: inset 0 0 0 1px var(--app, var(--ink)); color: var(--ink); }
 .tb-slider label { grid-column: 1 / -1; }
 .tb-slider input[type=range] { width: 100%; }
 .tb-num { width: 52px; padding: 2px 4px; border: 1px solid var(--rule); border-radius: 4px; background: var(--solid); font: 12px var(--mono); }
@@ -1057,6 +1080,18 @@ details.mt-p.na > summary { opacity: .5; cursor: default; }
 .mt-item.on { font-weight: 600; color: var(--c, var(--ink)); }
 #hits li.smetrics { display: block; padding: 2px 6px 6px; cursor: default; }
 #hits li.smetrics:hover { background: none; }
+/* 0.13 · search finds anything: a kind line under each result, its action on the right */
+#hits li.xhit { display: flex; align-items: center; gap: 10px; padding: 6px 10px; cursor: pointer; }
+#hits li.xhit:hover { background: var(--hover); }
+#hits li.xhit .xl { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#hits li.xhit .xl b { font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hits li.xhit .xl i { font-size: 11.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hits li.xhit .xgo { flex: none; font-size: 12px; color: var(--app, var(--ink-2)); font-weight: 700; }
+#hits li.xtry { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px; cursor: default; }
+#hits li.xtry span { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-right: 4px; }
+#hits li.xtry button { border: 1px solid var(--rule); background: var(--solid); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; }
+#hits li.xtry button:hover { border-color: var(--app, var(--ink-3)); }
+#hits li.xnone { padding: 10px; color: var(--ink-3); font-size: 13px; cursor: default; }
 /* apps as tabs inside Atlas (0.7.1): the app runs in a frame under a slim browser-like tab strip */
 .appframe { position: fixed; left: 0; right: 0; top: var(--tabh, 46px); bottom: 0; width: 100%; height: calc(100% - var(--tabh, 46px)); border: 0; z-index: 650; background: var(--solid); }
 body.apptab-on #top { top: 0; left: 0; right: 0; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--rule); box-shadow: 0 1px 4px rgba(0,0,0,.06); }
@@ -1762,6 +1797,36 @@ body.tb-arton #timebar { display: none !important; }
 .cl-read { display: flex; flex-direction: column; justify-content: center; } .cl-k { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); } .cl-read b { font-size: 26px; } .cl-read p { font: italic 400 12.5px/1.45 var(--f); color: var(--ink-2); margin: 6px 0 0; }
 .tb-thumb { position: relative; display: block; height: 34px; background: var(--solid); border-radius: 6px; overflow: hidden; } .tb-thumb i { position: absolute; }
 
+/* ===== 0.13 · Compare's four views ===== */
+.cmv-sw { display: inline-flex; margin: 0 0 12px; }
+.cmv-sw button { font-size: 13px; padding: 5px 12px; }
+.cmp-main .chip { gap: 6px; } .cmv-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--pc, var(--ink-3)); display: inline-block; }
+.cmv-ab { font-size: 10px; border: 1px solid currentColor; border-radius: 3px; padding: 0 3px; }
+.cmv-side { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-top: 10px; }
+.cmv-card, .cmv-hr { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; background: var(--solid); animation: atl-rise .32s var(--ease) both; animation-delay: calc(var(--i, 0) * 50ms); }
+.cmv-card h5, .cmv-hr h5 { margin: 0 0 8px; font-size: 13.5px; }
+.cmv-bars { display: flex; flex-direction: column; gap: 4px; }
+.cmv-r { display: grid; grid-template-columns: minmax(0, 7em) 1fr auto; gap: 8px; align-items: center; font-size: 12px; }
+.cmv-r > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmv-t { position: relative; height: 8px; background: var(--track); border-radius: 4px; }
+.cmv-t i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+.cmv-uk { position: absolute; top: -3px; bottom: -3px; border-left: 1.5px dashed var(--ink-2); }
+.cmv-r em { font-style: normal; color: var(--ink-2); white-space: nowrap; }
+.cmv-line { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.4; }
+.cmv-note { font-size: 12.5px; color: var(--ink-3); margin: 6px 0; }
+.cmv-h2h { display: flex; flex-direction: column; gap: 10px; }
+.cmv-hh { display: grid; grid-template-columns: 1fr 12px 1fr; font-weight: 700; font-size: 14px; } .cmv-hh span:first-child { text-align: right; }
+.cmv-mirror { display: grid; grid-template-columns: auto 1fr 1fr auto; gap: 6px; align-items: center; font-size: 12.5px; }
+.cmv-mirror em { font-style: normal; white-space: nowrap; }
+.cmv-l, .cmv-rr { height: 10px; background: var(--track); border-radius: 5px; position: relative; }
+.cmv-l i { position: absolute; right: 0; top: 0; bottom: 0; border-radius: 5px; transform-origin: right; } .cmv-rr i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
+.cmv-tctl { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.cmv-pick { font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; } .cmv-pick select { font: inherit; max-width: 320px; }
+.cmv-time { width: 100%; height: auto; aspect-ratio: 760 / 340; display: block; min-height: 0; }
+.cmv-time .g { stroke: var(--rule); } .cmv-time .ax { font-size: 11px; fill: var(--ink-3); }
+.cmv-ln { fill: none; stroke-width: 2.2; animation: atl-show .5s var(--ease) both; animation-delay: calc(var(--i, 0) * 90ms); } .cmv-ln.uk { stroke-dasharray: 5 4; stroke-width: 1.6; }
+.cmv-end { font-size: 11.5px; font-weight: 700; }
+.cmv-ev { stroke: var(--ink-3); stroke-dasharray: 2 3; } .cmv-evt { font-size: 10.5px; fill: var(--ink-3); }
 /* ===== 0.13 · the contents-page menu (Atlas design/menus/Menus (final).md) ===== */
 .mega { --mg-bg: var(--solid); --mg-line: var(--rule); --mg-ink: var(--ink); --mg-ink2: var(--ink-2); --mg-tile: var(--chip); --mg-hover: var(--hover); color: var(--ink); background: var(--solid); box-shadow: 0 18px 36px rgba(10,20,30,.16); }
 :root[data-mode="dark"] .mega { box-shadow: 0 18px 36px rgba(0,0,0,.5); }
@@ -1863,7 +1928,7 @@ body.tb-arton #timebar { display: none !important; }
   <button class="brand" id="brand" aria-expanded="false" aria-controls="menu" title="Settings, comparison and export"><b>ATLAS<sup id="sup"></sup></b><span>0.10 · United Kingdom ▾</span></button>
   <div class="finder">
     <button id="browse-btn" aria-expanded="false" aria-controls="browse" title="Choose which boundaries show, or browse places"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span id="browse-lv" class="vh">Areas</span></button>
-    <div class="search"><input id="search" type="search" placeholder="Find a place or a metric…" autocomplete="off" aria-label="Find a place or a metric"><span class="schips" id="schips" hidden></span><ul id="hits" hidden role="listbox" aria-multiselectable="true"></ul></div>
+    <div class="search"><input id="search" type="search" placeholder="Search places, rivers, companies, measures…   ⌘K" autocomplete="off" aria-label="Search anything on the map"><span class="schips" id="schips" hidden></span><ul id="hits" hidden role="listbox" aria-multiselectable="true"></ul></div>
     <div id="browse" hidden>
       <div class="lvpick" id="lvpick"></div>
       <div class="cats" id="cats"></div>

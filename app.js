@@ -3568,6 +3568,56 @@
     cmpEl.querySelectorAll("[data-kchart]").forEach(el => { const it = CMP.items.find(i => i.id === el.dataset.kchart); if (!it || !it.spec.style) { el.innerHTML = ""; return; } el.innerHTML = drawChart(it.spec, Math.max(260, el.clientWidth - 8)); });
   }
   const cmpEmpty = (m, codes) => m.nature !== "text" && codes.every(c => { try { const r = m.get(c, state.date); return !r || r.nm || r.v == null; } catch (e) { return true; } });
+  // ---------- 0.13: Compare's four views (Atlas design/compare/Compare (final).md) ----------
+  // Table (today's tables, charts and patterns) · Side by side (one small chart per measure, same place order, UK dashed)
+  // · Head to head (two places, mirrored bars, one sentence each) · Over time (lines, £ or 2010 = 100, end labels apart).
+  const CMP_COLS = ["var(--cat1)", "var(--cat2)", "var(--cat3)", "var(--cat4)", "var(--cat5)", "var(--cat6)", "var(--cat7)", "var(--cat8)"];
+  const cmpCol = (c, codes) => c === UKC ? "var(--ink-3)" : CMP_COLS[Math.max(0, codes.indexOf(c)) % CMP_COLS.length];
+  const cmpVal = (m, c) => { try { const r = m.get(c, state.date); return r && r.v != null && !r.nm && isFinite(r.v) ? r.v : null; } catch (e) { return null; } };
+  const cmpFmt = m => (window.AtlasNarrative ? AtlasNarrative.fmtOf(m) : (m.fmt || String));
+  function cmpSide(codes, ms) {
+    return `<div class="cmv-side">${ms.map((m, mi) => { const f = cmpFmt(m), vs = codes.map(c => [c, cmpVal(m, c)]).filter(x => x[1] != null), uk = cmpVal(m, UKC);
+      if (!vs.length) return `<div class="cmv-card" style="--i:${mi}"><h5>${esc(m.label)}</h5><p class="cmv-line">No values for these places on this date.</p></div>`;
+      const mx = Math.max(...vs.map(x => Math.abs(x[1])), Math.abs(uk || 0)) || 1, hi = vs.reduce((a, b) => b[1] > a[1] ? b : a), lo = vs.reduce((a, b) => b[1] < a[1] ? b : a);
+      return `<div class="cmv-card" style="--i:${mi}"><h5>${esc(m.label)}</h5><div class="cmv-bars">${codes.map(c => { const v = cmpVal(m, c); return `<div class="cmv-r"><span>${esc(nameOf(c))}</span><span class="cmv-t">${v != null ? `<i class="atl-fill" style="width:${(100 * Math.abs(v) / mx).toFixed(1)}%;background:${cmpCol(c, codes)}"></i>` : ""}${uk != null ? `<b class="cmv-uk" style="left:${(100 * Math.abs(uk) / mx).toFixed(1)}%" title="UK: ${esc(f(uk))}"></b>` : ""}</span><em>${v != null ? esc(f(v)) : "—"}</em></div>`; }).join("")}</div>
+        <p class="cmv-line">${esc(nameOf(hi[0]))} is highest at ${esc(f(hi[1]))}${vs.length > 1 ? `; ${esc(nameOf(lo[0]))} is lowest at ${esc(f(lo[1]))}` : ""}.${uk != null ? ` The UK: ${esc(f(uk))} (dashed).` : ""}</p></div>`; }).join("")}</div>`;
+  }
+  function h2hSentence(m, a, b, va, vb) {
+    const f = cmpFmt(m), A = nameOf(a), B = nameOf(b), pts = window.AtlasNarrative && AtlasNarrative.isPts(m);
+    if (va === vb) return `${A} and ${B} are level on ${m.label.toLowerCase()}, at ${f(va)}.`;
+    const [hi, lo, vh, vl] = va > vb ? [A, B, va, vb] : [B, A, vb, va];
+    if (!pts && vl > 0 && vh / vl >= 1.5) return `${hi}'s ${m.label.toLowerCase()} is ${(vh / vl).toFixed(vh / vl >= 10 ? 0 : 1)} times ${lo}'s (${f(vh)} against ${f(vl)}).`;
+    const d = vh - vl, ds = pts ? `${d.toFixed(1)} points` : String(f(d)).match(/^[£$€-]|\d/) ? f(d) : d.toLocaleString("en-GB");
+    return `${hi} is ${ds} higher than ${lo} on ${m.label.toLowerCase()} (${f(vh)} against ${f(vl)}).`;
+  }
+  function cmpH2H(codes, ms) {
+    const [a, b] = CMP.ab;
+    return `<p class="cmv-note">Click a place's chip to swap it in for <b>B</b>.</p><div class="cmv-h2h"><div class="cmv-hh"><span style="color:${cmpCol(a, codes)}">A · ${esc(nameOf(a))}</span><span></span><span style="color:${cmpCol(b, codes)}">B · ${esc(nameOf(b))}</span></div>
+      ${ms.map((m, mi) => { const f = cmpFmt(m), va = cmpVal(m, a), vb = cmpVal(m, b); if (va == null || vb == null) return `<div class="cmv-hr" style="--i:${mi}"><h5>${esc(m.label)}</h5><p class="cmv-line">Not available for both on this date.</p></div>`;
+        const mx = Math.max(Math.abs(va), Math.abs(vb)) || 1;
+        return `<div class="cmv-hr" style="--i:${mi}"><h5>${esc(m.label)}</h5><div class="cmv-mirror"><em>${esc(f(va))}</em><span class="cmv-l"><i class="atl-fill" style="width:${(100 * Math.abs(va) / mx).toFixed(1)}%;background:${cmpCol(a, codes)}"></i></span><span class="cmv-rr"><i class="atl-fill" style="width:${(100 * Math.abs(vb) / mx).toFixed(1)}%;background:${cmpCol(b, codes)}"></i></span><em>${esc(f(vb))}</em></div><p class="cmv-line">${esc(h2hSentence(m, a, b, va, vb))}</p></div>`; }).join("")}</div>`;
+  }
+  function cmpTime(codes, ms) {
+    const tms = ms.filter(m => EN.isNum(m) && m.temporal !== "static" && m.temporal !== "election"); if (!tms.length) return `<div class="empty-big">None of the chosen measures has a history to draw.</div>`;
+    if (!tms.some(m => m.id === CMP.tm)) CMP.tm = (tms.find(m => /^£/.test(String(cmpFmt(m)(1)))) || tms[0]).id; const m = M[CMP.tm], f = cmpFmt(m), idx = CMP.idx === true;
+    const all = codes.concat(codes.includes(UKC) ? [] : [UKC]).map(c => ({ c, pts: (window.AtlasNarrative ? AtlasNarrative.series(m, c) : []).filter(p => p[1] != null) })).filter(x => x.pts.length >= 2);
+    if (!all.length) return `<div class="empty-big">No history for these places.</div>`;
+    const base = x => { const b = x.pts.find(p => p[0] === 2010) || x.pts[0]; return b[1] || null; };
+    const lines = all.map(x => ({ c: x.c, pts: idx ? (base(x) ? x.pts.map(p => [p[0], 100 * p[1] / base(x)]) : []) : x.pts })).filter(x => x.pts.length >= 2);
+    const W = 760, H = 340, L = 64, R = 150, T = 16, B = 34, xs = lines.flatMap(x => x.pts.map(p => p[0])), ys = lines.flatMap(x => x.pts.map(p => p[1]));
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys, idx ? 100 : Infinity), y1 = Math.max(...ys), sx = v => L + (x1 > x0 ? (v - x0) / (x1 - x0) : .5) * (W - L - R), sy = v => H - B - (y1 > y0 ? (v - y0) / (y1 - y0) : .5) * (H - T - B);
+    const fy = v => idx ? v.toFixed(0) : f(v), ticks = [0, 1, 2, 3, 4].map(i => y0 + (y1 - y0) * i / 4), yrs = []; for (let y = Math.ceil(x0); y <= x1; y += Math.max(1, Math.round((x1 - x0) / 8))) yrs.push(y);
+    // end labels never overlap: place them at their line's end, then push apart top to bottom
+    const ends = lines.map(x => ({ c: x.c, y: sy(x.pts[x.pts.length - 1][1]), v: x.pts[x.pts.length - 1][1] })).sort((a, b) => a.y - b.y); for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
+    const over = ends.length ? ends[ends.length - 1].y - (H - B) : 0; if (over > 0) ends.forEach(e => e.y -= over);
+    const ev = x0 <= 2020 && x1 >= 2020 ? `<line class="cmv-ev" x1="${sx(2020)}" x2="${sx(2020)}" y1="${T}" y2="${H - B}"/><text class="cmv-evt" x="${sx(2020) + 4}" y="${T + 10}">2020: pandemic</text>` : "";
+    const hiL = lines.map(x => ({ c: x.c, v: x.pts[x.pts.length - 1][1] })).filter(x => x.c !== UKC).sort((a, b) => b.v - a.v);
+    return `<div class="cmv-tw"><div class="cmv-tctl"><label class="cmv-pick">Measure <select data-cmtm>${tms.map(t => `<option value="${t.id}" ${t.id === CMP.tm ? "selected" : ""}>${esc(t.label)}</option>`).join("")}</select></label><span class="seg sm"><button type="button" data-cmidx="0" class="${idx ? "" : "on"}">${/^£/.test(f(1)) ? "£" : "Values"}</button><button type="button" data-cmidx="1" class="${idx ? "on" : ""}">2010 = 100</button></span></div>
+      <svg class="cmv-time" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(m.label)} over time">${ticks.map(t => `<line class="g" x1="${L}" x2="${W - R}" y1="${sy(t)}" y2="${sy(t)}"/><text class="ax" x="${L - 6}" y="${sy(t) + 4}" text-anchor="end">${esc(String(fy(t)))}</text>`).join("")}${yrs.map(y => `<text class="ax" x="${sx(y)}" y="${H - B + 18}" text-anchor="middle">${y}</text>`).join("")}${ev}
+        ${lines.map((x, i) => `<path class="cmv-ln${x.c === UKC ? " uk" : ""}" style="--i:${i};stroke:${cmpCol(x.c, codes)}" d="${x.pts.map((p, k) => (k ? "L" : "M") + sx(p[0]).toFixed(1) + " " + sy(p[1]).toFixed(1)).join("")}"/>`).join("")}
+        ${ends.map(e => `<text class="cmv-end" x="${W - R + 8}" y="${e.y + 4}" style="fill:${cmpCol(e.c, codes)}">${esc(nameOf(e.c))} ${esc(String(fy(e.v)))}</text>`).join("")}</svg>
+      <p class="cmv-line">${hiL.length ? `${esc(nameOf(hiL[0].c))} ends highest${idx ? ", having grown most since 2010" : ` at ${esc(f(hiL[0].v))}`}${hiL.length > 1 ? `; ${esc(nameOf(hiL[hiL.length - 1].c))} ends lowest` : ""}.` : ""}${/^£/.test(f(1)) && !/real|constant/i.test(m.label) ? " Figures are before inflation." : ""}${idx ? " Each line starts at 100 in 2010 (or its first year), so the lines show growth, not size." : ""}</p></div>`;
+  }
   function renderCmp() {
     const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id));
     if (!CMP.items.length && codes.length >= 2 && ms.length) { CMP.items.push({ id: "k" + (++CMP.seq), kind: "table", title: "Places × metrics", spec: { layout: "pm", when: "bar", codes: codes.slice(), metrics: [...CMP.metrics].filter(id => M[id]) } }); CMP.at = "k" + CMP.seq; }   // the side-by-side table, as before
@@ -3578,10 +3628,15 @@
     const usable = ms.filter(m => m.nature !== "text");
     if (!usable.some(m => m.id === CMP.x)) CMP.x = (usable[0] || {}).id || null;
     if (!usable.some(m => m.id === CMP.y) || CMP.y === CMP.x) CMP.y = (usable.find(m => m.id !== CMP.x) || {}).id || null;
-    let main = `<section><h3>Places (${codes.length})</h3><div class="chips">${codes.map(c => `<span class="chip">${esc(nameOf(c))}<button data-rmc="${c}" aria-label="Remove ${esc(nameOf(c))}">×</button></span>`).join("")}
+    CMP.view = CMP.view || "table";
+    CMP.ab = (CMP.ab || []).filter(c => codes.includes(c)); codes.forEach(c => { if (CMP.ab.length < 2 && !CMP.ab.includes(c)) CMP.ab.push(c); });
+    let main = `<div class="cmv-sw seg" role="tablist" aria-label="View">${[["table", "Table"], ["side", "Side by side"], ["h2h", "Head to head"], ["time", "Over time"]].map(([k, l]) => `<button type="button" role="tab" data-cmview="${k}" class="${CMP.view === k ? "on" : ""}" aria-selected="${CMP.view === k}">${l}</button>`).join("")}</div>
+      <section><h3>Places (${codes.length})</h3><div class="chips">${codes.map(c => `<span class="chip" data-cmab="${c}" style="--pc:${cmpCol(c, codes)}"><i class="cmv-dot"></i>${CMP.view === "h2h" && (CMP.ab || []).includes(c) ? `<b class="cmv-ab">${(CMP.ab || []).indexOf(c) ? "B" : "A"}</b>` : ""}${esc(nameOf(c))}<button data-rmc="${c}" aria-label="Remove ${esc(nameOf(c))}">×</button></span>`).join("")}
       <span class="cmp-add"><input id="cmp-q" placeholder="Add a place…" autocomplete="off" value="${esc(CMP.q)}"><ul id="cmp-hits" hidden></ul></span>${codes.length ? `<button class="btn" data-clearall>Clear</button>` : ""}</div></section>`;
     if (codes.length < 2) main += `<div class="empty-big">Pick at least two places to compare. Add them here, Shift-click them on the map, or hold the mouse still and drag a box over them.</div>`;
     else if (!ms.length) main += `<div class="empty-big">Tick the metrics you want to compare on the left. They can come from the same perspective or different ones.</div>`;
+    else if (CMP.view !== "table") { const nums = ms.filter(m => EN.isNum(m)); const CAP = 12, shown = CMP.view === "time" ? nums : nums.slice(0, CAP), more = CMP.view !== "time" && nums.length > CAP ? `<p class="cmv-note">Showing the first ${CAP} of ${nums.length} measures; untick some on the left to choose which.</p>` : "";
+      main += !nums.length ? `<div class="empty-big">Tick a measure with numbers to see this view.</div>` : more + (CMP.view === "side" ? cmpSide(codes, shown) : CMP.view === "h2h" ? cmpH2H(codes, shown) : cmpTime(codes, shown)); }
     else {
       const anyNum = ms.some(m => EN.isNum(m));
       main += `<section class="cmp-acts"><button class="btn primary" data-kmk="table" title="Choose a layout and dates">Make table ▾</button><button class="btn primary" data-kmk="chart" title="Choose a chart style for these places and metrics">Make chart</button><button class="btn" data-can ${anyNum ? "" : `disabled title="Analyse needs at least one numeric metric"`}>Analyse these…</button><button class="btn" data-ctile title="The places as a small map in the workspace">Places as a tile → workspace</button><button class="btn" data-cexp>Export…</button>${helpBtn("tables", "Help: tables and totals")}</section>`;
@@ -3670,11 +3725,15 @@
     if (ds.kstyle) { const x = CMP.items.find(i => i.id === CMP.ac); if (x) { x.spec.style = ds.kstyle; x.title = "Chart: " + x.spec.metrics.map(id => M[id].label).join(" & "); renderCmp(); } return true; }
     return false;
   }
+  cmpEl.addEventListener("change", e => { const t = e.target.closest("[data-cmtm]"); if (t) { CMP.tm = t.value; renderCmp(); } });
   cmpEl.addEventListener("click", e => {
     if (e.target === cmpEl) return closeCmp();
     const li = e.target.closest("[data-add]"); if (li) { CMP.q = ""; addCompare({ code: li.dataset.add, level: P[li.dataset.add].level }); renderCmp(); return; }
+    const ab = e.target.closest("[data-cmab]"); if (ab && !e.target.closest("button") && CMP.view === "h2h") { const c = ab.dataset.cmab; CMP.ab = CMP.ab || []; if (!CMP.ab.includes(c)) CMP.ab[1] = c; else if (CMP.ab[1] === c) CMP.ab.reverse(); renderCmp(); return; }
     const it0 = e.target.closest("[data-kshow]"); if (it0 && !e.target.closest("button")) { cmpItemAction(it0); return; }
     const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.cmview) { CMP.view = b.dataset.cmview; renderCmp(); return; }
+    if (b.dataset.cmidx) { CMP.idx = b.dataset.cmidx === "1"; renderCmp(); return; }
     if (cmpItemAction(b)) return;
     if (b.hasAttribute("data-close")) closeCmp(); else if (b.dataset.rmc) toggleCompare({ code: b.dataset.rmc, level: P[b.dataset.rmc].level });
     else if (b.hasAttribute("data-clearall")) { clearCompare(); renderCmp(); }
@@ -3791,21 +3850,32 @@
     });
     ["ward-line", "council-line", "region-line", "nation-line"].forEach(id => { if (MAPCOL.lines) setP(id, "line-color", MAPCOL.lines); });
   }
+  // 0.13: the Toolbox (Atlas design/toolbox/Toolbox (final).md): five sections, closed until clicked, opening in place
+  const TBOPEN = new Set();
   function renderTools() {
-    tbMenu.innerHTML = `<div class="tb-tools">${[["measure", "Measure", "Click points to measure distance; three or more points give an area. Double-click or Esc to finish", '<path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>'], ["lasso", "Lasso", "Draw any shape around areas to select them (areas whose centre falls inside)", '<path d="M12 4c5 0 9 2.4 9 5.5S17 15 12 15s-9-2.4-9-5.5S7 4 12 4z"/><path d="M6.5 13.6c-.9 1-1 2.4-.1 3.3.8.8 2.2.8 3-.1M8.8 16.3 8 21"/>'], ["shot", "To workspace", "Send a picture of the map to the workspace", '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 9v6M9 12h6"/>'], ["copy", "Copy view", "Copy a picture of the map to paste elsewhere", '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>']].map(([id, l, t, ic]) => `<button data-tool="${id}" class="${state.tool === id ? "on" : ""}" title="${esc(t)}"><svg class="ico" viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("")}</div>
-      <div class="tb-row"><span>Panels</span><div class="seg sm"><button data-hot="0" class="${PS.hot ? "" : "on"}">Always shown</button><button data-hot="1" class="${PS.hot ? "on" : ""}">Near edges</button></div></div>
+    const appTools = APP ? APP.tools.concat(APP.panels.filter(x => x.id === "marketplace")) : [], TB = window.AtlasTimebar, stName = TB ? (TB.STYLES.find(x => x[0] === TB.style) || [, "Atlas"])[1] : "";
+    const secs = [["map", "On the map", "Measure, lasso, capture", `<div class="tb-tools">${[["measure", "Measure", "Click points to measure distance; three or more points give an area. Double-click or Esc to finish", '<path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>'], ["lasso", "Lasso", "Draw any shape around areas to select them (areas whose centre falls inside)", '<path d="M12 4c5 0 9 2.4 9 5.5S17 15 12 15s-9-2.4-9-5.5S7 4 12 4z"/><path d="M6.5 13.6c-.9 1-1 2.4-.1 3.3.8.8 2.2.8 3-.1M8.8 16.3 8 21"/>'], ["shot", "To workspace", "Send a picture of the map to the workspace", '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 9v6M9 12h6"/>'], ["copy", "Copy view", "Copy a picture of the map to paste elsewhere", '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>']].map(([id, l, t, ic]) => `<button data-tool="${id}" class="${state.tool === id ? "on" : ""}" title="${esc(t)}"><svg class="ico" viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("")}</div>`],
+      APP && appTools.length ? ["app", `In ${(x => x.charAt(0).toUpperCase() + x.slice(1))(APP.short || APP.name.replace(/^Atlas /, ""))}`, appTools.map(x => x.title).join(", "), `<div class="tb-apps">${appTools.map(x => { const tb = tabsOf(x); return `<div class="tb-app"><button type="button" data-tbapp="${x.id}"><b>${esc(x.title)}</b><small>${esc(x.blurb || "")}</small></button>${tb ? `<div class="tb-tabs">${tb.map(([k, l]) => `<button type="button" data-tbtab="${x.id}|${esc(k)}">${esc(l)}</button>`).join("")}</div>` : ""}</div>`; }).join("")}</div>`] : null,
+      TB ? ["time", "Time bar", `Style: ${stName}`, `<div class="tb-styles">${TB.STYLES.map(([id, l, d]) => `<button type="button" data-tbstyle="${id}" class="${TB.style === id ? "on" : ""}" title="${esc(d)}"><span class="tb-thumb">${TB.thumb(id)}</span>${esc(l)}</button>`).join("")}</div>`] : null,
+      ["look", "Look", "Panels, hover cards, grid, colours", `<div class="tb-row"><span>Panels</span><div class="seg sm"><button data-hot="0" class="${PS.hot ? "" : "on"}">Always shown</button><button data-hot="1" class="${PS.hot ? "on" : ""}">Near edges</button></div></div>
       <div class="tb-row"><span>Hover cards</span><div class="seg sm"><button data-detail="simple" class="${PS.detail === "simple" ? "on" : ""}">Simple</button><button data-detail="detailed" class="${PS.detail !== "simple" ? "on" : ""}">Detailed</button></div></div>
       <div class="tb-row"><span>Estimated values</span><div class="seg sm"><button data-hatch="1" class="${PS.hatch !== false ? "on" : ""}" title="Estimated areas (e.g. notional results) get diagonal lines">Hatched</button><button data-hatch="0" class="${PS.hatch === false ? "on" : ""}">Plain</button></div></div>
       <div class="tb-row"><span>Map colours</span><span class="mapcols">${[["land", "Land"], ["water", "Sea and water"], ["lines", "Boundaries"]].map(([k, l]) => `<label title="${l}"><input type="color" data-mapcol="${k}" value="${mapColNow(k)}"><small>${l}</small></label>`).join("")}${Object.keys(MAPCOL).length ? `<button class="lnk" data-mapcolreset>reset</button>` : ""}</span></div>
       <div class="tb-row"><span>Grid lines</span><div class="seg sm">${[["off", "Off"], ["deg", "Lat/long"], ["km", "km"]].map(([k, l]) => `<button data-grid="${k}" class="${TOOLS.grid === k ? "on" : ""}">${l}</button>`).join("")}</div></div>
-      ${SLIDERS.map(([k, l, t]) => `<div class="tb-slider" title="${esc(t)}"><label for="tb-${k}">${l}</label><input type="range" id="tb-${k}" data-sl="${k}" min="0" max="1" step="0.01" value="${TOOLS[k]}"><input type="number" class="tb-num" data-sn="${k}" min="0" max="1" step="0.01" value="${(+TOOLS[k]).toFixed(2)}" aria-label="${esc(l)} value"></div>`).join("")}
-      <div class="tb-foot"><button class="btn" data-treset>Reset to defaults</button><span>All sliders run from 0 to 1.</span></div>`;
+      `],
+      ["feel", "Feel", "Sliders and reset", `${SLIDERS.map(([k, l, t]) => `<div class="tb-slider" title="${esc(t)}"><label for="tb-${k}">${l}</label><input type="range" id="tb-${k}" data-sl="${k}" min="0" max="1" step="0.01" value="${TOOLS[k]}"><input type="number" class="tb-num" data-sn="${k}" min="0" max="1" step="0.01" value="${(+TOOLS[k]).toFixed(2)}" aria-label="${esc(l)} value"></div>`).join("")}
+      <div class="tb-foot"><button class="btn" data-treset>Reset to defaults</button><span>All sliders run from 0 to 1.</span></div>`]].filter(Boolean);
+    tbMenu.innerHTML = `<div class="tbx-h"><b>Toolbox</b><i>Your choices follow you between apps.</i></div>` + secs.map(([k, l, sum, body], n) => `<section class="tbx-sec${TBOPEN.has(k) ? " on" : ""}" style="--i:${n}"><button type="button" class="tbx-sh" data-tbsec="${k}" aria-expanded="${TBOPEN.has(k)}"><span>${esc(l)}</span><i>${esc(sum)}</i><b class="mgc-arr" aria-hidden="true">›</b></button>${TBOPEN.has(k) ? `<div class="tbx-sb">${body}</div>` : ""}</section>`).join("");
   }
   function toggleTools(force) { const open = force != null ? force : tbMenu.hidden; tbMenu.hidden = !open; tbBtn.setAttribute("aria-expanded", String(open)); if (open) { closeMenu(); renderTools(); } }
   tbBtn.addEventListener("click", () => toggleTools());
   $("open-tools").addEventListener("click", () => toggleTools(true));
   tbMenu.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.tbsec) { const k = b.dataset.tbsec; TBOPEN.has(k) ? TBOPEN.delete(k) : TBOPEN.add(k); renderTools(); return; }
+    if (b.dataset.tbstyle) { AtlasTimebar.setStyle(b.dataset.tbstyle); renderTools(); return; }
+    if (b.dataset.tbapp) { toggleTools(false); openFromBar(b.dataset.tbapp); return; }
+    if (b.dataset.tbtab) { const [id, k] = b.dataset.tbtab.split("|"); toggleTools(false); openPanelTab(id, k); return; }
     if (b.dataset.tool) { const t = b.dataset.tool; if (t === "copy") copyView(); else if (t === "shot") captureMap(); else setTool(state.tool === t ? null : t); renderTools(); }
     else if (b.dataset.grid) { TOOLS.grid = b.dataset.grid; applyTools(); renderTools(); }
     else if (b.dataset.hot) { PS.hot = b.dataset.hot === "1"; document.body.classList.toggle("hot", PS.hot); savePS(); renderTools(); toast(PS.hot ? "Panels now hide. Move the pointer to the left or bottom edge to bring them back." : "Panels always shown."); }
@@ -5112,13 +5182,55 @@
     const body = (extra.length ? `<li class="sec">Ticked</li>${extra.map(c => row(c, -1)).join("")}${hits.length ? `<li class="sec">Results</li>` : ""}` : "") + hits.map(row).join("");
     const pbody = phits.length ? `<li class="sec">Airports, ports and stations</li>${phits.map(i => `<li class="poi-hit" data-poi="${i.id}"><span class="poi-ic" style="background:${POI_KIND[i.k].col}"></span>${esc(i.n)} <small>${esc(POI_KIND[i.k].label)}</small></li>`).join("")}` : "";
     const mbody = pbody + (mhits.length ? `<li class="sec">Metrics <small>click to put one on the map</small></li><li class="smetrics">${mtree("search", mhits, mrow, { all: true, isOn: m => isMapped(m.id) })}</li>` : "");
-    hl.innerHTML = (hits.length || extra.length ? (mhits.length && !extra.length ? `<li class="sec">Places</li>` : "") + body : "") + mbody + `<li class="sfoot"><span>${picked.length ? `${picked.length} ticked` : "Tick places to show several together"}</span>${picked.length ? `<button type="button" class="btn" data-sclear>Clear</button>` : ""}<button type="button" class="btn primary" data-ssearch ${picked.length ? "" : "disabled"}>Search${picked.length > 1 ? ` (${picked.length})` : ""}</button></li>`;
-    hl.hidden = !ddOpen || (!hits.length && !picked.length && !mhits.length && !phits.length);
+    const nothing = si.value.trim().length >= 2 && !hits.length && !mhits.length && !phits.length && !xhits.length;
+    hl.innerHTML = (hits.length || extra.length ? ((mhits.length || xhits.length) && !extra.length ? `<li class="sec">Places</li>` : "") + body : "") + mbody + xbody() + (nothing ? `<li class="xnone">Nothing found for “${esc(si.value.trim())}”. Try a place, a river, a company or a measure.</li>` : "") + `<li class="sfoot"><span>${picked.length ? `${picked.length} ticked` : "Tick places to show several together"}</span>${picked.length ? `<button type="button" class="btn" data-sclear>Clear</button>` : ""}<button type="button" class="btn primary" data-ssearch ${picked.length ? "" : "disabled"}>Search${picked.length > 1 ? ` (${picked.length})` : ""}</button></li>`;
+    hl.hidden = !ddOpen || (!hits.length && !picked.length && !mhits.length && !phits.length && !xhits.length && !nothing && !(ddOpen && !si.value.trim()));
     tickPill.hidden = !picked.length || !hl.hidden; tickPill.innerHTML = `<button type="button" data-sopen>${picked.length} ticked</button>`;
   }
-  let phits = [];
-  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); mhits = searchMetrics(q); phits = searchPoi(q); cur = 0; ddOpen = true; showHits(); });
-  si.addEventListener("focus", () => { closeBrowse(); ddOpen = true; showHits(); });
+  let phits = [], xhits = [];
+  // 0.13: the search box finds anything on the map (Atlas design/masthead/Masthead (final).md): besides places, stations
+  // and measures, rivers, National Parks and Ramsar sites, coastal stretches, companies, donors, MPs, trade partners, this
+  // app's panels, the other apps, things to do, postcodes and coordinates. Each result says what it is on a second line.
+  const SIDX = () => window.ATLAS_SEARCH_INDEX || (SIDX.loading || (SIDX.loading = loadData("data/search_index.js", "ATLAS_SEARCH_INDEX").then(() => { const q = si.value.trim().toLowerCase(); if (q.length >= 2) { xhits = searchAll(q); showHits(); } }).catch(() => {})), null);
+  const fitBox = (b, z) => { map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 80, maxZoom: z || 12, duration: 1200 }); };
+  const capF = x => String(x || "").charAt(0).toUpperCase() + String(x || "").slice(1);
+  function countryCard(cc) { const T = window.ATLAS_TRADE, c = T && T.cty[cc]; if (!c) return null; const ys = Object.keys((c.y || {}).exp || {}).sort();
+    return { app: "Markets", title: c.n, kicker: [c.rg], figs: [{ v: fmtGBP(c.exp), l: "UK goods exports to it" }, { v: fmtGBP(c.imp), l: "UK goods imports from it" }, { v: fmtGBP(c.exp - c.imp), l: "balance", tone: c.exp >= c.imp ? "up" : "down" }],
+      items: [{ k: "Trade in goods, year by year", h: `Exports ${fmtGBP(c.exp)}, imports ${fmtGBP(c.imp)} in the latest year`, viz: window.AtlasCard ? AtlasCard.viz.bars(ys.map(y => ({ v: c.y.exp[y], c: "#9aa5ab", n: y }))) : "" }], source: "HMRC trade in goods", panel: "partners" }; }
+  function searchAll(q) {
+    const out = [], has = t => String(t || "").toLowerCase().includes(q), starts = t => String(t || "").toLowerCase().startsWith(q), rank = (a, b) => (starts(a.l) ? 0 : 1) - (starts(b.l) ? 0 : 1);
+    const add = (kind, rows, n) => { rows = rows.sort(rank).slice(0, n || 5); if (rows.length) out.push({ kind, rows }); };
+    const ll = q.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
+    if (ll && Math.abs(+ll[1]) <= 90 && Math.abs(+ll[2]) <= 180) add("Coordinates", [{ l: `${(+ll[1]).toFixed(4)}, ${(+ll[2]).toFixed(4)}`, sub: "Latitude, longitude", act: "Go", run: () => map.flyTo({ center: [+ll[2], +ll[1]], zoom: 12, duration: 1200 }) }]);
+    const pc = q.replace(/\s+/g, "").toUpperCase(); if (/^[A-Z]{1,2}\d[A-Z\d]?\d[A-Z]{2}$/.test(pc)) add("Postcode", [{ l: pc.slice(0, -3) + " " + pc.slice(-3), sub: "Postcode, found with postcodes.io", act: "Go", run: () => fetch("https://api.postcodes.io/postcodes/" + encodeURIComponent(pc)).then(r => r.json()).then(j => { const r = j && j.result; if (!r) return toast("That postcode wasn't found."); const c = [r.codes && r.codes.admin_ward, r.codes && r.codes.admin_district].find(x => x && P[x]); map.flyTo({ center: [r.longitude, r.latitude], zoom: 14, duration: 1200 }); if (c) setTimeout(() => focus(c), 1300); }).catch(() => toast("Postcodes couldn't be reached.")) }]);
+    if (q.length < 2) return out;
+    const X = SIDX();
+    if (X) {
+      add("Rivers", X.rivers.filter(r => has(r[0])).map(r => ({ l: r[0], sub: `${r[1]}, ${fmtInt(r[2])} km`, act: "Go", run: () => fitBox(r[3], 11) })));
+      add("National Parks and Ramsar sites", X.parks.filter(r => has(r[0])).map(r => ({ l: r[0], sub: r[1], act: "Go", run: () => fitBox(r[2], 11) })));
+      add("Coast", X.coast.filter(r => has(r[0])).map(r => ({ l: r[0], sub: "Shoreline management plan stretch", act: "Go", run: () => fitBox(r[2], 10) })));
+    }
+    if (q.length >= 3) {
+      const MK = window.ATLAS_MARKETS; if (MK && MK.companies) add("Companies", MK.companies.filter(c => has(c.n) || (c.t && c.t.toLowerCase() === q)).map(c => ({ l: c.n, sub: `Company${c.sector ? ", " + c.sector : ""}${c.hq ? ", head office " + c.hq.split(",").slice(-1)[0].trim() : ""}`, act: "Go", run: () => c.lat ? map.flyTo({ center: [c.lon, c.lat], zoom: 15, duration: 1200 }) : toast("No head office location for this company.") })));
+      const MO = window.ATLAS_MONEY, AM = window.AtlasMoney;
+      if (MO && AM) {
+        add("MPs", Object.entries(MO.mps || {}).filter(([, m]) => has(m.n)).map(([id, m]) => ({ l: m.n, sub: `MP${(m.seats || []).length ? ", " + nameOf(m.seats[m.seats.length - 1][0]) : ""}`, act: "Open", run: () => AM.openMP(id) })), 4);
+        add("Donors", Object.entries(MO.donors || {}).filter(([, d]) => has(d[0])).sort((a, b) => b[1][3] - a[1][3]).map(([id, d]) => ({ l: d[0], sub: `Political donor, ${fmtGBP(d[3])} registered`, act: "Open", run: () => AM.openDonor(id) })), 4);
+      }
+      const T = window.ATLAS_TRADE; if (T && T.cty) add("Trade partners", Object.entries(T.cty).filter(([, c]) => has(c.n)).map(([cc, c]) => ({ l: c.n, sub: `Trade partner, ${c.rg}: exports ${fmtGBP(c.exp)}`, act: "Open", run: () => { const sp = countryCard(cc); if (sp && window.AtlasCard) AtlasCard.open(sp); } })), 4);
+    }
+    if (APP) add(`Panels in ${capF(APP.short || APP.name.replace(/^Atlas /, ""))}`, APP.panels.concat(APP.tools).filter(x => has(x.title) || has(x.blurb)).map(x => ({ l: x.title, sub: x.blurb || "Panel", act: "Open", run: () => openFromBar(x.id) })), 4);
+    if (window.AtlasApps) add("Apps", AtlasApps.list().filter(a => has(a.name) || has(a.blurb)).map(a => ({ l: a.name, sub: a.blurb || "App", act: "Switch", run: () => openAppTab(a.id) })), 3);
+    add("Things to do", [["Compare places", "Compare", () => openCmp()], ["Analyse", "Correlation, regression, clusters, hot spots", () => openAnalyse({})], ["Export a table", "CSV or Excel of what's on the map", () => openExport()], ["Help", "The handbook", () => openHelp()]].filter(([l, d]) => has(l) || has(d)).map(([l, d, run]) => ({ l, sub: d, act: "Open", run })), 4);
+    return out;
+  }
+  const TRY = ["Leeds", "River Thames", "flood", "Compare", "SW1A 1AA"];
+  function xbody() {
+    if (!si.value.trim()) return ddOpen && !picked.length ? `<li class="xtry"><span>Try</span>${TRY.map(t => `<button type="button" data-xtry="${esc(t)}">${esc(t)}</button>`).join("")}</li>` : "";
+    let i = 0; return xhits.map(g => `<li class="sec">${esc(g.kind)}</li>` + g.rows.map(r => `<li class="xhit" data-x="${i++}"><span class="xl"><b>${esc(r.l)}</b><i>${esc(r.sub || "")}</i></span><span class="xgo">${esc(r.act)} ›</span></li>`).join("")).join(""); }
+  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); mhits = searchMetrics(q); phits = searchPoi(q); xhits = searchAll(q); cur = 0; ddOpen = true; showHits(); });
+  document.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) { e.preventDefault(); si.focus(); si.select(); } });   // ⌘K
+  si.addEventListener("focus", () => { closeBrowse(); ddOpen = true; SIDX(); showHits(); });
   si.addEventListener("blur", () => { setTimeout(() => { if (document.activeElement !== si) { ddOpen = false; showHits(); } }, 120); });
   function toggleTick(c) { picked = picked.includes(c) ? picked.filter(x => x !== c) : picked.concat(c); showHits(); if (!browse.hidden) renderPFoot(); }
   function jumpTo(code) { si.value = ""; hits = []; mhits = []; ddOpen = false; showHits(); si.blur(); closeBrowse(); focus(code); }
@@ -5141,6 +5253,8 @@
     if (b && b.hasAttribute("data-sclear")) { picked = []; showHits(); return; }
     if (b && b.dataset.sm) { const id = b.dataset.sm; if (!isMapped(id)) toggleMapped(id); else toast(`${M[id].label} is already on the map.`); si.value = ""; hits = []; mhits = []; ddOpen = false; showHits(); si.blur(); return; }
     const pl = e.target.closest("li[data-poi]"); if (pl) { const i = POI_BY[pl.dataset.poi]; si.value = ""; hits = []; mhits = []; phits = []; ddOpen = false; showHits(); si.blur(); map.flyTo({ center: [i.lon, i.lat], zoom: Math.max(i.minz + 1.5, i.k === "station" ? 13 : 10), duration: 1200 }); openPoiCard(i.id); return; }
+    const tr = e.target.closest("[data-xtry]"); if (tr) { si.value = tr.dataset.xtry; si.dispatchEvent(new Event("input")); return; }
+    const xh = e.target.closest("li[data-x]"); if (xh) { const r = xhits.flatMap(g => g.rows)[+xh.dataset.x]; si.value = ""; hits = []; mhits = []; phits = []; xhits = []; ddOpen = false; showHits(); si.blur(); if (r) r.run(); return; }
     const li = e.target.closest("li[data-c]"); if (li) toggleTick(li.dataset.c);
   });
   tickPill.addEventListener("mousedown", e => { e.preventDefault(); si.focus(); });
@@ -5498,7 +5612,7 @@
     // stays reachable: a panel not named in a group gets its own heading. A group of one panel keeps data-apanel.
     const GROUPS = appGroups(APP);
     bar.innerHTML = GROUPS.map((g, i) => `<button class="ah-link ah-group" data-agroup="${i}"${g.panels.length === 1 ? ` data-apanel="${g.panels[0].id}"` : ""} title="${esc(g.panels.map(x => x.title).join(", "))}">${esc(g.label)}</button>`).join("")
-      + APP.tools.map(x => `<button class="ah-link tool" data-apanel="${x.id}" title="${esc(x.blurb || x.title)}">${esc(x.title)}</button>`).join("");
+;   // 0.13: the app's tools live in the Toolbox (In <app>)
     APP.groupsNow = GROUPS;
     bar.hidden = false;
     // 0.11: headings drop down menus (menu.js), which include a panel's own tabs (0.10.1); forms and tools still open
