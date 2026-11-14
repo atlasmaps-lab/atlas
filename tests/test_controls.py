@@ -15,11 +15,11 @@ def main():
     rep = Report("controls")
     with server() as base, browser() as b:
         page = open_atlas(b, base, (1440, 900)); js = page.evaluate
-        js("() => AtlasCtx.openAnalyse({ metrics: ['le_f', 'claimant_rate'], level: 'council' })"); page.wait_for_timeout(800)
+        js("() => AtlasCtx.openAnalyse({ metrics: ['le_f', 'claimant_rate'], level: 'council' })"); page.wait_for_timeout(2000)
         A = "document.getElementById('analyse')"
         rep.check(js(f"() => !!{A}.querySelector('.an-ctl [data-anctlq]')"), "Stats for nerds has a Control for box with a search")
         rep.check(js(f"() => [...{A}.querySelectorAll('.an-methods button')].some(b => b.dataset.anmethod === 'ctl' && b.getAttribute('aria-disabled') === 'true')"), "Test with controls waits until a control is chosen")
-        js(f"() => {{ {A}.querySelector('.an-ctl').open = true; const q = {A}.querySelector('[data-anctlq]'); q.value = 'obes'; q.dispatchEvent(new Event('input', {{ bubbles: true }})); }}")
+        js(f"() => {{ {A}.querySelector('.an-ctl').open = true; const q = {A}.querySelector('[data-anctlq]'); q.value = 'obes'; q.dispatchEvent(new Event('input', {{ bubbles: true }})); }}"); page.wait_for_timeout(500)
         hits = js(f"() => [...{A}.querySelectorAll('.an-ctl-hit')].map(b => b.textContent)")
         rep.check(any("obes" in h.lower() for h in hits), f"searching finds any metric to control for ({hits[:2]})")
         js(f"() => {A}.querySelector('.an-ctl-hit').click()"); page.wait_for_timeout(400)
