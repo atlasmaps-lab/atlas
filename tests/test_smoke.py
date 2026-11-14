@@ -38,7 +38,7 @@ def main():
         rep.check(js("() => document.querySelectorAll('#ws .wsi').length") >= 1, "the workspace holds the chart that was sent")
         page.click("#ws [data-view='map']"); page.wait_for_timeout(300)
         js("() => { AtlasDebug.select(['E06000023', 'E08000025']); AtlasDebug.openCmp(); }"); page.wait_for_timeout(300)
-        rep.check(js("() => document.querySelectorAll('#cmp .cmv-tr-row:not(.ref)').length") == 2, "Compare shows a table of the two places")
+        rep.check(js("() => document.querySelectorAll('#cmp .cmv-tr-row:not(.ref):not(.tot)').length") == 2, "Compare shows a table of the two places")
         page.click("#cmp [data-can]"); page.wait_for_timeout(600)
         rep.check(page.is_visible("#analyse .an-res"), "Analyse opens from Compare")
         js("() => { AtlasDebug.closeAll && AtlasDebug.closeAll(); }")

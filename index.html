@@ -2096,7 +2096,7 @@ input.cmv-add { width: 130px; cursor: text; } input.cmv-add::placeholder { color
 .cmv-tr-row.ref { background: var(--chip); } .cmv-tr-row.tot { order: 50; border-top: 1px solid var(--ink); } .cmv-tr-row.ref { order: 60; } .cmv-table > .cmv-tr-row:not(.tot):not(.ref) { order: 10; }
 .cmv-tdp { width: 210px; flex: none; display: flex; align-items: center; gap: 8px; font: 400 14px var(--f); min-width: 0; } .cmv-tdp small { font: italic 400 11px var(--f); color: var(--ink-3); }
 .cmv-tdp .cmv-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-.cmv-td { flex: 1; min-width: 0; padding: 0 12px; display: flex; flex-direction: column; gap: 4px; } .cmv-td b { font: 700 14px var(--f); white-space: nowrap; }
+.cmv-td { flex: 1; min-width: 0; padding: 0 12px; display: flex; flex-direction: column; gap: 4px; } .cmv-td b { font: 700 14px var(--f); white-space: nowrap; } .cmv-td b.cmv-cat { font-weight: 400; white-space: normal; }
 .cmv-tr { height: 5px; background: var(--track); border-radius: 3px; overflow: hidden; max-width: 150px; } .cmv-tr i { display: block; height: 100%; border-radius: 3px; }
 .cmv-sheet .cmv-note { font: italic 400 12px/1.5 var(--f); color: var(--ink-3); margin: 10px 0 0; }
 .cmv-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
@@ -2163,6 +2163,23 @@ input.cmv-add { width: 130px; cursor: text; } input.cmv-add::placeholder { color
 #hits li.srow:hover .stick, #hits li.srow.ticked .stick { opacity: 1; } #hits li.srow.ticked .stick { background: var(--app, #a07a12); color: #fff; border-color: transparent; }
 #hits li.srow .ndtag { font: italic 400 11px var(--f); color: var(--ink-3); background: none; border: 0; }
 #hits li.xhit { border-radius: 8px; padding: 7px 8px; }
+
+/* ===== 0.13 · workspace pieces as designed: a white card, a header with the kind tag, the title and ↻ ⧉ ⋯ ===== */
+.wsi { border-radius: 10px; box-shadow: 0 4px 14px rgba(20,30,40,.10); border: 1px solid var(--rule); }
+.wsi-head { background: var(--solid) !important; border-bottom: 1px solid var(--rule); border-radius: 10px 10px 0 0; padding: 7px 8px 7px 10px; gap: 8px; }
+.wsi-head .ws-kind { min-width: 0; font-size: 9px; padding: 1px 5px; }
+.wsi-head .ws-kind.trk, .ws-oi .ws-kind.trk { border-color: var(--app, #a07a12); color: var(--app, #a07a12); }
+.wsi-head .wsi-t { font: 700 13px var(--f); }
+.wsi-head button { opacity: .6; } .wsi:hover .wsi-head button { opacity: 1; }
+.ws-canvas { background-color: #f4f2ec; } :root[data-mode="dark"] .ws-canvas { background-color: #1a1f23; }
+.wsnote { background: #fbf6e3; min-height: 100%; font-style: italic; } :root[data-mode="dark"] .wsnote { background: #2a2618; }
+
+.ws-bar { background: var(--solid); gap: 8px; padding: 8px 14px; }
+.ws-bar .btn { border-radius: 14px; padding: 4px 12px; font: 400 12.5px var(--f); background: transparent; border: 1px solid var(--rule); color: var(--ink); }
+.ws-bar .btn.primary, .ws-bar [data-wsexp] { background: var(--app, #a07a12) !important; border-color: var(--app, #a07a12) !important; color: #fff !important; font-weight: 700; }
+.ws-pname { border: 0; background: none; font: 700 17px var(--f); color: var(--ink); cursor: pointer; }
+.ws-meta { font: italic 400 12px var(--f); color: var(--ink-3); display: inline-flex; align-items: center; } .ws-meta .vr { width: 1px; height: 10px; background: currentColor; opacity: .5; margin: 0 8px; }
+.wstrack b { white-space: nowrap; }
 </style>
 <link rel="stylesheet" href="fonts.css?v=1300">
 <script src="theme.js?v=1300"></script>

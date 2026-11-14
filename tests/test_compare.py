@@ -20,7 +20,7 @@ def main():
         page.context.grant_permissions(["clipboard-read", "clipboard-write"])
         js("ps => { AtlasDebug.select(ps); AtlasDebug.setCmpMetrics(['population', 'gdp_per_head', 'control']); AtlasDebug.openCmp(); }", PLACES); page.wait_for_timeout(400)
         page.click("#cmp [data-fmax]"); page.wait_for_timeout(300)
-        rep.check(js("() => document.querySelectorAll('#cmp .cmv-tr-row:not(.ref)').length") >= 2, "Compare opens on the table view (0.13: the table is the view itself)")
+        rep.check(js("() => document.querySelectorAll('#cmp .cmv-tr-row:not(.ref):not(.tot)').length") >= 2, "Compare opens on the table view (0.13: the table is the view itself)")
         foot = js("() => [...document.querySelectorAll('#cmp .cmv-tr-row.tot .cmv-td')].map(td => [td.textContent.trim(), td.title])")
         rep.check(len(foot) == 3 and foot[0][0] and "Total" in foot[0][1], f"population (a count) is summed: {foot[0] if foot else None}")
         rep.check(len(foot) == 3 and "weighted by population" in foot[1][1], f"GDP per head (a rate) gets a population-weighted average: {foot[1] if len(foot) > 1 else None}")

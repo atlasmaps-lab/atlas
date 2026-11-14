@@ -15,7 +15,7 @@ def main():
         page.wait_for_timeout(2000)
         js("() => { AtlasDebug.select(['E06000023', 'E08000025', 'E08000035']); AtlasDebug.openCmp(); }"); page.wait_for_timeout(500)
         rep.check(js("() => [...document.querySelectorAll('#cmp [data-cmview]')].map(b => b.textContent).join('|')") == "Table|Side by side|Head to head|Over time", "a switch with the four views")
-        rep.check(js("() => document.querySelectorAll('#cmp .cmv-tr-row:not(.ref)').length") == 3 and js("() => !!document.querySelector('#cmp .cmv-tr-row.ref')"), "Table: a row per place, values with bars, the UK for reference")
+        rep.check(js("() => document.querySelectorAll('#cmp .cmv-tr-row:not(.ref):not(.tot)').length") == 3 and js("() => !!document.querySelector('#cmp .cmv-tr-row.ref')"), "Table: a row per place, values with bars, the UK for reference")
         cols = js("() => [...document.querySelectorAll('#cmp [data-cmab]')].map(c => c.style.getPropertyValue('--pc'))")
         rep.check(len(cols) == 3 and len(set(cols)) == 3, f"each place has its own colour ({cols})")
         js("() => document.querySelector('#cmp [data-cmview=side]').click()"); page.wait_for_timeout(500)
