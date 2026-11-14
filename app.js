@@ -4313,29 +4313,48 @@
   function chartInfoHTML() { return `<p class="ilead">Simple charts come first; a greyed style doesn't suit what's chosen (hover it for why).</p><table class="itab">${Object.entries(HELP.charts).map(([k, [use, not]]) => `<tr><th>${sIcon(k)} ${esc((EN.chartStyles([], 0).styles.find(x => x.id === k) || {}).label || k)}</th><td><b>For:</b> ${esc(use)}<br><b>Not for:</b> ${esc(not)}</td></tr>`).join("")}</table><p class="imore"><button class="linkish" data-help="charts">More in Help</button></p>`; }
   function honestyHTML() { return `<table class="itab">${HELP.honesty.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</table>`; }
   // the help centre: a full-screen tab
+  // 0.13: Help as a handbook (Atlas design/help/Help (final).md): contents on the left, one entry at a time on the right
+  // (kicker, title, rows), a Try it box on method entries and Related links. Wording from help.js and AN_METHODS.
+  let HELPAT = "help-honesty";
+  const H_REL = { rel: ["byarea", "matrix", "partial"], byarea: ["rel", "ctl"], matrix: ["partial", "pca", "rel"], partial: ["matrix", "ctl", "reg"], ctl: ["partial", "reg"], reg: ["ctl", "unusual", "matrix"],
+    pca: ["cluster", "matrix"], cluster: ["pca", "unusual"], unusual: ["cluster", "reg"], dist: ["dist2", "spatial"], dist2: ["dist", "rel"], spatial: ["dist", "cluster"], trend: ["timeline", "lag"], timeline: ["trend", "lag"], lag: ["timeline", "rel"] };
+  function helpEntries() {
+    return [["Reading the map", [["help-honesty", "Measured, estimated, missing"], ["help-levels", "Where metrics apply"], ["help-tables", "Totals in tables"]]],
+      ["Analysis methods", AN_METHODS.map(x => ["help-m-" + x.id, x.label])], ["Charts", [["help-charts", "Which chart for what"]]], ["Sources", [["help-sources", "Where the data comes from"]]]];
+  }
   function helpHTML() {
-    const meth = AN_METHODS.map(x => { const h = HELP.methods[x.id] || {}; return `<section class="hsec" id="help-m-${x.id}"><h3>${esc(x.label)} <small>${x.mode === "time" ? "over time" : "across places"}</small></h3>
+    const ent = (id, kick, title, body) => `<section class="hentry${id === HELPAT ? " on" : ""}" id="${id}"><div class="hkick">${esc(kick)}</div><h2>${esc(title)}</h2>${body}</section>`;
+    const meth = AN_METHODS.map(x => { const h = HELP.methods[x.id] || {}; return `<section class="hsec hentry${"help-m-" + x.id === HELPAT ? " on" : ""}" id="help-m-${x.id}"><div class="hkick">Analysis methods<span class="vr"></span>${x.mode === "time" ? "over time" : "across places"}</div><h3>${esc(x.label)}</h3><p class="hq">${esc(AN_Q[x.id] || "")}</p>
       <dl><dt>What it answers</dt><dd>${esc(h.answers || METHOD_WHY[x.id] || "")}</dd><dt>What it needs</dt><dd>${esc(x.needs)}</dd><dt>Assumptions</dt><dd>${esc(h.assumes || "")}</dd><dt>When it misleads</dt><dd>${esc(h.misleads || "")}</dd></dl>
-      ${h.example ? `<p class="hex">Example: ${esc(h.example.label)} <button class="btn sm" data-hexample="${x.id}">Load this example</button></p>` : ""}</section>`; }).join("");
+      ${h.example ? `<div class="htry"><b>Try it</b><span>${esc(h.example.label)}</span><button class="btn sm" data-hexample="${x.id}">Open in Analyse ›</button></div>` : ""}
+      ${(H_REL[x.id] || []).length ? `<p class="hrel">Related: ${H_REL[x.id].filter(k => AN_BY[k]).map(k => `<a data-hgo="help-m-${k}">${esc(AN_BY[k].label)}</a>`).join('<span class="vr"></span>')}</p>` : ""}</section>`; }).join("");
     const charts = Object.entries(HELP.charts).map(([k, [use, not]]) => `<tr><th>${sIcon(k)} ${esc((EN.chartStyles([], 0).styles.find(x => x.id === k) || {}).label || k)}</th><td>${esc(use)}</td><td>${esc(not)}</td></tr>`).join("");
     const levelled = METRICS.filter(m => m.levels && PER[m.p].ready).map(m => `<li><b>${esc(m.label)}</b>: ${esc(m.levels.map(l => (PLURAL_L[l] || "the UK").toLowerCase()).join(", "))} only</li>`).join("");
-    return `<div class="tv-wrap help"><div class="tv-head"><h2>Help</h2><span class="cp-sub">What each test, chart, table and label needs and means. The thresholds here are the ones Atlas uses.</span><button class="btn" data-tback>Back to the map</button></div>
-      <nav class="hnav"><a data-hgo="help-methods">Analysis methods</a><a data-hgo="help-charts">Charts</a><a data-hgo="help-tables">Tables</a><a data-hgo="help-honesty">Labels: measured, estimated…</a><a data-hgo="help-levels">Where metrics apply</a></nav>
-      <section id="help-methods"><h2>Analysis methods (Analyse window)</h2><p>Numeric metrics are numbers (counts, rates, amounts); categories (e.g. controlling party) and events (protests) are not used in these tests. “Places” are the areas compared, on one boundary set.</p>${meth}</section>
-      <section id="help-charts"><h2>Charts</h2><table class="itab wide"><thead><tr><th>Style</th><th>For</th><th>Not for</th></tr></thead><tbody>${charts}</tbody></table><p>Two axes, Small charts and the Line chart need metrics that change over time; Ranked, Shares and the story views use the time bar's date.</p></section>
-      <section id="help-tables"><h2>Tables (Compare)</h2><table class="itab wide"><tbody>${Object.entries(LAYOUTS).map(([k, l]) => `<tr><th>${esc(l)}</th><td>${k === "pm" ? "Two or more places and any metrics; one date (the time bar's or a chosen year)." : k === "py" ? "Two or more places and one metric; a range of years (values on 1 July)." : "One place and any metrics; a range of years. No totals (different units)."}</td></tr>`).join("")}${HELP.tables.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</tbody></table></section>
-      <section id="help-honesty"><h2>Labels: measured, estimated, missing, not meaningful</h2>${honestyHTML()}</section>
-      <section id="help-levels"><h2>Where metrics apply</h2><p>Some metrics only mean something for some boundary sets; elsewhere the map leaves areas unfilled and the menu greys them out.</p><ul>${levelled}</ul></section></div>`;
+    const srcs = {}; METRICS.filter(m => PER[m.p] && PER[m.p].ready).forEach(m => { const t = String((window.AtlasCtx && AtlasCtx.sourceOf ? AtlasCtx.sourceOf(m) : m.source) || "").replace(/https?:\/\/\S+/g, "").split(/[;(]/)[0].trim(); if (t) (srcs[PER[m.p].name] = srcs[PER[m.p].name] || new Set()).add(t); });
+    const nav = helpEntries().map(([g, es]) => `<div class="hng">${esc(g)}</div>` + es.map(([id, l]) => `<a data-hgo="${id}" class="${id === HELPAT ? "on" : ""}">${esc(l)}</a>`).join("")).join("");
+    return `<div class="tv-wrap help hbook"><div class="tv-head"><h2>Help</h2><span class="cp-sub"><i>What each test, chart, table and label means. The thresholds here are the ones Atlas uses.</i></span><button class="btn" data-tback>Back to the map</button></div>
+      <div class="hcols"><nav class="hnav" aria-label="Contents">${nav}</nav><div class="hbody">
+      ${ent("help-honesty", "Reading the map", "Measured, estimated, missing, not meaningful", honestyHTML())}
+      ${ent("help-levels", "Reading the map", "Where metrics apply", `<p>Some metrics only mean something for some boundary sets; elsewhere the map leaves areas unfilled and the menu greys them out.</p><ul>${levelled}</ul>`)}
+      ${`<section class="hentry${"help-tables" === HELPAT ? " on" : ""}" id="help-tables"><div class="hkick">Reading the map</div><h2>Totals in tables (Compare)</h2><table class="itab wide"><tbody>${Object.entries(LAYOUTS).map(([k, l]) => `<tr><th>${esc(l)}</th><td>${k === "pm" ? "Two or more places and any metrics; one date (the time bar's or a chosen year)." : k === "py" ? "Two or more places and one metric; a range of years (values on 1 July)." : "One place and any metrics; a range of years. No totals (different units)."}</td></tr>`).join("")}${HELP.tables.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</tbody></table></section>`}
+      <div id="help-methods"><p class="hnote">Numeric metrics are numbers (counts, rates, amounts); categories (e.g. controlling party) and events (protests) are not used in these tests. “Places” are the areas compared, on one boundary set.</p>${meth}</div>
+      ${ent("help-charts", "Charts", "Which chart for what", `<table class="itab wide"><thead><tr><th>Style</th><th>For</th><th>Not for</th></tr></thead><tbody>${charts}</tbody></table><p>Two axes, Small charts and the Line chart need metrics that change over time; Ranked, Shares and the story views use the time bar's date.</p>`)}
+      ${ent("help-sources", "Sources", "Where the data comes from", Object.entries(srcs).map(([p, set]) => `<h4>${esc(p)}</h4><ul>${[...set].sort().map(t => `<li>${esc(t)}</li>`).join("")}</ul>`).join(""))}
+      </div></div></div>`;
   }
+  function helpShow(id) { const root = document.querySelector(".hbook"); if (!root || !document.getElementById(id)) return; HELPAT = id;
+    root.querySelectorAll(".hentry").forEach(x => x.classList.toggle("on", x.id === id)); root.querySelectorAll(".hnav [data-hgo]").forEach(a => a.classList.toggle("on", a.dataset.hgo === id));
+    const b = root.querySelector(".hbody"); if (b) b.scrollTop = 0; }
   function openHelp(anchor) {
     let t = TABS.find(x => x.help); if (!t) { t = { id: "help", label: "Help", help: true }; TABS.push(t); }
     activateTab("help"); closeMenu();
-    if (anchor) requestAnimationFrame(() => { const el = $(anchor.startsWith("help-") ? anchor : "help-" + anchor); if (el) { el.scrollIntoView({ block: "start" }); el.classList.add("hflash"); setTimeout(() => el.classList.remove("hflash"), 1200); } });
+    const id = anchor ? (anchor.startsWith("help-") ? anchor : "help-" + anchor) : null, go = id === "help-methods" ? "help-m-" + AN_METHODS[0].id : id;
+    if (go) { HELPAT = go; requestAnimationFrame(() => { helpShow(go); const el = $(go); if (el) { el.classList.add("hflash"); setTimeout(() => el.classList.remove("hflash"), 1200); } }); }
   }
   document.addEventListener("click", e => {
     const i = e.target.closest("[data-info]"); if (i) { e.preventDefault(); e.stopPropagation(); const k = i.dataset.info; if (k === "__charts") openInfo("charts", "Chart styles", chartInfoHTML()); else if (k === "__honesty") openInfo("honesty", "What the labels mean", honestyHTML()); else openMetricInfo(k); return; }
     const h = e.target.closest("[data-help]"); if (h) { e.preventDefault(); e.stopPropagation(); const sec = h.dataset.help; openHelp(sec === "honesty" ? "help-honesty" : sec === "charts" ? "help-charts" : sec === "tables" ? "help-tables" : sec.startsWith("m-") ? "help-" + sec : "help-methods"); return; }
-    const g = e.target.closest("[data-hgo]"); if (g) { const el = $(g.dataset.hgo); if (el) el.scrollIntoView({ block: "start" }); return; }
+    const g = e.target.closest("[data-hgo]"); if (g) { const id = g.dataset.hgo === "help-methods" ? "help-m-" + AN_METHODS[0].id : g.dataset.hgo; if (document.querySelector(".hbook")) helpShow(id); else { const el = $(id); if (el) el.scrollIntoView({ block: "start" }); } return; }
     const x = e.target.closest("[data-hexample]"); if (x) { const ex = (HELP.methods[x.dataset.hexample] || {}).example; if (!ex) return;
       activateTab("map"); Object.assign(AN, { metrics: ex.metrics.filter(id => M[id]), mode: ex.mode || "across", level: ex.level || AN.level, within: UKC, place: ex.place || AN.place, method: ex.method }); saveAN(); openAnalyse(); AN.method = ex.method; renderAnalyse(); }
   }, true);
@@ -4413,6 +4432,10 @@
       check: c => c.k < 2 ? `Needs two metrics: you have ${nums(c.k)}` : !c.annual2 ? "Needs yearly data: election and event metrics have points at elections or events only" : null },
   ];
   const AN_BY = Object.fromEntries(AN_METHODS.map(x => [x.id, x]));
+  // 0.13: step 3 asks what you want to know; each question names its method in small type underneath
+  const AN_Q = { dist: "How are the values spread?", dist2: "How is each one spread?", spatial: "Where are the hot and cold spots?", rel: "Do two things move together?", byarea: "Does it hold in every region?",
+    matrix: "How does every pair relate?", partial: "Which links survive the others?", ctl: "What still matters once others are held fixed?", reg: "What predicts it best?", pca: "What moves together?",
+    cluster: "Which places are alike?", unusual: "Which places stand out?", trend: "How has it changed?", timeline: "How have they moved, side by side?", lag: "Does one lead the other?" };
   // which methods suit this choice: all of the mode's methods, each with ok and the reason when it isn't
   function anMethods(cfg) {
     const over = cfg.mode === "time", ms = cfg.metrics.map(id => M[id]).filter(Boolean);
@@ -4583,6 +4606,16 @@
         ${differ ? `<li class="muted">Spearman and Pearson differ, so the link is steady but not a straight line, or a few extreme places pull the line.</li>` : ""}</ul>` + splitHTML +
         caveat("Correlation is not causation, and a link between places doesn't have to hold for the people in them (the ecological fallacy).");
       out.map = { kind: "residual", label: `Residual: ${ms[1].label} given ${ms[0].label}`, codes, values: fit.residuals, level: cfg.level, fmt: f1 };
+      { // 0.13: the answer first, in plain words, then how sure, what it does not say, and the places that break the pattern
+        const r = differ || Math.abs(S.r || 0) > Math.abs(P1.r || 0) ? S.r : P1.r, p0 = differ ? S.p : P1.p, a = Math.abs(r || 0), up = (r || 0) > 0, lx0 = ms[0].label.toLowerCase(), ly0 = ms[1].label.toLowerCase();
+        const verdict = r == null ? "There aren't enough places to tell." : a < 0.1 ? `No: across ${unit}, ${lx0} and ${ly0} hardly move together.` : `${a >= 0.5 ? "Yes, clearly" : a >= 0.3 ? "Yes, moderately" : "Only weakly"}. Where ${lx0} is higher, ${ly0} tends to be ${up ? "higher" : "lower"} too.`;
+        const sure = p0 == null ? "Too few places to judge." : p0 < 0.001 ? `Very sure it isn't chance: a link this strong across ${P1.n} ${unit} would almost never appear by luck (${ST.pText(p0)}).` : p0 < 0.05 ? `Fairly sure it isn't chance (${ST.pText(p0)}), though a link this size leaves much unexplained.` : `Not sure: a link like this could easily be chance across ${P1.n} ${unit} (${ST.pText(p0)}).`;
+        const res = codes.map((c, i) => [c, fit.residuals[i]]).filter(z => z[1] != null && isFinite(z[1])).sort((u, v) => v[1] - u[1]), brk = res.slice(0, 3).concat(res.slice(-3).reverse());
+        out.html = `<div class="an-answer"><div class="an-q">${esc(AN_Q.rel)}</div><p class="an-a">${esc(verdict)}</p></div>` + out.html +
+          `<div class="an-boxes"><div class="an-box"><b>How sure?</b><p>${esc(sure)} ${fit.r2 != null ? `${esc(ms[0].label)} accounts for about ${Math.round(100 * fit.r2)}% of the differences in ${esc(ly0)} between ${esc(unit)}.` : ""}</p></div>
+          <div class="an-box"><b>What it does not say</b><p>It compares ${esc(unit)}, not people: it doesn't show that the same people are behind both. A link is not a cause; a third thing (income, age, place) may drive both. Next, ask "What still matters once others are held fixed?"</p></div>
+          <div class="an-box"><b>Places that break the pattern</b><p>${brk.map((z, k) => `<a data-go="${z[0]}" data-anpk="${z[0]}">${esc(nameOf(z[0]))}</a> <small>${k < 3 ? "higher" : "lower"} than expected by ${esc(f1(Math.abs(z[1])))}</small>`).join("<br>")}</p></div></div>`;
+      }
       return out;
     }
     if (method === "byarea") {
@@ -4602,9 +4635,18 @@
       const { R, N } = ST.corrMatrix(cols, cfg.corr), Pm = R.map((row, i) => row.map((r, j) => r == null || i === j ? null : (ST[cfg.corr === "spearman" ? "spearman" : "pearson"](cols[i], cols[j])).p));
       const pairs = []; for (let i = 0; i < R.length; i++) for (let j = i + 1; j < R.length; j++) if (R[i][j] != null) pairs.push([labels[i], labels[j], R[i][j], Pm[i][j]]);
       pairs.sort((a, b) => Math.abs(b[2]) - Math.abs(a[2]));
-      out.title = "Correlation matrix"; out.html = head(out.title, `${cfg.corr === "spearman" ? "Spearman (ranks)" : "Pearson"} correlations across ${n0} ${unit} in ${where}`) + `<div class="seg sm anseg"><button data-ancorr="pearson" class="${cfg.corr !== "spearman" ? "on" : ""}">Pearson</button><button data-ancorr="spearman" class="${cfg.corr === "spearman" ? "on" : ""}">Spearman</button></div>` + CH.heat(R, labels, { w, n: N, p: Pm }) +
+      out.title = "Correlation matrix"; out.html = head(out.title, `${cfg.corr === "spearman" ? "Spearman (ranks)" : "Pearson"} correlations across ${n0} ${unit} in ${where}`) + `<div class="seg sm anseg"><button data-ancorr="pearson" class="${cfg.corr !== "spearman" ? "on" : ""}">Pearson</button><button data-ancorr="spearman" class="${cfg.corr === "spearman" ? "on" : ""}">Spearman</button></div>` + CH.heat(R, labels, { w, n: N, p: Pm, pick: true }) +
         `<ul class="anstat">${pairs.slice(0, 4).map(p => `<li>${esc(p[0])} & ${esc(p[1])}: <b>${p[2].toFixed(2)}</b>, ${esc(ST.strength(p[2]))} (${ST.pText(p[3])})</li>`).join("")}</ul>`;
       out.csv = XL.csv([["", ...labels], ...R.map((row, i) => [labels[i], ...row.map(v => v == null ? "" : +v.toFixed(4))])]);
+      { // 0.13: the strongest link named first; click a square for that pair's scatter, with its own one-line reading
+        const s0 = pairs[0], word = r => Math.abs(r) >= 0.5 ? "a clear link" : Math.abs(r) >= 0.3 ? "a moderate link" : "a weak link";
+        out.html = `<div class="an-answer"><div class="an-q">${esc(AN_Q.matrix)}</div><p class="an-a">${s0 ? `The strongest link is between ${esc(s0[0].toLowerCase())} and ${esc(s0[1].toLowerCase())}: ${word(s0[2])}; where one is higher, the other tends to be ${s0[2] > 0 ? "higher" : "lower"}. Blue squares rise together; red ones move opposite ways. Click a square to see that pair.` : "Not enough places have every value to compare the pairs."}</p></div>` + out.html;
+        const pr = cfg.pair && cfg.pair.split(":").map(Number);
+        if (pr && cols[pr[0]] && cols[pr[1]] && pr[0] !== pr[1]) { const [i, j] = pr, x = cols[j], y = cols[i], fit = ST.regress(x, y), r = R[i][j];
+          out.html += `<div class="an-pair"><h4>${esc(labels[i])} against ${esc(labels[j])}</h4><p class="an-a sm">${r == null ? "" : `${esc(word(r).replace(/^./, ch => ch.toUpperCase()))}; where ${esc(labels[j].toLowerCase())} is higher, ${esc(labels[i].toLowerCase())} tends to be ${r > 0 ? "higher" : "lower"} (r = ${r.toFixed(2)}).`}</p>` +
+            CH.scatter(codes.map((c, k) => ({ x: x[k], y: y[k], label: nameOf(c), code: c })), { w: Math.min(w, 560), h: Math.round(Math.min(w, 560) * .58), xtitle: labels[j], ytitle: labels[i], xfmt: fmtOf(ms[j]), yfmt: fmtOf(ms[i]), fit: { slope: fit.slope, intercept: fit.intercept } }) + `</div>`;
+          out.map = { kind: "residual", label: `Residual: ${labels[i]} given ${labels[j]}`, codes, values: fit.residuals, level: cfg.level, fmt: fmtOf(ms[i]) }; }
+      }
       return out;
     }
     if (method === "partial") {
@@ -4740,36 +4782,48 @@
   function renderAnalyse() {
     if (anEl.hidden) return;
     const cfg = Object.assign({}, AN, { date: state.date }), methods = anMethods(cfg), okM = methods.filter(m => m[2]);
-    if (!okM.some(m => m[0] === AN.method)) AN.method = okM.length && cfg.metrics.length ? okM[0][0] : null; cfg.method = AN.method;
+    if (cfg.metrics.length >= 3 && (AN._k || 0) < 3 && okM.some(m => m[0] === "matrix")) AN.method = "matrix";   // 0.13: three or more measures open on the matrix
+    AN._k = cfg.metrics.length;
+    if (!okM.some(m => m[0] === AN.method)) AN.method = okM.length && cfg.metrics.length ? okM[0][0] : null; cfg.method = AN.method; cfg.pair = AN.method === "matrix" ? AN.pair : null;
     const pers = mtree("an", anMetricsAll().filter(m => m.p !== "analysis"), m => `<label style="--c:${PER[m.p].hue}"><input type="checkbox" data-anm="${m.id}" ${AN.metrics.includes(m.id) ? "checked" : ""}>${esc(m.label)}</label>${m.pick && AN.metrics.includes(m.id) && picker(m) ? `<div class="an-pick"><span>Choose</span>${picker(m)}</div>` : ""}`, { isOn: m => AN.metrics.includes(m.id) });   // 0.12: a "(choose …)" metric gets its choice right under it
     const res = cfg.method ? anResult(cfg, Math.max(360, Math.min(900, anEl.offsetWidth - 330))) : null;
-    anEl.innerHTML = `<div class="an-head"><b>Analyse</b><span class="cp-sub">How metrics relate across places, within an area, or over time. No need to pick places.</span>${helpBtn("methods", "Help: analysis methods")}<button class="x" data-anx aria-label="Close">×</button></div>
+    anEl.innerHTML = `<div class="an-head"><b>Analyse</b><span class="cp-sub"><i>Every result says what it means, how sure it is, and what it does not show.</i></span>${AN.docked ? `<button class="btn sm" data-anundock>Back to the full result</button>` : ""}${helpBtn("methods", "Help: analysis methods")}<button class="x" data-anx aria-label="Close">×</button></div>
       <div class="an-body"><div class="an-side">
+        <div class="an-step"><span>1</span>Places</div>
         <div class="an-row"><b>Look</b><div class="seg sm"><button data-anmode="across" class="${AN.mode !== "time" ? "on" : ""}">Across places</button><button data-anmode="time" class="${AN.mode === "time" ? "on" : ""}">Over time</button></div></div>
         ${AN.mode === "time" ? `<div class="an-row"><b>Find</b>${placeSearch("anplace", "Any place…")}</div><div class="an-row"><b>Place</b><select data-anplace>${[UKC, "E92000001", "S92000003", "W92000004", "N92000002"].concat(state.focus && !["E92000001", "S92000003", "W92000004", "N92000002", UKC].includes(state.focus) ? [state.focus] : [], state.sel.map(s => s.code), P[AN.place] ? [AN.place] : []).filter((c, i, a) => a.indexOf(c) === i).map(c => `<option value="${c}" ${AN.place === c ? "selected" : ""}>${esc(nameOf(c))}</option>`).join("")}</select></div>`
           : `<div class="an-row"><b>Compare</b><select data-anlevel>${LEVEL_OPTS().map(([l, t]) => `<option value="${l}" ${AN.level === l ? "selected" : ""}>${t}</option>`).join("")}</select></div>
              <div class="an-row"><b>Within</b><select data-anwithin>${WITHIN_OPTS().map(([c, t]) => `<option value="${c}" ${AN.within === c ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
              <div class="an-row"><b>Places</b><span class="an-pl">${placeSearch("an", "Search for places to analyse…")}${AN.within === "custom" ? `<span class="chips">${AN.custom.map(c => `<span class="chip">${esc(nameOf(c))}<button data-anrmp="${c}" aria-label="Remove">×</button></span>`).join("")}${AN.custom.length ? `<button class="lnk" data-anrmall>clear</button>` : ""}</span>` : ""}</span></div>`}
         <div class="an-row"><b>Date</b><span class="muted">${esc(longDate(state.date))} (time bar)</span></div>
+        <div class="an-step"><span>2</span>Measures</div>
         <div class="an-metrics"><div class="an-mh">Metrics <small>${AN.metrics.length} chosen</small>${AN.metrics.length ? `<button class="btn" data-anclear>Clear</button>` : ""}</div>${pers}</div>
       </div><div class="an-main">
-        ${AN.metrics.length ? `<div class="an-methods">${methods.map(([id, l, ok, why]) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}>${esc(l)}</button>`).join("")}</div>${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")} ${helpBtn("m-" + AN.method, "Help: what this method needs and assumes")}</p>` : `<p class="anwhy">No method suits this choice yet. ${methods.filter(m => !m[2]).slice(0, 3).map(([id, l, , why]) => `<button class="linkish" data-help="m-${id}">${esc(l)}: ${esc(why)}</button>`).join(" · ")}</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
+        <div class="an-step"><span>3</span>What do you want to know?</div>
+        ${AN.metrics.length ? `<div class="an-methods an-qs">${methods.map(([id, l, ok, why], i) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" style="--i:${i}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}><b>${esc(AN_Q[id] || l)}</b><i>${esc(l)}</i>${ok ? "" : `<small>${esc(why)}</small>`}</button>`).join("")}</div>${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")} ${helpBtn("m-" + AN.method, "Help: what this method needs and assumes")}</p>` : `<p class="anwhy">No method suits this choice yet. ${methods.filter(m => !m[2]).slice(0, 3).map(([id, l, , why]) => `<button class="linkish" data-help="m-${id}">${esc(l)}: ${esc(why)}</button>`).join(" · ")}</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
         ${AN.method === "rel" ? `<label class="anpick">Split by a category <select data-ansplit><option value="">none</option>${anCats().map(m => `<option value="${m.id}" ${AN.split === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : ""}
         <div class="an-ctlbox">${ctlBoxHTML(cfg)}</div>
         <div class="an-ex">${explainHTML(cfg)}</div>
         <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
-        ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Show on map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy data (CSV)</button>` : ""}</div>` : ""}
+        ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Put it on the map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy data (CSV)</button>` : ""}</div>` : ""}
       </div></div>`;
     addFctl(anEl); anEl._last = res;
   }
   // o.from: the window it was opened from (e.g. Compare): Analyse opens above it, with a way back
   function openAnalyse(o) { o = o || {}; closeMenu(); closePMenu(); if (o.metrics) AN.metrics = o.metrics.filter(id => M[id] && EN.isNum(M[id])); if (o.level) AN.level = o.level; WM.open(anEl, { parent: o.from }); renderAnalyse(); }
-  function closeAnalyse() { return WM.close(anEl); }
+  function closeAnalyse() { if (AN.docked) { AN.docked = false; anEl.classList.remove("an-docked"); } return WM.close(anEl); }
+  // 0.13: Put it on the map: the sheet shrinks to a 420 px side panel so the map shows; "Back to the full result" restores it
+  function anDock(on) {
+    const r = anEl.getBoundingClientRect();
+    if (on) { if (!AN.docked) AN.undock = { x: r.left, y: r.top, w: r.width, h: r.height }; AN.docked = true; anEl.classList.add("an-docked"); WM.place(anEl, { x: innerWidth - 420 - 12, y: Math.max(60, r.top), w: 420, h: Math.min(innerHeight - 140, Math.max(420, r.height)) }); }
+    else { AN.docked = false; anEl.classList.remove("an-docked"); if (AN.undock) WM.place(anEl, AN.undock); }
+    renderAnalyse(); }
   WM.register(anEl, { type: "analyse", title: "Analyse", handle: ".an-head", min: { w: 360, h: 260 }, onResize: renderAnalyse, close: closeAnalyse });
   anEl.addEventListener("click", e => {
     const a = e.target.closest("[data-go]"); if (a) { focus(a.dataset.go); return; }
     const sg = e.target.closest("[data-exsig]"); if (sg) { EXF.p = sg.dataset.exsig === "" ? null : +sg.dataset.exsig; explainPaint(); return; }   // 0.10.1
     const rw = e.target.closest("[data-exraw]"); if (rw) { EXF.raw = !rw.checked; explainPaint(); return; }
+    const hp = e.target.closest("[data-hpick]"); if (hp) { AN.pair = AN.pair === hp.dataset.hpick ? null : hp.dataset.hpick; saveAN(); renderAnalyse(); const pe = anEl.querySelector(".an-pair"); if (pe) pe.scrollIntoView({ block: "nearest", behavior: "smooth" }); return; }
     const ex = e.target.closest("[data-exm]"); if (ex) { AN.metrics = [AN.metrics[0], ex.dataset.exm]; AN.method = "rel"; saveAN(); renderAnalyse(); return; }   // 0.10: plot the pair
     const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
     if (b.hasAttribute("data-anx")) { closeAnalyse(); return; }
@@ -4781,7 +4835,8 @@
     else if (b.hasAttribute("data-anctlclear")) AN.controls = [];
     else if (b.hasAttribute("data-anctlothers")) AN.controls = [...new Set((AN.controls || []).concat(AN.metrics.slice(2)))];
     else if (b.hasAttribute("data-anws")) { const cfg = Object.assign({}, AN, { date: state.date }); sendToWS({ type: "analysis", title: anEl._last.title, cfg }); return; }
-    else if (b.hasAttribute("data-anmap")) { showOnMap(anEl._last.map); return; }
+    else if (b.hasAttribute("data-anmap")) { showOnMap(anEl._last.map); anDock(true); return; }
+    else if (b.hasAttribute("data-anundock")) { anDock(false); return; }
     else if (b.hasAttribute("data-ancsv")) { copy(anEl._last.csv); return; }
     else return;
     saveAN(); renderAnalyse();
@@ -5221,6 +5276,8 @@
     }
     if (APP) add(`Panels in ${capF(APP.short || APP.name.replace(/^Atlas /, ""))}`, APP.panels.concat(APP.tools).filter(x => has(x.title) || has(x.blurb)).map(x => ({ l: x.title, sub: x.blurb || "Panel", act: "Open", run: () => openFromBar(x.id) })), 4);
     if (window.AtlasApps) add("Apps", AtlasApps.list().filter(a => has(a.name) || has(a.blurb)).map(a => ({ l: a.name, sub: a.blurb || "App", act: "Switch", run: () => openAppTab(a.id) })), 3);
+    if (q.length >= 2) { const words = q.replace(/^(what (does|is|are)|how (do|does)|why)\s+/, "").replace(/\s*(mean|means)\??$/, "").replace(/\?$/, "").trim(), hs = (window.ATLAS_HELP || {}).methods || {};   // 0.13: Help entries ("What does R² mean")
+      if (words.length >= 2) add("Help", helpEntries().flatMap(([g, es]) => es.map(([id, l]) => ({ id, l, g }))).filter(e => { const k = e.id.replace("help-m-", ""), h = hs[k] || {}; return [e.l, h.answers, h.assumes, AN_Q[k]].some(t => String(t || "").toLowerCase().includes(words)); }).map(e => ({ l: e.l, sub: `Help, ${e.g.toLowerCase()}`, act: "Open", run: () => openHelp(e.id) })), 3); }
     add("Things to do", [["Compare places", "Compare", () => openCmp()], ["Analyse", "Correlation, regression, clusters, hot spots", () => openAnalyse({})], ["Export a table", "CSV or Excel of what's on the map", () => openExport()], ["Help", "The handbook", () => openHelp()]].filter(([l, d]) => has(l) || has(d)).map(([l, d, run]) => ({ l, sub: d, act: "Open", run })), 4);
     return out;
   }

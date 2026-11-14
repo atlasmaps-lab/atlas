@@ -125,7 +125,7 @@
     let body = rows.map((l, i) => `<text x="${L - 6}" y="${T + i * cell + cell / 2 + 4}" text-anchor="end">${esc(String(l).slice(0, 26))}</text>`).join("") +
       labels.map((l, j) => `<text transform="translate(${L + j * cell + cell / 2} ${T + m * cell + 8}) rotate(50)">${esc(String(l).slice(0, 22))}</text>`).join("");
     for (let i = 0; i < m; i++) for (let j = 0; j < k; j++) { const r = R[i] ? R[i][j] : null, P = o.p && o.p[i] && o.p[i][j], diag = sq && i === j;
-      body += `<rect class="cell" ${tip(diag ? labels[i] : `${rows[i]} × ${labels[j]}: ${r == null ? "—" : (o.label || "r") + " = " + r.toFixed(2)}${o.n ? ` (n = ${o.n[i][j]})` : ""}${P != null ? ` · ${P < 0.001 ? "p < 0.001" : "p = " + P.toFixed(3)}` : ""}`)} x="${L + j * cell}" y="${T + i * cell}" width="${cell - 1}" height="${cell - 1}" fill="${diag ? "var(--chip,#eee)" : col(r)}"/>`;
+      body += `<rect class="cell${o.pick && !diag ? " pick" : ""}" ${o.pick && !diag ? `data-hpick="${i}:${j}"` : ""} ${tip(diag ? labels[i] : `${rows[i]} × ${labels[j]}: ${r == null ? "—" : (o.label || "r") + " = " + r.toFixed(2)}${o.n ? ` (n = ${o.n[i][j]})` : ""}${P != null ? ` · ${P < 0.001 ? "p < 0.001" : "p = " + P.toFixed(3)}` : ""}`)} x="${L + j * cell}" y="${T + i * cell}" width="${cell - 1}" height="${cell - 1}" fill="${diag ? "var(--chip,#eee)" : col(r)}"/>`;
       if (!diag && r != null && cell >= 30) body += `<text x="${L + j * cell + cell / 2}" y="${T + i * cell + cell / 2 + 4}" text-anchor="middle" style="pointer-events:none" fill="${Math.abs(r) > .55 ? "#fff" : "#1f2a2e"}">${r.toFixed(2)}${P != null && P < 0.05 ? "*" : ""}</text>`; }
     return svg(W, H, body, "heat");
   }
