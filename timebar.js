@@ -125,7 +125,9 @@
       <div class="cl-read"><span class="cl-k">Selected month</span><b>${M.monthOf(M.cur)} ${M.yearOf(M.cur)}</b><span>${esc(valTxt(M))}${rank ? ` · ${rank}` : ""}</span><p>${esc(caption(M))}</p></div></div>`; };
 
   // ---------- draw ----------
+  function dlab() { const el = document.getElementById("tb-dlab"); if (!el || !A) return; const d = A.date(), M3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]; el.textContent = `${M3[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`; const n = document.getElementById("tnote"); el.title = (n && n.textContent ? n.textContent + " · " : "") + "Click to type a date"; }
   function update() {
+    dlab();
     if (!A) return; let M; try { M = model(); } catch (e) { console.error(e); return; }
     const tb = document.getElementById("timebar"), art = S.style !== "atlas";
     document.body.classList.toggle("tb-arton", art); document.body.dataset.tbstyle = S.style;
@@ -169,6 +171,8 @@
   function init(api) {
     A = api; buildExpanded();
     const tb = document.getElementById("timebar"), more = document.getElementById("tb-more"), pop = document.getElementById("tb-pop");
+    // 0.13 (as designed): the closed bar shows the date in bold on the right of the track; click it to type a date
+    { const tr = tb && tb.querySelector(".tright"); if (tr && !document.getElementById("tb-dlab")) { tr.insertAdjacentHTML("afterbegin", '<button type="button" id="tb-dlab" class="tb-dlab" title="Click to type a date"></button>'); document.getElementById("tb-dlab").addEventListener("click", () => { const c = document.getElementById("tcur"); if (c) c.click(); }); } }
     if (more) { more.textContent = "⌃"; more.setAttribute("aria-label", "Show more of the time bar"); more.title = "Events, the story strip and options"; }
     if (pop) { pop.addEventListener("click", onClick); new MutationObserver(() => { const open = !pop.hidden; tb.classList.toggle("tbx-open", open); if (more) { more.textContent = open ? "⌄" : "⌃"; more.setAttribute("aria-label", open ? "Fold the time bar" : "Show more of the time bar"); } if (open) update(); }).observe(pop, { attributes: true, attributeFilter: ["hidden"] }); }
     update();

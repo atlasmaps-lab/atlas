@@ -2180,6 +2180,11 @@ input.cmv-add { width: 130px; cursor: text; } input.cmv-add::placeholder { color
 .ws-pname { border: 0; background: none; font: 700 17px var(--f); color: var(--ink); cursor: pointer; }
 .ws-meta { font: italic 400 12px var(--f); color: var(--ink-3); display: inline-flex; align-items: center; } .ws-meta .vr { width: 1px; height: 10px; background: currentColor; opacity: .5; margin: 0 8px; }
 .wstrack b { white-space: nowrap; }
+
+/* 0.13 (as designed): the closed time bar: play, the track with years underneath, the date in bold on the right, ⌃ */
+#timebar:not(.tbx-open) #tcur { opacity: 0; pointer-events: none; }
+#timebar:not(.tbx-open) .tnote { display: none; }
+.tb-dlab { border: 0; background: none; font: 700 15px var(--f); color: var(--ink); cursor: text; white-space: nowrap; padding: 0 4px; }
 </style>
 <link rel="stylesheet" href="fonts.css?v=1300">
 <script src="theme.js?v=1300"></script>

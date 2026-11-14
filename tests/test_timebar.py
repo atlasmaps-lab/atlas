@@ -33,7 +33,8 @@ def main():
             print(f"  width {wpx}: {r}")
             rep.check(r["overlap"] == 0, f"{wpx}: no labels overlap ({r['n']} labels, tier {r['tier']})")
             rep.check(r["off"] == 0, f"{wpx}: no label runs off the bar")
-            rep.check(r["curIn"] and len(r["curText"]) >= 4, f"{wpx}: the current date shows above the handle (“{r['curText']}”)")
+            dl = page.evaluate("() => { const e = document.getElementById('tb-dlab'), t = document.getElementById('timebar').getBoundingClientRect(); if (!e) return null; const r = e.getBoundingClientRect(); return [e.textContent, r.width > 0 && r.right <= t.right + 0.5 && r.left >= t.left]; }")
+            rep.check(dl and len(dl[0]) >= 4 and dl[1], f"{wpx}: the current date shows on the right of the bar, as designed (“{dl and dl[0]}”)")
             rep.check(not r["clipped"], f"{wpx}: the date box and buttons fit inside the bar")
         page.evaluate("() => { const t = document.getElementById('timebar'); t.style.width = ''; t.style.minWidth = ''; }")
 
