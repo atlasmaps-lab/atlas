@@ -579,7 +579,7 @@
   const MARG = ["vm", "m", "fs", "s"], MARG_NAME = { vm: "Very marginal (under 5%)", m: "Marginal (5–10%)", fs: "Fairly safe (10–20%)", s: "Safe (20% or more)" };
   wm({ id: "ge_marginality", label: "Marginality", scale: "nominal", nature: "category", levels: SEAT_ONLY, nmText: M.ge_majority.nmText, desc: "How safe the seat is (bands of the majority)",
     how: "A view of the majority: under 5% very marginal, 5–10% marginal, 10–20% fairly safe, 20% or more safe. These bands are Atlas's convention, not an official definition",
-    colour: k => ({ vm: "#b2182b", m: "#ef8a62", fs: "#92c5de", s: "#2166ac" })[k], catName: k => MARG_NAME[k], cats: () => MARG,
+    colour: k => ({ vm: "#b06a35", m: "#e0a878", fs: "#7d9cc8", s: "#3f6596" })[k], catName: k => MARG_NAME[k], cats: () => MARG,
     get(code, d) { const r = M.ge_majority.get(code, d); if (!r || r.v == null) return r; const k = r.v < 5 ? "vm" : r.v < 10 ? "m" : r.v < 20 ? "fs" : "s"; return { v: k, text: `${MARG_NAME[k]}: ${r.text}`, yr: r.yr }; } });
   wm({ id: "ge_to_flip", label: "Votes to flip", scale: "ratio", nature: "count", levels: SEAT_ONLY, nmText: M.ge_majority.nmText, fmt: v => fmtInt(v) + " votes", desc: "Voters who would have to switch from the winner to the runner-up",
     how: "floor(majority in votes ÷ 2) + 1: each voter who switches takes one vote off the winner and gives one to the runner-up",
@@ -1316,7 +1316,7 @@
   const rgb2hex = a => "#" + a.map(x => Math.round(clamp(x, 0, 255)).toString(16).padStart(2, "0")).join("");
   const mix = (a, b, t) => { const A = hex2rgb(a), B = hex2rgb(b); return rgb2hex(A.map((x, i) => x + (B[i] - x) * t)); };
   const shadeOf = (hex, k, n) => { const t = n > 1 ? k / (n - 1) : 0.5; return t < 0.5 ? mix(hex, "#ffffff", (0.5 - t) / 0.5 * 0.8) : mix(hex, "#0d1114", (t - 0.5) / 0.5 * 0.5); };
-  const DIV = ["#b2182b", "#ef8a62", "#f2efe9", "#67a9cf", "#2166ac"];
+  const DIV = ["#b06a35", "#e0a878", "#f2efe9", "#7d9cc8", "#3f6596"];   // 0.13: two-sided scales run orange to blue (red and green mean fall and rise only), as designed
   const BIVP = {
     pt: { name: "Purple – teal", g: [["#e8e8e8", "#ace4e4", "#5ac8c8"], ["#dfb0d6", "#a5add3", "#5698b9"], ["#be64ac", "#8c62aa", "#3b4994"]] },
     br: { name: "Blue – red", g: [["#e8e8e8", "#e4acac", "#c85a5a"], ["#b0d5df", "#ad9ea5", "#985356"], ["#64acbe", "#627f8c", "#574249"]] },
@@ -4745,7 +4745,7 @@
     return Object.assign(out, { title: "", html: `<div class="aempty">Choose metrics and a method.</div>` });
   }
   const CLUSTER_COL = ["#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e", "#e6ab02"];
-  const HOT_COL = { HH: "#b2182b", LL: "#2166ac", HL: "#f4a582", LH: "#92c5de", none: "#e8e6e1" }, HOT_NAME = { HH: "Hot spot (high near high)", LL: "Cold spot (low near low)", HL: "High among low", LH: "Low among high", none: "No clear pattern" };
+  const HOT_COL = { HH: "#b06a35", LL: "#3f6596", HL: "#e0a878", LH: "#7d9cc8", none: "#e8e6e1" }, HOT_NAME = { HH: "Hot spot (high near high)", LL: "Cold spot (low near low)", HL: "High among low", LH: "Low among high", none: "No clear pattern" };
   let anSeq = 0;
   function showOnMap(spec) { // turns an analysis result into a metric in the Analysis perspective
     const id = "an_" + (++anSeq), byCode = {}; spec.codes.forEach((c, i) => { if (spec.values[i] != null) byCode[c] = spec.values[i]; });

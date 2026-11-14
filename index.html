@@ -2104,7 +2104,7 @@ input.cmv-add { width: 130px; cursor: text; } input.cmv-add::placeholder { color
 .cmv-btn.prim { border-color: var(--app, #a07a12); background: var(--app, #a07a12); color: #fff; font-weight: 700; }
 .cmv-lay { border: 0; border-bottom: 1px dotted var(--app, #a07a12); background: none; font: 400 12.5px var(--f); color: var(--ink-2); cursor: pointer; padding: 0; }
 .cmv-pat { margin-top: 12px; border-top: 1px solid var(--rule); }
-.cmv-pat > summary { display: flex; align-items: center; gap: 10px; padding: 10px 2px; cursor: pointer; list-style: none; }
+.cmv-pat > summary { display: flex; align-items: center; gap: 10px; padding: 10px 2px; cursor: pointer; list-style: none; text-transform: none !important; letter-spacing: 0 !important; color: var(--ink) !important; } .cmv-pat > summary i { text-transform: none; letter-spacing: 0; }
 .cmv-pat > summary b { font: 700 14.5px var(--f); } .cmv-pat > summary i { flex: 1; text-align: right; font: italic 400 12px var(--f); color: var(--ink-3); }
 .cmv-pat > summary::after { content: "›"; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--rule); display: grid; place-items: center; font: 700 13px var(--f); color: var(--ink-2); transition: transform .2s; }
 .cmv-pat[open] > summary::after { transform: rotate(90deg); }
