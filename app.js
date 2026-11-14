@@ -3485,7 +3485,7 @@
   const cmpEl = $("cmp");
   const CMP = { metrics: new Set(METRICS.filter(m => DEF_PS.active[m.id] && m.nature !== "event").map(m => m.id)), x: null, y: null, q: "" };
   function openCmp() { closeMenu(); closePMenu(); closeTools(); closeHist();
-    if (!CMP.userPicked && CMP.metrics.size > 12) { const on = planMetrics().filter(m => m.nature !== "event" && m.nature !== "line").map(m => m.id); CMP.metrics = new Set(on.length ? on : METRICS.filter(m => (!APP || m.p === APP.perspective) && EN.isNum(m) && m.nature !== "event").slice(0, 5).map(m => m.id)); }   // 0.13: start with what's on the map
+    if (!CMP.userPicked && CMP.metrics.size > 12) { const on = planMetrics().filter(m => m.nature !== "event" && m.nature !== "line").map(m => m.id); const nums = METRICS.filter(m => (!APP || m.p === APP.perspective) && PER[m.p] && PER[m.p].ready && EN.isNum(m) && m.nature !== "event" && m.nature !== "line" && m.temporal !== "event").slice(0, 4).map(m => m.id); CMP.metrics = new Set(on.some(id => EN.isNum(M[id])) ? on : on.concat(nums)); }   // 0.13: start with what's on the map, and always some measures with numbers
     WM.open(cmpEl); renderCmp(); }
   function closeCmp() { return WM.close(cmpEl); }
   // ---------- 1.8: Compare makes tables and charts from what's chosen ----------
@@ -4854,13 +4854,15 @@
     addFctl(anEl); anEl._last = res;
   }
   // o.from: the window it was opened from (e.g. Compare): Analyse opens above it, with a way back
-  function openAnalyse(o) { o = o || {}; closeMenu(); closePMenu(); if (o.metrics) AN.metrics = o.metrics.filter(id => M[id] && EN.isNum(M[id])); if (o.level) AN.level = o.level; WM.open(anEl, { parent: o.from }); if (!AN.docked) { const top = (WM.TOPNOW ? WM.TOPNOW() : 70) + 8; WM.place(anEl, { x: 16, y: top, w: Math.max(360, innerWidth - 32), h: Math.max(300, innerHeight - top - 16) }); } renderAnalyse(); }   // 0.13: a sheet over the map, as designed
+  function openAnalyse(o) { o = o || {}; closeMenu(); closePMenu(); if (o.metrics) AN.metrics = o.metrics.filter(id => M[id] && EN.isNum(M[id])); if (o.level) AN.level = o.level; WM.open(anEl, { parent: o.from }); if (!AN.docked) { const top = (WM.TOPNOW ? WM.TOPNOW() : 70) + 8; anPlace({ x: 16, y: top, w: Math.max(360, innerWidth - 32), h: Math.max(300, innerHeight - top - 16) }); } renderAnalyse(); }   // 0.13: a sheet over the map, as designed
   function closeAnalyse() { if (AN.docked) { AN.docked = false; anEl.classList.remove("an-docked"); } return WM.close(anEl); }
   // 0.13: Put it on the map: the sheet shrinks to a 420 px side panel so the map shows; "Back to the full result" restores it
+  // the sheet's size and the docked panel are Analyse's own: they don't become the place other windows open (the shared slots)
+  function anPlace(r) { const keep = Object.keys(localStorage).filter(k => k.startsWith("atlas-0101-slot-")).map(k => [k, localStorage.getItem(k)]); WM.place(anEl, r); try { Object.keys(localStorage).filter(k => k.startsWith("atlas-0101-slot-")).forEach(k => localStorage.removeItem(k)); keep.forEach(([k, v]) => localStorage.setItem(k, v)); } catch (e) {} }
   function anDock(on) {
     const r = anEl.getBoundingClientRect();
-    if (on) { if (!AN.docked) AN.undock = { x: r.left, y: r.top, w: r.width, h: r.height }; AN.docked = true; anEl.classList.add("an-docked"); WM.place(anEl, { x: innerWidth - 420 - 12, y: Math.max(60, r.top), w: 420, h: Math.min(innerHeight - 140, Math.max(420, r.height)) }); }
-    else { AN.docked = false; anEl.classList.remove("an-docked"); if (AN.undock) WM.place(anEl, AN.undock); }
+    if (on) { if (!AN.docked) AN.undock = { x: r.left, y: r.top, w: r.width, h: r.height }; AN.docked = true; anEl.classList.add("an-docked"); anPlace({ x: innerWidth - 420 - 12, y: Math.max(60, r.top), w: 420, h: Math.min(innerHeight - 140, Math.max(420, r.height)) }); }
+    else { AN.docked = false; anEl.classList.remove("an-docked"); if (AN.undock) anPlace(AN.undock); }
     renderAnalyse(); }
   WM.register(anEl, { type: "analyse", title: "Analyse", handle: ".an-head", min: { w: 360, h: 260 }, onResize: renderAnalyse, close: closeAnalyse });
   anEl.addEventListener("click", e => {
