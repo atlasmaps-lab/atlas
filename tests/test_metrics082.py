@@ -69,7 +69,8 @@ def main():
         rep.check("Aldershot" in r, f"…and the numbers follow the area in focus ({r})")
         js("() => AtlasDebug.unfocus()")
         # money: who gave to whom, and real values on the circles
-        js("() => { AtlasDebug.setLevel('constituency'); AtlasDebug.mapOnly(['money_received']); }")
+        # 0.13.1: the first measure fills the areas; circles are chosen in the key
+        js("() => { AtlasDebug.setLevel('constituency'); AtlasDebug.PS.prefs.money_received = 'size'; AtlasDebug.mapOnly(['money_received']); }")
         page.wait_for_function("() => document.querySelectorAll('#legend .mok-r').length > 0", timeout=30000)
         r = js("() => ({ rows: [...document.querySelectorAll('#legend .mok-r')].map(x => x.textContent.trim()).slice(0, 2), circles: [...document.querySelectorAll('#legend .dots span')].map(s => s.textContent) })")
         rep.check(len(r["rows"]) >= 3 or len(r["rows"]) >= 1 and "→" in r["rows"][0], f"the key says who gave to whom and how much ({r['rows'][:1]})")
