@@ -513,8 +513,12 @@
     const t = bdTotal(r); if (!t) return ""; const L = Object.entries(r).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
     return `<div class="compbar">${L.slice(0, 24).map(([k, v]) => `<i style="width:${(100 * v / t).toFixed(2)}%;background:${o.colour(k)}" title="${esc(o.name(k))}: ${esc(bdFmt(o, v))} (${pct1(100 * v / t)})"></i>`).join("")}</div><small>${L.slice(0, n || 5).map(([k, v]) => `${esc(o.name(k))} ${pct1(100 * v / t)}`).join(" · ")}</small>`;
   }
+  // 0.13: category colours never use green, red or gold (those mean rise, fall and the app); every breakdown takes this palette
+  const CAT_PAL = ["#3f6596", "#8a5a9e", "#b06a35", "#3d8aa1", "#6a62b0", "#9c6b77", "#5c6f85", "#7d868e", "#7d9cc8", "#b495c4", "#d39a6a", "#7fb6c6", "#a29be0", "#c49aa5"];
   function defBreakdown(o) {
     if (BD[o.id]) return; BD[o.id] = o;
+    { const order = () => { if (o._ord) return o._ord; let ks = (o.cats() || []).slice(); try { const d = o.of(UKC, state.date, BD_H); if (d) ks.sort((a, b) => (d[b] || 0) - (d[a] || 0)); } catch (e) {} return (o._ord = new Map(ks.map((k, i) => [k, i]))); };   // largest first: the strongest colours
+      o.colour = k => { const i = order().get(k); return i == null ? "#7d868e" : CAT_PAL[i % CAT_PAL.length]; }; }
     const base = { p: o.p, group: o.group, levels: o.levels, nmText: o.nmText, valid: o.valid, source: o.source, temporal: o.temporal || "static", span: o.span, bd: o.id, pickKey: o.id };
     const nm = k => o.name(k);
     def(Object.assign({}, base, { id: o.id + "_share", label: `${o.label}: share (choose)`, scale: "ratio", nature: "share", fmt: pct1, pick: "bd", desc: `The chosen category's share of ${o.label.toLowerCase()}; choose it in the key`,
