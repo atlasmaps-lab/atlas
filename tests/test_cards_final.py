@@ -33,7 +33,7 @@ def main():
         js(f"() => [...({CARD})().querySelectorAll('.pc-ranges button')].find(b => b.textContent === '5 years').click()"); page.wait_for_timeout(700)
         on = js(f"() => ({CARD})().querySelector('.pc-ranges button.on').textContent")
         rep.check(on == "5 years", "choosing 5 years re-tells the card for 5 years")
-        span = js(f"""() => {{ const t = [...({CARD})().querySelectorAll('.pc-lead .ach text')].map(x => +x.textContent).filter(x => x > 1900 && x < 2100); return t.length ? Math.max(...t) - Math.min(...t) : 0; }}""")
+        span = js(f"""() => {{ const c = ({CARD})(); const ax = [...c.querySelectorAll('.pc-lead .pc-vb-ax span')].map(x => 2000 + +x.textContent.replace("'", "")); const t = ax.length ? ax : [...c.querySelectorAll('.pc-lead .ach text')].map(x => +x.textContent).filter(x => x > 1900 && x < 2100); return t.length ? Math.max(...t) - Math.min(...t) : 0; }}""")
         rep.check(0 < span <= 6, f"…and the chart covers about five years ({span})")
         # lists: complete, sortable, See all
         js(f"() => ({CARD})().querySelectorAll('.pc-secs .pc-it').forEach(d => d.open = true)"); page.wait_for_timeout(400)

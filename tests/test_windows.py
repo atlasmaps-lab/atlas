@@ -39,7 +39,7 @@ def main():
             # default size: docked right, at most 40% wide and 70% high, never smaller than 320 × 200
             page.click("#chart-bubble"); page.wait_for_timeout(300)
             ch = page.eval_on_selector("#chartp", VISIBLE)
-            rep.check(ch["w"] <= max(0.4 * w, 340) + 1 and ch["h"] <= 0.7 * h + 1 and ch["x"] + ch["w"] > 0.55 * w, f"the chart panel opens docked right at the default size ({ch['w']:.0f}×{ch['h']:.0f})")
+            rep.check(ch["w"] <= max(0.4 * w, 340) + 1 and ch["h"] <= 0.7 * h + 1 and ch["x"] + ch["w"] > 0.55 * w, f"the chart panel opens docked right at the default size ({ch['w']:.0f}×{ch['h']:.0f} at x {ch['x']:.0f}, screen {w}×{h})")
             rep.check(ch["w"] >= 320 and ch["h"] >= 200, "the chart panel is at least 320 × 200")
             rep.check(not page.errors, "no console errors" + (f": {page.errors}" if page.errors else ""))
             page.context.close()

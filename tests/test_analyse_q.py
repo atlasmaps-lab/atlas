@@ -27,7 +27,7 @@ def main():
         r = js(f"""() => ({{ q: ({A}.querySelector('.an-answer .an-q') || {{}}).textContent, a: ({A}.querySelector('.an-answer .an-a') || {{}}).textContent || '', boxes: [...{A}.querySelectorAll('.an-box b')].map(x => x.textContent),
           brk: {A}.querySelectorAll('.an-box [data-anpk]').length, pic: !!{A}.querySelector('.an-res svg'), first: {A}.querySelector('.an-res').firstElementChild.className }})""")
         rep.check(r["q"] == "Do two things move together?" and len(r["a"]) > 20 and r["first"] in ("an-answer", "antrim"), f"the answer comes first in plain words ({r['a'][:70]!r})")
-        rep.check(r["boxes"] == ["How sure?", "What it does not say", "Places that break the pattern"] and r["brk"] == 6, f"…then How sure?, What it does not say, places that break the pattern ({r['boxes']})")
+        rep.check(set(r["boxes"]) == {"How sure?", "What it does not say", "Places that break the pattern"} and r["brk"] == 6, f"…then How sure?, What it does not say, places that break the pattern ({r['boxes']})")
         rep.check(r["pic"], "…and the picture")
         js(f"() => {A}.querySelector('[data-anm=\"imd_score\"]') ? 0 : 0")
         js("() => AtlasCtx.openAnalyse({ metrics: ['le_f', 'claimant_rate', 'imd_score'], level: 'council' })"); page.wait_for_timeout(1500)

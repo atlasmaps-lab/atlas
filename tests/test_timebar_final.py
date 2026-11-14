@@ -30,7 +30,7 @@ def main():
         js("() => document.querySelector('.tbx-chip[data-tbevgo]').click()"); page.wait_for_timeout(400)
         cap = js("() => document.querySelector('.tbx-cap').textContent")
         rep.check(js("() => !!document.querySelector('.tbx-chip.on')") and len(cap) > 30, f"an event chip jumps there and tells its story ({cap[:60]!r})")
-        page.click("#tb-more"); page.wait_for_timeout(300)
+        page.click("#tb-pop [data-tbfold]"); page.wait_for_timeout(300)
         rep.check(js("() => document.getElementById('tb-pop').hidden"), "⌄ folds it back")
         for st in ["frieze", "seismo", "core", "wheels", "navigator", "film", "clock", "watermark", "calendar"]:
             js(f"() => AtlasTimebar.setStyle('{st}')"); page.wait_for_timeout(300)

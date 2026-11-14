@@ -513,8 +513,12 @@
     const t = bdTotal(r); if (!t) return ""; const L = Object.entries(r).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
     return `<div class="compbar">${L.slice(0, 24).map(([k, v]) => `<i style="width:${(100 * v / t).toFixed(2)}%;background:${o.colour(k)}" title="${esc(o.name(k))}: ${esc(bdFmt(o, v))} (${pct1(100 * v / t)})"></i>`).join("")}</div><small>${L.slice(0, n || 5).map(([k, v]) => `${esc(o.name(k))} ${pct1(100 * v / t)}`).join(" · ")}</small>`;
   }
+  // 0.13: category colours never use green, red or gold (those mean rise, fall and the app); every breakdown takes this palette
+  const CAT_PAL = ["#3f6596", "#8a5a9e", "#b06a35", "#3d8aa1", "#6a62b0", "#9c6b77", "#5c6f85", "#7d868e", "#7d9cc8", "#b495c4", "#d39a6a", "#7fb6c6", "#a29be0", "#c49aa5"];
   function defBreakdown(o) {
     if (BD[o.id]) return; BD[o.id] = o;
+    { const order = () => { if (o._ord) return o._ord; let ks = (o.cats() || []).slice(); try { const d = o.of(UKC, state.date, BD_H); if (d) ks.sort((a, b) => (d[b] || 0) - (d[a] || 0)); } catch (e) {} return (o._ord = new Map(ks.map((k, i) => [k, i]))); };   // largest first: the strongest colours
+      o.colour = k => { const i = order().get(k); return i == null ? "#7d868e" : CAT_PAL[i % CAT_PAL.length]; }; }
     const base = { p: o.p, group: o.group, levels: o.levels, nmText: o.nmText, valid: o.valid, source: o.source, temporal: o.temporal || "static", span: o.span, bd: o.id, pickKey: o.id };
     const nm = k => o.name(k);
     def(Object.assign({}, base, { id: o.id + "_share", label: `${o.label}: share (choose)`, scale: "ratio", nature: "share", fmt: pct1, pick: "bd", desc: `The chosen category's share of ${o.label.toLowerCase()}; choose it in the key`,
@@ -575,7 +579,7 @@
   const MARG = ["vm", "m", "fs", "s"], MARG_NAME = { vm: "Very marginal (under 5%)", m: "Marginal (5–10%)", fs: "Fairly safe (10–20%)", s: "Safe (20% or more)" };
   wm({ id: "ge_marginality", label: "Marginality", scale: "nominal", nature: "category", levels: SEAT_ONLY, nmText: M.ge_majority.nmText, desc: "How safe the seat is (bands of the majority)",
     how: "A view of the majority: under 5% very marginal, 5–10% marginal, 10–20% fairly safe, 20% or more safe. These bands are Atlas's convention, not an official definition",
-    colour: k => ({ vm: "#b2182b", m: "#ef8a62", fs: "#92c5de", s: "#2166ac" })[k], catName: k => MARG_NAME[k], cats: () => MARG,
+    colour: k => ({ vm: "#b06a35", m: "#e0a878", fs: "#7d9cc8", s: "#3f6596" })[k], catName: k => MARG_NAME[k], cats: () => MARG,
     get(code, d) { const r = M.ge_majority.get(code, d); if (!r || r.v == null) return r; const k = r.v < 5 ? "vm" : r.v < 10 ? "m" : r.v < 20 ? "fs" : "s"; return { v: k, text: `${MARG_NAME[k]}: ${r.text}`, yr: r.yr }; } });
   wm({ id: "ge_to_flip", label: "Votes to flip", scale: "ratio", nature: "count", levels: SEAT_ONLY, nmText: M.ge_majority.nmText, fmt: v => fmtInt(v) + " votes", desc: "Voters who would have to switch from the winner to the runner-up",
     how: "floor(majority in votes ÷ 2) + 1: each voter who switches takes one vote off the winner and gives one to the runner-up",
@@ -1312,7 +1316,7 @@
   const rgb2hex = a => "#" + a.map(x => Math.round(clamp(x, 0, 255)).toString(16).padStart(2, "0")).join("");
   const mix = (a, b, t) => { const A = hex2rgb(a), B = hex2rgb(b); return rgb2hex(A.map((x, i) => x + (B[i] - x) * t)); };
   const shadeOf = (hex, k, n) => { const t = n > 1 ? k / (n - 1) : 0.5; return t < 0.5 ? mix(hex, "#ffffff", (0.5 - t) / 0.5 * 0.8) : mix(hex, "#0d1114", (t - 0.5) / 0.5 * 0.5); };
-  const DIV = ["#b2182b", "#ef8a62", "#f2efe9", "#67a9cf", "#2166ac"];
+  const DIV = ["#b06a35", "#e0a878", "#f2efe9", "#7d9cc8", "#3f6596"];   // 0.13: two-sided scales run orange to blue (red and green mean fall and rise only), as designed
   const BIVP = {
     pt: { name: "Purple – teal", g: [["#e8e8e8", "#ace4e4", "#5ac8c8"], ["#dfb0d6", "#a5add3", "#5698b9"], ["#be64ac", "#8c62aa", "#3b4994"]] },
     br: { name: "Blue – red", g: [["#e8e8e8", "#e4acac", "#c85a5a"], ["#b0d5df", "#ad9ea5", "#985356"], ["#64acbe", "#627f8c", "#574249"]] },
@@ -1797,7 +1801,7 @@
     map.addSource("trade-ports", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({ id: "trade-ports", type: "circle", source: "trade-ports", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["get", "v"], 1e8, 3, 1e10, 8, 1e11, 16], "circle-color": "#1f2a2e", "circle-opacity": 0.78, "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2 } }, bf);
   }
-  const TR_COL = { EU: "#2b6cb0", "Other Europe": "#7b4fa6", "North America": "#c0392b", "Latin America": "#e67e22", Asia: "#d4a017", Africa: "#2e8b57", Oceania: "#0f8b8d", Other: "#888888" };
+  const TR_COL = { EU: "#3f6596", "Other Europe": "#3d8aa1", "North America": "#8a5a9e", "Latin America": "#9c6b77", Asia: "#b06a35", Africa: "#6a62b0", Oceania: "#5c6f85", Other: "#7d868e" };   // 0.13: the category palette, as designed (no green, red or gold)
   function arc(a, b, n) { // great circle from a to b ([lon, lat]), n segments
     const r = Math.PI / 180, [l1, p1] = [a[0] * r, a[1] * r], [l2, p2] = [b[0] * r, b[1] * r];
     const d = 2 * Math.asin(Math.sqrt(Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin((l2 - l1) / 2) ** 2)); if (!d) return [a, b];
@@ -2327,9 +2331,9 @@
     if (!TRD) return ""; const f = m.id.endsWith("exp") ? "exp" : "imp", n = TRADE.code ? tradeNode(TRADE.code) : null;
     const ct = n ? n.ct[f] : Object.entries(TRD.cty).map(([c, o]) => [c, o[f]]).sort((a, b) => b[1] - a[1]).slice(0, 8), tot = n ? n[f] : TRD.tot[f];
     const po = n ? n.po[f] : Object.entries(TRD.ports).map(([p, o]) => [p, o[f]]).sort((a, b) => b[1] - a[1]).slice(0, 4), mx = ct.length ? ct[0][1] : 1;
-    return `<div class="trk"><div class="vsk-h">${TRADE.code ? `${esc(TRADE.code)} ${esc((n || {}).n || "")}` : "All goods"} · ${f === "exp" ? "exports" : "imports"} ${fmtGBP(tot || 0)} a year${TRADE.code ? ` <button class="lnk" data-trclear>show all goods</button>` : ""}</div>
-      ${(ct || []).slice(0, 6).map(([c, v]) => `<div class="mok-r"><span class="mok-w"><i class="sw" style="background:${TR_COL[(TRD.cty[c] || {}).rg] || "#888"}"></i>${esc((TRD.cty[c] || {}).n || c)}</span><span class="mok-bar"><i style="width:${(100 * v / mx).toFixed(1)}%;background:${TR_COL[(TRD.cty[c] || {}).rg] || "#888"}"></i></span><b>${fmtGBP(v)}</b><small>${tot ? pct1(100 * v / tot) : ""}</small></div>`).join("")}
-      <div class="note">Through ${(po || []).slice(0, 4).map(([p, v]) => `${esc((TRD.ports[p] || {}).n || p)} ${fmtGBP(v)}`).join(", ")}. ${esc(TRD.period ? "12 months to " + TRD.period[1].slice(2) + "/20" + TRD.period[1].slice(0, 2) : "")}, HMRC. Choose a product in Atlas Markets.</div></div>`;
+    return `<div class="trk"><p class="lg-sub">${TRADE.code ? `${esc(TRADE.code)} ${esc((n || {}).n || "")}` : "All goods"}, ${fmtGBP(tot || 0)} a year. Line width shows how much.${TRADE.code ? ` <button class="lnk" data-trclear>show all goods</button>` : ""}</p>
+      <details class="trk-more"><summary>Biggest partners and ports</summary>${(ct || []).slice(0, 6).map(([c, v]) => `<div class="mok-r"><span class="mok-w"><i class="sw" style="background:${TR_COL[(TRD.cty[c] || {}).rg] || "#888"}"></i>${esc((TRD.cty[c] || {}).n || c)}</span><span class="mok-bar"><i style="width:${(100 * v / mx).toFixed(1)}%;background:${TR_COL[(TRD.cty[c] || {}).rg] || "#888"}"></i></span><b>${fmtGBP(v)}</b><small>${tot ? pct1(100 * v / tot) : ""}</small></div>`).join("")}
+      <div class="note">Through ${(po || []).slice(0, 4).map(([p, v]) => `${esc((TRD.ports[p] || {}).n || p)} ${fmtGBP(v)}`).join(", ")}. ${esc(TRD.period ? "12 months to " + TRD.period[1].slice(2) + "/20" + TRD.period[1].slice(0, 2) : "")}, HMRC. Choose a product in Atlas Markets.</div></details></div>`;
   }
   function commuteLegend() {
     const f = state.focus && P[state.focus] && P[state.focus].level === "council" && CM ? state.focus : null;
@@ -2757,9 +2761,16 @@
   if (window.ResizeObserver) new ResizeObserver(() => renderMarks()).observe($("marks"));
   // 0.13: the time bar's expanded form and its nine other styles (timebar.js) read the date, range and what's on the map from here
   if (window.AtlasTimebar) AtlasTimebar.init({ lo: viewLo, hi: viewHi, date: () => state.date, set: d => { stopPlay(); setDate(d); }, play: () => playBtn.click(), playing: () => !!state.playing, monthIdx, fromMonthIdx,
-    measure: () => { const N = window.AtlasNarrative; if (!N) return null; const m = curPlan.notes.filter(n => n.ch).map(n => M[n.id]).find(x => x && x.temporal !== "static" && x.temporal !== "event" && x.nature !== "text"); if (!m) return null;
-      const code = state.focus && P[state.focus] ? state.focus : UKC; let pts = []; try { pts = N.series(m, code) || []; } catch (e) {}
-      return { label: m.label, fmt: N.fmtOf(m), pts, annual: m.temporal === "annual", where: code === UKC ? "the UK" : nameOf(code), topics: window.AtlasCard ? AtlasCard.topicsOf(m.id, m.label, m.group, m.p) : [] }; } });
+    // 0.13: the strip always has bars: the first mapped measure with a history (at the focused place, else the UK); trade lines
+    // fall back to UK goods exports; otherwise the app's first measure with a UK history
+    measure: () => { const N = window.AtlasNarrative; if (!N) return null; const code = state.focus && P[state.focus] ? state.focus : UKC;
+      const ser = (m, c) => { try { return (N.series(m, c) || []).filter(p => p[1] != null && isFinite(p[1])); } catch (e) { return []; } };
+      const pack = (m, c, pts) => ({ label: m.label, fmt: N.fmtOf(m), pts, annual: m.temporal === "annual", where: c === UKC ? "the UK" : nameOf(c), topics: window.AtlasCard ? AtlasCard.topicsOf(m.id, m.label, m.group, m.p) : [] });
+      const ok = x => x && x.temporal !== "static" && x.temporal !== "event" && x.nature !== "text" && EN.isNum(x);
+      for (const m of planMetrics().filter(ok)) { for (const c of [code, UKC]) { const pts = ser(m, c); if (pts.length >= 3) return pack(m, c, pts); } }
+      const T = window.ATLAS_TRADE; if (T && T.months && (curPlan.lines || []).some(m => /^trade_routes/.test(m.id))) { const y = {}; T.months.exp.forEach(([k, v]) => { const Y = 2000 + +k.slice(0, 2); y[Y] = (y[Y] || 0) + v; }); const pts = Object.keys(y).map(Number).sort().map(Y => [Y, y[Y]]); if (pts.length >= 3) return { label: "UK goods exports", fmt: fmtGBP, pts, annual: true, where: "the UK", topics: ["trade"] }; }
+      for (const m of METRICS.filter(x => ok(x) && (!APP || x.p === APP.perspective))) { const pts = ser(m, UKC); if (pts.length >= 3) return pack(m, UKC, pts); }
+      return null; } });
   function renderTNote() {
     const ms = curPlan.notes.filter(n => n.ch).map(n => M[n.id]), note = $("tnote"), bits = [];
     if (!isNow()) bits.push(`Showing ${longDate(state.date)}`);
@@ -3383,7 +3394,7 @@
       else if (id === "card") { PS.active[m.id] = true; PS.card[m.id] = !PS.card[m.id]; repaint(); }
       else if (id === "hist") { HIST = { code: state.focus, metric: m.id }; renderHist(); }
       else if (id === "chart") openChart({ metrics: [m.id], places: [state.focus, ...state.sel.map(s => s.code).filter(c => c !== state.focus)].slice(0, 8) });
-      else if (id === "cmp") { addCompare({ code: state.focus, level: P[state.focus].level }); CMP.metrics.add(m.id); openCmp(); }
+      else if (id === "cmp") { addCompare({ code: state.focus, level: P[state.focus].level }); if (!CMP.userPicked) CMP.metrics = new Set(); CMP.userPicked = true; CMP.metrics.add(m.id); openCmp(); }
       else if (id === "exp") openExport({ metrics: [m.id] });
     }
   });
@@ -3473,7 +3484,9 @@
   // ---------- comparison page ----------
   const cmpEl = $("cmp");
   const CMP = { metrics: new Set(METRICS.filter(m => DEF_PS.active[m.id] && m.nature !== "event").map(m => m.id)), x: null, y: null, q: "" };
-  function openCmp() { closeMenu(); closePMenu(); closeTools(); closeHist(); WM.open(cmpEl); renderCmp(); }
+  function openCmp() { closeMenu(); closePMenu(); closeTools(); closeHist();
+    if (!CMP.userPicked && CMP.metrics.size > 12) { const on = planMetrics().filter(m => m.nature !== "event" && m.nature !== "line").map(m => m.id); const nums = METRICS.filter(m => (!APP || m.p === APP.perspective) && PER[m.p] && PER[m.p].ready && EN.isNum(m) && m.nature !== "event" && m.nature !== "line" && m.temporal !== "event").slice(0, 4).map(m => m.id); CMP.metrics = new Set(on.some(id => EN.isNum(M[id])) ? on : on.concat(nums)); }   // 0.13: start with what's on the map, and always some measures with numbers
+    WM.open(cmpEl); renderCmp(); }
   function closeCmp() { return WM.close(cmpEl); }
   // ---------- 1.8: Compare makes tables and charts from what's chosen ----------
   // A table has a layout (places × metrics at one date; places × years for one metric; metrics × years for one place) and
@@ -3583,12 +3596,12 @@
         <p class="cmv-line">${esc(nameOf(hi[0]))} is highest at ${esc(f(hi[1]))}${vs.length > 1 ? `; ${esc(nameOf(lo[0]))} is lowest at ${esc(f(lo[1]))}` : ""}.${uk != null ? ` The UK: ${esc(f(uk))} (dashed).` : ""}</p></div>`; }).join("")}</div>`;
   }
   function h2hSentence(m, a, b, va, vb) {
-    const f = cmpFmt(m), A = nameOf(a), B = nameOf(b), pts = window.AtlasNarrative && AtlasNarrative.isPts(m);
-    if (va === vb) return `${A} and ${B} are level on ${m.label.toLowerCase()}, at ${f(va)}.`;
+    const f = cmpFmt(m), A = nameOf(a), B = nameOf(b), pts = window.AtlasNarrative && AtlasNarrative.isPts(m), lab = /^[A-Z]{2,}/.test(m.label) ? m.label : m.label.charAt(0).toLowerCase() + m.label.slice(1);   // acronyms keep their capitals
+    if (va === vb) return `${A} and ${B} are level on ${lab}, at ${f(va)}.`;
     const [hi, lo, vh, vl] = va > vb ? [A, B, va, vb] : [B, A, vb, va];
-    if (!pts && vl > 0 && vh / vl >= 1.5) return `${hi}'s ${m.label.toLowerCase()} is ${(vh / vl).toFixed(vh / vl >= 10 ? 0 : 1)} times ${lo}'s (${f(vh)} against ${f(vl)}).`;
+    if (!pts && vl > 0 && vh / vl >= 1.5) return `${hi}'s ${lab} is ${(vh / vl).toFixed(vh / vl >= 10 ? 0 : 1)} times ${lo}'s (${f(vh)} against ${f(vl)}).`;
     const d = vh - vl, ds = pts ? `${d.toFixed(1)} points` : String(f(d)).match(/^[£$€-]|\d/) ? f(d) : d.toLocaleString("en-GB");
-    return `${hi} is ${ds} higher than ${lo} on ${m.label.toLowerCase()} (${f(vh)} against ${f(vl)}).`;
+    return `${hi} is ${ds} higher than ${lo} on ${lab} (${f(vh)} against ${f(vl)}).`;
   }
   function cmpH2H(codes, ms) {
     const [a, b] = CMP.ab;
@@ -3620,7 +3633,7 @@
   }
   function renderCmp() {
     const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id));
-    if (!CMP.items.length && codes.length >= 2 && ms.length) { CMP.items.push({ id: "k" + (++CMP.seq), kind: "table", title: "Places × metrics", spec: { layout: "pm", when: "bar", codes: codes.slice(), metrics: [...CMP.metrics].filter(id => M[id]) } }); CMP.at = "k" + CMP.seq; }   // the side-by-side table, as before
+    if (false && !CMP.items.length && codes.length >= 2 && ms.length) { CMP.items.push({ id: "k" + (++CMP.seq), kind: "table", title: "Places × metrics", spec: { layout: "pm", when: "bar", codes: codes.slice(), metrics: [...CMP.metrics].filter(id => M[id]) } }); CMP.at = "k" + CMP.seq; }   // the side-by-side table, as before
     const made = CMP.items.length ? `<div class="cmp-made"><h4>Made here</h4>${CMP.items.map(it => `<div class="cmp-it${it.id === CMP.at || it.id === CMP.ac ? " on" : ""}" data-kshow="${it.id}" title="Show it"><span class="cmp-ik">${it.kind === "table" ? "▦" : sIcon(it.spec.style || "line")}</span><span class="cmp-in">${esc(it.title)}</span><button data-kdel="${it.id}" aria-label="Close ${esc(it.title)}">×</button></div>`).join("")}</div>` : "";
     const side = made + mtree("cmp", METRICS.filter(m => PER[m.p].ready), m => { const p = PER[m.p], on = CMP.metrics.has(m.id), nd = !on && codes.length && cmpEmpty(m, codes); return `<label style="--c:${p.hue}" class="${nd ? "dis" : ""}" ${nd ? `title="No data for these places on this date"` : ""}><input type="checkbox" data-cm="${m.id}" ${on ? "checked" : ""} ${nd ? "disabled" : ""}>${esc(m.label)}</label>`; },
       { isOn: m => CMP.metrics.has(m.id), extra: p => `<div class="quick"><button class="btn" data-all="${p.id}">All</button><button class="btn" data-none="${p.id}">None</button></div>`,
@@ -3630,21 +3643,35 @@
     if (!usable.some(m => m.id === CMP.y) || CMP.y === CMP.x) CMP.y = (usable.find(m => m.id !== CMP.x) || {}).id || null;
     CMP.view = CMP.view || "table";
     CMP.ab = (CMP.ab || []).filter(c => codes.includes(c)); codes.forEach(c => { if (CMP.ab.length < 2 && !CMP.ab.includes(c)) CMP.ab.push(c); });
-    let main = `<div class="cmv-sw seg" role="tablist" aria-label="View">${[["table", "Table"], ["side", "Side by side"], ["h2h", "Head to head"], ["time", "Over time"]].map(([k, l]) => `<button type="button" role="tab" data-cmview="${k}" class="${CMP.view === k ? "on" : ""}" aria-selected="${CMP.view === k}">${l}</button>`).join("")}</div>
-      <section><h3>Places (${codes.length})</h3><div class="chips">${codes.map(c => `<span class="chip" data-cmab="${c}" style="--pc:${cmpCol(c, codes)}"><i class="cmv-dot"></i>${CMP.view === "h2h" && (CMP.ab || []).includes(c) ? `<b class="cmv-ab">${(CMP.ab || []).indexOf(c) ? "B" : "A"}</b>` : ""}${esc(nameOf(c))}<button data-rmc="${c}" aria-label="Remove ${esc(nameOf(c))}">×</button></span>`).join("")}
-      <span class="cmp-add"><input id="cmp-q" placeholder="Add a place…" autocomplete="off" value="${esc(CMP.q)}"><ul id="cmp-hits" hidden></ul></span>${codes.length ? `<button class="btn" data-clearall>Clear</button>` : ""}</div></section>`;
-    if (codes.length < 2) main += `<div class="empty-big">Pick at least two places to compare. Add them here, Shift-click them on the map, or hold the mouse still and drag a box over them.</div>`;
-    else if (!ms.length) main += `<div class="empty-big">Tick the metrics you want to compare on the left. They can come from the same perspective or different ones.</div>`;
-    else if (CMP.view !== "table") { const nums = ms.filter(m => EN.isNum(m)); const CAP = 12, shown = CMP.view === "time" ? nums : nums.slice(0, CAP), more = CMP.view !== "time" && nums.length > CAP ? `<p class="cmv-note">Showing the first ${CAP} of ${nums.length} measures; untick some on the left to choose which.</p>` : "";
-      main += !nums.length ? `<div class="empty-big">Tick a measure with numbers to see this view.</div>` : more + (CMP.view === "side" ? cmpSide(codes, shown) : CMP.view === "h2h" ? cmpH2H(codes, shown) : cmpTime(codes, shown)); }
+    // 0.13 (as designed, Atlas design/compare): one sheet: title and the view switch, places and measures as chips, then the view
+    const views = `<span class="cmv-sw" role="tablist" aria-label="View">${[["table", "Table"], ["side", "Side by side"], ["h2h", "Head to head"], ["time", "Over time"]].map(([k, l]) => `<button type="button" role="tab" data-cmview="${k}" class="${CMP.view === k ? "on" : ""}" aria-selected="${CMP.view === k}">${l}</button>`).join("")}</span>`;
+    const placeChips = codes.map(c => `<span class="cmv-chip" data-cmab="${c}" style="--pc:${cmpCol(c, codes)}"><i class="cmv-dot"></i>${esc(nameOf(c))}${CMP.view === "h2h" && (CMP.ab || []).includes(c) ? `<b class="cmv-ab">${CMP.ab.indexOf(c) ? "B" : "A"}</b>` : ""}<button type="button" data-rmc="${c}" aria-label="Remove ${esc(nameOf(c))}">×</button></span>`).join("");
+    const measChips = ms.slice(0, 40).map(m => `<span class="cmv-chip on">✓ ${esc(m.label)}<button type="button" data-cmrm="${m.id}" aria-label="Take ${esc(m.label)} off">×</button></span>`).join("") + (ms.length > 40 ? `<span class="cmv-more">and ${ms.length - 40} more</span>` : "");
+    let body = "";
+    if (codes.length < 2) body = `<div class="empty-big">Pick at least two places to compare. Add them above, Shift-click them on the map, or drag a box over them.</div>`;
+    else if (!ms.length) body = `<div class="empty-big">Add a measure to compare these places.</div>`;
+    else if (CMP.view !== "table") { const nums = ms.filter(m => EN.isNum(m)); const CAP = 12, shown = CMP.view === "time" ? nums : nums.slice(0, CAP), more = CMP.view !== "time" && nums.length > CAP ? `<p class="cmv-note">Showing the first ${CAP} of ${nums.length} measures.</p>` : "";
+      body = !nums.length ? `<div class="empty-big">Add a measure with numbers to see this view.</div>` : more + (CMP.view === "side" ? cmpSide(codes, shown) : CMP.view === "h2h" ? cmpH2H(codes, shown) : cmpTime(codes, shown)); }
     else {
-      const anyNum = ms.some(m => EN.isNum(m));
-      main += `<section class="cmp-acts"><button class="btn primary" data-kmk="table" title="Choose a layout and dates">Make table ▾</button><button class="btn primary" data-kmk="chart" title="Choose a chart style for these places and metrics">Make chart</button><button class="btn" data-can ${anyNum ? "" : `disabled title="Analyse needs at least one numeric metric"`}>Analyse these…</button><button class="btn" data-ctile title="The places as a small map in the workspace">Places as a tile → workspace</button><button class="btn" data-cexp>Export…</button>${helpBtn("tables", "Help: tables and totals")}</section>`;
-      if (CMP.mk === "table") main += cmpBuilderHTML(codes, ms);
-      main += cmpWorkHTML();
-      main += `<details class="cmp-pat"${CMP.patOpen ? " open" : ""}><summary>Patterns between two metrics</summary>` + (usable.length < 2 ? `<div class="empty-big">Tick two or more metrics to look for a pattern between them.</div>` : patternHTML(codes, M[CMP.x], M[CMP.y], usable)) + `</details>`;
+      const anyNum = ms.some(m => EN.isNum(m)), cols = [...CMP.metrics].map(id => M[id]).filter(m => m && m.nature !== "text").slice(0, 8), all = codes.concat(codes.includes(UKC) ? [] : [UKC]);
+      const sb = CMP.sort && cols.some(m => m.id === CMP.sort.id) ? CMP.sort : null, rows = codes.slice();
+      if (sb) rows.sort((a, b) => { const x = cmpVal(M[sb.id], a), y = cmpVal(M[sb.id], b); if (x == null) return 1; if (y == null) return -1; return sb.dir === "asc" ? x - y : y - x; });
+      const mx = m => Math.max(1e-9, ...codes.map(c => Math.abs(cmpVal(m, c) || 0))), yrOf = m => { try { const r = m.get(codes[0], state.date); return r && (r.yr || r.year) ? String(r.yr || r.year) : ""; } catch (e) { return ""; } };
+      const cell = (m, c, i) => { if (!EN.isNum(m)) { let t = "—"; try { const r = m.get(c, state.date); if (r && r.v != null) t = m.catName ? m.catName(r.v) : String(r.v); } catch (e) {} return `<span class="cmv-td"><b class="cmv-cat">${esc(t)}</b></span>`; }   // categories show their name, no bar
+        const v = cmpVal(m, c); return `<span class="cmv-td"><b>${v == null ? "—" : esc(cmpFmt(m)(v))}</b><span class="cmv-tr"><i class="atl-fill" style="width:${v == null || c === UKC ? 0 : (100 * Math.abs(v) / mx(m)).toFixed(1)}%;background:${cmpCol(c, codes)};animation-delay:${i * 40}ms"></i></span></span>`; };
+      body = `<div class="cmv-table" style="--n:${cols.length}"><div class="cmv-thead"><span class="cmv-thp">Place</span>${cols.map(m => `<button type="button" class="cmv-th" data-cmsort="${m.id}"><b>${esc(m.label)}${sb && sb.id === m.id ? (sb.dir === "asc" ? " ↑" : " ↓") : ""}</b><i>${esc(yrOf(m) || longDate(state.date))}</i></button>`).join("")}</div>
+        ${(() => { const rs = m => codes.map(c => { try { return m.get(c, state.date); } catch (e) { return null; } }); const tots = cols.map(m => colTotal(m, codes, rs(m), state.date)); return tots.some(t => t.text && t.text !== "—") ? `<div class="cmv-tr-row tot"><span class="cmv-tdp">Together<small>these ${codes.length} places</small></span>${tots.map(t => `<span class="cmv-td" title="${esc(t.title || "")}"><b>${esc(t.text || "")}</b></span>`).join("")}</div>` : ""; })()}
+        ${rows.concat(all.includes(UKC) ? [UKC] : []).map((c, ri) => `<div class="cmv-tr-row${c === UKC ? " ref" : ""}" style="--i:${ri}"><span class="cmv-tdp"><i class="cmv-dot" style="background:${cmpCol(c, codes)}"></i>${esc(nameOf(c))}${c === UKC ? `<small>for reference</small>` : ""}</span>${cols.map(m => cell(m, c, ri)).join("")}</div>`).join("")}</div>
+        ${ms.length > cols.length ? `<p class="cmv-note">The table shows the first ${cols.length} of ${ms.length} measures; take some off above to choose.</p>` : ""}
+        <p class="cmv-note">Bars compare the places in each column; the UK row is the whole country, for reference. Values on ${esc(longDate(state.date))} (the time bar).</p>
+        <div class="cmv-acts"><button type="button" class="cmv-btn prim" data-kmk="chart">Make a chart ⌄</button><button type="button" class="cmv-btn" data-cmcsv>Copy as CSV</button><button type="button" class="cmv-btn" data-cmxl>Excel</button><button type="button" class="cmv-btn" data-cmws>☆ Workspace</button><button type="button" class="cmv-btn" data-cmmap>Put it on the map</button><button type="button" class="cmv-btn" data-can ${anyNum ? "" : "disabled"}>Analyse these…</button><span style="flex:1"></span><button type="button" class="cmv-lay" data-kmk="table">Layout: places × measures ⌄</button></div>
+        ${CMP.mk === "table" ? cmpBuilderHTML(codes, ms) : ""}${made ? `<div class="cmv-made">${made}</div>` : ""}${cmpWorkHTML()}
+        <details class="cmp-pat cmv-pat"${CMP.patOpen ? " open" : ""}><summary><b>Patterns between two measures</b><i>Pick two to see how they move together</i></summary>${usable.length < 2 ? `<div class="empty-big">Add two or more measures to look for a pattern between them.</div>` : patternHTML(codes, M[CMP.x], M[CMP.y], usable)}</details>`;
     }
-    cmpEl.innerHTML = `<div class="cmp-page" role="dialog" aria-label="Compare"><div class="cmp-top"><div><h2>Compare</h2><p>Choose places and any metrics, from one perspective or several. Uses the date on the time bar.</p></div><button class="btn" data-close>Close</button></div><div class="cmp-side">${side}</div><div class="cmp-main">${main}</div></div>`;
+    cmpEl.innerHTML = `<div class="cmp-page cmv-sheet" role="dialog" aria-label="Compare"><div class="cmv-top cmp-top"><div class="cmv-tt"><h2>Compare</h2><p>Places and measures side by side. Each measure uses the time bar's date.</p></div>${views}<button type="button" class="cmv-x" data-close aria-label="Close">×</button></div>
+      <div class="cmv-set"><span class="cmv-lab">Places</span>${placeChips}<span class="cmp-add"><input id="cmp-q" class="cmv-add" placeholder="+ Add a place" autocomplete="off" value="${esc(CMP.q)}"><ul id="cmp-hits" hidden></ul></span>${codes.length ? `<button type="button" class="cmv-clear" data-clearall>Clear</button>` : ""}</div>
+      <div class="cmv-set cmv-set2"><span class="cmv-lab">Measures</span>${measChips}<button type="button" class="cmv-add" data-cmaddm aria-expanded="${!!CMP.pick}">+ Add a measure</button></div>
+      ${CMP.pick ? `<div class="cmv-picker">${side.replace(made, "")}</div>` : ""}<div class="cmv-body">${body}</div></div>`;
     addFctl(cmpEl); requestAnimationFrame(drawCmpCharts);
     const q = $("cmp-q"); if (q && CMP.q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); showCmpHits(); }
   }
@@ -3694,7 +3721,7 @@
   function showCmpHits() { const ul = $("cmp-hits"), q = CMP.q.trim().toLowerCase(); if (!ul) return; const hs = q.length < 2 ? [] : searchNames(q); ul.innerHTML = hs.map(c => `<li data-add="${c}">${esc(nameOf(c))}<small>${LABEL[P[c].level]}</small></li>`).join(""); ul.hidden = !hs.length; }
   cmpEl.addEventListener("input", e => { if (e.target.id === "cmp-q") { CMP.q = e.target.value; showCmpHits(); } });
   cmpEl.addEventListener("change", e => { const t = e.target;
-    if (t.dataset.cm) { t.checked ? CMP.metrics.add(t.dataset.cm) : CMP.metrics.delete(t.dataset.cm); renderCmp(); }
+    if (t.dataset.cm) { t.checked ? CMP.metrics.add(t.dataset.cm) : CMP.metrics.delete(t.dataset.cm); CMP.userPicked = true; renderCmp(); }
     else if (t.dataset.ax) { CMP[t.dataset.ax] = t.value; renderCmp(); }
     else if (t.dataset.kf) { const k = t.dataset.kf, F = CMP.form; F[k] = ["year", "from", "to"].includes(k) ? clamp(+t.value || 1974, 1974, +TODAY.slice(0, 4)) : t.value; if (F.from > F.to) [F.from, F.to] = [F.to, F.from]; renderCmp(); } });
   cmpEl.addEventListener("toggle", e => { if (e.target.classList && e.target.classList.contains("cmp-pat")) CMP.patOpen = e.target.open; }, true);
@@ -3733,11 +3760,21 @@
     const it0 = e.target.closest("[data-kshow]"); if (it0 && !e.target.closest("button")) { cmpItemAction(it0); return; }
     const b = e.target.closest("button"); if (!b) return;
     if (b.dataset.cmview) { CMP.view = b.dataset.cmview; renderCmp(); return; }
+    if (b.hasAttribute("data-cmaddm")) { CMP.pick = !CMP.pick; renderCmp(); return; }
+    if (b.dataset.cmrm) { CMP.metrics.delete(b.dataset.cmrm); CMP.userPicked = true; renderCmp(); return; }
+    if (b.dataset.cmsort) { const id = b.dataset.cmsort; CMP.sort = CMP.sort && CMP.sort.id === id ? (CMP.sort.dir === "desc" ? { id, dir: "asc" } : null) : { id, dir: "desc" }; renderCmp(); return; }
+    if (b.hasAttribute("data-cmcsv") || b.hasAttribute("data-cmxl") || b.hasAttribute("data-cmws") || b.hasAttribute("data-cmmap")) {
+      const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id) && m.nature !== "text"), rows = [["Place", ...ms.map(m => m.label)], ...codes.concat([UKC]).map(c => [nameOf(c), ...ms.map(m => { const v = cmpVal(m, c); return v == null ? "" : +(+v).toFixed(4); })])];
+      if (b.hasAttribute("data-cmcsv")) copy(XL.csv(rows), "the table (CSV)");
+      else if (b.hasAttribute("data-cmxl")) download(XL.build([{ name: "Compare", rows }, { name: "About", rows: [["Atlas Compare", longDate(state.date)]] }]), `atlas-compare-${state.date.replace(/-/g, "")}.xlsx`);
+      else if (b.hasAttribute("data-cmws")) sendToWS({ type: "ctable", title: "Places × measures", spec: { layout: "pm", when: "bar", codes: codes.slice(), metrics: ms.map(m => m.id) } });
+      else { const m = ms.find(x => EN.isNum(x)); if (m && !isMapped(m.id)) toggleMapped(m.id); closeCmp(); toast(m ? `${m.label} is on the map, with your places picked out.` : "Add a measure with numbers first."); }
+      return; }
     if (b.dataset.cmidx) { CMP.idx = b.dataset.cmidx === "1"; renderCmp(); return; }
     if (cmpItemAction(b)) return;
     if (b.hasAttribute("data-close")) closeCmp(); else if (b.dataset.rmc) toggleCompare({ code: b.dataset.rmc, level: P[b.dataset.rmc].level });
     else if (b.hasAttribute("data-clearall")) { clearCompare(); renderCmp(); }
-    else if (b.dataset.all) { const codes = state.sel.map(x => x.code); METRICS.filter(m => m.p === b.dataset.all && !(codes.length && cmpEmpty(m, codes))).forEach(m => CMP.metrics.add(m.id)); renderCmp(); }
+    else if (b.dataset.all) { const codes = state.sel.map(x => x.code); METRICS.filter(m => m.p === b.dataset.all && !(codes.length && cmpEmpty(m, codes))).forEach(m => CMP.metrics.add(m.id)); CMP.userPicked = true; renderCmp(); }
     else if (b.dataset.none) { METRICS.filter(m => m.p === b.dataset.none).forEach(m => CMP.metrics.delete(m.id)); renderCmp(); }
     else if (b.hasAttribute("data-cws")) sendToWS({ type: "table", title: `Table: ${state.sel.length} places`, codes: state.sel.map(x => x.code), metrics: [...CMP.metrics] });
     else if (b.hasAttribute("data-ctile")) sendTile(state.sel.map(x => x.code));
@@ -4070,7 +4107,7 @@
     const st = spec.style, D = chartData(spec), m = D.m, o = { w, h: Math.round(w * 0.48), vfmt: D.fmt, yfmt: v => CH.compact(v), mid: m.mid, now: yearNow() };
     const numItems = D.items.filter(i => i.v != null && typeof i.v === "number");
     switch (st) {
-      case "line": return CH.line(D.series, o);
+      case "line": return CH.line(D.series, Object.assign({ hilo: D.series.length <= 3 }, o));   // 0.13: the chart rules: each line's highest and lowest marked
       case "area": return CH.area(D.series, o);
       case "bars": return CH.bars(D.series, o);
       case "slope": return CH.slope(D.series, o);
@@ -4611,10 +4648,14 @@
         const verdict = r == null ? "There aren't enough places to tell." : a < 0.1 ? `No: across ${unit}, ${lx0} and ${ly0} hardly move together.` : `${a >= 0.5 ? "Yes, clearly" : a >= 0.3 ? "Yes, moderately" : "Only weakly"}. Where ${lx0} is higher, ${ly0} tends to be ${up ? "higher" : "lower"} too.`;
         const sure = p0 == null ? "Too few places to judge." : p0 < 0.001 ? `Very sure it isn't chance: a link this strong across ${P1.n} ${unit} would almost never appear by luck (${ST.pText(p0)}).` : p0 < 0.05 ? `Fairly sure it isn't chance (${ST.pText(p0)}), though a link this size leaves much unexplained.` : `Not sure: a link like this could easily be chance across ${P1.n} ${unit} (${ST.pText(p0)}).`;
         const res = codes.map((c, i) => [c, fit.residuals[i]]).filter(z => z[1] != null && isFinite(z[1])).sort((u, v) => v[1] - u[1]), brk = res.slice(0, 3).concat(res.slice(-3).reverse());
-        out.html = `<div class="an-answer"><div class="an-q">${esc(AN_Q.rel)}</div><p class="an-a">${esc(verdict)}</p></div>` + out.html +
-          `<div class="an-boxes"><div class="an-box"><b>How sure?</b><p>${esc(sure)} ${fit.r2 != null ? `${esc(ms[0].label)} accounts for about ${Math.round(100 * fit.r2)}% of the differences in ${esc(ly0)} between ${esc(unit)}.` : ""}</p></div>
-          <div class="an-box"><b>What it does not say</b><p>It compares ${esc(unit)}, not people: it doesn't show that the same people are behind both. A link is not a cause; a third thing (income, age, place) may drive both. Next, ask "What still matters once others are held fixed?"</p></div>
-          <div class="an-box"><b>Places that break the pattern</b><p>${brk.map((z, k) => `<a data-go="${z[0]}" data-anpk="${z[0]}">${esc(nameOf(z[0]))}</a> <small>${k < 3 ? "higher" : "lower"} than expected by ${esc(f1(Math.abs(z[1])))}</small>`).join("<br>")}</p></div></div>`;
+        const sc = CH.scatter(pts, { w: Math.round(w * 0.6), h: Math.round(w * 0.42), xtitle: ms[0].label, ytitle: ms[1].label, xfmt: f0, yfmt: f1, fit: { slope: fit.slope, intercept: fit.intercept }, logx: lx, logy: ly });
+        const kn = [[r == null ? "—" : r.toFixed(2), `Correlation (${differ ? "by rank" : "Pearson"})${differ ? "" : `; ${S.r == null ? "—" : S.r.toFixed(2)} by rank too`}`], [fit.r2 == null ? "—" : fit.r2.toFixed(2), "Share of the differences it accounts for (R²)"], [`${fit.slope >= 0 ? "+" : "−"}${f1(Math.abs(fit.slope))}`, `${ly0} per one more ${String(f0(1)).replace(/^[£$]?1(\.0+)?\s*/, "") || "unit"} of ${lx0}`], [p0 == null ? "—" : p0 < 0.001 ? "p < 0.001" : "p = " + p0.toFixed(3), "Chance of a link this strong by luck"]];
+        out.html = `<div class="an-kick">Relationship<span class="vr"></span>${P1.n} ${esc(unit)}</div><div class="an-answer"><div class="an-q">${esc(AN_Q.rel)}</div><p class="an-a">${esc(verdict)}${fit.r2 != null ? ` ${esc(lx0.charAt(0).toUpperCase() + lx0.slice(1))} accounts for about ${Math.round(100 * fit.r2)}% of the differences between ${esc(unit)}.` : ""}</p></div>
+          <div class="an-rel"><div class="an-sc">${sc}</div><div class="an-rside"><div class="an-kn">${kn.map(([v, l]) => `<div><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join("")}</div>
+            <div class="an-box an-brk"><b>Places that break the pattern</b><ul>${brk.map((z, k) => `<li><a data-go="${z[0]}" data-anpk="${z[0]}">${esc(nameOf(z[0]))}</a><span class="${k < 3 ? "up" : "down"}">${k < 3 ? "+" : "−"}${esc(f1(Math.abs(z[1])))}</span></li>`).join("")}</ul></div></div></div>
+          <div class="an-boxes"><div class="an-box"><b>How sure?</b><p>${esc(sure)}</p></div>
+          <div class="an-box"><b>What it does not say</b><p>It compares ${esc(unit)}, not people: it doesn't show that the same people are behind both. A link is not a cause; a third thing (income, age, place) may drive both. Next, ask "What still matters once others are held fixed?"</p></div></div>
+          <details class="an-full"><summary>The numbers in full ›</summary>${out.html.replace(/<svg class="ach[\s\S]*?<\/svg>/, "")}</details>`;
       }
       return out;
     }
@@ -4704,7 +4745,7 @@
     return Object.assign(out, { title: "", html: `<div class="aempty">Choose metrics and a method.</div>` });
   }
   const CLUSTER_COL = ["#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e", "#e6ab02"];
-  const HOT_COL = { HH: "#b2182b", LL: "#2166ac", HL: "#f4a582", LH: "#92c5de", none: "#e8e6e1" }, HOT_NAME = { HH: "Hot spot (high near high)", LL: "Cold spot (low near low)", HL: "High among low", LH: "Low among high", none: "No clear pattern" };
+  const HOT_COL = { HH: "#b06a35", LL: "#3f6596", HL: "#e0a878", LH: "#7d9cc8", none: "#e8e6e1" }, HOT_NAME = { HH: "Hot spot (high near high)", LL: "Cold spot (low near low)", HL: "High among low", LH: "Low among high", none: "No clear pattern" };
   let anSeq = 0;
   function showOnMap(spec) { // turns an analysis result into a metric in the Analysis perspective
     const id = "an_" + (++anSeq), byCode = {}; spec.codes.forEach((c, i) => { if (spec.values[i] != null) byCode[c] = spec.values[i]; });
@@ -4797,26 +4838,31 @@
              <div class="an-row"><b>Places</b><span class="an-pl">${placeSearch("an", "Search for places to analyse…")}${AN.within === "custom" ? `<span class="chips">${AN.custom.map(c => `<span class="chip">${esc(nameOf(c))}<button data-anrmp="${c}" aria-label="Remove">×</button></span>`).join("")}${AN.custom.length ? `<button class="lnk" data-anrmall>clear</button>` : ""}</span>` : ""}</span></div>`}
         <div class="an-row"><b>Date</b><span class="muted">${esc(longDate(state.date))} (time bar)</span></div>
         <div class="an-step"><span>2</span>Measures</div>
-        <div class="an-metrics"><div class="an-mh">Metrics <small>${AN.metrics.length} chosen</small>${AN.metrics.length ? `<button class="btn" data-anclear>Clear</button>` : ""}</div>${pers}</div>
-      </div><div class="an-main">
+        <div class="an-mchips">${AN.metrics.map(id => M[id] ? `<span class="an-mchip">✓ ${esc(M[id].label)}<button type="button" data-anmrm="${id}" aria-label="Take ${esc(M[id].label)} off">×</button></span>${M[id].pick && picker(M[id]) && !(AN.pickOpen) ? `<div class="an-pick"><span>Choose</span>${picker(M[id])}</div>` : ""}` : "").join("")}<button type="button" class="an-madd" data-anmadd aria-expanded="${!!AN.pickOpen || !AN.metrics.length}">+ Add a measure</button>${AN.metrics.length ? `<button type="button" class="an-mclear" data-anclear>Clear</button>` : ""}</div>
+        ${AN.pickOpen || !AN.metrics.length ? `<div class="an-metrics">${pers}</div>` : ""}
         <div class="an-step"><span>3</span>What do you want to know?</div>
-        ${AN.metrics.length ? `<div class="an-methods an-qs">${methods.map(([id, l, ok, why], i) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" style="--i:${i}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}><b>${esc(AN_Q[id] || l)}</b><i>${esc(l)}</i>${ok ? "" : `<small>${esc(why)}</small>`}</button>`).join("")}</div>${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")} ${helpBtn("m-" + AN.method, "Help: what this method needs and assumes")}</p>` : `<p class="anwhy">No method suits this choice yet. ${methods.filter(m => !m[2]).slice(0, 3).map(([id, l, , why]) => `<button class="linkish" data-help="m-${id}">${esc(l)}: ${esc(why)}</button>`).join(" · ")}</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
+        ${AN.metrics.length ? `<div class="an-methods an-qs">${methods.map(([id, l, ok, why], i) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" style="--i:${i}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}><b>${esc(AN_Q[id] || l)}</b><i>${esc(l)}</i>${ok ? "" : `<small>${esc(why)}</small>`}</button>`).join("")}</div>` : `<p class="muted an-qwait">Add a measure first.</p>`}
+      </div><div class="an-main">
+        <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
+        ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>☆ Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Put it on the map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy the data</button>` : ""}</div>` : ""}
+        <div class="an-more">
+        ${AN.metrics.length ? `${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")} ${helpBtn("m-" + AN.method, "Help: what this method needs and assumes")}</p>` : `<p class="anwhy">No method suits this choice yet. ${methods.filter(m => !m[2]).slice(0, 3).map(([id, l, , why]) => `<button class="linkish" data-help="m-${id}">${esc(l)}: ${esc(why)}</button>`).join(" · ")}</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
         ${AN.method === "rel" ? `<label class="anpick">Split by a category <select data-ansplit><option value="">none</option>${anCats().map(m => `<option value="${m.id}" ${AN.split === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : ""}
         <div class="an-ctlbox">${ctlBoxHTML(cfg)}</div>
-        <div class="an-ex">${explainHTML(cfg)}</div>
-        <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
-        ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Put it on the map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy data (CSV)</button>` : ""}</div>` : ""}
+        <div class="an-ex">${explainHTML(cfg)}</div></div>
       </div></div>`;
     addFctl(anEl); anEl._last = res;
   }
   // o.from: the window it was opened from (e.g. Compare): Analyse opens above it, with a way back
-  function openAnalyse(o) { o = o || {}; closeMenu(); closePMenu(); if (o.metrics) AN.metrics = o.metrics.filter(id => M[id] && EN.isNum(M[id])); if (o.level) AN.level = o.level; WM.open(anEl, { parent: o.from }); renderAnalyse(); }
+  function openAnalyse(o) { o = o || {}; closeMenu(); closePMenu(); if (o.metrics) AN.metrics = o.metrics.filter(id => M[id] && EN.isNum(M[id])); if (o.level) AN.level = o.level; WM.open(anEl, { parent: o.from }); if (!AN.docked) { const top = (WM.TOPNOW ? WM.TOPNOW() : 70) + 8; anPlace({ x: 16, y: top, w: Math.max(360, innerWidth - 32), h: Math.max(300, innerHeight - top - 16) }); } renderAnalyse(); }   // 0.13: a sheet over the map, as designed
   function closeAnalyse() { if (AN.docked) { AN.docked = false; anEl.classList.remove("an-docked"); } return WM.close(anEl); }
   // 0.13: Put it on the map: the sheet shrinks to a 420 px side panel so the map shows; "Back to the full result" restores it
+  // the sheet's size and the docked panel are Analyse's own: they don't become the place other windows open (the shared slots)
+  function anPlace(r) { const keep = Object.keys(localStorage).filter(k => k.startsWith("atlas-0101-slot-")).map(k => [k, localStorage.getItem(k)]); WM.place(anEl, r); try { Object.keys(localStorage).filter(k => k.startsWith("atlas-0101-slot-")).forEach(k => localStorage.removeItem(k)); keep.forEach(([k, v]) => localStorage.setItem(k, v)); } catch (e) {} }
   function anDock(on) {
     const r = anEl.getBoundingClientRect();
-    if (on) { if (!AN.docked) AN.undock = { x: r.left, y: r.top, w: r.width, h: r.height }; AN.docked = true; anEl.classList.add("an-docked"); WM.place(anEl, { x: innerWidth - 420 - 12, y: Math.max(60, r.top), w: 420, h: Math.min(innerHeight - 140, Math.max(420, r.height)) }); }
-    else { AN.docked = false; anEl.classList.remove("an-docked"); if (AN.undock) WM.place(anEl, AN.undock); }
+    if (on) { if (!AN.docked) AN.undock = { x: r.left, y: r.top, w: r.width, h: r.height }; AN.docked = true; anEl.classList.add("an-docked"); anPlace({ x: innerWidth - 420 - 12, y: Math.max(60, r.top), w: 420, h: Math.min(innerHeight - 140, Math.max(420, r.height)) }); }
+    else { AN.docked = false; anEl.classList.remove("an-docked"); if (AN.undock) anPlace(AN.undock); }
     renderAnalyse(); }
   WM.register(anEl, { type: "analyse", title: "Analyse", handle: ".an-head", min: { w: 360, h: 260 }, onResize: renderAnalyse, close: closeAnalyse });
   anEl.addEventListener("click", e => {
@@ -4830,6 +4876,8 @@
     if (ds.anmethod && b.getAttribute("aria-disabled") === "true") { undoToast(`${AN_BY[ds.anmethod].label}: ${b.title}.`, () => {}); const t = $("toast"), u = $("undo-btn"); if (u) { u.textContent = "What it needs"; u.onclick = () => { t.hidden = true; openHelp("help-m-" + ds.anmethod); }; } return; }
     if (ds.antrim) AN.trim = ds.antrim === "1"; else if (ds.anmode) AN.mode = ds.anmode; else if (ds.anmethod) AN.method = ds.anmethod; else if (ds.ancorr) AN.corr = ds.ancorr;
     else if (b.hasAttribute("data-anclear")) AN.metrics = [];
+    else if (b.hasAttribute("data-anmadd")) AN.pickOpen = !AN.pickOpen;
+    else if (ds.anmrm) AN.metrics = AN.metrics.filter(x => x !== ds.anmrm);
     else if (ds.anctladd) { AN.controls = (AN.controls || []).filter(x => x !== ds.anctladd).concat(ds.anctladd); }   // 0.11: Control for
     else if (ds.anctlrm) AN.controls = (AN.controls || []).filter(x => x !== ds.anctlrm);
     else if (b.hasAttribute("data-anctlclear")) AN.controls = [];
@@ -4918,19 +4966,20 @@
     if (it && cv) cv.scrollTo({ left: Math.max(0, it.x * wsZoom() - 40), top: Math.max(0, it.y * wsZoom() - 40), behavior: "smooth" }); }
   function renderWS() {
     const p = proj();
-    wsEl.innerHTML = `<div class="ws-bar"><select data-wsproj aria-label="Project">${WS.projects.map(q => `<option value="${q.id}" ${q.id === p.id ? "selected" : ""}>${esc(q.name)}</option>`).join("")}</select>
+    const lastCh = p.items.length ? Math.max(...p.items.map(i => i.created || 0)) : 0, ago = lastCh ? (Date.now() - lastCh < 864e5 ? "last changed today" : `last changed ${new Date(lastCh).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`) : "nothing yet";
+    wsEl.innerHTML = `<div class="ws-bar"><select data-wsproj aria-label="Project" class="ws-pname">${WS.projects.map(q => `<option value="${q.id}" ${q.id === p.id ? "selected" : ""}>${esc(q.name)}</option>`).join("")}</select><span class="ws-meta">${p.items.length} item${p.items.length === 1 ? "" : "s"}<span class="vr"></span>${ago}</span>
         <button class="btn" data-wsnew title="New project">+ Project</button><button class="btn" data-wsren>Rename</button>
         <span class="ws-sep"></span><button class="btn" data-wsnote>+ Note</button><button class="btn" data-wsshot>Capture map</button><button class="btn" data-wstidy>Tidy</button>
         <span class="ws-sep"></span><div class="ws-exp"><button class="btn primary" data-wsexp>Export ▾</button><div class="ws-menu" hidden><button data-wspdf>PDF (print)</button><button data-wsslides>Presentation (HTML slides)</button><button data-wsjson>Project file (.json)</button><label>Import a project file<input type="file" accept=".json" data-wsimp hidden></label><button data-wsdel class="danger">Delete this project</button></div></div>
         <span class="ws-grow"></span><span class="ws-zoom" title="Make the whole board bigger or smaller"><button class="btn" data-wsz="-1" aria-label="Zoom the board out">−</button><button class="btn ws-zoom-v" data-wsz="0" title="Back to 100%">100%</button><button class="btn" data-wsz="1" aria-label="Zoom the board in">+</button></span><div class="seg sm"><button data-view="split" class="${VIEW.mode === "split" ? "on" : ""}" title="Map and workspace side by side">Split</button><button data-view="ws" class="${VIEW.mode === "ws" ? "on" : ""}" title="Workspace only">Full</button><button data-view="map" title="Back to the map">Map</button></div></div>
       ${wsSide(p)}<div class="ws-canvas" id="ws-canvas"><div class="ws-inner" style="transform:scale(${wsZoom()})">${p.items.length ? "" : `<div class="ws-empty"><h3>${esc(p.name)} is empty</h3><p>Send things here with <b>Send to workspace</b>: charts (chart panel and tabs), tables (comparison page), analyses (Analyse), area cards and tiles (a pinned card's ⋯), and pictures of the map (Capture map). Then drag them around, resize them from the corner, and drop one onto another to combine them.</p></div>`}
-        ${p.items.map(it => `<div class="wsi${it.id === wsNew ? " wsi-new" : ""}${it.id === wsSel ? " wsi-sel" : ""}" data-wsi="${it.id}" style="left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;z-index:${it.z || 1}"><div class="wsi-head"><span class="wsi-t" title="Double-click to rename">${esc(it.title)}</span>
+        ${p.items.map(it => `<div class="wsi${it.id === wsNew ? " wsi-new" : ""}${it.id === wsSel ? " wsi-sel" : ""}" data-wsi="${it.id}" style="left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;z-index:${it.z || 1}"><div class="wsi-head"><span class="ws-kind${it.type === "track" ? " trk" : ""}">${WS_KIND[it.type] || "Item"}</span><span class="wsi-t" title="Double-click to rename">${esc(it.title)}</span>
           ${LIVE[it.type] ? `<button data-wsref="${it.id}" title="Refresh to the time bar's date (${esc(dmy(state.date))})">↻</button>` : ""}${it.type === "chart" ? `<button data-wstab="${it.id}" title="Open in its own tab">⧉</button>` : ""}${it.parts || it.type === "stack" ? `<button data-wssep="${it.id}" title="Separate: split this back into the items it was made from">⇲ Separate</button>` : ""}<button data-wsdup="${it.id}" title="Duplicate">⎘</button><button data-wsx="${it.id}" title="Remove">×</button></div>
           <div class="wsi-body">${itemBody(it)}</div><div class="rgrip" data-wsrs="${it.id}" title="Drag to resize"></div></div>`).join("")}</div></div>`;
     wsEl.querySelector(".ws-zoom-v").textContent = Math.round(wsZoom() * 100) + "%";
     // 0.11: a zoom control on the board itself (pinch also works), and a newly sent item comes into view
     wsEl.querySelector(".ws-canvas").insertAdjacentHTML("afterend", `<div class="ws-zoomer" role="group" aria-label="Zoom the board"><button type="button" data-wsz="-1" aria-label="Zoom out" title="Zoom out (or pinch)">−</button><button type="button" class="wz-v" data-wsz="0" title="Back to 100%">${Math.round(wsZoom() * 100)}%</button><button type="button" data-wsz="1" aria-label="Zoom in" title="Zoom in (or pinch)">+</button><button type="button" class="wz-fit" data-wszfit title="Fit everything on the board in view">Fit</button></div>`);
-    if (wsNew) { const n = wsEl.querySelector(".wsi-new"), cv = wsEl.querySelector(".ws-canvas"); wsNew = null; if (n && cv) requestAnimationFrame(() => { const it = wsItem(n.dataset.wsi); if (it) cv.scrollTo({ left: Math.max(0, it.x * wsZoom() - 40), top: Math.max(0, it.y * wsZoom() - 40), behavior: "smooth" }); }); }
+    if (wsNew) { const n = wsEl.querySelector(".wsi-new"), cv = wsEl.querySelector(".ws-canvas"); wsNew = null; if (n && cv) requestAnimationFrame(() => { const it = wsItem(n.dataset.wsi), z = wsZoom(); if (it && it.x * z >= cv.scrollLeft && (it.x + Math.min(it.w, 300)) * z <= cv.scrollLeft + cv.clientWidth && it.y * z >= cv.scrollTop && it.y * z + 60 <= cv.scrollTop + cv.clientHeight) return; if (it) cv.scrollTo({ left: Math.max(0, it.x * wsZoom() - 40), top: Math.max(0, it.y * wsZoom() - 40), behavior: "smooth" }); }); }
   }
   function wsItem(id) { return proj().items.find(i => i.id === id); }
   const WSZ = [0.3, 0.4, 0.5, 0.6, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5];
@@ -5231,14 +5280,18 @@
   const mrow = m => `<button type="button" class="mt-item${isMapped(m.id) ? " on" : ""}" data-sm="${m.id}" title="${esc(m.desc || "")}">${isMapped(m.id) ? "✓ " : ""}${esc(m.label)}</button>`;
   const subOf = c => (P[c].level === "ward" || P[c].level === "constituency") && P[c].parent && P[P[c].parent] ? " · " + esc(nameOf(P[c].parent)) : "";
   const noDataFor = c => { const ms = planMetrics(); return ms.length > 0 && ms.every(m => { try { const r = m.get(c, state.date); return !r || r.v == null || r.nm; } catch (e) { return true; } }); };
-  const row = (c, i) => `<li data-c="${c}" class="${i === cur ? "on" : ""}${picked.includes(c) ? " ticked" : ""}" role="option" aria-selected="${picked.includes(c)}"><input type="checkbox" tabindex="-1" ${picked.includes(c) ? "checked" : ""} aria-label="Tick ${esc(nameOf(c))}"><span class="nm">${esc(nameOf(c))}</span><small>${LABEL[P[c].level]}${subOf(c)}</small>${noDataFor(c) ? `<em class="ndtag" title="None of the metrics on the map has a value for this place on this date">no data</em>` : ""}</li>`;
+  // 0.13 (as designed): a place's name, what it is in italics ("Council, Yorkshire and the Humber"), Go › on the right; + ticks it to show several together
+  const kindOf = c => { const l = P[c].level, par = P[c].parent && P[P[c].parent] ? nameOf(P[c].parent) : ""; return l === "constituency" ? `Constituency, 2024 boundaries${par ? ", " + par : ""}` : `${LABEL[l] || l}${par ? ", " + par : ""}`; };
+  const row = (c, i) => `<li data-c="${c}" class="srow${i === cur ? " on" : ""}${picked.includes(c) ? " ticked" : ""}" role="option" aria-selected="${i === cur}"><span class="sl"><span class="nm">${esc(nameOf(c))}</span><small>${esc(kindOf(c))}</small></span>${noDataFor(c) ? `<em class="ndtag" title="None of the metrics on the map has a value for this place on this date">no data</em>` : ""}<button type="button" class="stick" data-stick tabindex="-1" title="${picked.includes(c) ? "Ticked: shown with the others" : "Tick it, to show several places together"}" aria-label="Tick ${esc(nameOf(c))}">${picked.includes(c) ? "✓" : "+"}</button><span class="xgo">Go ›</span></li>`;
   function showHits() {
     const extra = picked.filter(c => !hits.includes(c));
-    const body = (extra.length ? `<li class="sec">Ticked</li>${extra.map(c => row(c, -1)).join("")}${hits.length ? `<li class="sec">Results</li>` : ""}` : "") + hits.map(row).join("");
-    const pbody = phits.length ? `<li class="sec">Airports, ports and stations</li>${phits.map(i => `<li class="poi-hit" data-poi="${i.id}"><span class="poi-ic" style="background:${POI_KIND[i.k].col}"></span>${esc(i.n)} <small>${esc(POI_KIND[i.k].label)}</small></li>`).join("")}` : "";
-    const mbody = pbody + (mhits.length ? `<li class="sec">Metrics <small>click to put one on the map</small></li><li class="smetrics">${mtree("search", mhits, mrow, { all: true, isOn: m => isMapped(m.id) })}</li>` : "");
+    const nW = hits.filter(c => P[c].level !== "ward").length;   // 0.13: wards come last, after rivers, companies and the rest
+    const body = (extra.length ? `<li class="sec">Ticked</li>${extra.map(c => row(c, -1)).join("")}` : "") + (nW ? `<li class="sec">Places</li>` + hits.slice(0, nW).map((c, i) => row(c, i)).join("") : "");
+    const wbody = hits.length > nW ? `<li class="sec">Wards</li>` + hits.slice(nW).map((c, i) => row(c, nW + i)).join("") : "";
+    const pbody = phits.length ? `<li class="sec">Airports, ports and stations</li>${phits.map(i => `<li class="poi-hit srow" data-poi="${i.id}"><span class="poi-ic" style="background:${POI_KIND[i.k].col}"></span><span class="sl"><span class="nm">${esc(i.n)}</span><small>${esc(POI_KIND[i.k].label)}</small></span><span class="xgo">Go ›</span></li>`).join("")}` : "";
+
     const nothing = si.value.trim().length >= 2 && !hits.length && !mhits.length && !phits.length && !xhits.length;
-    hl.innerHTML = (hits.length || extra.length ? ((mhits.length || xhits.length) && !extra.length ? `<li class="sec">Places</li>` : "") + body : "") + mbody + xbody() + (nothing ? `<li class="xnone">Nothing found for “${esc(si.value.trim())}”. Try a place, a river, a company or a measure.</li>` : "") + `<li class="sfoot"><span>${picked.length ? `${picked.length} ticked` : "Tick places to show several together"}</span>${picked.length ? `<button type="button" class="btn" data-sclear>Clear</button>` : ""}<button type="button" class="btn primary" data-ssearch ${picked.length ? "" : "disabled"}>Search${picked.length > 1 ? ` (${picked.length})` : ""}</button></li>`;
+    hl.innerHTML = body + xbody() + pbody + (mhits.length ? `<li class="sec">Measures <small>put one on the map</small></li><li class="smetrics">${mtree("search", mhits, mrow, { all: true, isOn: m => isMapped(m.id) })}</li>` : "") + wbody + (nothing ? `<li class="xnone">Nothing found for “${esc(si.value.trim())}”. Try a place, a river, a company or a measure.</li>` : "") + (picked.length ? `<li class="sfoot"><span>${picked.length} ticked</span><button type="button" class="btn" data-sclear>Clear</button><button type="button" class="btn primary" data-ssearch>Show ${picked.length > 1 ? `all ${picked.length}` : "it"} together</button></li>` : "");
     hl.hidden = !ddOpen || (!hits.length && !picked.length && !mhits.length && !phits.length && !xhits.length && !nothing && !(ddOpen && !si.value.trim()));
     tickPill.hidden = !picked.length || !hl.hidden; tickPill.innerHTML = `<button type="button" data-sopen>${picked.length} ticked</button>`;
   }
@@ -5254,14 +5307,14 @@
       items: [{ k: "Trade in goods, year by year", h: `Exports ${fmtGBP(c.exp)}, imports ${fmtGBP(c.imp)} in the latest year`, viz: window.AtlasCard ? AtlasCard.viz.bars(ys.map(y => ({ v: c.y.exp[y], c: "#9aa5ab", n: y }))) : "" }], source: "HMRC trade in goods", panel: "partners" }; }
   function searchAll(q) {
     const out = [], has = t => String(t || "").toLowerCase().includes(q), starts = t => String(t || "").toLowerCase().startsWith(q), rank = (a, b) => (starts(a.l) ? 0 : 1) - (starts(b.l) ? 0 : 1);
-    const add = (kind, rows, n) => { rows = rows.sort(rank).slice(0, n || 5); if (rows.length) out.push({ kind, rows }); };
+    const add = (kind, rows, n) => { rows = rows.map((r, i) => [r, i]).sort((a, b) => rank(a[0], b[0]) || a[1] - b[1]).map(x => x[0]).slice(0, n || 5); if (rows.length) out.push({ kind, rows }); };
     const ll = q.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
     if (ll && Math.abs(+ll[1]) <= 90 && Math.abs(+ll[2]) <= 180) add("Coordinates", [{ l: `${(+ll[1]).toFixed(4)}, ${(+ll[2]).toFixed(4)}`, sub: "Latitude, longitude", act: "Go", run: () => map.flyTo({ center: [+ll[2], +ll[1]], zoom: 12, duration: 1200 }) }]);
     const pc = q.replace(/\s+/g, "").toUpperCase(); if (/^[A-Z]{1,2}\d[A-Z\d]?\d[A-Z]{2}$/.test(pc)) add("Postcode", [{ l: pc.slice(0, -3) + " " + pc.slice(-3), sub: "Postcode, found with postcodes.io", act: "Go", run: () => fetch("https://api.postcodes.io/postcodes/" + encodeURIComponent(pc)).then(r => r.json()).then(j => { const r = j && j.result; if (!r) return toast("That postcode wasn't found."); const c = [r.codes && r.codes.admin_ward, r.codes && r.codes.admin_district].find(x => x && P[x]); map.flyTo({ center: [r.longitude, r.latitude], zoom: 14, duration: 1200 }); if (c) setTimeout(() => focus(c), 1300); }).catch(() => toast("Postcodes couldn't be reached.")) }]);
     if (q.length < 2) return out;
     const X = SIDX();
     if (X) {
-      add("Rivers", X.rivers.filter(r => has(r[0])).map(r => ({ l: r[0], sub: `${r[1]}, ${fmtInt(r[2])} km`, act: "Go", run: () => fitBox(r[3], 11) })));
+      add("Rivers", X.rivers.filter(r => has(r[0])).sort((a, b) => b[2] - a[2]).map(r => ({ l: r[0], sub: `${r[1]}, ${fmtInt(r[2])} km`, act: "Go", run: () => fitBox(r[3], 11) })));
       add("National Parks and Ramsar sites", X.parks.filter(r => has(r[0])).map(r => ({ l: r[0], sub: r[1], act: "Go", run: () => fitBox(r[2], 11) })));
       add("Coast", X.coast.filter(r => has(r[0])).map(r => ({ l: r[0], sub: "Shoreline management plan stretch", act: "Go", run: () => fitBox(r[2], 10) })));
     }
@@ -5285,7 +5338,7 @@
   function xbody() {
     if (!si.value.trim()) return ddOpen && !picked.length ? `<li class="xtry"><span>Try</span>${TRY.map(t => `<button type="button" data-xtry="${esc(t)}">${esc(t)}</button>`).join("")}</li>` : "";
     let i = 0; return xhits.map(g => `<li class="sec">${esc(g.kind)}</li>` + g.rows.map(r => `<li class="xhit" data-x="${i++}"><span class="xl"><b>${esc(r.l)}</b><i>${esc(r.sub || "")}</i></span><span class="xgo">${esc(r.act)} ›</span></li>`).join("")).join(""); }
-  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); mhits = searchMetrics(q); phits = searchPoi(q); xhits = searchAll(q); cur = 0; ddOpen = true; showHits(); });
+  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); { const nw = hits.filter(c => P[c].level !== "ward"), w = hits.filter(c => P[c].level === "ward"); hits = nw.concat(w.slice(0, 6)); } mhits = searchMetrics(q); phits = searchPoi(q); xhits = searchAll(q); cur = 0; ddOpen = true; showHits(); });
   document.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) { e.preventDefault(); si.focus(); si.select(); } });   // ⌘K
   si.addEventListener("focus", () => { closeBrowse(); ddOpen = true; SIDX(); showHits(); });
   si.addEventListener("blur", () => { setTimeout(() => { if (document.activeElement !== si) { ddOpen = false; showHits(); } }, 120); });
@@ -5312,7 +5365,7 @@
     const pl = e.target.closest("li[data-poi]"); if (pl) { const i = POI_BY[pl.dataset.poi]; si.value = ""; hits = []; mhits = []; phits = []; ddOpen = false; showHits(); si.blur(); map.flyTo({ center: [i.lon, i.lat], zoom: Math.max(i.minz + 1.5, i.k === "station" ? 13 : 10), duration: 1200 }); openPoiCard(i.id); return; }
     const tr = e.target.closest("[data-xtry]"); if (tr) { si.value = tr.dataset.xtry; si.dispatchEvent(new Event("input")); return; }
     const xh = e.target.closest("li[data-x]"); if (xh) { const r = xhits.flatMap(g => g.rows)[+xh.dataset.x]; si.value = ""; hits = []; mhits = []; phits = []; xhits = []; ddOpen = false; showHits(); si.blur(); if (r) r.run(); return; }
-    const li = e.target.closest("li[data-c]"); if (li) toggleTick(li.dataset.c);
+    const li = e.target.closest("li[data-c]"); if (li) { if (e.target.closest("[data-stick]")) toggleTick(li.dataset.c); else jumpTo(li.dataset.c); }   // 0.13: a row goes there; + ticks it
   });
   tickPill.addEventListener("mousedown", e => { e.preventDefault(); si.focus(); });
   showHits();

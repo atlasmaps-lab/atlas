@@ -94,6 +94,17 @@
       items = (items || []).filter(x => x.v > 0); const t = items.reduce((a, x) => a + x.v, 0); if (!t) return ""; let x0 = 0;
       return `<svg viewBox="0 0 120 72" class="pc-bars" aria-hidden="true">${items.map(x => { const w = 120 * x.v / t, r = `<rect x="${x0.toFixed(1)}" y="20" width="${Math.max(0.6, w - 0.6).toFixed(1)}" height="32" fill="${x.c || "#888"}"><title>${esc(x.n || "")}</title></rect>`; x0 += w; return r; }).join("")}</svg>`;
     },
+    // 0.13 (as designed): bars for a time series, neutral, the highest green and the lowest red, labels underneath
+    vbars(pts) { pts = (pts || []).filter(p => p && p.v != null && isFinite(p.v)); if (!pts.length) return ""; const mx = Math.max(...pts.map(p => Math.abs(p.v))) || 1;
+      let hi = 0, lo = 0; pts.forEach((p, i) => { if (p.v > pts[hi].v) hi = i; if (p.v < pts[lo].v) lo = i; });
+      return `<div class="pc-vb" role="img" aria-label="${esc(pts.map(p => (p.full || p.lab) + ": " + (p.t || p.v)).join("; "))}"><div class="pc-vb-bars">${pts.map((p, i) => `<span class="pc-vb-c"><b class="pc-vb-v">${esc(p.t || "")}</b><i class="${i === hi && pts.length > 1 ? "hi" : i === lo && pts.length > 1 ? "lo" : ""}" style="height:${Math.max(2, 100 * Math.abs(p.v) / mx).toFixed(1)}%" title="${esc((p.full || p.lab) + ": " + (p.t || p.v))}"></i></span>`).join("")}</div>
+        <div class="pc-vb-ax">${pts.map(p => `<span>${esc(p.lab)}</span>`).join("")}</div></div>`; },
+    // 0.13 (as designed): what's in it as blocks sized by value, two rows, each block named with its value
+    tree(items, fmt) { items = (items || []).filter(x => x.v > 0).sort((a, b) => b.v - a.v); if (!items.length) return ""; const t = items.reduce((a, x) => a + x.v, 0);
+      let top = items.slice(0, 6); const rest = items.slice(6).reduce((a, x) => a + x.v, 0); if (rest > 0) top.push({ n: "Everything else", v: rest, other: 1 });
+      const rows = [[], []]; let acc = 0; top.forEach((x, i) => { (i === 0 || acc < t * 0.55 ? rows[0] : rows[1]).push(x); acc += x.v; }); if (!rows[1].length && rows[0].length > 1) rows[1].push(rows[0].pop());
+      const rs = rows.filter(r => r.length).map(r => ({ r, s: r.reduce((a, x) => a + x.v, 0) })); let ci = 0;
+      return `<div class="pc-tree">${rs.map(({ r, s: rsum }) => `<div class="pc-tree-r" style="flex:${(rsum / t).toFixed(3)}">${r.map(x => `<span class="pc-tree-b${x.v / t < 0.04 ? " sm" : ""}" style="flex:${(x.v / rsum).toFixed(3)};background:${x.other ? "var(--pc-neutral, #5b6b7c)" : `var(--cat${(ci++ % 6) + 1})`}" title="${esc(x.n)}: ${esc(fmt ? fmt(x.v) : x.v)}"><b>${esc(x.n)}</b><em>${esc(fmt ? fmt(x.v) : x.v)}</em></span>`).join("")}</div>`).join("")}</div>`; },
     big(text, sub) { const t = String(text == null ? "" : text).replace(/\s*\(.*$/, ""), n = t.length; return `<div class="pc-bign${n > 9 ? " xs" : n > 6 ? " s" : ""}"><b>${esc(t)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</div>`; },
   };
 
@@ -119,7 +130,7 @@
     const mapA = it.map ? ` data-pcmapspec="${js(it.map)}"` : "";
     const more = String(it.more || "").replace(/<div class="pc-chart">/g, `<div class="pc-chart pc-zoomable">${VACTS}${ZACTS}`);
     const hasChart = /pc-chart/.test(more);
-    return `<div class="pc-it pc-lead"${mapA}>${it.k ? `<div class="pc-k pc-leadk">${esc(it.k)}</div>` : ""}<h2 class="pc-h pc-head">${it.h}</h2>${it.sub ? `<p class="pc-sum">${it.sub}</p>` : ""}${hasChart ? "" : it.viz ? `<div class="pc-viz pc-leadviz">${it.viz}</div>` : ""}${more ? `<div class="pc-body">${more}</div>` : ""}${it.cap ? `<p class="pc-cap">${it.cap}</p>` : ""}${deepList(it.deep, it.deepTitle)}${it.go ? `<button type="button" class="pc-gob pc-leadgo" data-pcdeep="${deepRef(it.go, it.goTitle || "")}">Go deeper ›</button>` : ""}</div>`;
+    return `<div class="pc-it pc-lead"${mapA}>${it.k ? `<div class="pc-k pc-leadk">${esc(it.k)}</div>` : ""}<h2 class="pc-h pc-head">${it.h}</h2>${it.sub ? `<p class="pc-sum">${it.sub}</p>` : ""}${hasChart ? "" : it.viz ? `<div class="pc-viz pc-leadviz">${it.viz}</div>` : ""}${it.chartK && hasChart ? `<div class="pc-charth"><span>${esc(it.chartK)}</span><button type="button" class="pc-enl" data-pczoom>⤢ Enlarge</button></div>` : ""}${more ? `<div class="pc-body">${more}</div>` : ""}${it.cap ? `<p class="pc-cap">${it.cap}</p>` : ""}${deepList(it.deep, it.deepTitle)}${it.go ? `<button type="button" class="pc-gob pc-leadgo" data-pcdeep="${deepRef(it.go, it.goTitle || "")}">Go deeper ›</button>` : ""}</div>`;
   }
   function item(it, i) {
     if (!it) return "";
@@ -129,11 +140,13 @@
     const txt = `<div class="pc-txt">${kick}<div class="pc-h">${it.h}${it.go ? ` <span class="pc-chev" aria-hidden="true">›</span>` : ""}</div>${it.sub ? `<div class="pc-sub">${it.sub}</div>` : ""}</div>`;
     const mapA = it.map ? ` data-pcmapspec="${js(it.map)}"` : "";
     if (it.go) return `<div class="${cls} pc-go"${mapA}><button type="button" class="pc-gob" data-pcdeep="${deepRef(it.go, it.goTitle || "")}">${txt}${vz}</button></div>`;
-    const body = String(it.more || "").replace(/<div class="pc-chart">/g, `<div class="pc-chart">${VACTS}`) + deepList(it.deep, it.deepTitle);
+    const pic = it.pic || (it.viz && /pc-tree|pc-vb/.test(it.viz) ? it.viz : "");   // 0.13 (as designed): the picture shows when the section opens
+    const body = (pic ? `<div class="pc-pic">${pic}</div>${it.picCap ? `<p class="pc-viz-cap">${it.picCap}</p>` : ""}` : "") + String(it.more || "").replace(/<div class="pc-chart">/g, `<div class="pc-chart">${VACTS}`) + deepList(it.deep, it.deepTitle);
     if (!body.trim()) return `<div class="${cls} pc-flat"${mapA}><div class="pc-sum">${txt}${vz}</div></div>`;
     const acts = `${it.map ? `<button type="button" data-pcmap>Put on map</button>` : ""}<button type="button" data-pcwsi>Send to workspace</button>${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.urlLabel || "Read more")} ↗</a>` : ""}`;
-    return `<details class="${cls}"${it.open ? " open" : ""}${mapA}><summary>${txt}${vz}<span class="pc-tog" aria-hidden="true"></span></summary>
-      <div class="pc-body">${body}<div class="pc-iacts">${acts}</div></div></details>`;
+    const seeAll = it.deep && it.deep.length > 5 ? `<span class="pc-seelink">See all ${it.deep.length} ${esc(it.deepNoun || "")} ›</span>`.replace(" ›", " ›").replace(/\s+›/, " ›") : "";
+    return `<details class="${cls}"${it.open ? " open" : ""}${mapA}><summary>${txt}<span class="pc-tog" aria-hidden="true"></span>${seeAll}</summary>
+      <div class="pc-body">${!pic && vz ? vz : ""}${body}<div class="pc-iacts">${acts}</div></div></details>`;
   }
   // 0.13: the time-range switch (12 months, 5 years, 10 years, all) re-tells the whole card for that range
   const rangeBar = spec => spec.ranges && spec.ranges.length > 1 && spec.range ? `<div class="pc-ranges" role="group" aria-label="Time range">${spec.ranges.map(r => `<button type="button" class="${r.k === spec.rangeAt ? "on" : ""}" aria-pressed="${r.k === spec.rangeAt}" data-pcrange="${deepRef(() => spec.range(r.k), spec.title)}">${esc(r.l)}</button>`).join("")}</div>` : "";
@@ -150,7 +163,7 @@
       <div class="pc-crumbs"><nav aria-label="Where you are">${crumbs.map((c, i) => `<span${i === crumbs.length - 1 ? ' class="on"' : ""}>${esc(c)}</span>`).join('<span class="pc-csep" aria-hidden="true">›</span>')}</nav>
         <button type="button" class="pc-follow" data-pcws title="Send this card to the workspace">${STAR}<span>Workspace</span></button></div>
       <header class="pc-top"><div class="pc-brand"><span class="pc-logo">ATLAS</span>${spec.app ? `<span class="pc-app">${esc(spec.app)}</span>` : ""}</div>${rangeBar(spec)}</header>
-      ${spec._back ? `<button type="button" class="pc-back" data-pcback="${esc(spec._back)}">‹ ${esc(spec._backTitle || "Back")}</button>` : ""}<div class="pc-kick"><span class="pc-pill">${esc(spec.title)}</span>${(spec.kicker || []).map(k => `<span class="vr"></span><span>${esc(k)}</span>`).join("")}${spec.when ? `<span class="vr"></span><span class="pc-kwhen">${esc(spec.when)}</span>` : ""}</div>${spec.shape && window.AtlasShape ? AtlasShape.buttons(spec.shape) : ""}
+      ${spec._back ? `<button type="button" class="pc-back" data-pcback="${esc(spec._back)}">‹ ${esc(spec._backTitle || "Back")}</button>` : ""}<div class="pc-kick"><span class="pc-pill">${esc(spec.kickTitle || spec.title)}</span>${(spec.kicker || []).map(k => `<span class="vr"></span><span>${esc(k)}</span>`).join("")}${spec.when ? `<span class="vr"></span><span class="pc-kwhen">${esc(spec.when)}</span>` : ""}</div>${spec.shape && window.AtlasShape ? AtlasShape.buttons(spec.shape) : ""}
       ${hasLead ? `<div class="pc-items pc-leadbox">${lead(items[0])}</div>` : ""}${spec.lede ? `<p class="pc-lede">${spec.lede}</p>` : ""}${figHTML}
       <div class="pc-items pc-secs">${items.slice(hasLead ? 1 : 0).map((it, i) => item(it, 1 + i)).join("")}</div>
       ${notes.length ? `<ol class="pc-notes">${notes.map(n => `<li>${n}</li>`).join("")}</ol>` : ""}
@@ -166,7 +179,7 @@
       spec.then(sp => { if (!sp) return; w.setBody(html(sp)); w.setTitle && w.setTitle(sp.title); w.el.classList.remove("pc-loading"); }, () => w.setBody(html({ title: "Couldn't load", items: [{ k: "Sorry", h: "The data didn't load; try again" }] })));
       return w;
     }
-    const top = ctx.WM.TOPNOW ? ctx.WM.TOPNOW() : 90, W = Math.min(440, innerWidth - 32);
+    const top = ctx.WM.TOPNOW ? ctx.WM.TOPNOW() : 90, W = Math.min(480, innerWidth - 32);
     const w = ctx.WM.make({ type: "pcard", title: spec.title, html: html(spec), cascade: true, min: { w: 300, h: 240 }, def: () => ({ x: Math.max(16, innerWidth - W - 24), y: top + 8, w: W, h: Math.min(680, innerHeight - top - 24) }) });
     w.el.classList.add("pcwin"); ctx.WM.open(w.el); return w;
   }
@@ -196,7 +209,7 @@
     const [head, rest] = parts.story ? first(parts.story) : [now ? `${esc(m.label)} in ${esc(where)}: <b>${esc(f(now.v))}</b>${now.yr ? ` (${esc(now.yr)})` : ""}` : `No figure for ${esc(where)} on this date.`, ""];
     const colour = "var(--pc-acc, currentColor)";
     items.push({ k: code === ctx.UKC ? "" : where, h: head.replace(/\.$/, ""), viz: pts.length > 1 ? viz.spark(pts, colour) : now ? viz.big(f(now.v), now.yr || "") : "", open: true,
-      more: `${rest ? `<p>${rest}</p>` : ""}${pts.length > 2 ? `<div class="pc-chart">${ctx.CH.line([{ name: where, colour: "var(--ink-2,#56656b)", pts }], { w: 380, h: 190, vfmt: f, yfmt: v => ctx.CH.compact ? ctx.CH.compact(v) : String(v), events: w.events, hilo: true })}</div>${evList(w.events)}` : ""}`, cap: hiloCap(pts, f), map: { metrics: [id] } });
+      more: `${rest ? `<p>${rest}</p>` : ""}${pts.length > 2 ? `<div class="pc-chart">${pts.length <= 16 && pts.every(p => p[1] >= 0) ? viz.vbars(pts.map(p => ({ v: p[1], lab: Number.isInteger(p[0]) ? "'" + String(p[0]).slice(2) : String(p[0]), full: String(Math.floor(p[0])), t: f(p[1]) }))) : ctx.CH.line([{ name: where, colour: "var(--ink-2,#56656b)", pts }], { w: 380, h: 190, vfmt: f, yfmt: v => ctx.CH.compact ? ctx.CH.compact(v) : String(v), events: w.events, hilo: true })}</div>${evList(w.events)}` : ""}`, cap: hiloCap(pts, f), map: { metrics: [id] } });
     if (pts.length > 2) items.push({ k: "Why it moved", h: w.lines.length ? first(w.lines[0])[0].replace(/<[^>]+>/g, "").replace(/\.$/, "") : "No sharp moves stand out", viz: viz.big(String(w.events.length), w.events.length === 1 ? "event" : "events"), more: whyHTML(w) });
     // across the map: the place's own boundary set (wards and seats compare with their own kind)
     const lv = ctx.P[code] && ["council", "region", "nation", "constituency"].includes(ctx.P[code].level) ? ctx.P[code].level : (m.levels && m.levels[0]) || "council";
@@ -331,7 +344,7 @@
   }
   function seeAll(btn) { const ul = btn.previousElementSibling; if (!ul) return; ul.dataset.all = "1"; [...ul.children].forEach(li => { li.hidden = false; li.classList.add("atl-rise"); }); btn.remove(); }
   function zoom(btn) {
-    const ch = btn.closest(".pc-chart"); if (!ch) return;
+    const ch = btn.closest(".pc-chart") || (btn.closest(".pc-lead") || btn).querySelector(".pc-chart"); if (!ch) return;
     let back = document.getElementById("pc-zoomback");
     if (ch.classList.contains("pc-big")) { ch.classList.remove("pc-big"); if (back) back.hidden = true; return; }
     if (!back) { back = document.createElement("div"); back.id = "pc-zoomback"; back.className = "pc-zoomback"; document.body.appendChild(back); back.addEventListener("click", () => { document.querySelectorAll(".pc-chart.pc-big").forEach(x => x.classList.remove("pc-big")); back.hidden = true; }); }
