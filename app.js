@@ -3383,7 +3383,7 @@
       else if (id === "card") { PS.active[m.id] = true; PS.card[m.id] = !PS.card[m.id]; repaint(); }
       else if (id === "hist") { HIST = { code: state.focus, metric: m.id }; renderHist(); }
       else if (id === "chart") openChart({ metrics: [m.id], places: [state.focus, ...state.sel.map(s => s.code).filter(c => c !== state.focus)].slice(0, 8) });
-      else if (id === "cmp") { addCompare({ code: state.focus, level: P[state.focus].level }); CMP.metrics.add(m.id); openCmp(); }
+      else if (id === "cmp") { addCompare({ code: state.focus, level: P[state.focus].level }); if (!CMP.userPicked) CMP.metrics = new Set(); CMP.userPicked = true; CMP.metrics.add(m.id); openCmp(); }
       else if (id === "exp") openExport({ metrics: [m.id] });
     }
   });
@@ -3473,7 +3473,9 @@
   // ---------- comparison page ----------
   const cmpEl = $("cmp");
   const CMP = { metrics: new Set(METRICS.filter(m => DEF_PS.active[m.id] && m.nature !== "event").map(m => m.id)), x: null, y: null, q: "" };
-  function openCmp() { closeMenu(); closePMenu(); closeTools(); closeHist(); WM.open(cmpEl); renderCmp(); }
+  function openCmp() { closeMenu(); closePMenu(); closeTools(); closeHist();
+    if (!CMP.userPicked && CMP.metrics.size > 12) { const on = planMetrics().filter(m => m.nature !== "event" && m.nature !== "line").map(m => m.id); CMP.metrics = new Set(on.length ? on : METRICS.filter(m => (!APP || m.p === APP.perspective) && EN.isNum(m) && m.nature !== "event").slice(0, 5).map(m => m.id)); }   // 0.13: start with what's on the map
+    WM.open(cmpEl); renderCmp(); }
   function closeCmp() { return WM.close(cmpEl); }
   // ---------- 1.8: Compare makes tables and charts from what's chosen ----------
   // A table has a layout (places × metrics at one date; places × years for one metric; metrics × years for one place) and
@@ -3620,7 +3622,7 @@
   }
   function renderCmp() {
     const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id));
-    if (!CMP.items.length && codes.length >= 2 && ms.length) { CMP.items.push({ id: "k" + (++CMP.seq), kind: "table", title: "Places × metrics", spec: { layout: "pm", when: "bar", codes: codes.slice(), metrics: [...CMP.metrics].filter(id => M[id]) } }); CMP.at = "k" + CMP.seq; }   // the side-by-side table, as before
+    if (false && !CMP.items.length && codes.length >= 2 && ms.length) { CMP.items.push({ id: "k" + (++CMP.seq), kind: "table", title: "Places × metrics", spec: { layout: "pm", when: "bar", codes: codes.slice(), metrics: [...CMP.metrics].filter(id => M[id]) } }); CMP.at = "k" + CMP.seq; }   // the side-by-side table, as before
     const made = CMP.items.length ? `<div class="cmp-made"><h4>Made here</h4>${CMP.items.map(it => `<div class="cmp-it${it.id === CMP.at || it.id === CMP.ac ? " on" : ""}" data-kshow="${it.id}" title="Show it"><span class="cmp-ik">${it.kind === "table" ? "▦" : sIcon(it.spec.style || "line")}</span><span class="cmp-in">${esc(it.title)}</span><button data-kdel="${it.id}" aria-label="Close ${esc(it.title)}">×</button></div>`).join("")}</div>` : "";
     const side = made + mtree("cmp", METRICS.filter(m => PER[m.p].ready), m => { const p = PER[m.p], on = CMP.metrics.has(m.id), nd = !on && codes.length && cmpEmpty(m, codes); return `<label style="--c:${p.hue}" class="${nd ? "dis" : ""}" ${nd ? `title="No data for these places on this date"` : ""}><input type="checkbox" data-cm="${m.id}" ${on ? "checked" : ""} ${nd ? "disabled" : ""}>${esc(m.label)}</label>`; },
       { isOn: m => CMP.metrics.has(m.id), extra: p => `<div class="quick"><button class="btn" data-all="${p.id}">All</button><button class="btn" data-none="${p.id}">None</button></div>`,
@@ -3630,21 +3632,34 @@
     if (!usable.some(m => m.id === CMP.y) || CMP.y === CMP.x) CMP.y = (usable.find(m => m.id !== CMP.x) || {}).id || null;
     CMP.view = CMP.view || "table";
     CMP.ab = (CMP.ab || []).filter(c => codes.includes(c)); codes.forEach(c => { if (CMP.ab.length < 2 && !CMP.ab.includes(c)) CMP.ab.push(c); });
-    let main = `<div class="cmv-sw seg" role="tablist" aria-label="View">${[["table", "Table"], ["side", "Side by side"], ["h2h", "Head to head"], ["time", "Over time"]].map(([k, l]) => `<button type="button" role="tab" data-cmview="${k}" class="${CMP.view === k ? "on" : ""}" aria-selected="${CMP.view === k}">${l}</button>`).join("")}</div>
-      <section><h3>Places (${codes.length})</h3><div class="chips">${codes.map(c => `<span class="chip" data-cmab="${c}" style="--pc:${cmpCol(c, codes)}"><i class="cmv-dot"></i>${CMP.view === "h2h" && (CMP.ab || []).includes(c) ? `<b class="cmv-ab">${(CMP.ab || []).indexOf(c) ? "B" : "A"}</b>` : ""}${esc(nameOf(c))}<button data-rmc="${c}" aria-label="Remove ${esc(nameOf(c))}">×</button></span>`).join("")}
-      <span class="cmp-add"><input id="cmp-q" placeholder="Add a place…" autocomplete="off" value="${esc(CMP.q)}"><ul id="cmp-hits" hidden></ul></span>${codes.length ? `<button class="btn" data-clearall>Clear</button>` : ""}</div></section>`;
-    if (codes.length < 2) main += `<div class="empty-big">Pick at least two places to compare. Add them here, Shift-click them on the map, or hold the mouse still and drag a box over them.</div>`;
-    else if (!ms.length) main += `<div class="empty-big">Tick the metrics you want to compare on the left. They can come from the same perspective or different ones.</div>`;
-    else if (CMP.view !== "table") { const nums = ms.filter(m => EN.isNum(m)); const CAP = 12, shown = CMP.view === "time" ? nums : nums.slice(0, CAP), more = CMP.view !== "time" && nums.length > CAP ? `<p class="cmv-note">Showing the first ${CAP} of ${nums.length} measures; untick some on the left to choose which.</p>` : "";
-      main += !nums.length ? `<div class="empty-big">Tick a measure with numbers to see this view.</div>` : more + (CMP.view === "side" ? cmpSide(codes, shown) : CMP.view === "h2h" ? cmpH2H(codes, shown) : cmpTime(codes, shown)); }
+    // 0.13 (as designed, Atlas design/compare): one sheet: title and the view switch, places and measures as chips, then the view
+    const views = `<span class="cmv-sw" role="tablist" aria-label="View">${[["table", "Table"], ["side", "Side by side"], ["h2h", "Head to head"], ["time", "Over time"]].map(([k, l]) => `<button type="button" role="tab" data-cmview="${k}" class="${CMP.view === k ? "on" : ""}" aria-selected="${CMP.view === k}">${l}</button>`).join("")}</span>`;
+    const placeChips = codes.map(c => `<span class="cmv-chip" data-cmab="${c}" style="--pc:${cmpCol(c, codes)}"><i class="cmv-dot"></i>${esc(nameOf(c))}${CMP.view === "h2h" && (CMP.ab || []).includes(c) ? `<b class="cmv-ab">${CMP.ab.indexOf(c) ? "B" : "A"}</b>` : ""}<button type="button" data-rmc="${c}" aria-label="Remove ${esc(nameOf(c))}">×</button></span>`).join("");
+    const measChips = ms.slice(0, 40).map(m => `<span class="cmv-chip on">✓ ${esc(m.label)}<button type="button" data-cmrm="${m.id}" aria-label="Take ${esc(m.label)} off">×</button></span>`).join("") + (ms.length > 40 ? `<span class="cmv-more">and ${ms.length - 40} more</span>` : "");
+    let body = "";
+    if (codes.length < 2) body = `<div class="empty-big">Pick at least two places to compare. Add them above, Shift-click them on the map, or drag a box over them.</div>`;
+    else if (!ms.length) body = `<div class="empty-big">Add a measure to compare these places.</div>`;
+    else if (CMP.view !== "table") { const nums = ms.filter(m => EN.isNum(m)); const CAP = 12, shown = CMP.view === "time" ? nums : nums.slice(0, CAP), more = CMP.view !== "time" && nums.length > CAP ? `<p class="cmv-note">Showing the first ${CAP} of ${nums.length} measures.</p>` : "";
+      body = !nums.length ? `<div class="empty-big">Add a measure with numbers to see this view.</div>` : more + (CMP.view === "side" ? cmpSide(codes, shown) : CMP.view === "h2h" ? cmpH2H(codes, shown) : cmpTime(codes, shown)); }
     else {
-      const anyNum = ms.some(m => EN.isNum(m));
-      main += `<section class="cmp-acts"><button class="btn primary" data-kmk="table" title="Choose a layout and dates">Make table ▾</button><button class="btn primary" data-kmk="chart" title="Choose a chart style for these places and metrics">Make chart</button><button class="btn" data-can ${anyNum ? "" : `disabled title="Analyse needs at least one numeric metric"`}>Analyse these…</button><button class="btn" data-ctile title="The places as a small map in the workspace">Places as a tile → workspace</button><button class="btn" data-cexp>Export…</button>${helpBtn("tables", "Help: tables and totals")}</section>`;
-      if (CMP.mk === "table") main += cmpBuilderHTML(codes, ms);
-      main += cmpWorkHTML();
-      main += `<details class="cmp-pat"${CMP.patOpen ? " open" : ""}><summary>Patterns between two metrics</summary>` + (usable.length < 2 ? `<div class="empty-big">Tick two or more metrics to look for a pattern between them.</div>` : patternHTML(codes, M[CMP.x], M[CMP.y], usable)) + `</details>`;
+      const anyNum = ms.some(m => EN.isNum(m)), cols = [...CMP.metrics].map(id => M[id]).filter(m => m && m.nature !== "text").slice(0, 8), all = codes.concat(codes.includes(UKC) ? [] : [UKC]);
+      const sb = CMP.sort && cols.some(m => m.id === CMP.sort.id) ? CMP.sort : null, rows = codes.slice();
+      if (sb) rows.sort((a, b) => { const x = cmpVal(M[sb.id], a), y = cmpVal(M[sb.id], b); if (x == null) return 1; if (y == null) return -1; return sb.dir === "asc" ? x - y : y - x; });
+      const mx = m => Math.max(1e-9, ...codes.map(c => Math.abs(cmpVal(m, c) || 0))), yrOf = m => { try { const r = m.get(codes[0], state.date); return r && (r.yr || r.year) ? String(r.yr || r.year) : ""; } catch (e) { return ""; } };
+      const cell = (m, c, i) => { const v = cmpVal(m, c); return `<span class="cmv-td"><b>${v == null ? "—" : esc(cmpFmt(m)(v))}</b><span class="cmv-tr"><i class="atl-fill" style="width:${v == null || c === UKC ? 0 : (100 * Math.abs(v) / mx(m)).toFixed(1)}%;background:${cmpCol(c, codes)};animation-delay:${i * 40}ms"></i></span></span>`; };
+      body = `<div class="cmv-table" style="--n:${cols.length}"><div class="cmv-thead"><span class="cmv-thp">Place</span>${cols.map(m => `<button type="button" class="cmv-th" data-cmsort="${m.id}"><b>${esc(m.label)}${sb && sb.id === m.id ? (sb.dir === "asc" ? " ↑" : " ↓") : ""}</b><i>${esc(yrOf(m) || longDate(state.date))}</i></button>`).join("")}</div>
+        ${(() => { const rs = m => codes.map(c => { try { return m.get(c, state.date); } catch (e) { return null; } }); const tots = cols.map(m => colTotal(m, codes, rs(m), state.date)); return tots.some(t => t.text && t.text !== "—") ? `<div class="cmv-tr-row tot"><span class="cmv-tdp">Together<small>these ${codes.length} places</small></span>${tots.map(t => `<span class="cmv-td" title="${esc(t.title || "")}"><b>${esc(t.text || "")}</b></span>`).join("")}</div>` : ""; })()}
+        ${rows.concat(all.includes(UKC) ? [UKC] : []).map((c, ri) => `<div class="cmv-tr-row${c === UKC ? " ref" : ""}" style="--i:${ri}"><span class="cmv-tdp"><i class="cmv-dot" style="background:${cmpCol(c, codes)}"></i>${esc(nameOf(c))}${c === UKC ? `<small>for reference</small>` : ""}</span>${cols.map(m => cell(m, c, ri)).join("")}</div>`).join("")}</div>
+        ${ms.length > cols.length ? `<p class="cmv-note">The table shows the first ${cols.length} of ${ms.length} measures; take some off above to choose.</p>` : ""}
+        <p class="cmv-note">Bars compare the places in each column; the UK row is the whole country, for reference. Values on ${esc(longDate(state.date))} (the time bar).</p>
+        <div class="cmv-acts"><button type="button" class="cmv-btn prim" data-kmk="chart">Make a chart ⌄</button><button type="button" class="cmv-btn" data-cmcsv>Copy as CSV</button><button type="button" class="cmv-btn" data-cmxl>Excel</button><button type="button" class="cmv-btn" data-cmws>☆ Workspace</button><button type="button" class="cmv-btn" data-cmmap>Put it on the map</button><button type="button" class="cmv-btn" data-can ${anyNum ? "" : "disabled"}>Analyse these…</button><span style="flex:1"></span><button type="button" class="cmv-lay" data-kmk="table">Layout: places × measures ⌄</button></div>
+        ${CMP.mk === "table" ? cmpBuilderHTML(codes, ms) : ""}${made ? `<div class="cmv-made">${made}</div>` : ""}${cmpWorkHTML()}
+        <details class="cmp-pat cmv-pat"${CMP.patOpen ? " open" : ""}><summary><b>Patterns between two measures</b><i>Pick two to see how they move together</i></summary>${usable.length < 2 ? `<div class="empty-big">Add two or more measures to look for a pattern between them.</div>` : patternHTML(codes, M[CMP.x], M[CMP.y], usable)}</details>`;
     }
-    cmpEl.innerHTML = `<div class="cmp-page" role="dialog" aria-label="Compare"><div class="cmp-top"><div><h2>Compare</h2><p>Choose places and any metrics, from one perspective or several. Uses the date on the time bar.</p></div><button class="btn" data-close>Close</button></div><div class="cmp-side">${side}</div><div class="cmp-main">${main}</div></div>`;
+    cmpEl.innerHTML = `<div class="cmp-page cmv-sheet" role="dialog" aria-label="Compare"><div class="cmv-top cmp-top"><div class="cmv-tt"><h2>Compare</h2><p>Places and measures side by side. Each measure uses the time bar's date.</p></div>${views}<button type="button" class="cmv-x" data-close aria-label="Close">×</button></div>
+      <div class="cmv-set"><span class="cmv-lab">Places</span>${placeChips}<span class="cmp-add"><input id="cmp-q" class="cmv-add" placeholder="+ Add a place" autocomplete="off" value="${esc(CMP.q)}"><ul id="cmp-hits" hidden></ul></span>${codes.length ? `<button type="button" class="cmv-clear" data-clearall>Clear</button>` : ""}</div>
+      <div class="cmv-set cmv-set2"><span class="cmv-lab">Measures</span>${measChips}<button type="button" class="cmv-add" data-cmaddm aria-expanded="${!!CMP.pick}">+ Add a measure</button></div>
+      ${CMP.pick ? `<div class="cmv-picker">${side.replace(made, "")}</div>` : ""}<div class="cmv-body">${body}</div></div>`;
     addFctl(cmpEl); requestAnimationFrame(drawCmpCharts);
     const q = $("cmp-q"); if (q && CMP.q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); showCmpHits(); }
   }
@@ -3694,7 +3709,7 @@
   function showCmpHits() { const ul = $("cmp-hits"), q = CMP.q.trim().toLowerCase(); if (!ul) return; const hs = q.length < 2 ? [] : searchNames(q); ul.innerHTML = hs.map(c => `<li data-add="${c}">${esc(nameOf(c))}<small>${LABEL[P[c].level]}</small></li>`).join(""); ul.hidden = !hs.length; }
   cmpEl.addEventListener("input", e => { if (e.target.id === "cmp-q") { CMP.q = e.target.value; showCmpHits(); } });
   cmpEl.addEventListener("change", e => { const t = e.target;
-    if (t.dataset.cm) { t.checked ? CMP.metrics.add(t.dataset.cm) : CMP.metrics.delete(t.dataset.cm); renderCmp(); }
+    if (t.dataset.cm) { t.checked ? CMP.metrics.add(t.dataset.cm) : CMP.metrics.delete(t.dataset.cm); CMP.userPicked = true; renderCmp(); }
     else if (t.dataset.ax) { CMP[t.dataset.ax] = t.value; renderCmp(); }
     else if (t.dataset.kf) { const k = t.dataset.kf, F = CMP.form; F[k] = ["year", "from", "to"].includes(k) ? clamp(+t.value || 1974, 1974, +TODAY.slice(0, 4)) : t.value; if (F.from > F.to) [F.from, F.to] = [F.to, F.from]; renderCmp(); } });
   cmpEl.addEventListener("toggle", e => { if (e.target.classList && e.target.classList.contains("cmp-pat")) CMP.patOpen = e.target.open; }, true);
@@ -3733,11 +3748,21 @@
     const it0 = e.target.closest("[data-kshow]"); if (it0 && !e.target.closest("button")) { cmpItemAction(it0); return; }
     const b = e.target.closest("button"); if (!b) return;
     if (b.dataset.cmview) { CMP.view = b.dataset.cmview; renderCmp(); return; }
+    if (b.hasAttribute("data-cmaddm")) { CMP.pick = !CMP.pick; renderCmp(); return; }
+    if (b.dataset.cmrm) { CMP.metrics.delete(b.dataset.cmrm); CMP.userPicked = true; renderCmp(); return; }
+    if (b.dataset.cmsort) { const id = b.dataset.cmsort; CMP.sort = CMP.sort && CMP.sort.id === id ? (CMP.sort.dir === "desc" ? { id, dir: "asc" } : null) : { id, dir: "desc" }; renderCmp(); return; }
+    if (b.hasAttribute("data-cmcsv") || b.hasAttribute("data-cmxl") || b.hasAttribute("data-cmws") || b.hasAttribute("data-cmmap")) {
+      const codes = state.sel.map(s => s.code), ms = METRICS.filter(m => CMP.metrics.has(m.id) && m.nature !== "text"), rows = [["Place", ...ms.map(m => m.label)], ...codes.concat([UKC]).map(c => [nameOf(c), ...ms.map(m => { const v = cmpVal(m, c); return v == null ? "" : +(+v).toFixed(4); })])];
+      if (b.hasAttribute("data-cmcsv")) copy(XL.csv(rows), "the table (CSV)");
+      else if (b.hasAttribute("data-cmxl")) download(XL.build([{ name: "Compare", rows }, { name: "About", rows: [["Atlas Compare", longDate(state.date)]] }]), `atlas-compare-${state.date.replace(/-/g, "")}.xlsx`);
+      else if (b.hasAttribute("data-cmws")) sendToWS({ type: "ctable", title: "Places × measures", spec: { layout: "pm", when: "bar", codes: codes.slice(), metrics: ms.map(m => m.id) } });
+      else { const m = ms.find(x => EN.isNum(x)); if (m && !isMapped(m.id)) toggleMapped(m.id); closeCmp(); toast(m ? `${m.label} is on the map, with your places picked out.` : "Add a measure with numbers first."); }
+      return; }
     if (b.dataset.cmidx) { CMP.idx = b.dataset.cmidx === "1"; renderCmp(); return; }
     if (cmpItemAction(b)) return;
     if (b.hasAttribute("data-close")) closeCmp(); else if (b.dataset.rmc) toggleCompare({ code: b.dataset.rmc, level: P[b.dataset.rmc].level });
     else if (b.hasAttribute("data-clearall")) { clearCompare(); renderCmp(); }
-    else if (b.dataset.all) { const codes = state.sel.map(x => x.code); METRICS.filter(m => m.p === b.dataset.all && !(codes.length && cmpEmpty(m, codes))).forEach(m => CMP.metrics.add(m.id)); renderCmp(); }
+    else if (b.dataset.all) { const codes = state.sel.map(x => x.code); METRICS.filter(m => m.p === b.dataset.all && !(codes.length && cmpEmpty(m, codes))).forEach(m => CMP.metrics.add(m.id)); CMP.userPicked = true; renderCmp(); }
     else if (b.dataset.none) { METRICS.filter(m => m.p === b.dataset.none).forEach(m => CMP.metrics.delete(m.id)); renderCmp(); }
     else if (b.hasAttribute("data-cws")) sendToWS({ type: "table", title: `Table: ${state.sel.length} places`, codes: state.sel.map(x => x.code), metrics: [...CMP.metrics] });
     else if (b.hasAttribute("data-ctile")) sendTile(state.sel.map(x => x.code));

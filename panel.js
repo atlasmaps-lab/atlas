@@ -29,7 +29,7 @@
     if (story) { [headline, rest] = firstSentence(story.innerHTML); if (rest) story.innerHTML = rest; else story.remove(); }
     const head = document.createElement("header"); head.className = "ed-head";
     // 0.12: ATLAS and the app, with the panel's name beside it; the black bar below is the Summary, open
-    head.innerHTML = `<div class="ed-kick ed-mast"><span class="pc-logo">ATLAS</span> <span class="pc-app">${esc(meta.app)}</span><span class="ed-ptl"> · ${esc(meta.title)}</span></div>`;
+    head.innerHTML = `<div class="ed-kick ed-mast"><span class="pc-logo">ATLAS</span> <span class="pc-app">${esc(meta.app)}</span><span class="ed-ptl"> · ${esc(meta.title)}</span><span class="ed-crumb">${esc(String(meta.app || "").replace(/^Atlas /i, ""))}<span class="vr"></span>${esc(meta.title)}</span></div>`;   // 0.13: the crumb line, as designed
     body.insertBefore(head, body.firstChild);
     // 0.12: definitions ("What it tells us" that only describes the measure) and caveats ("How far to trust it") leave the
     // Summary for "How to read this · Sources"; a "What it tells us" built from the data (.nv-data) stays
@@ -49,6 +49,8 @@
     const tail = [...body.querySelectorAll(":scope > .ap-note, :scope > .ec-src, :scope > .mo-src")].filter(p => /OGL|Licence|Source|ONS|HMRC|DWP|MHCLG|Treasury|Fingertips|Census|Bank of England|Electoral Commission/.test(p.textContent) && p === body.lastElementChild);
     const fold = [...new Set([...intro, ...tail])];
     if (fold.length || moved.length) { const d = document.createElement("details"); d.className = "ed-notes"; d.innerHTML = `<summary>How to read this · Sources</summary>${moved.map(h => `<p class="ap-note">${h}</p>`).join("")}`; fold.forEach(p => d.appendChild(p)); body.appendChild(d); }
+    // 0.13 (as designed): what sits between the summary and the first section (the main chart, its switch) belongs to the summary, the hero
+    { let n = sum.nextElementSibling; const mv = []; while (n && n.tagName !== "H4" && !n.classList.contains("ed-notes") && !n.classList.contains("ed-sec")) { if (!n.matches("p.ap-keep, .ap-keep")) mv.push(n); n = n.nextElementSibling; } mv.forEach(x => sumBody.appendChild(x)); }
     sections(body, meta);
   }
   // 0.12: every section (a heading and what follows it) folds away; Summary stays open. Open sections are remembered while
@@ -76,9 +78,11 @@
   }
   function tilePreview(d, bd, sm) {
     if (sm.querySelector(".ed-tprev")) return;
-    const p = bd.querySelector("p:not(.ap-note), .nv-story, .ed-dek"), first = p ? (firstSentence(p.innerHTML)[0] || "").replace(/<[^>]+>/g, "") : "";
+    const p = bd.querySelector("p:not(.ap-note), .nv-story, .ed-dek"); let first = p ? (firstSentence(p.innerHTML)[0] || "").replace(/<[^>]+>/g, "") : "";
     let rows = "";
     const tb = bd.querySelector("table"); if (tb) { const rs = [...tb.querySelectorAll("tbody tr, tr")].filter(r => r.cells.length >= 2 && !r.closest("thead")).slice(0, 4); rows = rs.map(r => `<span class="ed-trow"><span>${esc(r.cells[0].textContent.trim().slice(0, 48))}</span><b>${esc(r.cells[r.cells.length - 1].textContent.trim().slice(0, 16))}</b></span>`).join(""); }
+    else if (bd.querySelector(".ec-tile, .ec-lab")) { const ts = [...bd.querySelectorAll(".ec-tile")].slice(0, 4); rows = ts.map(x => { const l = x.querySelector(".ec-lab"), v = x.querySelector(".ec-val"); return `<span class="ed-trow"><span>${esc((l ? l.textContent : "").trim().slice(0, 48))}</span><b>${esc((v ? v.textContent : "").trim().slice(0, 18))}</b></span>`; }).join("");   // 0.13: figure boxes give a tile its rows, and the first one its lead
+      if (!first && ts[0]) { const l = ts[0].querySelector(".ec-lab"), v = ts[0].querySelector(".ec-val"); if (l && v) first = `${l.textContent.trim()}: ${v.textContent.trim()}`; } }
     else { const li = [...bd.querySelectorAll("li")].slice(0, 4); rows = li.map(x => `<span class="ed-trow"><span>${esc(x.textContent.trim().slice(0, 64))}</span></span>`).join(""); }
     if (!first && !rows) return;
     sm.insertAdjacentHTML("beforeend", `<span class="ed-tprev">${first ? `<span class="ed-tlead">${esc(first.slice(0, 180))}</span>` : ""}${rows}</span>`);
@@ -86,7 +90,8 @@
   // 0.13: the panel's width sets the layout: three columns from 1040 px, two from 760 px, otherwise one scrolling column
   function tiles(body) {
     body.classList.add("ed-tiles");
-    const set = () => { const w = body.clientWidth, c = w >= 1040 ? "3" : w >= 760 ? "2" : "1"; if (body.dataset.cols !== c) { body.dataset.cols = c; if (c === "1") { body.classList.remove("ed-one"); body.querySelectorAll(".ed-cur").forEach(x => x.classList.remove("ed-cur")); } } };
+    const set = () => { const w = body.clientWidth, c = w >= 1040 ? "3" : w >= 760 ? "2" : "1"; if (body.dataset.cols !== c) { body.dataset.cols = c; if (c === "1") { body.classList.remove("ed-one"); body.querySelectorAll(".ed-cur").forEach(x => x.classList.remove("ed-cur")); }
+        else if (!window.ATLAS_SECTIONS_OPEN && !body.classList.contains("ed-one")) body.querySelectorAll(":scope > details.ed-sec:not(.ed-summary)[open]").forEach(d => { d._edQuiet = 1; d.open = false; }); } };   // 0.13: wide, every section starts as a closed tile
     set(); if (!body._edRO && window.ResizeObserver) { body._edRO = new ResizeObserver(set); body._edRO.observe(body); }
   }
   document.addEventListener("click", e => {

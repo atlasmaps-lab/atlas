@@ -25,7 +25,7 @@ def main():
         rep.check(width(560) == "1", "a narrow panel is one scrolling column")
         width(900)
         s = js(f"""() => {{ const b = {BODY}; const hero = b.querySelector('.ed-summary'); const t = [...b.querySelectorAll(':scope > .ed-sec:not(.ed-summary):not([open])')];
-          return {{ hero: !!hero && (getComputedStyle(hero).gridRowStart + getComputedStyle(hero).gridRowEnd).includes('span'), tiles: t.length, prev: t.filter(x => x.querySelector('.ed-tprev') && getComputedStyle(x.querySelector('.ed-tprev')).display !== 'none').length }}; }}""")
+          return {{ hero: !!hero && [...b.querySelectorAll(':scope > .ed-sec')][0] === hero && Math.abs(hero.getBoundingClientRect().left - b.getBoundingClientRect().left) < 30, tiles: t.length, prev: t.filter(x => x.querySelector('.ed-tprev') && getComputedStyle(x.querySelector('.ed-tprev')).display !== 'none').length }}; }}""")
         rep.check(s["hero"], "the Summary is the hero tile")
         rep.check(s["tiles"] >= 2 and s["prev"] >= 1, f"closed sections are tiles with a preview ({s})")
         js(f"() => {BODY}.querySelector(':scope > .ed-sec:not(.ed-summary):not([open]) > summary').click()"); page.wait_for_timeout(500)

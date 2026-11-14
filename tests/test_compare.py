@@ -20,13 +20,13 @@ def main():
         page.context.grant_permissions(["clipboard-read", "clipboard-write"])
         js("ps => { AtlasDebug.select(ps); AtlasDebug.setCmpMetrics(['population', 'gdp_per_head', 'control']); AtlasDebug.openCmp(); }", PLACES); page.wait_for_timeout(400)
         page.click("#cmp [data-fmax]"); page.wait_for_timeout(300)
-        rep.check(js("() => document.querySelectorAll('#cmp .cmp-it').length") == 1, "Compare starts with one table (places × metrics) in its list")
-        foot = js("() => [...document.querySelectorAll('#cmp table.ctab tfoot td')].map(td => [td.textContent.trim(), td.title])")
+        rep.check(js("() => document.querySelectorAll('#cmp .cmv-tr-row:not(.ref)').length") >= 2, "Compare opens on the table view (0.13: the table is the view itself)")
+        foot = js("() => [...document.querySelectorAll('#cmp .cmv-tr-row.tot .cmv-td')].map(td => [td.textContent.trim(), td.title])")
         rep.check(len(foot) == 3 and foot[0][0] and "Total" in foot[0][1], f"population (a count) is summed: {foot[0] if foot else None}")
         rep.check(len(foot) == 3 and "weighted by population" in foot[1][1], f"GDP per head (a rate) gets a population-weighted average: {foot[1] if len(foot) > 1 else None}")
         rep.check(len(foot) == 3 and foot[2][0] == "", "Controlling party (a category) gets no total")
         # population sum is right
-        ok = js("ps => { const t = ps.reduce((a, c) => a + AtlasDebug.M.population.get(c, AtlasDebug.state.date).v, 0); const shown = document.querySelector('#cmp table.ctab tfoot td').textContent.replace(/[^0-9]/g, ''); return [t, shown]; }", PLACES)
+        ok = js("ps => { const t = ps.reduce((a, c) => a + AtlasDebug.M.population.get(c, AtlasDebug.state.date).v, 0); const shown = document.querySelector('#cmp .cmv-tr-row.tot .cmv-td').textContent.replace(/[^0-9]/g, ''); return [t, shown]; }", PLACES)
         rep.check(str(round(ok[0])) == ok[1], f"the population total adds up ({ok})")
         # places × years
         page.click("#cmp [data-kmk=table]"); page.click("#cmp [data-klay=py]"); page.wait_for_timeout(200)
@@ -40,7 +40,7 @@ def main():
         page.click("#cmp [data-kmake]"); page.wait_for_timeout(300)
         rows = js("() => [...document.querySelectorAll('#cmp table.ctab tbody th')].map(t => t.firstChild.textContent)")
         rep.check(len(rows) == 3 and not js("() => !!document.querySelector('#cmp table.ctab tfoot')"), f"metrics × years: one row per metric, no total across different units ({rows})")
-        rep.check(js("() => document.querySelectorAll('#cmp .cmp-it').length") == 3, "the three tables stay in the list on the left")
+        rep.check(js("() => document.querySelectorAll('#cmp .cmp-it').length") == 2, "the tables you make stay in the Made here list")
         # sorting
         page.click("#cmp table.ctab thead th:nth-child(2)"); page.wait_for_timeout(100)
         d1 = js("() => document.querySelector('#cmp table.ctab thead th:nth-child(2)').dataset.dir")
@@ -55,7 +55,7 @@ def main():
         rep.check(js("() => !!document.querySelector('#cmp .cmp-chart svg')"), "the chart is drawn inside the comparison page")
         side = js("() => { const t = document.querySelector('#cmp .cmp-tpane').getBoundingClientRect(), c = document.querySelector('#cmp .cmp-cpane').getBoundingClientRect(); return c.left >= t.right - 1; }")
         rep.check(side, "the chart sits beside the table")
-        rep.check(js("() => document.querySelectorAll('#cmp .cmp-it').length") == 4, "the chart joins the list")
+        rep.check(js("() => document.querySelectorAll('#cmp .cmp-it').length") == 3, "the chart joins the list")
         # actions
         page.click("#cmp .cmp-tpane [data-kcsv]"); page.wait_for_timeout(300)
         clip = js("() => navigator.clipboard.readText().catch(() => '')")

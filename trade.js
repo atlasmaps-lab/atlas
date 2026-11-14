@@ -60,17 +60,22 @@
     el.innerHTML = `<div class="nv"><p class="nv-story">${story}</p><p class="nv-means"><b>What it tells us.</b> What the UK sells to and buys from the rest of the world in physical goods, product by product and country by country.</p>
         <p class="nv-trust">HMRC's customs and survey records, revised for months. Goods only: the UK earns most abroad from services, so a goods deficit isn't the whole picture (Partners shows services too). Precious metals moving through London swing the totals; imports are by country of origin.</p></div>
       <div class="tr-head"><div><span class="tr-k">Exports</span><b>${gbp(t.tot.exp)}</b></div><div><span class="tr-k">Imports</span><b>${gbp(t.tot.imp)}</b></div><div><span class="tr-k">Balance</span><b class="${bal < 0 ? "neg" : "pos"}">${gbp(bal)}</b></div></div>
-      <p class="ap-note">Monthly since 2016:</p><div class="tr-chart">${trend(mser, 440, 150)}</div>
+      ${(() => { const R = OV.r || "5y", yrs = { "1y": 1, "5y": 5 }[R], last = Math.max(...mser.flatMap(x => x.pts.map(p => p[0]))), ser = mser.map(x => Object.assign({}, x, { pts: yrs ? x.pts.filter(p => p[0] > last - yrs - 1e-6) : x.pts }));
+        const gapAvg = (() => { const e = ser[0].pts, i = ser[1].pts; const n = Math.min(e.length, i.length); if (!n) return null; let d = 0; for (let k = 0; k < n; k++) d += (i[k][1] - e[k][1]); return d / n; })();
+        return `<div class="tr-chead"><b>Each month, £bn</b><span class="tr-rng" role="group" aria-label="Time range">${[["1y", "1y"], ["5y", "5y"], ["all", "Since 2016"]].map(([k, l]) => `<button type="button" data-trr="${k}" class="${k === R ? "on" : ""}">${l}</button>`).join("")}</span></div>
+          <div class="tr-chart">${ctx.CH.line(ser, { w: 440, h: 190, vfmt: gbp, xfmt: x => String(Math.floor(x)), hilo: true, xlab: x => ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Math.min(11, Math.round((x - Math.floor(x)) * 12))] + " " + Math.floor(x) })}</div>
+          <p class="tr-cap">${yrs === 1 ? "The last 12 months" : yrs === 5 ? "Five years" : "Every month since 2016"}, before inflation. The highest and lowest months are marked${gapAvg != null ? `; the gap between imports and exports averaged ${gbp(gapAvg)} a month` : ""}.</p>`; })()}
       <div class="seg sm" role="group">${["both", "exp", "imp"].map(k => `<button data-trf="${k}" class="${k === f ? "on" : ""}">${k === "both" ? "Both" : FL[k]}</button>`).join("")}</div>
-      <h4>Top products (chapters)</h4>${both ? bars2(chs2, k => `${esc(k)} ${esc(short(t.ch[k].n))}`, "trprod") : bars(chs, f, k => `${esc(k)} ${esc(short(t.ch[k].n))}`, "trprod")}
+      <h4>Top products (chapters)</h4>${both ? bars2(chs2, k => esc(plain(k, t.ch[k].n)), "trprod") : bars(chs, f, k => esc(plain(k, t.ch[k].n)), "trprod")}
       <h4>Top partners <small>(${both ? "exports, imports and the UK's balance" : "value, and the UK's balance with them"})</small></h4>${both ? bars2(cts2, k => esc(cty(k)), "trcty") : bars(cts, f, k => esc(cty(k)), "trcty")}
-      <h4>Biggest changes on the year before</h4><table class="tr-t">${mv.map(([h, n, v, pv, fl]) => `<tr data-trprod="${h}"><td class="tr-n">${esc(h)} ${esc(short(n))}${both ? ` <small class="tr-fl ${fl}">${FL[fl]}</small>` : ""}</td><td class="num">${gbp(pv)} → ${gbp(v)}</td><td class="num tr-x ${v >= pv ? "pos" : "neg"}">${chg(v, pv)}</td></tr>`).join("")}</table>
+      <h4>Biggest changes on the year before</h4><table class="tr-t">${mv.map(([h, n, v, pv, fl]) => `<tr data-trprod="${h}"><td class="tr-n">${esc(plain(h, n))}${both ? ` <small class="tr-fl ${fl}">${FL[fl]}</small>` : ""}</td><td class="num">${gbp(pv)} → ${gbp(v)}</td><td class="num tr-x ${v >= pv ? "pos" : "neg"}">${chg(v, pv)}</td></tr>`).join("")}</table>
       <h4>Dependence: imports mostly from one country</h4><p class="ap-note">Products (HS6) worth over £50m a year where one country supplies more than half of UK imports.</p>
-      <table class="tr-t">${(t.dep || []).slice(0, 12).map(([h, n, c, sh, v]) => `<tr data-trprod="${h}"><td class="tr-n">${esc(short(n, 46))}</td><td>${esc(cty(c))}</td><td class="num">${(sh * 100).toFixed(0)}%</td><td class="num tr-x">${gbp(v)}</td></tr>`).join("")}</table>
+      <table class="tr-t">${(t.dep || []).slice(0, 12).map(([h, n, c, sh, v]) => `<tr data-trprod="${h}"><td class="tr-n">${esc(plain(h, n, 46))}</td><td>${esc(cty(c))}</td><td class="num">${(sh * 100).toFixed(0)}%</td><td class="num tr-x">${gbp(v)}</td></tr>`).join("")}</table>
       <div class="ap-row"><button class="btn sm" data-trmap="both">Show both routes</button><button class="btn sm" data-trmap="exp">Export routes</button><button class="btn sm" data-trmap="imp">Import routes</button><button class="btn sm" data-trmetric>Map exports by area</button></div>
       <p class="ap-note">${esc(t.sources)}</p>`;
     el.onclick = e => {
       const b = e.target.closest("[data-trf]"); if (b) { OV.f = b.dataset.trf; overview(cx, el); return; }
+      const rr = e.target.closest("[data-trr]"); if (rr) { OV.r = rr.dataset.trr; overview(cx, el); return; }   // 0.13
       if (common(e)) return;
       if (e.target.closest("[data-trmetric]")) { ctx.setLevel("auto"); ctx.mapOnly(["trade_exp"]); }
     };
@@ -88,6 +93,7 @@
     ctx.view([10, 35], 1.6);
   }
   const mname = k => new Date(2000 + +k.slice(0, 2), +k.slice(2) - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  const plain = (code, n, l) => { const t = window.AtlasTradeStory ? AtlasTradeStory.nice(code, n) : n; return short(t, l); };   // 0.13: plain names, as designed
   const short = (n, l) => { n = String(n || ""); l = l || 60; return n.length > l ? n.slice(0, l - 1) + "…" : n; };
 
   // ---------- Products ----------
