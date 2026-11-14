@@ -31,62 +31,89 @@
   // ---------- the model: months from the bar's start to its end, the mapped measure's value in each, and the events ----------
   function model() {
     const lo = A.lo(), hi = A.hi(), m0 = A.monthIdx(lo), m1 = A.monthIdx(hi), N = Math.max(1, m1 - m0 + 1);
-    const cur = Math.max(0, Math.min(N - 1, A.monthIdx(A.date()) - m0)), me = A.measure && A.measure();
-    const V = new Array(N).fill(null);
-    if (me && me.pts && me.pts.length) {
-      const pts = me.pts.filter(p => p[1] != null && isFinite(p[1])).sort((a, b) => a[0] - b[0]); let j = -1;
-      for (let k = 0; k < N; k++) { const x = (m0 + k) / 12 + 1 / 24; while (j + 1 < pts.length && pts[j + 1][0] <= x + 0.0001) j++; if (j >= 0) V[k] = pts[j][1]; }
-    }
+    const cur = Math.max(0, Math.min(N - 1, A.monthIdx(A.date()) - m0)), list = A.measures ? A.measures() : (A.measure && A.measure() ? [A.measure()] : []);
     const Y0 = Math.floor(m0 / 12), NY = Math.floor(m1 / 12) - Y0 + 1;
-    const years = Array.from({ length: NY }, (_, y) => { const vs = []; for (let mo = 0; mo < 12; mo++) { const k = (Y0 + y) * 12 + mo - m0; if (k >= 0 && k < N && V[k] != null) vs.push(V[k]); } return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null; });
-    const fullY = years.map((v, y) => v != null && (Y0 + y) * 12 + 11 <= m1 ? v : null).filter(v => v != null);
-    const yMax = fullY.length ? Math.max(...fullY) : null, yMin = fullY.length ? Math.min(...fullY) : null;
-    const topics = (me && me.topics) || [], win = S.evWin;
-    const evs = (window.ATLAS_EVENTS || []).map(e => ({ k: A.monthIdx(e.d) - m0, t: e.t, x: e.x, u: e.u, big: e.big, tp: e.tp || [] }))
+    // 0.13.1: one row of the strip per measure on the map; each keeps its own highest (green) and lowest (red) year
+    const ser = list.map(me => {
+      const V = new Array(N).fill(null), pts = (me.pts || []).filter(p => p[1] != null && isFinite(p[1])).sort((a, b) => a[0] - b[0]); let j = -1;
+      for (let k = 0; k < N; k++) { const x = (m0 + k) / 12 + 1 / 24; while (j + 1 < pts.length && pts[j + 1][0] <= x + 0.0001) j++; if (j >= 0) V[k] = pts[j][1]; }
+      if (pts.length) for (let k = 0; k < N; k++) if ((m0 + k) / 12 < pts[0][0] - 0.0001) V[k] = null;
+      const years = Array.from({ length: NY }, (_, y) => { const vs = []; for (let mo = 0; mo < 12; mo++) { const k = (Y0 + y) * 12 + mo - m0; if (k >= 0 && k < N && V[k] != null) vs.push(V[k]); } return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null; });
+      const fullY = years.map((v, y) => v != null && (Y0 + y) * 12 + 11 <= m1 ? v : null).filter(v => v != null);
+      return { me, V, years, yMax: fullY.length ? Math.max(...fullY) : null, yMin: fullY.length ? Math.min(...fullY) : null, fmt: me.fmt || (v => (+v).toLocaleString("en-GB")) };
+    });
+    const F = ser[0] || { me: null, V: new Array(N).fill(null), years: new Array(NY).fill(null), yMax: null, yMin: null, fmt: v => (+v).toLocaleString("en-GB") };
+    const V = F.V, years = F.years, yMax = F.yMax, yMin = F.yMin, me = F.me;
+    const topics = [...new Set(ser.flatMap(x => x.me.topics || []))], win = S.evWin;
+    const evs = (window.ATLAS_EVENTS || []).map(e => ({ k: A.monthIdx(e.d) - m0, d: e.d, t: e.t, x: e.x, u: e.u, s: e.s, big: e.big, tp: e.tp || [] }))
       .filter(e => e.k >= 0 && e.k < N && (e.big || e.tp.some(t => topics.includes(t)))).filter(e => !win || e.k > cur - win * 12 && e.k <= cur + win * 12);
     const fmt = (me && me.fmt) || (v => (+v).toLocaleString("en-GB"));
-    return { m0, m1, N, cur, V, Y0, NY, years, yMax, yMin, evs, me, fmt, monthOf: k => MN[(m0 + k) % 12], yearOf: k => Math.floor((m0 + k) / 12), go: k => A.set(A.fromMonthIdx(m0 + Math.max(0, Math.min(N - 1, k)))) };
+    return { m0, m1, N, cur, V, Y0, NY, years, yMax, yMin, evs, me, fmt, ser, monthOf: k => MN[(m0 + k) % 12], yearOf: k => Math.floor((m0 + k) / 12), go: k => A.set(A.fromMonthIdx(m0 + Math.max(0, Math.min(N - 1, k)))) };
   }
   const pc = (M, k) => (100 * (k + 0.5) / M.N).toFixed(3);
   function caption(M) {
     const ev = S.ev >= 0 ? M.evs[S.ev] : null;
     if (ev && ev.k === M.cur) return `${MN[(M.m0 + ev.k) % 12]} ${M.yearOf(ev.k)}: ${ev.t}. ${ev.x}`;
-    const when = `${M.monthOf(M.cur)} ${M.yearOf(M.cur)}`, v = M.V[M.cur];
-    if (!M.me) return `Showing ${when}. Put a measure on the map to see it over time here.`;
-    if (v == null) return `No figures for ${M.me.label.toLowerCase()} in ${M.me.where} at ${when}.`;
-    return `Showing ${when}: ${M.me.label} in ${M.me.where}, ${M.fmt(v)}.${M.me.annual ? ` Published once a year, so every month of ${M.yearOf(M.cur)} shows that year's figure.` : ""}`;
+    const when = `${M.monthOf(M.cur)} ${M.yearOf(M.cur)}`;
+    if (!M.ser.length) return `Showing ${when}. Put a measure on the map to see it over time here, and the bar will fit the years it has data for.`;
+    const R = A.range ? A.range() : null, bits = M.ser.map(x => { const v = x.V[M.cur]; return v == null ? `no figure yet for ${x.me.label.toLowerCase()}` : `${x.me.label} in ${x.me.where}, ${x.fmt(v)}`; });
+    const annual = M.ser.some(x => x.me.annual) ? ` Yearly figures fill every month of ${M.yearOf(M.cur)}.` : "";
+    const rng = R && R.n >= 2 ? (R.mode === "all" && !R.overlap ? " These measures share no years, so the bar runs from the first one's start to the last one's end." : R.mode === "all" ? " The bar covers only the years every measure has data for." : "") : "";
+    return `Showing ${when}: ${bits.join("; ")}.${annual}${rng}`;
   }
 
   // ---------- the Atlas style: the expanded part of the bar ----------
   function atlasExpanded(M) {
     const pop = document.getElementById("tb-pop"); if (!pop || !pop._built) return;
     const evs = M.evs, chips = evs.slice(-6).map(e => ({ e, i: evs.indexOf(e) }));
-    pop.querySelector(".tbx-ev").innerHTML = `<button type="button" class="tbx-step" data-tbev="-1" aria-label="Previous event">‹</button><span class="tbx-chips">${chips.map(c => `<button type="button" class="tbx-chip${S.ev === c.i && c.e.k === M.cur ? " on" : ""}" data-tbevgo="${c.i}"><b>${M.yearOf(c.e.k)}</b> ${esc(c.e.t)}</button>`).join("")}<button type="button" class="tbx-chip${M.cur === M.N - 1 ? " on" : ""}" data-tblatest>Latest</button></span><button type="button" class="tbx-step" data-tbev="1" aria-label="Next event">›</button><span class="tbx-name">${M.me ? esc(M.me.label) : ""}</span>`;
-    const vals = M.years.filter(v => v != null), lo = vals.length ? Math.min(...vals) : 0, hi = vals.length ? Math.max(...vals) : 1;
-    const cols = M.years.map((v, y) => { if (v == null) return ""; const k0 = Math.max(0, (M.Y0 + y) * 12 - M.m0), k1 = Math.min(M.N - 1, (M.Y0 + y) * 12 + 11 - M.m0), mid = (k0 + k1) / 2, partial = (M.Y0 + y) * 12 + 11 > M.m1;
-      const h = Math.round(10 + (v - lo * 0.9) / ((hi - lo * 0.9) || 1) * 46), c = partial ? "var(--track)" : v === M.yMax ? "var(--up)" : v === M.yMin ? "var(--down)" : "var(--ink-3)", here = M.yearOf(M.cur) === M.Y0 + y;
-      return `<i class="tbx-col${here ? " here" : ""}" style="left:${pc(M, mid)}%;width:${Math.max(0.6, 70 / M.NY)}%;height:${h}px;background:${c}" title="${M.Y0 + y}: ${esc(M.fmt(v))}${partial ? " (part year)" : ""}"></i>`; }).join("");
-    const dia = evs.map(e => `<i class="tbx-dia${S.ev >= 0 && evs[S.ev] === e && e.k === M.cur ? " on" : ""}" style="left:${pc(M, e.k)}%" title="${esc(MS[(M.m0 + e.k) % 12] + " " + M.yearOf(e.k) + ": " + e.t)}"></i>`).join("");
-    const v = M.V[M.cur], lab = `${M.monthOf(M.cur)} ${M.yearOf(M.cur)}${v != null ? ": " + M.fmt(v) : ""}`;
+    pop.querySelector(".tbx-ev").innerHTML = `<button type="button" class="tbx-step" data-tbev="-1" aria-label="Previous event">‹</button><span class="tbx-chips">${chips.map(c => `<button type="button" class="tbx-chip${S.ev === c.i && c.e.k === M.cur ? " on" : ""}" data-tbevgo="${c.i}"><b>${M.yearOf(c.e.k)}</b> ${esc(c.e.t)}</button>`).join("")}<button type="button" class="tbx-chip${M.cur === M.N - 1 ? " on" : ""}" data-tblatest>Latest</button></span><button type="button" class="tbx-step" data-tbev="1" aria-label="Next event">›</button><span class="tbx-name">${M.ser.length ? esc(M.ser.map(x => x.me.label).join(" · ")) : ""}</span>`;
+    const NS = Math.max(1, M.ser.length), BAND = 56 + 34 * (NS - 1);
+    { const st = pop.querySelector(".tbx-strip"); if (st) st.style.height = (96 + 34 * (NS - 1)) + "px"; }
+    const bh = NS === 1 ? BAND : Math.floor((BAND - (NS - 1) * 6) / NS);
+    const cols = M.ser.map((sr, si) => { const vals = sr.years.filter(v => v != null), lo = vals.length ? Math.min(...vals) : 0, hi = vals.length ? Math.max(...vals) : 1, base = 22 + (NS - 1 - si) * (bh + 6);
+      return (NS > 1 ? `<span class="tbx-slab" style="bottom:${base + bh - 11}px">${esc(sr.me.label)}</span>` : "") + sr.years.map((v, y) => { if (v == null) return ""; const k0 = Math.max(0, (M.Y0 + y) * 12 - M.m0), k1 = Math.min(M.N - 1, (M.Y0 + y) * 12 + 11 - M.m0), mid = (k0 + k1) / 2, partial = (M.Y0 + y) * 12 + 11 > M.m1;
+        const h = Math.max(3, Math.round(bh * (0.2 + 0.8 * (v - lo) / ((hi - lo) || 1)))), c = partial ? "var(--track)" : v === sr.yMax ? "var(--up)" : v === sr.yMin ? "var(--down)" : "var(--ink-3)", here = M.yearOf(M.cur) === M.Y0 + y;
+        return `<i class="tbx-col${here ? " here" : ""}" style="left:${pc(M, mid)}%;width:${Math.max(0.6, 70 / M.NY)}%;height:${h}px;bottom:${base}px;background:${c}" title="${esc(sr.me.label)}, ${M.Y0 + y}: ${esc(sr.fmt(v))}${partial ? " (part year)" : ""}"></i>`; }).join(""); }).join("");
+    const dia = evs.map((e, i) => `<button type="button" class="tbx-dia${(S.ev >= 0 && evs[S.ev] === e && e.k === M.cur) || S.evOpen === i ? " on" : ""}" data-tbdia="${i}" style="left:${pc(M, e.k)}%" title="${esc(MS[(M.m0 + e.k) % 12] + " " + M.yearOf(e.k) + ": " + e.t)} (click for what it did to the map)" aria-label="${esc(e.t)}"></button>`).join("");
+    const lab = `${M.monthOf(M.cur)} ${M.yearOf(M.cur)}${M.ser.length === 1 && M.V[M.cur] != null ? ": " + M.fmt(M.V[M.cur]) : M.ser.length > 1 ? ": " + M.ser.map(x => x.V[M.cur] == null ? "–" : x.fmt(x.V[M.cur])).join(" · ") : ""}`;
     const ticks = Array.from({ length: M.NY }, (_, y) => y).filter(y => M.NY <= 14 || y % Math.ceil(M.NY / 12) === 0 || y === M.NY - 1).map(y => `<span class="tbx-yr${M.yearOf(M.cur) === M.Y0 + y ? " here" : ""}" style="left:${pc(M, Math.max(0, (M.Y0 + y) * 12 + 6 - M.m0))}%">${M.NY > 20 ? "'" + String(M.Y0 + y).slice(2) : M.Y0 + y}</span>`).join("");
     pop.querySelector(".tbx-strip").innerHTML = `${cols}${dia}<i class="tbx-line" style="left:${pc(M, M.cur)}%"></i><span class="tbx-bub" style="left:${pc(M, M.cur)}%;transform:translateX(${M.cur / M.N > .82 ? "-100%" : M.cur / M.N < .12 ? "0" : "-50%"})">${esc(lab)}</span>${ticks}`;
     pop.querySelector(".tbx-cap").textContent = caption(M);
-    { const ms = A.measure && A.measure(), ml = pop.querySelector(".tbx-mlab"), pl = pop.querySelector(".tbx-play"); if (ml) ml.textContent = ms ? `${ms.where === "the UK" ? "UK" : ms.where} ${ms.label.charAt(0).toLowerCase() + ms.label.slice(1)}` : ""; if (pl) pl.textContent = A.playing && A.playing() ? "❚❚" : "▶"; }
+    // 0.13.1: the range: only where the measures on the map have data (all of them, or any), or 1974 to today
+    { const R = A.range ? A.range() : null, box = pop.querySelector(".tbx-rng"); if (R && box) { const one = R.n <= 1;
+      box.innerHTML = `<button type="button" class="tbx-o${R.mode === "all" || (one && R.mode === "any") ? " on" : ""}" data-tbrange="all" title="Only the dates the measure${one ? "" : "s"} on the map ha${one ? "s" : "ve"} figures for">${one ? "Where it has data" : "Where all have data"}</button>${one ? "" : `<button type="button" class="tbx-o${R.mode === "any" ? " on" : ""}" data-tbrange="any" title="From the first measure's start to the last one's end">Where any has data</button>`}`;
+      const fb = document.getElementById("tb-full"); if (fb) fb.textContent = "1974 to today"; } }
+    evPop(M);
+    { const ms = M.ser.length > 1 ? { where: M.ser[0].me.where, label: M.ser.map(x => x.me.label).join(" · ") } : M.me, ml = pop.querySelector(".tbx-mlab"), pl = pop.querySelector(".tbx-play"); if (ml) ml.textContent = ms ? `${ms.where === "the UK" ? "UK" : ms.where} ${ms.label.charAt(0).toLowerCase() + ms.label.slice(1)}` : ""; if (pl) pl.textContent = A.playing && A.playing() ? "❚❚" : "▶"; }
     pop.querySelectorAll("[data-tbwin]").forEach(b => b.classList.toggle("on", +b.dataset.tbwin === S.evWin));
     const back = pop.querySelector("[data-tblatest2]"); if (back) back.hidden = M.cur === M.N - 1;
+  }
+  // 0.13.1: a diamond opens its event: what happened, the source, and what each measure on the bar did around it
+  function evPop(M) {
+    const box = document.querySelector("#tb-pop .tbx-evp"); if (!box) return; const e = S.evOpen != null ? M.evs[S.evOpen] : null;
+    if (!e) { box.hidden = true; box.innerHTML = ""; return; }
+    const when = `${MN[(M.m0 + e.k) % 12]} ${M.yearOf(e.k)}`, near = (sr, k, dir) => { for (let j = 0; j < 13; j++) { const q = k + dir * j; if (q >= 0 && q < M.N && sr.V[q] != null) return [q, sr.V[q]]; } return null; };
+    const lines = M.ser.map(sr => { const a = near(sr, Math.max(0, e.k - 12), 1), b = near(sr, Math.min(M.N - 1, e.k + 12), -1); if (!a || !b || a[0] >= b[0]) return `<li><b>${esc(sr.me.label)}</b>: no figures either side of it.</li>`;
+      const d = b[1] - a[1], rel = (e.tp || []).some(t => (sr.me.topics || []).includes(t));
+      return `<li><b>${esc(sr.me.label)}</b> in ${esc(sr.me.where)}: ${esc(sr.fmt(a[1]))} in ${MS[(M.m0 + a[0]) % 12]} ${M.yearOf(a[0])}, ${esc(sr.fmt(b[1]))} in ${MS[(M.m0 + b[0]) % 12]} ${M.yearOf(b[0])} <em class="${d > 0 ? "up" : d < 0 ? "down" : ""}">${d > 0 ? "▲" : d < 0 ? "▼" : "="} ${esc(sr.fmt(Math.abs(d)))}</em>${rel ? ` <span class="tbx-rel">Same subject</span>` : ""}</li>`; }).join("");
+    const L = Math.max(4, Math.min(64, 100 * (e.k + 0.5) / M.N - 18));
+    box.hidden = false; box.style.left = L.toFixed(1) + "%";
+    box.innerHTML = `<button type="button" class="tbx-evx" data-tbevclose aria-label="Close">×</button><div class="tbx-evk">${esc(when)}${e.big ? `<span class="vr"></span>National event` : ""}</div><b class="tbx-evt">${esc(e.t)}</b>${e.x ? `<p>${esc(e.x)}</p>` : ""}
+      ${M.ser.length ? `<div class="tbx-evk2">On the bar, a year before and a year after</div><ul>${lines}</ul><p class="tbx-evn">Changes around a date show timing, not cause: other things moved too.</p>` : `<p class="tbx-evn">Put a measure on the map to see what it did around this date.</p>`}
+      <div class="tbx-eva"><button type="button" class="tbx-o on" data-tbevgo2="${S.evOpen}">Go to ${esc(when)}</button>${e.u ? `<a href="${esc(e.u)}" target="_blank" rel="noopener">Source: ${esc(e.s || (() => { try { return new URL(e.u).hostname.replace(/^www\./, ""); } catch (x) { return "link"; } })())} ›</a>` : ""}</div>`;
   }
   function buildExpanded() {
     const pop = document.getElementById("tb-pop"); if (!pop || pop._built) return; pop._built = true;
     const steps = document.getElementById("steps"), full = document.getElementById("tb-full");
     pop.innerHTML = `<div class="tbx-top"><div class="tbx-ev"></div><span class="tbx-mlab"></span><button type="button" class="tbx-fold" data-tbfold aria-label="Fold the time bar" title="Fold the time bar">⌄</button></div>
-      <div class="tbx-row"><button type="button" class="tbx-play" data-tbplay aria-label="Play through time">▶</button><div class="tbx-strip" role="slider" aria-label="Drag to any month" tabindex="0"></div></div><p class="tbx-cap"></p>
-      <div class="tbx-opt"><span class="tbx-ol">Step</span><span class="tbx-steps"></span><span class="vr"></span><span class="tbx-ol">Range</span><span class="tbx-full"></span><span class="vr"></span><span class="tbx-ol">Events counted</span>${[[1, "1y"], [5, "5y"], [10, "10y"], [0, "All"]].map(([n, l]) => `<button type="button" class="tbx-o" data-tbwin="${n}">${l}</button>`).join("")}<span style="flex:1"></span><button type="button" class="tbx-back" data-tblatest2>Back to latest ›</button></div>`;
+      <div class="tbx-row"><button type="button" class="tbx-play" data-tbplay aria-label="Play through time">▶</button><div class="tbx-strip" role="slider" aria-label="Drag to any month" tabindex="0"></div></div><div class="tbx-evp" hidden></div><p class="tbx-cap"></p>
+      <div class="tbx-opt"><span class="tbx-ol">Step</span><span class="tbx-steps"></span><span class="vr"></span><span class="tbx-ol">Range</span><span class="tbx-rng"></span><span class="tbx-full"></span><span class="vr"></span><span class="tbx-ol">Events</span>${[[1, "1y"], [5, "5y"], [10, "10y"], [0, "All"]].map(([n, l]) => `<button type="button" class="tbx-o" data-tbwin="${n}">${l}</button>`).join("")}<span style="flex:1"></span><button type="button" class="tbx-back" data-tblatest2>Back to latest ›</button></div>`;
     if (steps) { pop.querySelector(".tbx-steps").appendChild(steps); if (!steps.querySelector('[data-step="0"]')) steps.insertAdjacentHTML("afterbegin", '<button data-step="0">1 month</button>'); }
     if (full) { pop.querySelector(".tbx-full").appendChild(full); }
     // drag on the strip: any month
     const strip = pop.querySelector(".tbx-strip"); let drag = false;
     const at = e => { const r = strip.getBoundingClientRect(), M = model(); M.go(Math.floor((e.clientX - r.left) / r.width * M.N)); };
-    strip.addEventListener("pointerdown", e => { drag = true; strip.setPointerCapture(e.pointerId); S.ev = -1; at(e); });
+    strip.addEventListener("pointerdown", e => { if (e.target.closest(".tbx-dia")) return; drag = true; strip.setPointerCapture(e.pointerId); S.ev = -1; at(e); });
     strip.addEventListener("pointermove", e => { if (drag) at(e); });
     strip.addEventListener("pointerup", () => { drag = false; });
     strip.addEventListener("keydown", e => { const M = model(); if (e.key === "ArrowLeft") { M.go(M.cur - 1); e.preventDefault(); } if (e.key === "ArrowRight") { M.go(M.cur + 1); e.preventDefault(); } });
@@ -144,6 +171,10 @@
     const b = e.target.closest("button"); if (!b) return; const M = model();
     if (b.hasAttribute("data-tbfold")) { const more = document.getElementById("tb-more"); if (more) more.click(); return; }
     if (b.hasAttribute("data-tbplay")) { A.play(); setTimeout(update, 50); return; }
+    if (b.dataset.tbdia != null) { S.evOpen = S.evOpen === +b.dataset.tbdia ? null : +b.dataset.tbdia; update(); return; }
+    if (b.hasAttribute("data-tbevclose")) { S.evOpen = null; update(); return; }
+    if (b.dataset.tbevgo2 != null) { const ev = M.evs[+b.dataset.tbevgo2]; if (ev) { S.ev = +b.dataset.tbevgo2; S.evOpen = null; M.go(ev.k); update(); } return; }
+    if (b.dataset.tbrange) { S.evOpen = null; A.setRange && A.setRange(b.dataset.tbrange); update(); return; }
     if (b.dataset.tbevgo != null) { S.ev = +b.dataset.tbevgo; M.go(M.evs[S.ev].k); update(); return; }
     if (b.dataset.tbev) return stepEv(+b.dataset.tbev);
     if (b.hasAttribute("data-tblatest") || b.hasAttribute("data-tblatest2")) { S.ev = -1; M.go(M.N - 1); return; }

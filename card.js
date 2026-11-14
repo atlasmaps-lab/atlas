@@ -104,7 +104,7 @@
       let top = items.slice(0, 6); const rest = items.slice(6).reduce((a, x) => a + x.v, 0); if (rest > 0) top.push({ n: "Everything else", v: rest, other: 1 });
       const rows = [[], []]; let acc = 0; top.forEach((x, i) => { (i === 0 || acc < t * 0.55 ? rows[0] : rows[1]).push(x); acc += x.v; }); if (!rows[1].length && rows[0].length > 1) rows[1].push(rows[0].pop());
       const rs = rows.filter(r => r.length).map(r => ({ r, s: r.reduce((a, x) => a + x.v, 0) })); let ci = 0;
-      return `<div class="pc-tree">${rs.map(({ r, s: rsum }) => `<div class="pc-tree-r" style="flex:${(rsum / t).toFixed(3)}">${r.map(x => `<span class="pc-tree-b${x.v / t < 0.04 ? " sm" : ""}" style="flex:${(x.v / rsum).toFixed(3)};background:${x.other ? "var(--pc-neutral, #5b6b7c)" : `var(--cat${(ci++ % 6) + 1})`}" title="${esc(x.n)}: ${esc(fmt ? fmt(x.v) : x.v)}"><b>${esc(x.n)}</b><em>${esc(fmt ? fmt(x.v) : x.v)}</em></span>`).join("")}</div>`).join("")}</div>`; },
+      return `<div class="pc-tree">${rs.map(({ r, s: rsum }) => `<div class="pc-tree-r" style="flex:${(rsum / t).toFixed(3)}">${r.map(x => `<span class="pc-tree-b${x.v / t < 0.04 ? " sm" : ""}" style="flex:${(x.v / rsum).toFixed(3)};background:${x.other ? "var(--pc-neutral, #5b6b7c)" : x.c || `var(--cat${(ci++ % 6) + 1})`}" title="${esc(x.n)}: ${esc(fmt ? fmt(x.v) : x.v)}"><b>${esc(x.n)}</b><em>${esc(fmt ? fmt(x.v) : x.v)}</em></span>`).join("")}</div>`).join("")}</div>`; },
     big(text, sub) { const t = String(text == null ? "" : text).replace(/\s*\(.*$/, ""), n = t.length; return `<div class="pc-bign${n > 9 ? " xs" : n > 6 ? " s" : ""}"><b>${esc(t)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</div>`; },
   };
 
@@ -231,6 +231,22 @@
         if (d != null && isFinite(d)) { const small = abs ? Math.abs(d) < Math.abs(a[1] || 1) * 0.01 : Math.abs(d) < 1; trend = small ? `about where it was in ${Math.floor(a[0])}` : `${d > 0 ? "up" : "down"} ${abs ? (isP ? Math.abs(d).toFixed(1) + " points" : f(Math.abs(d))) : Math.abs(d).toFixed(Math.abs(d) < 10 ? 1 : 0) + "%"} since ${Math.floor(a[0])}`; } }
       if (rank || trend) { const good = rank && trend && /^(Highest|In the top)/.test(rank) === /^up/.test(trend) ? ", and " : rank && trend ? ", though " : "";
         L.sub = L.h + "."; L.h = rank && trend ? `${rank}${good}${trend}` : rank || cap1(trend); } }
+    // 0.13.1: a category (who controls, who won, which zone): how the map divides, and how that changed. A place with no
+    // figure on the date gets the latest one it has. No card is left as "no figure" and a list of folds.
+    if (m.scale === "nominal" && m.nature !== "text" && m.nature !== "event" && m.nature !== "site" && m.nature !== "line") {
+      const B = catBreak(m, lv); if (B) {
+        const plural = ({ council: "councils", region: "regions", nation: "nations", constituency: "seats", ward: "wards" })[lv] || "places", top = B.rows[0], pc = x => (100 * x / B.N).toFixed(x / B.N < 0.1 ? 1 : 0) + "%";
+        const lead = `${top.n} leads with ${top.k} of ${B.N} ${plural} (${pc(top.k)})${B.rows[1] ? `, then ${B.rows[1].n} with ${B.rows[1].k}` : ""}`;
+        const hereR = code !== ctx.UKC ? (() => { try { return m.get(code, ctx.date); } catch (e) { return null; } })() : null;
+        if (!now) { const L = items[0]; if (hereR && hereR.v != null) { L.h = `${esc(where)}: ${esc(String(hereR.text || hereR.v))}`; L.sub = esc(lead) + "."; } else { L.h = esc(lead); L.sub = code === ctx.UKC ? `Across the ${plural} on ${esc(ctx.longDate(ctx.date))}.` : `${esc(where)} has no record for this date. ${esc(lead)}.`; } L.viz = viz.stack(B.rows.map(r => ({ v: r.k, c: r.c, n: r.n }))); }
+        items.splice(1, 0, { k: `Across the map · ${B.N} ${plural}`, h: esc(B.rows.slice(0, 4).map(r => `${r.n} ${r.k}`).join(", ") + (B.rows.length > 4 ? `, and ${B.rows.length - 4} more` : "")), viz: viz.stack(B.rows.map(r => ({ v: r.k, c: r.c, n: r.n }))), pic: viz.tree(B.rows.map(r => ({ n: r.n, v: r.k, c: r.c })), v => `${v}`),
+          picCap: `Each block's size is the number of ${plural} on ${esc(ctx.longDate(ctx.date))}.`, map: { metrics: [id], level: lv }, deepNoun: "categories",
+          deep: B.rows.map(r => ({ label: r.n, c: r.c, sub: pc(r.k) + ` of ${plural}`, v: String(r.k), n: r.k, fn: () => metric(id, code) })), deepTitle: "Largest first" });
+        const H = catHistory(m, lv, B.rows.slice(0, 5));
+        if (H) items.splice(2, 0, { k: "Over time", h: esc(H.line), viz: "", more: `<div class="pc-chart">${ctx.CH.line(H.series, { w: 380, h: 200, vfmt: v => String(Math.round(v)), yfmt: v => String(Math.round(v)), hilo: false })}</div><p class="pc-viz-cap">${esc(plural.charAt(0).toUpperCase() + plural.slice(1))} for each, every July from ${H.y0} to ${H.y1}.</p>` });
+      }
+    } else if (!now && N && N.series) { const all = N.series(m, code).filter(p => p[1] != null && isFinite(p[1])), L = items[0];
+      if (all.length) { const z = all[all.length - 1], before = z[0] < +ctx.date.slice(0, 4); L.h = `${esc(m.label)} in ${esc(where)}: <b>${esc(f(z[1]))}</b> in ${esc(String(Math.floor(z[0])))}`; L.sub = before ? `The latest figure: there is none yet for ${esc(ctx.longDate(ctx.date))}.` : `The first figure is for ${esc(String(Math.floor(all[0][0])))}; there is none for ${esc(ctx.longDate(ctx.date))}.`; } }
     const cmp = compareItem(m, code, f); if (cmp) items.push(cmp);
     const rel = relatedItem(m, code); if (rel) items.push(rel);
     const gw = goesWithItem(m, code, f); if (gw) items.push(gw);
@@ -243,6 +259,20 @@
     return { app: APPN[m.p] || "", title: m.label, crumbs, kicker: code === ctx.UKC ? [] : [where], ranges, rangeAt, range: r => metric(id, code, r), track: { metric: id, code }, lastStep, figs, items, source: String(src).split(/[;(]/)[0].replace(/https?:\/\/\S+/, "").trim().slice(0, 60) || "Atlas", when: now && now.yr ? String(now.yr) : ctx.longDate(ctx.date), map: { metrics: [id] }, links: url ? [{ label: "Source", url }] : [] };
   }
 
+  // 0.13.1: how a category measure divides a boundary set on a date: [{ v, n, c, k }] largest first
+  function catBreak(m, lv, d) {
+    const codes = ctx.allCodesAt(lv), by = new Map(); let N = 0;
+    codes.forEach(c => { let r; try { r = m.get(c, d || ctx.date); } catch (e) { r = null; } if (!r || r.v == null || r.nm) return; N++; const k = String(r.v); if (!by.has(k)) by.set(k, { v: r.v, k: 0, n: m.catName ? m.catName(r.v) : String(r.text || r.v).replace(/\s*\(.*$/, ""), c: m.colour ? m.colour(r.v) : "" }); by.get(k).k++; });
+    if (N < 3) return null; return { N, rows: [...by.values()].sort((a, b) => b.k - a.k) };
+  }
+  function catHistory(m, lv, cats) {
+    const y1 = +ctx.date.slice(0, 4), ser = cats.map(c => ({ name: c.n, colour: c.c || "var(--ink-2)", pts: [] })); let y0 = null;
+    for (let y = Math.max(1974, y1 - 30); y <= y1; y++) { const B = catBreak(m, lv, y === y1 ? ctx.date : y + "-07-01"); if (!B || B.N < ctx.allCodesAt(lv).length * 0.5) continue; if (y0 == null) y0 = y;
+      cats.forEach((c, i) => { const r = B.rows.find(x => String(x.v) === String(c.v)); ser[i].pts.push([y, r ? r.k : 0]); }); }
+    if (y0 == null || y1 - y0 < 2) return null;
+    const a = ser[0].pts[0][1], b = ser[0].pts[ser[0].pts.length - 1][1];
+    return { y0, y1, series: ser.filter(x => x.pts.some(p => p[1] > 0)), line: `${cats[0].n}: ${b} now, ${b === a ? "the same as" : b > a ? `up from ${a}` : `down from ${a}`} in ${y0}` };
+  }
   // 0.13: the caption under a series: which point was highest (green on the chart) and which lowest (red)
   function hiloCap(pts, f) {
     pts = (pts || []).filter(p => p[1] != null && isFinite(p[1])); if (pts.length < 3) return "";

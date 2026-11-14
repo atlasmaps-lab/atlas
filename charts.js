@@ -50,8 +50,8 @@
   function line(series, o, filled) {
     o = o || {}; const pts = allPts(series); if (!pts.length) return empty();
     // 0.10.1: end labels get room on the right (they were cut off) and are spread out so they don't sit on each other
-    const ends = series.length > 1 && series.length <= 6, nm = s => String(s.name).slice(0, 14);
-    if (ends && o.right == null) o = Object.assign({}, o, { right: Math.min(110, 10 + 6.2 * Math.max(...series.map(s => nm(s).length))) });
+    const ends = series.length > 1 && series.length <= 6, nm = s => String(s.name).slice(0, 20);
+    if (ends && o.right == null) o = Object.assign({}, o, { right: Math.min(150, 12 + 7 * Math.max(...series.map(s => nm(s).length))) });
     const f = frame(o, pts.map(p => p[0]), pts.map(p => p[1]));
     const labs = [];
     const paths = series.map((s, i) => {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atlas 0.13 · UK</title>
+<title>Atlas 0.13.1 · UK</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&amp;display=swap">
@@ -1725,7 +1725,7 @@ button.pc-fig { cursor: pointer; } button.pc-fig:hover { background: var(--hover
 #play { background: var(--app, #a07a12); border: 0; color: #fff; width: 30px; height: 30px; }
 #play:hover { filter: brightness(1.08); }
 #tb-more { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--rule); background: var(--solid); color: var(--app, #a07a12); font: 700 14px/1 var(--f); padding: 0; cursor: pointer; }
-#timebar.tbx-open { z-index: 40; }
+#timebar.tbx-open { z-index: 1400; }   /* 0.13.1: the open bar sits above panels (their edges covered its buttons) */
 #tb-pop { position: absolute; left: 50%; right: auto; bottom: calc(100% + 8px); transform: none; margin-left: calc(-1 * min(430px, calc(50vw - 16px))); width: min(860px, calc(100vw - 32px)); box-sizing: border-box; display: block; padding: 10px 14px 9px; border: 0; border-radius: 14px; box-shadow: 0 10px 30px rgba(20,30,40,.2); animation: atl-rise 280ms var(--ease) both; }
 .tbx-ev { display: flex; align-items: center; gap: 6px; }
 .tbx-chips { display: flex; gap: 6px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
@@ -2192,9 +2192,83 @@ input.cmv-add { width: 130px; cursor: text; } input.cmv-add::placeholder { color
 .trk-more > summary { cursor: pointer; font: 400 12px var(--f); color: var(--ink-2); list-style: none; padding: 4px 0; } .trk-more > summary::before { content: "› "; color: var(--app, #a07a12); }
 .trk-more[open] > summary::before { content: "⌄ "; }
 </style>
-<link rel="stylesheet" href="fonts.css?v=1300">
-<script src="theme.js?v=1300"></script>
-<script src="theme-apply.js?v=1300"></script>
+<link rel="stylesheet" href="fonts.css?v=1310">
+<script src="theme.js?v=1310"></script>
+<script src="theme-apply.js?v=1310"></script>
+<style id="ed-0131">
+/* 0.13.1: the new look for every panel's contents (panel.js restyle, figures, menu rows) */
+:is(.ed, .pcard) .ed-af { display: flex; flex-wrap: wrap; margin: 10px 0 12px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+:is(.ed, .pcard) .ed-f { flex: 1 1 120px; min-width: 0; text-align: left; background: none; border: 0; border-right: 1px solid var(--rule); padding: 10px 14px 10px 0; margin-right: 14px; font: inherit; color: var(--ink); cursor: pointer; }
+:is(.ed, .pcard) .ed-f:last-child { border-right: 0; margin-right: 0; }
+:is(.ed, .pcard) .ed-f b { display: block; font: 700 clamp(18px, 4.6cqw, 26px)/1.1 var(--f); overflow-wrap: anywhere; }
+:is(.ed, .pcard) .ed-f small { display: block; font: 400 12px/1.35 var(--f); color: var(--ink-2); margin-top: 2px; }
+:is(.ed, .pcard) .ed-f span { display: block; font: 700 10.5px/1.3 var(--f); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+:is(.ed, .pcard) .ed-f em { display: block; font: 700 12px var(--f); font-style: normal; color: var(--ink-3); margin-top: 3px; } .ed .ed-f em.up { color: var(--up); } .ed .ed-f em.down { color: var(--down); }
+:is(.ed, .pcard) .ed-f:hover b { color: var(--app, var(--pc-acc)); }
+:is(.ed, .pcard) table.ed-rtab { border-collapse: collapse; width: 100%; min-width: 0; font: 400 13.5px/1.35 var(--f); }
+:is(.ed, .pcard) table.ed-rtab thead th { background: none; font: 700 10.5px var(--f); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--ink-3); padding: 6px 8px; position: static; }
+:is(.ed, .pcard) table.ed-rtab tbody th, :is(.ed, .pcard) table.ed-rtab td { padding: 8px 8px; border-bottom: 1px solid var(--rule); background: none; font-weight: 400; }
+:is(.ed, .pcard) table.ed-rtab tbody th, :is(.ed, .pcard) table.ed-rtab tbody td:first-child { font-weight: 700; color: var(--ink); position: static; }
+:is(.ed, .pcard) table.ed-rtab td.num, :is(.ed, .pcard) table.ed-rtab td.ed-bar { text-align: right; font-variant-numeric: tabular-nums lining-nums; }
+:is(.ed, .pcard) table.ed-rtab td.ed-bar { font-weight: 700; background-image: linear-gradient(var(--bc, var(--ink-3)), var(--bc, var(--ink-3))); background-repeat: no-repeat; background-position: right bottom 3px; background-size: var(--w, 0) 3px; }
+:is(.ed, .pcard) table.ed-rtab td.ed-up { color: var(--up); font-weight: 700; } .ed table.ed-rtab td.ed-down { color: var(--down); font-weight: 700; }
+:is(.ed, .pcard) table.ed-rtab tbody tr:hover > * { background: var(--chip); }
+:is(.ed, .pcard) .sw, :is(.ed, .pcard) i.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: 0; flex: none; }
+:is(.ed, .pcard) .ed-share { display: flex; height: 46px; border-radius: 6px; overflow: hidden; margin: 10px 0 8px; gap: 2px; }
+:is(.ed, .pcard) .ed-share i { display: flex; flex-direction: column; justify-content: space-between; padding: 5px 7px; min-width: 0; color: #fff; font-style: normal; animation: atl-grow 420ms var(--ease, ease) both; transform-origin: left; }
+:is(.ed, .pcard) .ed-share i span { font: 700 11px/1.1 var(--f); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ed .ed-share i b { font: 700 13px var(--f); }
+@keyframes atl-grow { from { transform: scaleX(0); } to { transform: none; } }
+:is(.ed, .pcard) .ed-sort { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 10px 0 6px; }
+:is(.ed, .pcard) .ed-sort span { font: 700 10.5px var(--f); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-right: auto; }
+:is(.ed, .pcard) .ed-sort button { border: 0; background: none; border-radius: 999px; padding: 3px 10px; font: 400 12.5px var(--f); color: var(--ink-2); cursor: pointer; }
+:is(.ed, .pcard) .ed-sort button.on { background: var(--app, var(--pc-acc)); color: #fff; font-weight: 700; }
+:is(.ed, .pcard) ul.ed-items { list-style: none; margin: 4px 0 8px; padding: 0; }
+:is(.ed, .pcard) ul.ed-items li button { display: grid; grid-template-columns: 1fr 14px; column-gap: 10px; align-items: center; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--rule); padding: 9px 0; font: inherit; color: var(--ink); cursor: pointer; }
+:is(.ed, .pcard) ul.ed-items .ed-in { font: 700 14px var(--f); } .ed ul.ed-items .ed-is { grid-column: 1; font: 400 12.5px/1.4 var(--f); color: var(--ink-3); font-variant-numeric: tabular-nums; margin-top: 2px; } .ed ul.ed-items i { grid-column: 2; grid-row: 1 / span 2; font-style: normal; color: var(--ink-3); }
+:is(.ed, .pcard) ul.ed-items li button:hover .ed-in { color: var(--app, var(--pc-acc)); }
+:is(.ed, .pcard) select { font: 400 13px var(--f); border: 1px solid var(--rule); border-radius: 999px; padding: 4px 26px 4px 12px; background-color: var(--solid); color: var(--ink); }
+:is(.ed, .pcard) .btn.sm, :is(.ed, .pcard) .ap-row .btn { border-radius: 999px; font: 400 13px var(--f); padding: 5px 13px; }
+:is(.ed, .pcard) p.ap-warn { border-radius: 8px; }
+:is(.ed, .pcard) .ed-ct { font: 700 14px var(--f); margin: 12px 0 4px; color: var(--ink); }
+:is(.ed, .pcard) .ed-sbody ol, :is(.ed, .pcard) .ed-sbody ul:not(.ed-items):not(.chips):not(.tabs) { list-style: none; padding: 0; margin: 4px 0 8px; counter-reset: edr; }
+:is(.ed, .pcard) .ed-sbody ol > li, :is(.ed, .pcard) .ed-sbody ul:not(.ed-items):not(.chips):not(.tabs) > li { counter-increment: edr; position: relative; padding: 8px 0 8px 30px; border-bottom: 1px solid var(--rule); font: 400 13.5px/1.4 var(--f); }
+:is(.ed, .pcard) .ed-sbody ol > li::before { content: counter(edr); position: absolute; left: 0; top: 9px; width: 22px; text-align: right; font: 400 12px var(--f); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+:is(.ed, .pcard) .ed-sbody ul:not(.ed-items):not(.chips):not(.tabs) > li { padding-left: 0; }
+:is(.ed, .pcard) .ed-sbody ol > li > a:first-child, :is(.ed, .pcard) .ed-sbody ol > li > b:first-child, :is(.ed, .pcard) .ed-sbody ol > li > button:first-child { font-weight: 700; color: var(--ink); text-decoration: none; }
+:is(.ed, .pcard) .srt-bar { margin: 10px 0 6px; gap: 4px; } .ed .srt-bar button { border: 0; background: none; color: var(--ink-2); padding: 3px 10px; font: 400 12.5px var(--f); }
+:is(.ed, .pcard) .srt-bar button.on { background: var(--app, var(--pc-acc)); color: #fff; border: 0; font-weight: 700; }
+:is(.ed, .pcard) .srt-bar::before { content: "Sort"; font: 700 10.5px var(--f); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-right: auto; }
+:is(.ed, .pcard) input[type=search], :is(.ed, .pcard) input[type=text] { font: 400 14px var(--f); border: 1px solid var(--rule); border-radius: 999px; padding: 6px 14px; background: var(--solid); color: var(--ink); }
+/* a list of buttons, each with a description: rows with a title, a grey line and › */
+:is(.ed, .pcard) .ed-sbody li:has(> button.btn:first-child) { display: grid; grid-template-columns: 1fr auto; column-gap: 8px; padding: 9px 0; }
+:is(.ed, .pcard) .ed-sbody li:has(> button.btn:first-child) > button.btn:first-child { grid-column: 1; justify-self: start; border: 0; background: none; padding: 0; font: 700 14px var(--f); color: var(--ink); border-radius: 0; text-align: left; cursor: pointer; }
+:is(.ed, .pcard) .ed-sbody li:has(> button.btn:first-child) > button.btn:first-child:hover { color: var(--app, var(--pc-acc)); }
+:is(.ed, .pcard) .ed-sbody li:has(> button.btn:first-child) > small { grid-column: 1; display: block; font: 400 12.5px/1.4 var(--f); color: var(--ink-3); margin-top: 2px; }
+:is(.ed, .pcard) .ed-sbody li:has(> button.btn:first-child) > button:not(:first-child) { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+:is(.ed, .pcard) .ed-sbody li:has(> button.btn:first-child)::after { content: "›"; grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--ink-3); }
+:is(.ed, .pcard) .ed-sbody li:has(> button.btn:first-child):has(> button:not(:first-child))::after { content: none; }
+:is(.ed, .pcard) .ed-sbody a:not(.btn):not([class*="pc-"]) { color: var(--ink); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+:is(.ed, .pcard) .ed-sbody a:not(.btn):hover { color: var(--app, var(--pc-acc)); text-decoration-color: currentColor; }
+.mgc-fig b { white-space: normal; overflow-wrap: anywhere; } .mgc-fig small { display: block; font: 400 11.5px/1.3 var(--f); color: var(--ink-2); }
+</style>
+<style id="tb-0131">
+/* 0.13.1: the time bar with several measures, clickable events, the range buttons */
+.tbx-dia { pointer-events: auto; padding: 0; cursor: pointer; z-index: 2; }
+.tbx-dia:hover, .tbx-dia:focus-visible { background: var(--app, #a07a12); border-color: var(--app, #a07a12); outline: none; transform: translateX(-50%) rotate(45deg) scale(1.35); }
+.tbx-slab { position: absolute; left: 0; font: italic 400 11px var(--f); color: var(--ink-3); pointer-events: none; white-space: nowrap; background: color-mix(in srgb, var(--solid) 80%, transparent); padding: 0 4px 0 0; z-index: 1; }
+.tbx-rng { display: inline-flex; gap: 4px; }
+.tbx-evp { position: absolute; bottom: calc(100% - 92px); width: min(380px, 70%); background: var(--solid); color: var(--ink); border: 1px solid var(--rule); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); padding: 12px 14px 10px; z-index: 5; font: 400 13px/1.45 var(--f); animation: atl-rise .22s var(--ease) both; }
+.tbx-evk, .tbx-evk2 { font: 700 10.5px var(--f); letter-spacing: .08em; text-transform: uppercase; color: var(--app, #a07a12); display: flex; align-items: center; gap: 8px; }
+.tbx-evk2 { color: var(--ink-3); margin-top: 8px; }
+.tbx-evt { display: block; font: 700 16px/1.25 var(--f); margin: 3px 24px 4px 0; }
+.tbx-evp p { margin: 0 0 4px; color: var(--ink-2); }
+.tbx-evp ul { list-style: none; margin: 4px 0; padding: 0; } .tbx-evp li { padding: 4px 0; border-top: 1px solid var(--rule); }
+.tbx-evp em { font-style: normal; font-weight: 700; color: var(--ink-3); white-space: nowrap; } .tbx-evp em.up { color: var(--up); } .tbx-evp em.down { color: var(--down); }
+.tbx-rel { font: 700 10px var(--f); letter-spacing: .06em; text-transform: uppercase; color: var(--app, #a07a12); border: 1px solid currentColor; border-radius: 8px; padding: 0 5px; margin-left: 4px; }
+.tbx-evn { font-style: italic; font-size: 12px; color: var(--ink-3) !important; }
+.tbx-eva { display: flex; align-items: center; gap: 12px; margin-top: 6px; } .tbx-eva a { color: var(--app, #a07a12); font-weight: 700; text-decoration: none; }
+.tbx-evx { position: absolute; top: 8px; right: 10px; border: 0; background: none; font: 400 18px var(--f); color: var(--ink-3); cursor: pointer; }
+</style>
 </head>
 <body>
 <div id="map"></div>
@@ -2315,34 +2389,34 @@ input.cmv-add { width: 130px; cursor: text; } input.cmv-add::placeholder { color
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=1300"></script>
+<script src="data/places_poi.js?v=1310"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=1300"></script>
-<script src="data/representation.js?v=1300"></script>
-<script src="data/trade.js?v=1300"></script>
-<script src="data/investment.js?v=1300"></script>
-<script src="data/industry.js?v=1300"></script>
-<script src="data/census.js?v=1300"></script>
-<script src="data/health_deaths.js?v=1300"></script>
-<script src="data/bd_economy.js?v=1300"></script>
-<script src="data/bd_census.js?v=1300"></script>
-<script src="data/spending.js?v=1300"></script>
-<script src="data/bd_health.js?v=1300"></script>
-<script src="data/people.js?v=1300"></script>
-<script src="data/bd_spending.js?v=1300"></script>
-<script src="data/bd_people.js?v=1300"></script>
-<script src="data/transport.js?v=1300"></script>
-<script src="data/economy.js?v=1300"></script>
-<script src="data/airports.js?v=1300"></script>
+<script src="data/money.js?v=1310"></script>
+<script src="data/representation.js?v=1310"></script>
+<script src="data/trade.js?v=1310"></script>
+<script src="data/investment.js?v=1310"></script>
+<script src="data/industry.js?v=1310"></script>
+<script src="data/census.js?v=1310"></script>
+<script src="data/health_deaths.js?v=1310"></script>
+<script src="data/bd_economy.js?v=1310"></script>
+<script src="data/bd_census.js?v=1310"></script>
+<script src="data/spending.js?v=1310"></script>
+<script src="data/bd_health.js?v=1310"></script>
+<script src="data/people.js?v=1310"></script>
+<script src="data/bd_spending.js?v=1310"></script>
+<script src="data/bd_people.js?v=1310"></script>
+<script src="data/transport.js?v=1310"></script>
+<script src="data/economy.js?v=1310"></script>
+<script src="data/airports.js?v=1310"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="data/environment.js?v=1300"></script>
-<script src="data/airquality.js?v=1300"></script>
-<script src="stats.js?v=1300"></script>
-<script src="psephology.js?v=1300"></script>
-<script src="charts.js?v=1300"></script>
-<script src="engine.js?v=1300"></script>
-<script src="xlsx.js?v=1300"></script>
+<script src="data/environment.js?v=1310"></script>
+<script src="data/airquality.js?v=1310"></script>
+<script src="stats.js?v=1310"></script>
+<script src="psephology.js?v=1310"></script>
+<script src="charts.js?v=1310"></script>
+<script src="engine.js?v=1310"></script>
+<script src="xlsx.js?v=1310"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -2352,26 +2426,26 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=1300"></script>
-<script src="apps.js?v=1300"></script>
-<script src="views/views.js?v=1300"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=1310"></script>
+<script src="apps.js?v=1310"></script>
+<script src="views/views.js?v=1310"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=1300"></script>
-<script src="money.js?v=1300"></script>
-<script src="trade.js?v=1300"></script>
-<script src="trade_story.js?v=1300"></script>
-<script src="narrative.js?v=1300"></script>
-<script src="panel.js?v=1300"></script>
-<script src="data/events.js?v=1300"></script>
-<script src="card.js?v=1300"></script>
-<script src="timebar.js?v=1300"></script>
-<script src="sort.js?v=1300"></script>
-<script src="rivers.js?v=1300"></script>
-<script src="shape.js?v=1300"></script>
-<script src="newsfor.js?v=1300"></script>
-<script src="menu.js?v=1300"></script>
-<script src="profile.js?v=1300"></script>
-<script src="devdesign.js?v=1300"></script>
-<script src="app.js?v=1300"></script>
+<script src="windows.js?v=1310"></script>
+<script src="money.js?v=1310"></script>
+<script src="trade.js?v=1310"></script>
+<script src="trade_story.js?v=1310"></script>
+<script src="narrative.js?v=1310"></script>
+<script src="panel.js?v=1310"></script>
+<script src="data/events.js?v=1310"></script>
+<script src="card.js?v=1310"></script>
+<script src="timebar.js?v=1310"></script>
+<script src="sort.js?v=1310"></script>
+<script src="rivers.js?v=1310"></script>
+<script src="shape.js?v=1310"></script>
+<script src="newsfor.js?v=1310"></script>
+<script src="menu.js?v=1310"></script>
+<script src="profile.js?v=1310"></script>
+<script src="devdesign.js?v=1310"></script>
+<script src="app.js?v=1310"></script>
 </body>
 </html>
