@@ -1801,7 +1801,7 @@
     map.addSource("trade-ports", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({ id: "trade-ports", type: "circle", source: "trade-ports", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["get", "v"], 1e8, 3, 1e10, 8, 1e11, 16], "circle-color": "#1f2a2e", "circle-opacity": 0.78, "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2 } }, bf);
   }
-  const TR_COL = { EU: "#2b6cb0", "Other Europe": "#7b4fa6", "North America": "#c0392b", "Latin America": "#e67e22", Asia: "#d4a017", Africa: "#2e8b57", Oceania: "#0f8b8d", Other: "#888888" };
+  const TR_COL = { EU: "#3f6596", "Other Europe": "#3d8aa1", "North America": "#8a5a9e", "Latin America": "#9c6b77", Asia: "#b06a35", Africa: "#6a62b0", Oceania: "#5c6f85", Other: "#7d868e" };   // 0.13: the category palette, as designed (no green, red or gold)
   function arc(a, b, n) { // great circle from a to b ([lon, lat]), n segments
     const r = Math.PI / 180, [l1, p1] = [a[0] * r, a[1] * r], [l2, p2] = [b[0] * r, b[1] * r];
     const d = 2 * Math.asin(Math.sqrt(Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin((l2 - l1) / 2) ** 2)); if (!d) return [a, b];
@@ -2331,9 +2331,9 @@
     if (!TRD) return ""; const f = m.id.endsWith("exp") ? "exp" : "imp", n = TRADE.code ? tradeNode(TRADE.code) : null;
     const ct = n ? n.ct[f] : Object.entries(TRD.cty).map(([c, o]) => [c, o[f]]).sort((a, b) => b[1] - a[1]).slice(0, 8), tot = n ? n[f] : TRD.tot[f];
     const po = n ? n.po[f] : Object.entries(TRD.ports).map(([p, o]) => [p, o[f]]).sort((a, b) => b[1] - a[1]).slice(0, 4), mx = ct.length ? ct[0][1] : 1;
-    return `<div class="trk"><div class="vsk-h">${TRADE.code ? `${esc(TRADE.code)} ${esc((n || {}).n || "")}` : "All goods"} · ${f === "exp" ? "exports" : "imports"} ${fmtGBP(tot || 0)} a year${TRADE.code ? ` <button class="lnk" data-trclear>show all goods</button>` : ""}</div>
-      ${(ct || []).slice(0, 6).map(([c, v]) => `<div class="mok-r"><span class="mok-w"><i class="sw" style="background:${TR_COL[(TRD.cty[c] || {}).rg] || "#888"}"></i>${esc((TRD.cty[c] || {}).n || c)}</span><span class="mok-bar"><i style="width:${(100 * v / mx).toFixed(1)}%;background:${TR_COL[(TRD.cty[c] || {}).rg] || "#888"}"></i></span><b>${fmtGBP(v)}</b><small>${tot ? pct1(100 * v / tot) : ""}</small></div>`).join("")}
-      <div class="note">Through ${(po || []).slice(0, 4).map(([p, v]) => `${esc((TRD.ports[p] || {}).n || p)} ${fmtGBP(v)}`).join(", ")}. ${esc(TRD.period ? "12 months to " + TRD.period[1].slice(2) + "/20" + TRD.period[1].slice(0, 2) : "")}, HMRC. Choose a product in Atlas Markets.</div></div>`;
+    return `<div class="trk"><p class="lg-sub">${TRADE.code ? `${esc(TRADE.code)} ${esc((n || {}).n || "")}` : "All goods"}, ${fmtGBP(tot || 0)} a year. Line width shows how much.${TRADE.code ? ` <button class="lnk" data-trclear>show all goods</button>` : ""}</p>
+      <details class="trk-more"><summary>Biggest partners and ports</summary>${(ct || []).slice(0, 6).map(([c, v]) => `<div class="mok-r"><span class="mok-w"><i class="sw" style="background:${TR_COL[(TRD.cty[c] || {}).rg] || "#888"}"></i>${esc((TRD.cty[c] || {}).n || c)}</span><span class="mok-bar"><i style="width:${(100 * v / mx).toFixed(1)}%;background:${TR_COL[(TRD.cty[c] || {}).rg] || "#888"}"></i></span><b>${fmtGBP(v)}</b><small>${tot ? pct1(100 * v / tot) : ""}</small></div>`).join("")}
+      <div class="note">Through ${(po || []).slice(0, 4).map(([p, v]) => `${esc((TRD.ports[p] || {}).n || p)} ${fmtGBP(v)}`).join(", ")}. ${esc(TRD.period ? "12 months to " + TRD.period[1].slice(2) + "/20" + TRD.period[1].slice(0, 2) : "")}, HMRC. Choose a product in Atlas Markets.</div></details></div>`;
   }
   function commuteLegend() {
     const f = state.focus && P[state.focus] && P[state.focus].level === "council" && CM ? state.focus : null;

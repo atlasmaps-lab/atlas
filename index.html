@@ -2185,6 +2185,12 @@ input.cmv-add { width: 130px; cursor: text; } input.cmv-add::placeholder { color
 #timebar:not(.tbx-open) #tcur { opacity: 0; pointer-events: none; }
 #timebar:not(.tbx-open) .tnote { display: none; }
 .tb-dlab { border: 0; background: none; font: 700 15px var(--f); color: var(--ink); cursor: text; white-space: nowrap; padding: 0 4px; }
+
+/* 0.13 (as designed): the key's sub line, and the partner list folded */
+.lg .lg-sub { font: italic 400 12px/1.4 var(--f); color: var(--ink-3); margin: 2px 0 6px; }
+.lg:has(> .trk) { display: flex; flex-direction: column; } .lg:has(> .trk) > h5 { order: -2; } .lg > .trk { display: contents; } .trk .lg-sub { order: -1; }
+.trk-more > summary { cursor: pointer; font: 400 12px var(--f); color: var(--ink-2); list-style: none; padding: 4px 0; } .trk-more > summary::before { content: "› "; color: var(--app, #a07a12); }
+.trk-more[open] > summary::before { content: "⌄ "; }
 </style>
 <link rel="stylesheet" href="fonts.css?v=1300">
 <script src="theme.js?v=1300"></script>
