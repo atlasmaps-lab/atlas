@@ -2757,9 +2757,16 @@
   if (window.ResizeObserver) new ResizeObserver(() => renderMarks()).observe($("marks"));
   // 0.13: the time bar's expanded form and its nine other styles (timebar.js) read the date, range and what's on the map from here
   if (window.AtlasTimebar) AtlasTimebar.init({ lo: viewLo, hi: viewHi, date: () => state.date, set: d => { stopPlay(); setDate(d); }, play: () => playBtn.click(), playing: () => !!state.playing, monthIdx, fromMonthIdx,
-    measure: () => { const N = window.AtlasNarrative; if (!N) return null; const m = curPlan.notes.filter(n => n.ch).map(n => M[n.id]).find(x => x && x.temporal !== "static" && x.temporal !== "event" && x.nature !== "text"); if (!m) return null;
-      const code = state.focus && P[state.focus] ? state.focus : UKC; let pts = []; try { pts = N.series(m, code) || []; } catch (e) {}
-      return { label: m.label, fmt: N.fmtOf(m), pts, annual: m.temporal === "annual", where: code === UKC ? "the UK" : nameOf(code), topics: window.AtlasCard ? AtlasCard.topicsOf(m.id, m.label, m.group, m.p) : [] }; } });
+    // 0.13: the strip always has bars: the first mapped measure with a history (at the focused place, else the UK); trade lines
+    // fall back to UK goods exports; otherwise the app's first measure with a UK history
+    measure: () => { const N = window.AtlasNarrative; if (!N) return null; const code = state.focus && P[state.focus] ? state.focus : UKC;
+      const ser = (m, c) => { try { return (N.series(m, c) || []).filter(p => p[1] != null && isFinite(p[1])); } catch (e) { return []; } };
+      const pack = (m, c, pts) => ({ label: m.label, fmt: N.fmtOf(m), pts, annual: m.temporal === "annual", where: c === UKC ? "the UK" : nameOf(c), topics: window.AtlasCard ? AtlasCard.topicsOf(m.id, m.label, m.group, m.p) : [] });
+      const ok = x => x && x.temporal !== "static" && x.temporal !== "event" && x.nature !== "text" && EN.isNum(x);
+      for (const m of planMetrics().filter(ok)) { for (const c of [code, UKC]) { const pts = ser(m, c); if (pts.length >= 3) return pack(m, c, pts); } }
+      const T = window.ATLAS_TRADE; if (T && T.months && (curPlan.lines || []).some(m => /^trade_routes/.test(m.id))) { const y = {}; T.months.exp.forEach(([k, v]) => { const Y = 2000 + +k.slice(0, 2); y[Y] = (y[Y] || 0) + v; }); const pts = Object.keys(y).map(Number).sort().map(Y => [Y, y[Y]]); if (pts.length >= 3) return { label: "UK goods exports", fmt: fmtGBP, pts, annual: true, where: "the UK", topics: ["trade"] }; }
+      for (const m of METRICS.filter(x => ok(x) && (!APP || x.p === APP.perspective))) { const pts = ser(m, UKC); if (pts.length >= 3) return pack(m, UKC, pts); }
+      return null; } });
   function renderTNote() {
     const ms = curPlan.notes.filter(n => n.ch).map(n => M[n.id]), note = $("tnote"), bits = [];
     if (!isNow()) bits.push(`Showing ${longDate(state.date)}`);
@@ -4636,10 +4643,14 @@
         const verdict = r == null ? "There aren't enough places to tell." : a < 0.1 ? `No: across ${unit}, ${lx0} and ${ly0} hardly move together.` : `${a >= 0.5 ? "Yes, clearly" : a >= 0.3 ? "Yes, moderately" : "Only weakly"}. Where ${lx0} is higher, ${ly0} tends to be ${up ? "higher" : "lower"} too.`;
         const sure = p0 == null ? "Too few places to judge." : p0 < 0.001 ? `Very sure it isn't chance: a link this strong across ${P1.n} ${unit} would almost never appear by luck (${ST.pText(p0)}).` : p0 < 0.05 ? `Fairly sure it isn't chance (${ST.pText(p0)}), though a link this size leaves much unexplained.` : `Not sure: a link like this could easily be chance across ${P1.n} ${unit} (${ST.pText(p0)}).`;
         const res = codes.map((c, i) => [c, fit.residuals[i]]).filter(z => z[1] != null && isFinite(z[1])).sort((u, v) => v[1] - u[1]), brk = res.slice(0, 3).concat(res.slice(-3).reverse());
-        out.html = `<div class="an-answer"><div class="an-q">${esc(AN_Q.rel)}</div><p class="an-a">${esc(verdict)}</p></div>` + out.html +
-          `<div class="an-boxes"><div class="an-box"><b>How sure?</b><p>${esc(sure)} ${fit.r2 != null ? `${esc(ms[0].label)} accounts for about ${Math.round(100 * fit.r2)}% of the differences in ${esc(ly0)} between ${esc(unit)}.` : ""}</p></div>
-          <div class="an-box"><b>What it does not say</b><p>It compares ${esc(unit)}, not people: it doesn't show that the same people are behind both. A link is not a cause; a third thing (income, age, place) may drive both. Next, ask "What still matters once others are held fixed?"</p></div>
-          <div class="an-box"><b>Places that break the pattern</b><p>${brk.map((z, k) => `<a data-go="${z[0]}" data-anpk="${z[0]}">${esc(nameOf(z[0]))}</a> <small>${k < 3 ? "higher" : "lower"} than expected by ${esc(f1(Math.abs(z[1])))}</small>`).join("<br>")}</p></div></div>`;
+        const sc = CH.scatter(pts, { w: Math.round(w * 0.6), h: Math.round(w * 0.42), xtitle: ms[0].label, ytitle: ms[1].label, xfmt: f0, yfmt: f1, fit: { slope: fit.slope, intercept: fit.intercept }, logx: lx, logy: ly });
+        const kn = [[r == null ? "—" : r.toFixed(2), `Correlation (${differ ? "by rank" : "Pearson"})${differ ? "" : `; ${S.r == null ? "—" : S.r.toFixed(2)} by rank too`}`], [fit.r2 == null ? "—" : fit.r2.toFixed(2), "Share of the differences it accounts for (R²)"], [`${fit.slope >= 0 ? "+" : "−"}${f1(Math.abs(fit.slope))}`, `${ly0} per one more ${String(f0(1)).replace(/^[£$]?1(\.0+)?\s*/, "") || "unit"} of ${lx0}`], [p0 == null ? "—" : p0 < 0.001 ? "p < 0.001" : "p = " + p0.toFixed(3), "Chance of a link this strong by luck"]];
+        out.html = `<div class="an-kick">Relationship<span class="vr"></span>${P1.n} ${esc(unit)}</div><div class="an-answer"><div class="an-q">${esc(AN_Q.rel)}</div><p class="an-a">${esc(verdict)}${fit.r2 != null ? ` ${esc(lx0.charAt(0).toUpperCase() + lx0.slice(1))} accounts for about ${Math.round(100 * fit.r2)}% of the differences between ${esc(unit)}.` : ""}</p></div>
+          <div class="an-rel"><div class="an-sc">${sc}</div><div class="an-rside"><div class="an-kn">${kn.map(([v, l]) => `<div><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join("")}</div>
+            <div class="an-box an-brk"><b>Places that break the pattern</b><ul>${brk.map((z, k) => `<li><a data-go="${z[0]}" data-anpk="${z[0]}">${esc(nameOf(z[0]))}</a><span class="${k < 3 ? "up" : "down"}">${k < 3 ? "+" : "−"}${esc(f1(Math.abs(z[1])))}</span></li>`).join("")}</ul></div></div></div>
+          <div class="an-boxes"><div class="an-box"><b>How sure?</b><p>${esc(sure)}</p></div>
+          <div class="an-box"><b>What it does not say</b><p>It compares ${esc(unit)}, not people: it doesn't show that the same people are behind both. A link is not a cause; a third thing (income, age, place) may drive both. Next, ask "What still matters once others are held fixed?"</p></div></div>
+          <details class="an-full"><summary>The numbers in full ›</summary>${out.html.replace(/<svg class="ach[\s\S]*?<\/svg>/, "")}</details>`;
       }
       return out;
     }
@@ -4822,20 +4833,23 @@
              <div class="an-row"><b>Places</b><span class="an-pl">${placeSearch("an", "Search for places to analyse…")}${AN.within === "custom" ? `<span class="chips">${AN.custom.map(c => `<span class="chip">${esc(nameOf(c))}<button data-anrmp="${c}" aria-label="Remove">×</button></span>`).join("")}${AN.custom.length ? `<button class="lnk" data-anrmall>clear</button>` : ""}</span>` : ""}</span></div>`}
         <div class="an-row"><b>Date</b><span class="muted">${esc(longDate(state.date))} (time bar)</span></div>
         <div class="an-step"><span>2</span>Measures</div>
-        <div class="an-metrics"><div class="an-mh">Metrics <small>${AN.metrics.length} chosen</small>${AN.metrics.length ? `<button class="btn" data-anclear>Clear</button>` : ""}</div>${pers}</div>
-      </div><div class="an-main">
+        <div class="an-mchips">${AN.metrics.map(id => M[id] ? `<span class="an-mchip">✓ ${esc(M[id].label)}<button type="button" data-anmrm="${id}" aria-label="Take ${esc(M[id].label)} off">×</button></span>${M[id].pick && picker(M[id]) && !(AN.pickOpen) ? `<div class="an-pick"><span>Choose</span>${picker(M[id])}</div>` : ""}` : "").join("")}<button type="button" class="an-madd" data-anmadd aria-expanded="${!!AN.pickOpen || !AN.metrics.length}">+ Add a measure</button>${AN.metrics.length ? `<button type="button" class="an-mclear" data-anclear>Clear</button>` : ""}</div>
+        ${AN.pickOpen || !AN.metrics.length ? `<div class="an-metrics">${pers}</div>` : ""}
         <div class="an-step"><span>3</span>What do you want to know?</div>
-        ${AN.metrics.length ? `<div class="an-methods an-qs">${methods.map(([id, l, ok, why], i) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" style="--i:${i}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}><b>${esc(AN_Q[id] || l)}</b><i>${esc(l)}</i>${ok ? "" : `<small>${esc(why)}</small>`}</button>`).join("")}</div>${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")} ${helpBtn("m-" + AN.method, "Help: what this method needs and assumes")}</p>` : `<p class="anwhy">No method suits this choice yet. ${methods.filter(m => !m[2]).slice(0, 3).map(([id, l, , why]) => `<button class="linkish" data-help="m-${id}">${esc(l)}: ${esc(why)}</button>`).join(" · ")}</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
+        ${AN.metrics.length ? `<div class="an-methods an-qs">${methods.map(([id, l, ok, why], i) => `<button class="${id === AN.method ? "on" : ""}${ok ? "" : " no"}" style="--i:${i}" data-anmethod="${id}" ${ok ? "" : `aria-disabled="true" title="${esc(why)}"`}><b>${esc(AN_Q[id] || l)}</b><i>${esc(l)}</i>${ok ? "" : `<small>${esc(why)}</small>`}</button>`).join("")}</div>` : `<p class="muted an-qwait">Add a measure first.</p>`}
+      </div><div class="an-main">
+        <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
+        ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>☆ Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Put it on the map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy the data</button>` : ""}</div>` : ""}
+        <div class="an-more">
+        ${AN.metrics.length ? `${AN.method ? `<p class="anwhy"><b>Method:</b> ${esc(METHOD_WHY[AN.method] || "")} ${helpBtn("m-" + AN.method, "Help: what this method needs and assumes")}</p>` : `<p class="anwhy">No method suits this choice yet. ${methods.filter(m => !m[2]).slice(0, 3).map(([id, l, , why]) => `<button class="linkish" data-help="m-${id}">${esc(l)}: ${esc(why)}</button>`).join(" · ")}</p>`}` : `<div class="aempty">Tick one or more metrics on the left. One metric: its distribution and spatial pattern. Two: their relationship. Three or more: patterns across all of them (matrix, regression, components, clusters, unusual places).</div>`}
         ${AN.method === "rel" ? `<label class="anpick">Split by a category <select data-ansplit><option value="">none</option>${anCats().map(m => `<option value="${m.id}" ${AN.split === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : ""}
         <div class="an-ctlbox">${ctlBoxHTML(cfg)}</div>
-        <div class="an-ex">${explainHTML(cfg)}</div>
-        <div class="an-res">${res ? (res.trim || "") + res.html : ""}</div>
-        ${res && res.title ? `<div class="an-acts"><button class="btn primary" data-anws>Send to workspace</button>${res.map ? `<button class="btn" data-anmap>Put it on the map</button>` : ""}${res.csv ? `<button class="btn" data-ancsv>Copy data (CSV)</button>` : ""}</div>` : ""}
+        <div class="an-ex">${explainHTML(cfg)}</div></div>
       </div></div>`;
     addFctl(anEl); anEl._last = res;
   }
   // o.from: the window it was opened from (e.g. Compare): Analyse opens above it, with a way back
-  function openAnalyse(o) { o = o || {}; closeMenu(); closePMenu(); if (o.metrics) AN.metrics = o.metrics.filter(id => M[id] && EN.isNum(M[id])); if (o.level) AN.level = o.level; WM.open(anEl, { parent: o.from }); renderAnalyse(); }
+  function openAnalyse(o) { o = o || {}; closeMenu(); closePMenu(); if (o.metrics) AN.metrics = o.metrics.filter(id => M[id] && EN.isNum(M[id])); if (o.level) AN.level = o.level; WM.open(anEl, { parent: o.from }); if (!AN.docked) { const top = (WM.TOPNOW ? WM.TOPNOW() : 70) + 8; WM.place(anEl, { x: 16, y: top, w: Math.max(360, innerWidth - 32), h: Math.max(300, innerHeight - top - 16) }); } renderAnalyse(); }   // 0.13: a sheet over the map, as designed
   function closeAnalyse() { if (AN.docked) { AN.docked = false; anEl.classList.remove("an-docked"); } return WM.close(anEl); }
   // 0.13: Put it on the map: the sheet shrinks to a 420 px side panel so the map shows; "Back to the full result" restores it
   function anDock(on) {
@@ -4855,6 +4869,8 @@
     if (ds.anmethod && b.getAttribute("aria-disabled") === "true") { undoToast(`${AN_BY[ds.anmethod].label}: ${b.title}.`, () => {}); const t = $("toast"), u = $("undo-btn"); if (u) { u.textContent = "What it needs"; u.onclick = () => { t.hidden = true; openHelp("help-m-" + ds.anmethod); }; } return; }
     if (ds.antrim) AN.trim = ds.antrim === "1"; else if (ds.anmode) AN.mode = ds.anmode; else if (ds.anmethod) AN.method = ds.anmethod; else if (ds.ancorr) AN.corr = ds.ancorr;
     else if (b.hasAttribute("data-anclear")) AN.metrics = [];
+    else if (b.hasAttribute("data-anmadd")) AN.pickOpen = !AN.pickOpen;
+    else if (ds.anmrm) AN.metrics = AN.metrics.filter(x => x !== ds.anmrm);
     else if (ds.anctladd) { AN.controls = (AN.controls || []).filter(x => x !== ds.anctladd).concat(ds.anctladd); }   // 0.11: Control for
     else if (ds.anctlrm) AN.controls = (AN.controls || []).filter(x => x !== ds.anctlrm);
     else if (b.hasAttribute("data-anctlclear")) AN.controls = [];

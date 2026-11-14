@@ -71,13 +71,15 @@
     const ticks = Array.from({ length: M.NY }, (_, y) => y).filter(y => M.NY <= 14 || y % Math.ceil(M.NY / 12) === 0 || y === M.NY - 1).map(y => `<span class="tbx-yr${M.yearOf(M.cur) === M.Y0 + y ? " here" : ""}" style="left:${pc(M, Math.max(0, (M.Y0 + y) * 12 + 6 - M.m0))}%">${M.NY > 20 ? "'" + String(M.Y0 + y).slice(2) : M.Y0 + y}</span>`).join("");
     pop.querySelector(".tbx-strip").innerHTML = `${cols}${dia}<i class="tbx-line" style="left:${pc(M, M.cur)}%"></i><span class="tbx-bub" style="left:${pc(M, M.cur)}%;transform:translateX(${M.cur / M.N > .82 ? "-100%" : M.cur / M.N < .12 ? "0" : "-50%"})">${esc(lab)}</span>${ticks}`;
     pop.querySelector(".tbx-cap").textContent = caption(M);
+    { const ms = A.measure && A.measure(), ml = pop.querySelector(".tbx-mlab"), pl = pop.querySelector(".tbx-play"); if (ml) ml.textContent = ms ? `${ms.where === "the UK" ? "UK" : ms.where} ${ms.label.charAt(0).toLowerCase() + ms.label.slice(1)}` : ""; if (pl) pl.textContent = A.playing && A.playing() ? "❚❚" : "▶"; }
     pop.querySelectorAll("[data-tbwin]").forEach(b => b.classList.toggle("on", +b.dataset.tbwin === S.evWin));
     const back = pop.querySelector("[data-tblatest2]"); if (back) back.hidden = M.cur === M.N - 1;
   }
   function buildExpanded() {
     const pop = document.getElementById("tb-pop"); if (!pop || pop._built) return; pop._built = true;
     const steps = document.getElementById("steps"), full = document.getElementById("tb-full");
-    pop.innerHTML = `<div class="tbx-ev"></div><div class="tbx-strip" role="slider" aria-label="Drag to any month" tabindex="0"></div><p class="tbx-cap"></p>
+    pop.innerHTML = `<div class="tbx-top"><div class="tbx-ev"></div><span class="tbx-mlab"></span><button type="button" class="tbx-fold" data-tbfold aria-label="Fold the time bar" title="Fold the time bar">⌄</button></div>
+      <div class="tbx-row"><button type="button" class="tbx-play" data-tbplay aria-label="Play through time">▶</button><div class="tbx-strip" role="slider" aria-label="Drag to any month" tabindex="0"></div></div><p class="tbx-cap"></p>
       <div class="tbx-opt"><span class="tbx-ol">Step</span><span class="tbx-steps"></span><span class="vr"></span><span class="tbx-ol">Range</span><span class="tbx-full"></span><span class="vr"></span><span class="tbx-ol">Events counted</span>${[[1, "1y"], [5, "5y"], [10, "10y"], [0, "All"]].map(([n, l]) => `<button type="button" class="tbx-o" data-tbwin="${n}">${l}</button>`).join("")}<span style="flex:1"></span><button type="button" class="tbx-back" data-tblatest2>Back to latest ›</button></div>`;
     if (steps) { pop.querySelector(".tbx-steps").appendChild(steps); if (!steps.querySelector('[data-step="0"]')) steps.insertAdjacentHTML("afterbegin", '<button data-step="0">1 month</button>'); }
     if (full) { pop.querySelector(".tbx-full").appendChild(full); }
@@ -138,6 +140,8 @@
   let playT = 0;
   function onClick(e) {
     const b = e.target.closest("button"); if (!b) return; const M = model();
+    if (b.hasAttribute("data-tbfold")) { const more = document.getElementById("tb-more"); if (more) more.click(); return; }
+    if (b.hasAttribute("data-tbplay")) { A.play(); setTimeout(update, 50); return; }
     if (b.dataset.tbevgo != null) { S.ev = +b.dataset.tbevgo; M.go(M.evs[S.ev].k); update(); return; }
     if (b.dataset.tbev) return stepEv(+b.dataset.tbev);
     if (b.hasAttribute("data-tblatest") || b.hasAttribute("data-tblatest2")) { S.ev = -1; M.go(M.N - 1); return; }

@@ -36,7 +36,7 @@ def main():
         rep.check("imd 2025" not in t, "acronyms keep their capitals")
         rep.check(js(f"() => [...{A}.querySelectorAll('.an-acts button')].some(b => /Put it on the map/.test(b.textContent))"), "the outcome beyond what the controls predict can go on the map")
         js(f"() => {{ const s = {A}.querySelector('[data-antest]'); s.value = s.options[0].value; s.dispatchEvent(new Event('change', {{ bubbles: true }})); }}"); page.wait_for_timeout(800)
-        head = js(f"() => {A}.querySelector('.ex-t thead') ? {A}.querySelector('.ex-t thead').innerText : ''")
+        head = js(f"() => {A}.querySelector('.an-ex .ex-t thead') ? {A}.querySelector('.an-ex .ex-t thead').innerText : ''")
         rep.check("3 factors fixed" in head, f"“What goes with” holds the chosen controls fixed too ({head!r})")
         js("() => localStorage.getItem('atlas-16-an')")
         rep.check(js("() => (JSON.parse(localStorage.getItem('atlas-16-an')).controls || []).length === 3"), "the controls are remembered")
