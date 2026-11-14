@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atlas 0.12.1 · UK</title>
+<title>Atlas 0.13 · UK</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&amp;display=swap">
@@ -516,7 +516,7 @@ body.focused #legend:hover { opacity: 1; z-index: 5; }
 .tb-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; }
 .tb-slider { display: grid; grid-template-columns: 1fr 52px; gap: 0 8px; align-items: center; font-size: 12.5px; }
 /* 0.13 · the Toolbox: five sections, closed until clicked */
-#tools { width: 420px; box-sizing: border-box; max-width: calc(100vw - 24px); padding: 0 !important; }
+#tools { width: 420px; box-sizing: border-box; max-width: calc(100vw - 24px); padding: 0 !important; background: var(--solid); }
 .tbx-h { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px 10px; border-bottom: 1px solid var(--rule); }
 .tbx-h b { font-size: 16px; } .tbx-h i { font-size: 12.5px; color: var(--ink-3); }
 .tbx-sec { border-bottom: 1px solid var(--rule); animation: atl-rise .3s var(--ease) both; animation-delay: calc(var(--i, 0) * 45ms); }
@@ -1953,9 +1953,9 @@ svg.heat rect.cell.pick { cursor: pointer; } svg.heat rect.cell.pick:hover { str
 .ed .ed-figs b { white-space: nowrap; font-size: clamp(16px, 4.5cqw, 24px); }
 .wm-body { container-type: inline-size; }
 </style>
-<link rel="stylesheet" href="fonts.css?v=1230">
-<script src="theme.js?v=1230"></script>
-<script src="theme-apply.js?v=1230"></script>
+<link rel="stylesheet" href="fonts.css?v=1300">
+<script src="theme.js?v=1300"></script>
+<script src="theme-apply.js?v=1300"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -2076,34 +2076,34 @@ svg.heat rect.cell.pick { cursor: pointer; } svg.heat rect.cell.pick:hover { str
 <script src="data/local.js"></script>
 <script src="data/polls.js"></script>
 <script src="data/news.js"></script>
-<script src="data/places_poi.js?v=1230"></script>
+<script src="data/places_poi.js?v=1300"></script>
 <script src="data/context.js"></script>
-<script src="data/money.js?v=1230"></script>
-<script src="data/representation.js?v=1230"></script>
-<script src="data/trade.js?v=1230"></script>
-<script src="data/investment.js?v=1230"></script>
-<script src="data/industry.js?v=1230"></script>
-<script src="data/census.js?v=1230"></script>
-<script src="data/health_deaths.js?v=1230"></script>
-<script src="data/bd_economy.js?v=1230"></script>
-<script src="data/bd_census.js?v=1230"></script>
-<script src="data/spending.js?v=1230"></script>
-<script src="data/bd_health.js?v=1230"></script>
-<script src="data/people.js?v=1230"></script>
-<script src="data/bd_spending.js?v=1230"></script>
-<script src="data/bd_people.js?v=1230"></script>
-<script src="data/transport.js?v=1230"></script>
-<script src="data/economy.js?v=1230"></script>
-<script src="data/airports.js?v=1230"></script>
+<script src="data/money.js?v=1300"></script>
+<script src="data/representation.js?v=1300"></script>
+<script src="data/trade.js?v=1300"></script>
+<script src="data/investment.js?v=1300"></script>
+<script src="data/industry.js?v=1300"></script>
+<script src="data/census.js?v=1300"></script>
+<script src="data/health_deaths.js?v=1300"></script>
+<script src="data/bd_economy.js?v=1300"></script>
+<script src="data/bd_census.js?v=1300"></script>
+<script src="data/spending.js?v=1300"></script>
+<script src="data/bd_health.js?v=1300"></script>
+<script src="data/people.js?v=1300"></script>
+<script src="data/bd_spending.js?v=1300"></script>
+<script src="data/bd_people.js?v=1300"></script>
+<script src="data/transport.js?v=1300"></script>
+<script src="data/economy.js?v=1300"></script>
+<script src="data/airports.js?v=1300"></script>
 <script src="data/extra.js"></script>
 <script src="data/extra_wards.js"></script>
-<script src="data/environment.js?v=1230"></script>
-<script src="data/airquality.js?v=1230"></script>
-<script src="stats.js?v=1230"></script>
-<script src="psephology.js?v=1230"></script>
-<script src="charts.js?v=1230"></script>
-<script src="engine.js?v=1230"></script>
-<script src="xlsx.js?v=1230"></script>
+<script src="data/environment.js?v=1300"></script>
+<script src="data/airquality.js?v=1300"></script>
+<script src="stats.js?v=1300"></script>
+<script src="psephology.js?v=1300"></script>
+<script src="charts.js?v=1300"></script>
+<script src="engine.js?v=1300"></script>
+<script src="xlsx.js?v=1300"></script>
 <script src="data/edits.js"></script>
 <script>
 /* Opened straight from inside a zip (Windows allows this)? Then none of the other files are there: say so. */
@@ -2113,26 +2113,26 @@ if (!window.maplibregl || !window.ATLAS_UK || !window.ATLAS_UK_GEO) document.add
   document.body.appendChild(d);
 });
 </script>
-<script src="help.js?v=1230"></script>
-<script src="apps.js?v=1230"></script>
-<script src="views/views.js?v=1230"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
+<script src="help.js?v=1300"></script>
+<script src="apps.js?v=1300"></script>
+<script src="views/views.js?v=1300"></script>   <!-- every view: views/<id>/ (see views/views.js) -->
 <script src="data/prices.js"></script>
-<script src="windows.js?v=1230"></script>
-<script src="money.js?v=1230"></script>
-<script src="trade.js?v=1230"></script>
-<script src="trade_story.js?v=1230"></script>
-<script src="narrative.js?v=1230"></script>
-<script src="panel.js?v=1230"></script>
-<script src="data/events.js?v=1230"></script>
-<script src="card.js?v=1230"></script>
-<script src="timebar.js?v=1230"></script>
-<script src="sort.js?v=1230"></script>
-<script src="rivers.js?v=1230"></script>
-<script src="shape.js?v=1230"></script>
+<script src="windows.js?v=1300"></script>
+<script src="money.js?v=1300"></script>
+<script src="trade.js?v=1300"></script>
+<script src="trade_story.js?v=1300"></script>
+<script src="narrative.js?v=1300"></script>
+<script src="panel.js?v=1300"></script>
+<script src="data/events.js?v=1300"></script>
+<script src="card.js?v=1300"></script>
+<script src="timebar.js?v=1300"></script>
+<script src="sort.js?v=1300"></script>
+<script src="rivers.js?v=1300"></script>
+<script src="shape.js?v=1300"></script>
 <script src="newsfor.js?v=1300"></script>
-<script src="menu.js?v=1230"></script>
-<script src="profile.js?v=1230"></script>
-<script src="devdesign.js?v=1230"></script>
-<script src="app.js?v=1230"></script>
+<script src="menu.js?v=1300"></script>
+<script src="profile.js?v=1300"></script>
+<script src="devdesign.js?v=1300"></script>
+<script src="app.js?v=1300"></script>
 </body>
 </html>

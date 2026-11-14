@@ -3867,7 +3867,7 @@
       <div class="tb-foot"><button class="btn" data-treset>Reset to defaults</button><span>All sliders run from 0 to 1.</span></div>`]].filter(Boolean);
     tbMenu.innerHTML = `<div class="tbx-h"><b>Toolbox</b><i>Your choices follow you between apps.</i></div>` + secs.map(([k, l, sum, body], n) => `<section class="tbx-sec${TBOPEN.has(k) ? " on" : ""}" style="--i:${n}"><button type="button" class="tbx-sh" data-tbsec="${k}" aria-expanded="${TBOPEN.has(k)}"><span>${esc(l)}</span><i>${esc(sum)}</i><b class="mgc-arr" aria-hidden="true">›</b></button>${TBOPEN.has(k) ? `<div class="tbx-sb">${body}</div>` : ""}</section>`).join("");
   }
-  function toggleTools(force) { const open = force != null ? force : tbMenu.hidden; tbMenu.hidden = !open; tbBtn.setAttribute("aria-expanded", String(open)); if (open) { closeMenu(); renderTools(); } }
+  function toggleTools(force) { const open = force != null ? force : tbMenu.hidden; tbMenu.hidden = !open; tbBtn.setAttribute("aria-expanded", String(open)); if (open) { closeMenu(); renderTools(); const r = tbBtn.getBoundingClientRect(); if (r.width) { tbMenu.style.left = Math.max(12, Math.min(innerWidth - tbMenu.offsetWidth - 12, r.right - tbMenu.offsetWidth)) + "px"; tbMenu.style.right = "auto"; tbMenu.style.top = (r.bottom + 6) + "px"; } } }   // 0.13: drops down from its button
   tbBtn.addEventListener("click", () => toggleTools());
   $("open-tools").addEventListener("click", () => toggleTools(true));
   tbMenu.addEventListener("click", e => {
@@ -5616,7 +5616,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.12.1</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.13</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));

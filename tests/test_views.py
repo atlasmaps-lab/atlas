@@ -26,7 +26,7 @@ def main():
             js = page.evaluate; page.wait_for_timeout(800)
             links = js("() => [...document.querySelectorAll('link[data-view]')].map(l => l.dataset.view)")
             rep.check(links and all(x == v for x in links), f"{v}: only its own view.css is loaded ({links})")
-            rep.check(js("() => document.body.classList.contains('appmode') && document.querySelectorAll('#appbar [data-apanel]').length > 0"), f"{v}: opens as its own view with its panels")
+            rep.check(js("() => document.body.classList.contains('appmode') && document.querySelectorAll('#appbar [data-agroup], #appbar [data-apanel]').length > 0"), f"{v}: opens as its own view with its panels (0.13: headings are groups)")
             rep.check(not page.errors, f"{v}: no console errors" + (f" ({page.errors[:2]})" if page.errors else ""))
             page.context.close()
     rep.done()
