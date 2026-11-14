@@ -1,6 +1,6 @@
 # CLAUDE.md — Atlas
 
-Read this whole file before you change anything. It says what Atlas is, how the code fits together, the rules for working in it, the design principles agreed with Mo, and what is left to do. Written from `main` at commit `8e9a984` (14 Nov 2026, "Merge pull request #31 from atlasmaps-lab/mo/0.13"), which is **Atlas 0.13.1**. Where this file and Ruben's handover brief once disagreed, the brief won.
+Read this whole file before you change anything. It says what Atlas is, how the code fits together, the rules for working in it, the design principles agreed with Mo, and what is left to do. Written from `main` at commit `8e9a984` (14 Nov 2026, "Merge pull request #31 from atlasmaps-lab/mo/0.13"), which is **Atlas 0.13.1**. It follows Mo's handover brief; where the two once disagreed, the brief won.
 
 ## 1. What Atlas is
 
@@ -70,7 +70,7 @@ docs/             perspective-apps.md, perspective-research.md, flights-proxy.md
 
 ## 4. Rules
 
-1. **Git.** Branch from an up-to-date `origin/main` and name the branch `ruben/<topic>`. Never commit to `main`. Commit with clear one-line messages. Locally, Ruben pushes with GitHub Desktop; in a Claude Code cloud session, push to the session's `ruben/<topic>` branch (the container is thrown away, so unpushed work is lost).
+1. **Git.** Branch from an up-to-date `origin/main` and name the branch `ruben/<topic>`. Never commit to `main`. Commit with clear one-line messages. Don't push: Ruben pushes with GitHub Desktop.
 2. **Prefer working inside a view folder.** Core changes (`app.js`, `index.html`, `panel.js`, `card.js`, `timebar.js`, `menu.js`, `engine.js`, `data/`, a new `ctx` function) go in small separate commits titled `core: …`, and Ruben tells Mo about them.
 3. **Cache numbers.** After editing any JS or CSS, raise every `?v=` in `index.html` and `V` in `views/views.js` together.
 4. **Fix patterns, not examples.** When Ruben points at one panel or card, assume the problem is everywhere: fix it in the shared code so it reaches every app, panel and card, then check all apps.
