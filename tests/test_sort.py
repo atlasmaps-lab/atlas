@@ -2,7 +2,7 @@
 Atlas 0.12: every table and list of figures sorts high→low and low→high.   python tests/test_sort.py
 
 Tables with headings: click a heading (numbers go highest first, click again for lowest first). Tables without headings
-and lists of figures get a Sort switch (High→low, Low→high, As shown). Columns of places in the menus have ↓ ↑.
+and lists of figures get a Sort switch (Largest first, Smallest first, A–Z, As shown). Columns of places in the menus have ↓ ↑.
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -36,10 +36,10 @@ def main():
         js("() => document.querySelector('#srt-probe [data-srt=orig]').click()"); page.wait_for_timeout(100)
         rep.check(js("() => [...document.querySelectorAll('#srt-probe td:first-child')].map(x => x.textContent).join('')") == "abcd", "As shown puts it back")
         # menu columns
-        page.click("#appbar [data-apanel=money]"); page.wait_for_timeout(400)
-        rep.check(js("() => !!document.querySelector('#mega .mg-sort [data-msort]')"), "the Parties column has ↓ ↑")
-        js("() => document.querySelector('#mega .mg-sort [data-msort$=\"|asc\"]').click()"); page.wait_for_timeout(200)
-        first = js("() => document.querySelector('#mega .mg-items[data-depth=\"0\"] .mg-l').textContent")
+        js("() => AtlasMenu.openAt('money', 'Parties', [])"); page.wait_for_timeout(400)
+        rep.check(js("() => !!document.querySelector('#mega .mgc-sorts [data-msort]')"), "the Parties list has Largest first, Smallest first, A–Z")
+        js("() => document.querySelector('#mega .mgc-sorts [data-msort$=\"|asc\"]').click()"); page.wait_for_timeout(200)
+        first = js("() => document.querySelector('#mega .mgc-detail .mg-l').textContent")
         rep.check(first not in ("Conservative", "Labour"), f"…lowest first puts a small party at the top ({first})")
         page.keyboard.press("Escape")
         rep.check(not [e for e in page.errors if "favicon" not in e], f"no errors ({page.errors[:2]})")

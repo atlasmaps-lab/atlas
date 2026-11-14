@@ -40,6 +40,7 @@ def main():
         rep.check("6 nearest neighbours" in js("() => document.getElementById('help-m-spatial').textContent"), "Moran's I says it compares 6 nearest neighbours")
         rep.check("yearly" in js("() => document.getElementById('help-m-lag').textContent").lower(), "Lag says it needs yearly data")
         rep.check("Gallagher" in js("() => document.getElementById('help-levels').textContent"), "Where metrics apply lists Gallagher (regions and nations only)")
+        page.click("#tabview .hnav [data-hgo='help-m-reg']"); page.wait_for_timeout(300)
         page.click("#tabview [data-hexample='reg']"); page.wait_for_timeout(800)
         r = js("() => [AtlasDebug.AN.method, AtlasDebug.AN.metrics.length, !document.getElementById('analyse').hidden]")
         rep.check(r[0] == "reg" and r[1] >= 3 and r[2], f"“Load this example” opens Analyse on regression with its metrics ({r})")

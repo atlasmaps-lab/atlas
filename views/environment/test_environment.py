@@ -14,8 +14,10 @@ def main():
     rep = Report("environment view")
     with server() as base, browser() as b:
         page = open_atlas(b, base, (1440, 900), query="debug#app=environment"); js = page.evaluate
-        tabs = js("() => [...document.querySelectorAll('.ah-nav [data-apanel]')].map(b => b.textContent.trim())")
-        rep.check(tabs[:7] == ["Timeline", "Floods", "Coast", "Heat", "Conservation", "Climate & air", "Sources"], f"header tabs: {tabs}")
+        # 0.13: headings are groups of panels (Hazards holds Floods, Coast, Heat and Timeline); every panel stays in one
+        tabs = js("() => [...document.querySelectorAll('.ah-nav [data-agroup]')].map(b => b.textContent.trim())")
+        held = js("() => ['timeline', 'floods', 'coast', 'heat', 'conservation', 'climate', 'sources'].filter(id => [...document.querySelectorAll('.ah-nav [data-agroup]')].some(b => AtlasMenu.groupHas(+b.dataset.agroup, id)))")
+        rep.check(tabs[:4] == ["Hazards", "Nature", "Climate & air", "Sources"] and len(held) == 7, f"header headings: {tabs}, holding {held}")
         page.wait_for_function("() => AtlasCtx.map.getSource('env-floods') && AtlasCtx.map.getSource('env-cons') && AtlasCtx.map.getSource('env-coast')", timeout=60000)
         rep.check(js("() => AtlasDebug.mapped ? AtlasDebug.mapped().length === 0 : true"), "no area metrics on the map: the zones are their own view")
         count = lambda: js("() => AtlasCtx.map.querySourceFeatures('env-floods-pt').length")

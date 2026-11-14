@@ -1,6 +1,48 @@
-# Atlas 0.12.1 — United Kingdom
+# Atlas 0.13 — United Kingdom
 
 Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
+
+## What's new in 0.13
+
+The new look, built from the designs agreed on 13 November (specs in `Atlas design/*/… (final).md`). They are principles for every app and panel, not one screen.
+
+- **One typeface and clear colour rules.**
+  - PT Serif for every word.
+  - The app's colour is for controls only. Rises are green and falls red, in shades of their own. Category colours never use green, red or gold.
+  - Thin vertical rules, not dots, separate items.
+- **Cards.**
+  - A breadcrumb, then the masthead over a double rule.
+  - A 12 months / 5 years / 10 years / since switch that re-tells the card.
+  - A lead whose chart marks the highest point green and the lowest red, with a caption.
+  - Key figures, then sections that open in place.
+  - Complete sortable lists ending in "See all N".
+  - Charts enlarge, and Pin to track puts a live figure in the workspace.
+- **The time bar.**
+  - A slim capsule; ⌃ opens the full bar with events, a story strip you can drag to any month, a caption and options (including a one-month step).
+  - Nine more styles (frieze, seismograph, core sample, date wheels, range navigator, filmstrip, strategy clock, watermark, calendar) are chosen in the Toolbox and remembered.
+- **Menus as contents pages.**
+  - Headings are groups of panels in every app, with nothing dropped (the groupings are listed in the feedback note).
+  - Each heading has headline figures and closed sections that open to a summary, a share bar and the top five, then a full sortable list with next steps.
+  - Opening a section grows it to the left, and **News** about it fills the right: the most relevant story with its picture, two more without, each naming its source and linking to it. News comes from GOV.UK, Parliament and the public feeds of BBC News, The Guardian and Sky News, plus a live GOV.UK search.
+- **Panels as tiles.** One, two or three columns by the panel's width. The Summary is the hero; each tile shows its first sentence and first rows and grows to fill the panel.
+- **An interactive key.** Category rows have a bar, a figure and a share; click one to pick it out on the map. Trade route regions too.
+- **Workspace.**
+  - An "In this project" sidebar; Add Note, Heading or Map picture.
+  - Tracked figures show the last release and what comes next.
+  - Tidy glides the pieces into place.
+- **Toolbox.** Five sections: On the map, In <app> (the app's tools, with their tabs), Time bar styles, Look and Feel.
+- **Search finds anything.**
+  - Places, postcodes and coordinates.
+  - Rivers, National Parks, Ramsar sites and coastal stretches.
+  - Companies, donors, MPs and trade partners.
+  - Measures, panels, apps, things to do and Help entries.
+  - ⌘K focuses the box.
+- **Compare** has four views: Table, Side by side, Head to head and Over time (£ or 2010 = 100).
+- **Analyse** asks "What do you want to know?" in plain questions.
+  - The answer comes first, then How sure?, What it does not say, and the places that break the pattern.
+  - Three or more measures open on the correlation matrix.
+  - Put it on the map docks the result beside the map.
+- **Help** is a handbook: contents on the left, one entry at a time, Try it, Related.
 
 ## What's new in 0.12.1
 
@@ -344,12 +386,7 @@ Each view (Atlas Politics, Economic, Social, Health, Markets) now lives in `view
 - The app shows 0.7.1.
 - The phone layout is still to come.
 
-**Type.** Text is set in Surveyor Text Light, and headers and titles in Surveyor Text Book, in capitals and bold. Every digit is Archer Numeric Bold, everywhere. Both are Hoefler&Co fonts (typography.com) and need a licence, so they aren't in this public repository. Atlas uses them wherever it can get them:
-1. installed on the computer;
-2. licensed web font files in `fonts/` (see `fonts-files.example.css`, then set `fontFiles: true` in `config.js`);
-3. a Hoefler&Co Cloud.typography kit (put its CSS address in `fontKitCss` in `config.js`). This is the way to get them on the public website.
-
-Until then the free stand-ins are Newsreader (text and headers) and Zilla Slab Bold (digits). Map labels drawn by the basemap keep the basemap's own fonts. Everything is in `fonts.css`.
+**Type.** Since 0.13 every word in Atlas is PT Serif (Google Fonts, Open Font License), in two weights: regular for text and bold for headings and figures. Numbers line up because they use tabular, lining figures (`font-variant-numeric`), not a second font. Map labels drawn by the basemap keep the basemap's own fonts. Everything is in `fonts.css`; a second typeface anywhere is a bug (`tests/test_font.py` checks).
 
 **Rebuilding the new data:** `python3 pipeline/build_polls.py` (add new polls to `pipeline/sources/polls_wikipedia.csv` first) and `python3 pipeline/fetch_news.py`.
 

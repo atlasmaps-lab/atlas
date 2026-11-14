@@ -64,12 +64,12 @@ def main():
         for app, word in (("economic", "CPI inflation"), ("social", "Near this view")):   # 0.8: Economic opens on Indicators, Social on its Feed
             page = open_atlas(b, base, (1440, 900), query="debug#app=" + app); js = page.evaluate; page.wait_for_timeout(1500)
             rep.check(word in js("() => [...document.querySelectorAll('.apppanel:not([hidden]), .fwin:not([hidden])')].map(e => e.textContent).join(' ')"), f"Atlas {app.title()} opens on its first panel")
-            for x in js("() => [...document.querySelectorAll('#appbar [data-apanel]')].map(b => b.dataset.apanel)"):
+            for x in js("() => [...new Set([...document.querySelectorAll('#appbar [data-agroup]')].flatMap(b => AtlasMenu.groupSpecAt(+b.dataset.agroup).links.map(p => p.id)).concat([...document.querySelectorAll('#appbar .tool[data-apanel]')].map(b => b.dataset.apanel)))]"):
                 open_panel(page, f"{x}"); page.wait_for_timeout(250)
             rep.check(not page.errors, f"{app}: every panel opens without console errors" + (f": {page.errors}" if page.errors else ""))
             page.context.close()
         page = open_atlas(b, base, (1440, 900), query="debug#app=transport"); js = page.evaluate; page.wait_for_timeout(800)
-        rep.check("not available yet" not in js("() => document.body.textContent").lower() and js("() => !!document.querySelector('#apphead [data-apanel=directions]')"), "#app=transport opens Atlas Transport (0.8: it has data now)")
+        rep.check("not available yet" not in js("() => document.body.textContent").lower() and js("() => [...document.querySelectorAll('#apphead [data-agroup]')].some(b => /Getting around/.test(b.textContent))"), "#app=transport opens Atlas Transport (0.8: it has data now)")
         page.context.close()
     rep.done()
 
