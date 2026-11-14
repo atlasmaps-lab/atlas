@@ -1171,6 +1171,11 @@
     ["step", "win", "detail", "hot", "hatch", "hex"].forEach(k => { if (s[k] != null) o[k] = s[k]; });
     return o;
   })();
+  // 0.13.1: Atlas opens on a plain map: nothing is on it until the person puts it there (their other settings are kept)
+  // (tests written for the old opening layout ask for it with window.ATLAS_LEGACY_OPEN)
+  const LEGACY_OPEN = !!window.ATLAS_LEGACY_OPEN;
+  if (!LEGACY_OPEN) { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; PS.on[p] = false; }); PS.order = []; }
+  let BOOTING = false;
   // 0.3.1: a perspective is "on" exactly when something in it is ticked (there is no separate perspective switch any more)
   Object.keys(PS.mapped).forEach(pid => { if (!PS.on[pid]) PS.mapped[pid] = []; PS.on[pid] = PS.mapped[pid].length > 0; });
   const savePS = () => store.set("atlas-15-persp" + (APP_ID ? "-" + APP_ID : ""), PS);
@@ -2545,7 +2550,7 @@
         ${APP && p.id === APP.perspective ? "" : `<div class="phead"><button class="pname" data-open="${p.id}" aria-expanded="${open}" ${p.ready ? "" : `title="Not available yet: no data loaded. Click to see what's planned"`}>${esc(p.name)}${p.ready ? "" : `<small>not available yet</small>`}<span class="caret">▾</span></button>${on ? `<button class="pclear" data-pclear="${p.id}" title="Take the ${esc(p.name)} metrics off the map">clear</button>` : ""}${!APP && p.ready && p.id !== "analysis" ? `<a class="papp" href="${appHref(p.id)}" title="Open ${esc(appName(p.id))} as a tab inside Atlas">↗</a>` : ""}</div>`}
         ${open || (APP && p.id === APP.perspective) ? `<div class="pgroups">${groupsOfP(p).map(g => { const k = mappedIn(p.id, g) + cardIn(p.id, g), sel = pmOpen && pmOpen.p === p.id && pmOpen.g === g; return `<button class="pgroup${k ? " on" : ""}${sel ? " sel" : ""}" data-group="${esc(g)}" data-p="${p.id}" aria-expanded="${sel}">${esc(g || p.name)}${k ? `<span class="k">${k}</span>` : ""}</button>`; }).join("")}</div>` : ""}</div>`; }).join("")}</div></div>`;
   }
-  function mapOnly(ids) { Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.filter(id => M[id]).forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); }
+  function mapOnly(ids) { if (BOOTING) return; Object.keys(PS.mapped).forEach(p => { PS.mapped[p] = []; }); ids.filter(id => M[id]).forEach(id => { const m = M[id]; (PS.mapped[m.p] = PS.mapped[m.p] || []).push(id); PS.active[id] = true; }); PERSPECTIVES.forEach(p => syncOn(p.id)); repaint(); }
   // ---------- 1.8: perspective apps ----------
   const APP_FOR = { political: "politics", economic: "economic", social: "social", markets: "markets", health: "health", transport: "transport", environment: "environment", resilience: "resilience" };
   const appHref = pid => location.pathname + "#app=" + (APP_FOR[pid] || pid);
@@ -2652,7 +2657,9 @@
   slider.min = monthIdx(START); slider.max = monthIdx(TODAY); slider.step = 1;
   // 1.8: the bar runs from the earliest to the latest date with data for what's on the map (the union across the metrics).
   // "Full range" shows 1974 to today anyway, with the years outside the data hatched.
-  const TB = { lo: START, hi: TODAY, has: false, full: !!store.get("atlas-18-tb-full", false) };
+  // 0.13.1: the bar's range: "all" = only the dates where every measure on the map has data (so no card is left without a
+  // figure), "any" = from the first measure's start to the last one's end, "full" = 1974 to today
+  const TB = { lo: START, hi: TODAY, has: false, n: 0, overlap: true, mode: (v => ["all", "any", "full"].includes(v) ? v : store.get("atlas-18-tb-full", false) ? "full" : "all")(store.get("atlas-1301-tb-range", "")), get full() { return this.mode === "full"; }, set full(v) { this.mode = v ? "full" : "all"; } };
   const viewLo = () => TB.full ? START : TB.lo, viewHi = () => TB.full ? TODAY : TB.hi;
   const EVENT_SPAN = PR.events.length ? [fromDay(Math.min(...PR.events.map(e => e.t0))), fromDay(Math.min(dayNum(TODAY), Math.max(...PR.events.map(e => e.end))))] : null;
   const spanCache = {};
@@ -2677,9 +2684,11 @@
   const allLevelCodes = l => Object.keys(P).filter(c => P[c].level === l);
   function syncRange(quiet) { // the bar follows the metrics on the map; a date outside the new range moves to its nearest end
     const spans = planMetrics().map(metricSpan).filter(Boolean);
-    TB.has = spans.length > 0;
-    TB.lo = TB.has ? spans.reduce((a, s) => s[0] < a ? s[0] : a, TODAY) : START;
-    TB.hi = TB.has ? spans.reduce((a, s) => s[1] > a ? s[1] : a, START) : TODAY;
+    TB.has = spans.length > 0; TB.n = spans.length;
+    const uLo = TB.has ? spans.reduce((a, s) => s[0] < a ? s[0] : a, TODAY) : START, uHi = TB.has ? spans.reduce((a, s) => s[1] > a ? s[1] : a, START) : TODAY;
+    const iLo = TB.has ? spans.reduce((a, s) => s[0] > a ? s[0] : a, START) : START, iHi = TB.has ? spans.reduce((a, s) => s[1] < a ? s[1] : a, TODAY) : TODAY;
+    TB.overlap = iLo <= iHi; TB.uLo = uLo; TB.uHi = uHi;
+    if (TB.mode === "all" && TB.overlap) { TB.lo = iLo; TB.hi = iHi; } else { TB.lo = uLo; TB.hi = uHi; }
     slider.min = monthIdx(viewLo()); slider.max = monthIdx(viewHi());
     const d = state.date, nd = d < viewLo() ? viewLo() : d > viewHi() ? viewHi() : d;
     if (nd !== d) {
@@ -2757,19 +2766,28 @@
   document.addEventListener("mousedown", e => { if (!$("tb-pop").hidden && !e.target.closest("#tb-pop,#tb-more")) $("tb-pop").hidden = true; });
   $("tcur").addEventListener("click", () => { timebar.classList.add("typing"); dateIn.focus(); dateIn.select(); });
   dateIn.addEventListener("blur", () => timebar.classList.remove("typing"));
-  $("tb-full").addEventListener("click", () => { TB.full = !TB.full; store.set("atlas-18-tb-full", TB.full); syncRange(); if (TB.full) toast("Full range: 1974 to today. Hatched years have no data for what's on the map."); });
+  function setRangeMode(mode) { if (!["all", "any", "full"].includes(mode)) return; TB.mode = mode; store.set("atlas-1301-tb-range", mode); store.set("atlas-18-tb-full", mode === "full"); syncRange(); if (mode === "full") toast("Full range: 1974 to today. Hatched years have no data for what's on the map."); }
+  $("tb-full").addEventListener("click", () => setRangeMode(TB.mode === "full" ? "all" : "full"));
   if (window.ResizeObserver) new ResizeObserver(() => renderMarks()).observe($("marks"));
   // 0.13: the time bar's expanded form and its nine other styles (timebar.js) read the date, range and what's on the map from here
   if (window.AtlasTimebar) AtlasTimebar.init({ lo: viewLo, hi: viewHi, date: () => state.date, set: d => { stopPlay(); setDate(d); }, play: () => playBtn.click(), playing: () => !!state.playing, monthIdx, fromMonthIdx,
     // 0.13: the strip always has bars: the first mapped measure with a history (at the focused place, else the UK); trade lines
     // fall back to UK goods exports; otherwise the app's first measure with a UK history
+    range: () => ({ mode: TB.mode, n: TB.n, overlap: TB.overlap, lo: TB.lo, hi: TB.hi, uLo: TB.uLo, uHi: TB.uHi }), setRange: m => setRangeMode(m),
+    // 0.13.1: every measure on the map with a history (up to three), each at the focused place, else the UK. Nothing on the
+    // map: nothing on the bar (Atlas opens plain)
+    measures: () => { const N = window.AtlasNarrative; if (!N) return []; const code = state.focus && P[state.focus] ? state.focus : UKC, out = [];
+      const ser = (m, c) => { try { return (N.series(m, c) || []).filter(p => p[1] != null && isFinite(p[1])); } catch (e) { return []; } };
+      const ok = x => x && x.temporal !== "static" && x.temporal !== "event" && x.nature !== "text" && EN.isNum(x);
+      for (const m of planMetrics().filter(ok)) { if (out.length >= 3) break; for (const c of [code, UKC]) { const pts = ser(m, c); if (pts.length >= 2) { out.push({ id: m.id, label: m.label, fmt: N.fmtOf(m), pts, annual: m.temporal === "annual", where: c === UKC ? "the UK" : nameOf(c), topics: window.AtlasCard ? AtlasCard.topicsOf(m.id, m.label, m.group, m.p) : [] }); break; } } }
+      const T = window.ATLAS_TRADE; if (out.length < 3 && T && T.months && (curPlan.lines || []).some(m => /^trade_routes/.test(m.id))) { const y = {}; T.months.exp.forEach(([k, v]) => { const Y = 2000 + +k.slice(0, 2); y[Y] = (y[Y] || 0) + v; }); const pts = Object.keys(y).map(Number).sort().map(Y => [Y, y[Y]]); if (pts.length >= 3) out.push({ id: "trade", label: "UK goods exports", fmt: fmtGBP, pts, annual: true, where: "the UK", topics: ["trade"] }); }
+      return out; },
     measure: () => { const N = window.AtlasNarrative; if (!N) return null; const code = state.focus && P[state.focus] ? state.focus : UKC;
       const ser = (m, c) => { try { return (N.series(m, c) || []).filter(p => p[1] != null && isFinite(p[1])); } catch (e) { return []; } };
       const pack = (m, c, pts) => ({ label: m.label, fmt: N.fmtOf(m), pts, annual: m.temporal === "annual", where: c === UKC ? "the UK" : nameOf(c), topics: window.AtlasCard ? AtlasCard.topicsOf(m.id, m.label, m.group, m.p) : [] });
       const ok = x => x && x.temporal !== "static" && x.temporal !== "event" && x.nature !== "text" && EN.isNum(x);
       for (const m of planMetrics().filter(ok)) { for (const c of [code, UKC]) { const pts = ser(m, c); if (pts.length >= 3) return pack(m, c, pts); } }
       const T = window.ATLAS_TRADE; if (T && T.months && (curPlan.lines || []).some(m => /^trade_routes/.test(m.id))) { const y = {}; T.months.exp.forEach(([k, v]) => { const Y = 2000 + +k.slice(0, 2); y[Y] = (y[Y] || 0) + v; }); const pts = Object.keys(y).map(Number).sort().map(Y => [Y, y[Y]]); if (pts.length >= 3) return { label: "UK goods exports", fmt: fmtGBP, pts, annual: true, where: "the UK", topics: ["trade"] }; }
-      for (const m of METRICS.filter(x => ok(x) && (!APP || x.p === APP.perspective))) { const pts = ser(m, UKC); if (pts.length >= 3) return pack(m, UKC, pts); }
       return null; } });
   function renderTNote() {
     const ms = curPlan.notes.filter(n => n.ch).map(n => M[n.id]), note = $("tnote"), bits = [];
@@ -5507,7 +5525,7 @@
     trade: { get data() { return TRD; }, detail: () => loadData("data/trade_detail.js", "ATLAS_TRADE_DETAIL"), firms: () => loadData("data/trade_firms.js", "ATLAS_TRADE_FIRMS"), setProduct: (c, f) => setTradeProduct(c, f), get product() { return TRADE.code; }, at: (code, f) => tradeAt(code, f), colours: TR_COL },   // 0.9
     bd: { of: (id, code, d) => BD[id] ? bdOf(BD[id], code, d || state.date) : null, spec: id => BD[id], ids: () => Object.keys(BD), bar: (id, r, n) => bdBar(BD[id], r, n), fmt: (id, v) => bdFmt(BD[id], v), pick: (id, k) => bdPick(id, k) }, fmtGBP,   // 0.9
     get date() { return state.date; }, get level() { return state.level; }, get focused() { return state.focus; }, get sel() { return state.sel.map(x => x.code); },
-    setDate: d => setDate(d), mapOnly, setLevel: l => l === "auto" ? setLevelOn("auto", true) : makeActive(l), setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); },
+    setDate: d => setDate(d), mapOnly, setLevel: l => { if (BOOTING) return; l === "auto" ? setLevelOn("auto", true) : makeActive(l); }, setHex: on => { PS.hex = on; syncPcon.warned = false; if (on && state.level !== "constituency") makeActive("constituency"); syncPcon(true); },
     focus: c => focus(c), view: (center, zoom) => map.flyTo({ center, zoom, duration: 1000 }), allCodesAt, popAt, seriesOf, resultFor, resultsOf: code => (RES[code] || []).map(decode), areaOf: c => AREA[c] || null, previousFor, ELX, GE_DAYS, metricSpan: id => metricSpan(M[id]),
     openChart: o => openChart(o), openCmp: () => openCmp(), openProtestList: () => openProtestList(), openProtestCard: i => openProtestCard(i), openInfo: id => openMetricInfo(id),
     sendToWS: it => sendToWS(it), toast, copy, download, searchNames, onDate: f => appListeners.push(f), openPanel: id => openAppPanel(id), store,
@@ -5669,7 +5687,7 @@
     const head = document.createElement("header"); head.id = "apphead"; head.style.setProperty("--app", APP.accent);
     head.innerHTML = `<div class="ah-row"><a class="ah-brand to-multi" href="${location.pathname}" title="Back to Atlas Multi (all perspectives)"><span class="ah-logo">ATLAS</span><b>${esc(APP.short)}</b></a>
       <div class="ah-search"></div>
-      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.13</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
+      <div class="ah-right"><span class="ah-ver" title="Atlas version">0.13.1</span><button class="ah-more" aria-label="Menu" title="Tools, compare, analyse, chart, map styles, export, help">⋯</button></div></div>
       <nav class="ah-nav" aria-label="${esc(APP.name)}"></nav>`;
     document.body.appendChild(head);
     head.querySelector(".ah-search").appendChild(document.querySelector("#top .finder"));
@@ -5737,7 +5755,7 @@
     if (APP.onBoot) { const b = () => { try { APP.onBoot(CTX); } catch (e) { console.error(e); } }; map.loaded() ? b() : map.once("load", b); }   // 0.12: a view's own map layers, every time it opens
     if (APP.rivers && window.AtlasRivers) { const r = () => AtlasRivers.show(CTX); map.loaded() ? r() : map.once("load", r); }   // 0.12
     dockOpenP = APP.perspective; setFold(false);
-    if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) map.loaded() ? APP.init(CTX) : map.once("load", () => APP.init(CTX)); }
+    if (!store.get("atlas-18-app-seen-" + APP.id, false) || !anyMapped()) { store.set("atlas-18-app-seen-" + APP.id, true); if (APP.init) { const run = () => { BOOTING = !LEGACY_OPEN; try { APP.init(CTX); } finally { BOOTING = false; } }; map.loaded() ? run() : map.once("load", run); } }
   }
   $("brand").addEventListener("click", renderAppsMenu);
 

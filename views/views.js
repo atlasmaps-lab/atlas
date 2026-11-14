@@ -26,7 +26,7 @@
     environment: { owner: "", js: ["view.js"], css: ["view.css"] },
     resilience: { owner: "", js: ["view.js"], css: ["view.css"] },   // 0.12
   };
-  const V = "1300";   // bump with the ?v= numbers in index.html so browsers fetch fresh copies
+  const V = "1310";   // bump with the ?v= numbers in index.html so browsers fetch fresh copies
 
   window.ATLAS_VIEWS = VIEWS;
   const m = location.hash.match(/app=([a-z]+)/), open = m && VIEWS[m[1]] ? m[1] : null;

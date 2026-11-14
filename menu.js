@@ -207,7 +207,7 @@
     el.style.setProperty("--app", APP.accent);
     const k = S.anim = (S.anim || 0) + (S.bump ? 1 : 0); S.bump = false;
     const figs = s.figures.slice(0, 4), cols = s.sections, openSet = S.cols;
-    const figHTML = figs.map((f, i) => `<button type="button" class="mgc-fig" data-mfig="${i}" style="animation-delay:${i * 50}ms" title="${esc(f.label + ": " + f.value)}"><b>${esc(short(f.value))}</b><span>${esc(f.label)}</span>${f.chg ? `<em class="${f.tone === "good" ? "up" : f.tone === "bad" ? "down" : ""}">${esc(f.chg)}</em>` : ""}</button>`).join("");
+    const figHTML = figs.map((f, i) => `<button type="button" class="mgc-fig" data-mfig="${i}" style="animation-delay:${i * 50}ms" title="${esc(f.label + ": " + f.value)}">${(() => { const sp = window.AtlasPanel && AtlasPanel.splitFig ? AtlasPanel.splitFig(short(f.value)) : [short(f.value), ""]; return `<b>${esc(sp[0])}</b>${sp[1] ? `<small>${esc(sp[1])}</small>` : ""}`; })()}<span>${esc(f.label)}</span>${f.chg ? `<em class="${f.tone === "good" ? "up" : f.tone === "bad" ? "down" : ""}">${esc(f.chg)}</em>` : ""}</button>`).join("");
     const focus = openSet.size ? [...openSet].pop() : null;   // 0.13: one section open: it grows to the left over two columns, its news beside it
     const colHTML = cols.map((sc, i) => { const on = openSet.has(i), items = (sc.items || []).filter(Boolean), nums = items.filter(it => numOf(it) != null && numOf(it) > 0), tot = nums.reduce((a, it) => a + numOf(it), 0), share = nums.length >= 2 && nums.length >= items.length * 0.6 && items.some(it => it.colour);
       const top = items.slice(0, 5);

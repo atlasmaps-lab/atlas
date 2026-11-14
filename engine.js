@@ -127,10 +127,14 @@
     metrics.filter(m => m.nature === "site" && !placed(m)).forEach(m => { if (free("sites")) take("sites", m, channels(m)[0].why); });
     evs.filter(m => m.heatOnly && !placed(m)).forEach(m => { if (free("heat")) take("heat", m, channels(m)[0].why); else P.notes.push({ id: m.id, ch: null, why: `The heat map is in use, so ${m.label} can't be drawn. Show the other one as points.` }); });
     evs.filter(m => !m.heatOnly && !placed(m)).forEach(m => { if (free("points")) take("points", m, channels(m)[0].why); else if (free("heat")) take("heat", m, channels(m)[1].why); });
-    nums.filter(m => !placed(m)).sort((a, b) => (channels(b)[0] || {}).score - (channels(a)[0] || {}).score).forEach(m => {
+    // 0.13.1: in the order they were put on the map, so the first one takes the fill
+    nums.filter(m => !placed(m)).forEach(m => {
       const best = channels(m).map(c => c.ch);
       const fillTaken = P.shade || P.diverge || P.grid;
-      if ((m.nature === "count" || m.nature === "amount") && free("size")) return take("size", m, channels(m).find(c => c.ch === "size").why);
+      // 0.13.1: the first measure on the map always fills the areas (colour or lightness); a total moves to circles only
+      // when the fill is already in use. The key still offers circles for it.
+      if ((m.nature === "count" || m.nature === "amount") && free("size") && (P.hue || fillTaken)) return take("size", m, channels(m).find(c => c.ch === "size").why);
+      if ((m.nature === "count" || m.nature === "amount") && !P.hue && !fillTaken) return take("shade", m, `${m.label} is the first measure on the map, so it fills the areas, light to dark. It is a total, so large areas tend to look darker: switch it to circles in the key if you prefer.`);
       if (P.hue && !P.shade && best.includes("shade")) return take("shade", m, `${P.hue.label} sets the colour, so ${m.label} sets how light or dark it is (value by lightness).`);
       if (!P.hue && !fillTaken && m.mid != null) return take("diverge", m, channels(m)[0].why);
       if (!P.hue && !fillTaken && best.includes("shade")) return take("shade", m, channels(m).find(c => c.ch === "shade").why);

@@ -1,6 +1,17 @@
-# Atlas 0.13 — United Kingdom
+# Atlas 0.13.1 — United Kingdom
 
 Atlas 0.8 adds money in politics, Atlas Transport, a social layer with a marketplace, written context beside the numbers, map symbols for airports, ports and stations, and views rebuilt around how specialists work. It also gives the map a proper dark mode, relief and place names. The sections below describe 0.7.2 and earlier.
+
+## What's new in 0.13.1
+
+Mo's second round of notes, applied across every app, panel and card:
+
+- **A plain map at opening.** Nothing is on the map, or on the time bar, until you add it.
+- **The first measure fills the areas** (colour or lightness); the key still switches styles.
+- **The time bar fits the data.** Range: where the measure has data, where all (or any) of several measures have data, or 1974 to today. Several measures share the bar as rows, each with its highest and lowest year.
+- **Events you can open.** A diamond shows what happened, its source, and what each measure on the bar did a year either side.
+- **Every panel in the new look.** A summary with headline figures, a lead on each section, tables as rows with bars and a sort, lists as numbered rows.
+- **Cards with little data are full cards.** Category measures (who controls, who won) show how the map divides and how that changed; a measure with no figure on the date shows its latest one.
 
 ## What's new in 0.13
 

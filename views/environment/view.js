@@ -13,7 +13,7 @@
   const SRC_NAME = { river: "River", sea: "Sea", surface: "Surface water and drains", ground: "Groundwater", other: "Other or unknown" };
   const NAT = { E: "England", W: "Wales", S: "Scotland", NI: "Northern Ireland" };
   const HEAT_RAMP = [0, "rgba(255,240,200,0)", 0.5, "#fff1c1", 2, "#fdd17f", 5, "#f99d4b", 10, "#e8592b", 20, "#b8202b", 40, "#6b0f2a"];
-  const S = { mine: null, year: null, fut: null, heat: "b01", heatPicked: false, on: { floods: true, coast: true, heat: false, cons: true, fire: true }, playing: null };
+  const S = { mine: null, year: null, fut: null, heat: "b01", heatPicked: false, on: window.ATLAS_LEGACY_OPEN ? { floods: true, coast: true, heat: false, cons: true, fire: true } : { floods: false, coast: false, heat: false, cons: false, fire: false }, playing: null };
   let CTX = null, TODAY_Y = 2026, ELS = {};
 
   // ---------- data: each theme loads once, when first needed ----------
@@ -270,8 +270,9 @@
   function avgHeat(i) { const v = D.heat.features.map(f => f.properties.v[i]).filter(x => x != null); return v.reduce((a, b) => a + b, 0) / (v.length || 1); }
 
   function bars(rows, w = 300, h = 90, col = "#1f6fb4", mark) {
-    const max = Math.max(1, ...rows.map(r => r[1])), bw = w / rows.length;
-    return `<svg class="env-bars" viewBox="0 0 ${w} ${h + 14}" preserveAspectRatio="none">${rows.map((r, i) => `<rect x="${i * bw}" y="${h - r[1] / max * h}" width="${Math.max(1, bw - 1)}" height="${r[1] / max * h}" fill="${mark != null && r[0] === mark ? "#0b3d6e" : col}"><title>${r[0]}: ${fmt(r[1])}</title></rect>`).join("")}
+    // 0.13.1: a time series as designed: neutral bars, the highest year green, the lowest red, the year on the bar outlined
+    const max = Math.max(1, ...rows.map(r => r[1])), bw = w / rows.length; let hi = 0, lo = 0; rows.forEach((r, i) => { if (r[1] > rows[hi][1]) hi = i; if (r[1] < rows[lo][1]) lo = i; });
+    return `<svg class="env-bars" viewBox="0 0 ${w} ${h + 14}" preserveAspectRatio="none">${rows.map((r, i) => `<rect x="${i * bw}" y="${h - r[1] / max * h}" width="${Math.max(1, bw - 1)}" height="${Math.max(r[1] ? 1 : 0, r[1] / max * h)}" fill="${i === hi ? "var(--up, #1f8a4c)" : i === lo && rows[lo][1] < rows[hi][1] ? "var(--down, #c0392b)" : "var(--ink-3, #8a969b)"}"${mark != null && r[0] === mark ? ` stroke="var(--app, #2e7d4f)" stroke-width="1.5"` : ""}><title>${r[0]}: ${fmt(r[1])}</title></rect>`).join("")}
       <text x="0" y="${h + 12}" font-size="10" fill="currentColor">${rows[0] ? rows[0][0] : ""}</text><text x="${w}" y="${h + 12}" font-size="10" text-anchor="end" fill="currentColor">${rows.length ? rows[rows.length - 1][0] : ""}</text></svg>`;
   }
   function needs(key, ctx, el, fn) {

@@ -51,7 +51,8 @@ def main():
         open_panel(page, "fifteen"); page.wait_for_timeout(500)
         js(f"() => AtlasMove.run15({{ label: 'Birmingham', lon: {C[0]}, lat: {C[1]} }})"); page.wait_for_timeout(2500)
         t = js("() => [...document.querySelectorAll('.apppanel')].find(w => !w.hidden && w.querySelector('.mv-15t')).innerText")
-        rep.check("Walk" in t and "Cycle" in t and "Public transport" in t and "of 11" in t, f"15-minute city scores each way of getting about ({t[:80]!r})")
+        tl = t.lower()   # 0.13.1: table headings are small capitals
+        rep.check("walk" in tl and "cycle" in tl and "public transport" in tl and "of 11" in tl, f"15-minute city scores each way of getting about ({t[:80]!r})")
         rows = js("() => Object.fromEntries([...document.querySelectorAll('.mv-15t tbody tr')].map(r => [r.cells[0].textContent.trim(), r.cells[1].textContent.trim()]))")
         rep.check(rows.get("Pharmacy", "").startswith("✓") and rows.get("GP surgery", "").startswith("✓") and rows.get("Library", "") == "✗", f"…counting needs inside the 15-minute area and not those outside it ({rows})")
         js("() => document.querySelector('[data-mv15card]').click()"); page.wait_for_timeout(500)

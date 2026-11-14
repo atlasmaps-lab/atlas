@@ -40,7 +40,7 @@ def browser():
             b.close()
 
 
-def open_atlas(b, base, size=(1280, 800), storage=None, query="debug", init_script=None, sections_open=True):
+def open_atlas(b, base, size=(1280, 800), storage=None, query="debug", init_script=None, sections_open=True, plain=False):
     """A fresh page with Atlas loaded and the map ready. storage: extra localStorage keys (JSON-encodable values).
     sections_open: 0.12 panels fold every section but the Summary; tests that read inside panels open them all."""
     import json
@@ -50,6 +50,9 @@ def open_atlas(b, base, size=(1280, 800), storage=None, query="debug", init_scri
     ctx.add_init_script("(() => { const s = %s; for (const k in s) localStorage.setItem(k, JSON.stringify(s[k])); })();" % json.dumps(init))
     if init_script: ctx.add_init_script(init_script)
     if sections_open: ctx.add_init_script("window.ATLAS_SECTIONS_OPEN = 1;")
+    # 0.13.1: Atlas opens on a plain map; most tests were written for the old opening layout (Controlling party and
+    # protests in Multi, each app's own measures), so they ask for it. plain=True tests the real opening.
+    if not plain: ctx.add_init_script("window.ATLAS_LEGACY_OPEN = 1;")
     page = ctx.new_page()
     page.errors = []
     page.on("console", lambda m: page.errors.append(m.text) if m.type == "error" else None)
