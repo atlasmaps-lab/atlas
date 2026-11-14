@@ -36,7 +36,7 @@ def main():
         r = search("politics")
         rep.check("Apps" in r["secs"], f"apps ({r['secs']})")
         r = search("trade")
-        rep.check(any(s.startswith("Panels in") for s in r["secs"]) and any(s == "Measures" or s.startswith("Metrics") for s in r["secs"]), f"panels and measures ({r['secs']})")
+        rep.check(any(s.startswith("Panels in") for s in r["secs"]) and any(s.startswith("Measures") or s.startswith("Metrics") for s in r["secs"]), f"panels and measures ({r['secs']})")
         r = search("53.8, -1.55")
         rep.check("Coordinates" in r["secs"], "coordinates")
         r = search("LS1 4AP")

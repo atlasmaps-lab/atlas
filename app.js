@@ -5272,14 +5272,18 @@
   const mrow = m => `<button type="button" class="mt-item${isMapped(m.id) ? " on" : ""}" data-sm="${m.id}" title="${esc(m.desc || "")}">${isMapped(m.id) ? "✓ " : ""}${esc(m.label)}</button>`;
   const subOf = c => (P[c].level === "ward" || P[c].level === "constituency") && P[c].parent && P[P[c].parent] ? " · " + esc(nameOf(P[c].parent)) : "";
   const noDataFor = c => { const ms = planMetrics(); return ms.length > 0 && ms.every(m => { try { const r = m.get(c, state.date); return !r || r.v == null || r.nm; } catch (e) { return true; } }); };
-  const row = (c, i) => `<li data-c="${c}" class="${i === cur ? "on" : ""}${picked.includes(c) ? " ticked" : ""}" role="option" aria-selected="${picked.includes(c)}"><input type="checkbox" tabindex="-1" ${picked.includes(c) ? "checked" : ""} aria-label="Tick ${esc(nameOf(c))}"><span class="nm">${esc(nameOf(c))}</span><small>${LABEL[P[c].level]}${subOf(c)}</small>${noDataFor(c) ? `<em class="ndtag" title="None of the metrics on the map has a value for this place on this date">no data</em>` : ""}</li>`;
+  // 0.13 (as designed): a place's name, what it is in italics ("Council, Yorkshire and the Humber"), Go › on the right; + ticks it to show several together
+  const kindOf = c => { const l = P[c].level, par = P[c].parent && P[P[c].parent] ? nameOf(P[c].parent) : ""; return l === "constituency" ? `Constituency, 2024 boundaries${par ? ", " + par : ""}` : `${LABEL[l] || l}${par ? ", " + par : ""}`; };
+  const row = (c, i) => `<li data-c="${c}" class="srow${i === cur ? " on" : ""}${picked.includes(c) ? " ticked" : ""}" role="option" aria-selected="${i === cur}"><span class="sl"><span class="nm">${esc(nameOf(c))}</span><small>${esc(kindOf(c))}</small></span>${noDataFor(c) ? `<em class="ndtag" title="None of the metrics on the map has a value for this place on this date">no data</em>` : ""}<button type="button" class="stick" data-stick tabindex="-1" title="${picked.includes(c) ? "Ticked: shown with the others" : "Tick it, to show several places together"}" aria-label="Tick ${esc(nameOf(c))}">${picked.includes(c) ? "✓" : "+"}</button><span class="xgo">Go ›</span></li>`;
   function showHits() {
     const extra = picked.filter(c => !hits.includes(c));
-    const body = (extra.length ? `<li class="sec">Ticked</li>${extra.map(c => row(c, -1)).join("")}${hits.length ? `<li class="sec">Results</li>` : ""}` : "") + hits.map(row).join("");
-    const pbody = phits.length ? `<li class="sec">Airports, ports and stations</li>${phits.map(i => `<li class="poi-hit" data-poi="${i.id}"><span class="poi-ic" style="background:${POI_KIND[i.k].col}"></span>${esc(i.n)} <small>${esc(POI_KIND[i.k].label)}</small></li>`).join("")}` : "";
-    const mbody = pbody + (mhits.length ? `<li class="sec">Metrics <small>click to put one on the map</small></li><li class="smetrics">${mtree("search", mhits, mrow, { all: true, isOn: m => isMapped(m.id) })}</li>` : "");
+    const nW = hits.filter(c => P[c].level !== "ward").length;   // 0.13: wards come last, after rivers, companies and the rest
+    const body = (extra.length ? `<li class="sec">Ticked</li>${extra.map(c => row(c, -1)).join("")}` : "") + (nW ? `<li class="sec">Places</li>` + hits.slice(0, nW).map((c, i) => row(c, i)).join("") : "");
+    const wbody = hits.length > nW ? `<li class="sec">Wards</li>` + hits.slice(nW).map((c, i) => row(c, nW + i)).join("") : "";
+    const pbody = phits.length ? `<li class="sec">Airports, ports and stations</li>${phits.map(i => `<li class="poi-hit srow" data-poi="${i.id}"><span class="poi-ic" style="background:${POI_KIND[i.k].col}"></span><span class="sl"><span class="nm">${esc(i.n)}</span><small>${esc(POI_KIND[i.k].label)}</small></span><span class="xgo">Go ›</span></li>`).join("")}` : "";
+
     const nothing = si.value.trim().length >= 2 && !hits.length && !mhits.length && !phits.length && !xhits.length;
-    hl.innerHTML = (hits.length || extra.length ? ((mhits.length || xhits.length) && !extra.length ? `<li class="sec">Places</li>` : "") + body : "") + mbody + xbody() + (nothing ? `<li class="xnone">Nothing found for “${esc(si.value.trim())}”. Try a place, a river, a company or a measure.</li>` : "") + `<li class="sfoot"><span>${picked.length ? `${picked.length} ticked` : "Tick places to show several together"}</span>${picked.length ? `<button type="button" class="btn" data-sclear>Clear</button>` : ""}<button type="button" class="btn primary" data-ssearch ${picked.length ? "" : "disabled"}>Search${picked.length > 1 ? ` (${picked.length})` : ""}</button></li>`;
+    hl.innerHTML = body + xbody() + pbody + (mhits.length ? `<li class="sec">Measures <small>put one on the map</small></li><li class="smetrics">${mtree("search", mhits, mrow, { all: true, isOn: m => isMapped(m.id) })}</li>` : "") + wbody + (nothing ? `<li class="xnone">Nothing found for “${esc(si.value.trim())}”. Try a place, a river, a company or a measure.</li>` : "") + (picked.length ? `<li class="sfoot"><span>${picked.length} ticked</span><button type="button" class="btn" data-sclear>Clear</button><button type="button" class="btn primary" data-ssearch>Show ${picked.length > 1 ? `all ${picked.length}` : "it"} together</button></li>` : "");
     hl.hidden = !ddOpen || (!hits.length && !picked.length && !mhits.length && !phits.length && !xhits.length && !nothing && !(ddOpen && !si.value.trim()));
     tickPill.hidden = !picked.length || !hl.hidden; tickPill.innerHTML = `<button type="button" data-sopen>${picked.length} ticked</button>`;
   }
@@ -5295,14 +5299,14 @@
       items: [{ k: "Trade in goods, year by year", h: `Exports ${fmtGBP(c.exp)}, imports ${fmtGBP(c.imp)} in the latest year`, viz: window.AtlasCard ? AtlasCard.viz.bars(ys.map(y => ({ v: c.y.exp[y], c: "#9aa5ab", n: y }))) : "" }], source: "HMRC trade in goods", panel: "partners" }; }
   function searchAll(q) {
     const out = [], has = t => String(t || "").toLowerCase().includes(q), starts = t => String(t || "").toLowerCase().startsWith(q), rank = (a, b) => (starts(a.l) ? 0 : 1) - (starts(b.l) ? 0 : 1);
-    const add = (kind, rows, n) => { rows = rows.sort(rank).slice(0, n || 5); if (rows.length) out.push({ kind, rows }); };
+    const add = (kind, rows, n) => { rows = rows.map((r, i) => [r, i]).sort((a, b) => rank(a[0], b[0]) || a[1] - b[1]).map(x => x[0]).slice(0, n || 5); if (rows.length) out.push({ kind, rows }); };
     const ll = q.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
     if (ll && Math.abs(+ll[1]) <= 90 && Math.abs(+ll[2]) <= 180) add("Coordinates", [{ l: `${(+ll[1]).toFixed(4)}, ${(+ll[2]).toFixed(4)}`, sub: "Latitude, longitude", act: "Go", run: () => map.flyTo({ center: [+ll[2], +ll[1]], zoom: 12, duration: 1200 }) }]);
     const pc = q.replace(/\s+/g, "").toUpperCase(); if (/^[A-Z]{1,2}\d[A-Z\d]?\d[A-Z]{2}$/.test(pc)) add("Postcode", [{ l: pc.slice(0, -3) + " " + pc.slice(-3), sub: "Postcode, found with postcodes.io", act: "Go", run: () => fetch("https://api.postcodes.io/postcodes/" + encodeURIComponent(pc)).then(r => r.json()).then(j => { const r = j && j.result; if (!r) return toast("That postcode wasn't found."); const c = [r.codes && r.codes.admin_ward, r.codes && r.codes.admin_district].find(x => x && P[x]); map.flyTo({ center: [r.longitude, r.latitude], zoom: 14, duration: 1200 }); if (c) setTimeout(() => focus(c), 1300); }).catch(() => toast("Postcodes couldn't be reached.")) }]);
     if (q.length < 2) return out;
     const X = SIDX();
     if (X) {
-      add("Rivers", X.rivers.filter(r => has(r[0])).map(r => ({ l: r[0], sub: `${r[1]}, ${fmtInt(r[2])} km`, act: "Go", run: () => fitBox(r[3], 11) })));
+      add("Rivers", X.rivers.filter(r => has(r[0])).sort((a, b) => b[2] - a[2]).map(r => ({ l: r[0], sub: `${r[1]}, ${fmtInt(r[2])} km`, act: "Go", run: () => fitBox(r[3], 11) })));
       add("National Parks and Ramsar sites", X.parks.filter(r => has(r[0])).map(r => ({ l: r[0], sub: r[1], act: "Go", run: () => fitBox(r[2], 11) })));
       add("Coast", X.coast.filter(r => has(r[0])).map(r => ({ l: r[0], sub: "Shoreline management plan stretch", act: "Go", run: () => fitBox(r[2], 10) })));
     }
@@ -5326,7 +5330,7 @@
   function xbody() {
     if (!si.value.trim()) return ddOpen && !picked.length ? `<li class="xtry"><span>Try</span>${TRY.map(t => `<button type="button" data-xtry="${esc(t)}">${esc(t)}</button>`).join("")}</li>` : "";
     let i = 0; return xhits.map(g => `<li class="sec">${esc(g.kind)}</li>` + g.rows.map(r => `<li class="xhit" data-x="${i++}"><span class="xl"><b>${esc(r.l)}</b><i>${esc(r.sub || "")}</i></span><span class="xgo">${esc(r.act)} ›</span></li>`).join("")).join(""); }
-  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); mhits = searchMetrics(q); phits = searchPoi(q); xhits = searchAll(q); cur = 0; ddOpen = true; showHits(); });
+  si.addEventListener("input", () => { const q = si.value.trim().toLowerCase(); hits = q.length < 2 ? [] : searchNames(q); { const nw = hits.filter(c => P[c].level !== "ward"), w = hits.filter(c => P[c].level === "ward"); hits = nw.concat(w.slice(0, 6)); } mhits = searchMetrics(q); phits = searchPoi(q); xhits = searchAll(q); cur = 0; ddOpen = true; showHits(); });
   document.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) { e.preventDefault(); si.focus(); si.select(); } });   // ⌘K
   si.addEventListener("focus", () => { closeBrowse(); ddOpen = true; SIDX(); showHits(); });
   si.addEventListener("blur", () => { setTimeout(() => { if (document.activeElement !== si) { ddOpen = false; showHits(); } }, 120); });
@@ -5353,7 +5357,7 @@
     const pl = e.target.closest("li[data-poi]"); if (pl) { const i = POI_BY[pl.dataset.poi]; si.value = ""; hits = []; mhits = []; phits = []; ddOpen = false; showHits(); si.blur(); map.flyTo({ center: [i.lon, i.lat], zoom: Math.max(i.minz + 1.5, i.k === "station" ? 13 : 10), duration: 1200 }); openPoiCard(i.id); return; }
     const tr = e.target.closest("[data-xtry]"); if (tr) { si.value = tr.dataset.xtry; si.dispatchEvent(new Event("input")); return; }
     const xh = e.target.closest("li[data-x]"); if (xh) { const r = xhits.flatMap(g => g.rows)[+xh.dataset.x]; si.value = ""; hits = []; mhits = []; phits = []; xhits = []; ddOpen = false; showHits(); si.blur(); if (r) r.run(); return; }
-    const li = e.target.closest("li[data-c]"); if (li) toggleTick(li.dataset.c);
+    const li = e.target.closest("li[data-c]"); if (li) { if (e.target.closest("[data-stick]")) toggleTick(li.dataset.c); else jumpTo(li.dataset.c); }   // 0.13: a row goes there; + ticks it
   });
   tickPill.addEventListener("mousedown", e => { e.preventDefault(); si.focus(); });
   showHits();

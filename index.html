@@ -2150,6 +2150,19 @@ input.cmv-add { width: 130px; cursor: text; } input.cmv-add::placeholder { color
 .tbx-fold { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--rule); background: none; color: var(--app, #a07a12); font: 400 15px var(--f); cursor: pointer; }
 .tbx-row { display: flex; align-items: flex-end; gap: 10px; } .tbx-row .tbx-strip { flex: 1; min-width: 0; }
 .tbx-play { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--app, #a07a12); color: #fff; font-size: 12px; cursor: pointer; margin-bottom: 18px; }
+
+/* ===== 0.13 · search results as designed (Atlas design/masthead): name, italic kind line, Go › ===== */
+#hits { border-radius: 14px; padding: 8px; background: var(--solid) !important; z-index: 1700 !important; }
+#hits li.sec { font: 700 10.5px var(--f); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 8px 8px 4px; }
+#hits li.srow { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; cursor: pointer; }
+#hits li.srow:hover, #hits li.srow.on, #hits li.xhit:hover { background: color-mix(in srgb, var(--app, #a07a12) 12%, transparent); }
+#hits li.srow .sl { flex: 1; min-width: 0; display: flex; flex-direction: column; } #hits li.srow .nm { font: 400 14px var(--f); color: var(--ink); }
+#hits li.srow small { font: italic 400 11.5px var(--f); color: var(--ink-3); margin: 0; text-align: left; }
+#hits li.srow .xgo, #hits li.xhit .xgo { font: 700 12px var(--f); color: var(--app, #a07a12); flex: none; }
+#hits li.srow .stick { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--rule); background: none; color: var(--ink-3); font-size: 12px; cursor: pointer; opacity: 0; transition: opacity .15s; }
+#hits li.srow:hover .stick, #hits li.srow.ticked .stick { opacity: 1; } #hits li.srow.ticked .stick { background: var(--app, #a07a12); color: #fff; border-color: transparent; }
+#hits li.srow .ndtag { font: italic 400 11px var(--f); color: var(--ink-3); background: none; border: 0; }
+#hits li.xhit { border-radius: 8px; padding: 7px 8px; }
 </style>
 <link rel="stylesheet" href="fonts.css?v=1300">
 <script src="theme.js?v=1300"></script>
